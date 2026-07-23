@@ -1,0 +1,17 @@
+.cults{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}
+.cult-card{border:1px solid var(--line);border-radius:var(--radius-md);padding:12px 13px;background:#fcfdfb}
+.cc-name{font-size:13px;font-weight:800;color:var(--ink)}
+.cc-stage{font-size:11px;color:var(--muted);margin:3px 0 10px}
+.cc-stage b{color:var(--teal);font-weight:700}
+.cc-stage-muted{font-style:italic}
+.bar{height:7px;background:#eef2ec;border-radius:var(--radius-bar);overflow:hidden;margin-bottom:9px} .bar-fill{height:100%;border-radius:var(--radius-bar)}
+.cc-etapas{display:flex;flex-direction:column;gap:7px;margin-bottom:10px}
+.et-row{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:8px}
+.et-lbl{font-size:10.5px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:108px}
+.et-bar{margin-bottom:0;flex:1}
+.et-val{font-size:11px;font-weight:800;white-space:nowrap;min-width:36px;text-align:right}
+.et-empty{font-size:11px;color:var(--muted);font-style:italic;padding:4px 0}
+.cc-ha{display:flex;flex-direction:column;gap:4px}
+.cc-ha div{background:#f2f6ef;border-radius:7px;padding:5px 8px;display:flex;justify-content:space-between}
+.cc-ha span{font-size:9.5px;color:var(--muted);text-transform:uppercase} .cc-ha b{font-size:11px}
+@media(max-width:900px){.cults{grid-template-columns:repeat(2,1fr)}}
