@@ -102,49 +102,45 @@ function renderAlertas(){
     : '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:16px">Sin OT atrasadas para el filtro seleccionado</td></tr>';
 }
 
-// ---- Insumos (no combustible): Compras vs Consumo, mostrados por separado ----
-// Modulo totalmente independiente de Combustible: propio filtro de mes, propios datos
-// (D.insumos_compras / D.insumos_consumo), sin sumar ni mostrar nada de D.combustible*.
-// Compras (Ingreso de Mercaderia) y Consumo (Comprobante Automático de Egreso de Stock) son
-// tipos de movimiento distintos y NUNCA se suman entre si ni con ningun otro tipo — ver el
-// comentario en data.js para la lista completa de tipos que quedan afuera de ambas cifras.
+// ---- Insumos (no combustible): Ingreso y Consumo, en CANTIDAD real (Unidades), no en dinero,
+// porque un mismo tipoInsumo mezcla unidades incompatibles entre si (Litros, Kilos, Unidades,
+// Dosis...) y no hay una sola cifra "total" que tenga sentido sumar entre insumos distintos (por
+// eso los KPIs son conteos, no cantidades sumadas). Modulo independiente de Combustible: propio
+// filtro de mes, propios datos (D.insumos_ingreso / D.insumos_consumo).
+// Sin Stock Inicial (a diferencia de Combustible): acá no alimenta ningún Balance ni cambia con
+// el filtro de Mes, así que mostrarlo como tabla suelta no aportaba nada — se descartó.
 function renderInsumos(){
   const selV=document.getElementById('imes').value, sel=selV==='ALL'?'ALL':parseInt(selV);
   const selTxt=selV==='ALL'?'Toda la campaña':document.getElementById('imes').selectedOptions[0].text;
-  const compras = sel==='ALL' ? D.insumos_compras : D.insumos_compras.filter(r=>r.mesnum===sel);
+
+  const ingreso = sel==='ALL' ? D.insumos_ingreso : D.insumos_ingreso.filter(r=>r.mesnum===sel);
   const consumo = sel==='ALL' ? D.insumos_consumo : D.insumos_consumo.filter(r=>r.mesnum===sel);
-
-  const comprasOrd = compras.slice().sort((a,b)=>b.gasto-a.gasto);
-  const gastoCompras = comprasOrd.reduce((s,o)=>s+o.gasto,0);
-  const nMovCompras = comprasOrd.reduce((s,o)=>s+o.n,0);
-
-  const byTipoUnidad={};
-  consumo.forEach(r=>{ const key=r.tipo+'|'+r.unidad; if(!byTipoUnidad[key]) byTipoUnidad[key]={tipo:r.tipo,unidad:r.unidad,n:0,gasto:0};
-    const o=byTipoUnidad[key]; o.n+=r.n; o.gasto+=r.gasto; });
-  const consumoOrd = Object.values(byTipoUnidad).sort((a,b)=>b.gasto-a.gasto);
-  const gastoConsumo = consumoOrd.reduce((s,o)=>s+o.gasto,0);
+  const ingresoOrd = ingreso.slice().sort((a,b)=>b.cantidad-a.cantidad);
+  const consumoOrd = consumo.slice().sort((a,b)=>b.cantidad-a.cantidad);
+  const nMovIngreso = ingresoOrd.reduce((s,o)=>s+o.n,0);
   const nMovConsumo = consumoOrd.reduce((s,o)=>s+o.n,0);
+  const nInsumosMovidos = new Set([...ingresoOrd.map(o=>o.nombre),...consumoOrd.map(o=>o.nombre)]).size;
 
   const K=[
-    ['Compras','US$ '+fmtUSD(gastoCompras),selTxt],
-    ['Consumo','US$ '+fmtUSD(gastoConsumo),selTxt],
-    ['Movimientos de Compra',nMovCompras,'Ingreso de Mercadería'],
-    ['Movimientos de Consumo',nMovConsumo,'Egreso de Stock'],
+    ['Movimientos de Ingreso',nMovIngreso,selTxt],
+    ['Movimientos de Consumo',nMovConsumo,selTxt],
+    ['Insumos con Movimiento',nInsumosMovidos,selTxt],
   ];
   document.getElementById('ins-kpis').innerHTML=K.map(k=>`<div class="kpi"><div class="k-lab">${k[0]}</div><div class="k-val">${k[1]}</div><div class="k-foot">${k[2]}</div></div>`).join('');
   document.getElementById('inote').textContent=selTxt;
 
-  document.getElementById('ins-compras-sub').textContent=nMovCompras+' movimientos · US$ '+fmtUSD(gastoCompras)+' acumulado';
-  document.getElementById('ins-compras').innerHTML = comprasOrd.length ? comprasOrd.map(o=>{
-    const part = gastoCompras ? Math.round(o.gasto/gastoCompras*1000)/10 : 0;
-    return `<tr><td>${o.nombre}</td><td>${o.proveedor}</td><td>${o.unidad}</td><td class="tr mono">${o.n}</td><td class="tr mono">US$ ${fmtUSD(o.gasto)}</td><td class="tr"><div class="minibar"><div class="mb-fill f-o" style="width:${Math.min(part*2.5,100)}%"></div></div></td><td class="tr">${fmt1(part)}%</td></tr>`;
-  }).join('') : '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:16px">Sin compras de insumos en el período</td></tr>';
+  document.getElementById('ins-ingreso-sub').textContent=selTxt+' · '+nMovIngreso+' movimientos (Ingreso de Mercadería)';
+  document.getElementById('ins-ingreso').innerHTML = ingresoOrd.length ? ingresoOrd.map(o=>
+    `<tr><td>${o.nombre}</td><td>${o.proveedor}</td><td class="tr mono">${o.n}</td><td>${o.unidad}</td><td class="tr mono">${fmt2(o.cantidad)}</td></tr>`
+  ).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px">Sin ingresos de insumos en el período</td></tr>';
 
-  document.getElementById('ins-consumo-sub').textContent=consumoOrd.length+' tipos · US$ '+fmtUSD(gastoConsumo)+' acumulado';
-  document.getElementById('ins-consumo').innerHTML = consumoOrd.length ? consumoOrd.map(o=>{
-    const part = gastoConsumo ? Math.round(o.gasto/gastoConsumo*1000)/10 : 0;
-    return `<tr><td>${o.tipo}</td><td>${o.unidad}</td><td class="tr mono">${o.n}</td><td class="tr mono">US$ ${fmtUSD(o.gasto)}</td><td class="tr"><div class="minibar"><div class="mb-fill f-o" style="width:${Math.min(part*2.5,100)}%"></div></div></td><td class="tr">${fmt1(part)}%</td></tr>`;
-  }).join('') : '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:16px">Sin consumo de insumos en el período</td></tr>';
+  // Proveedor viene vacío en el 100% de las filas de Consumo reales (confirmado contra los datos
+  // del repo) — se muestra igual la columna, con "(sin dato)", para que Ingreso y Consumo
+  // compartan exactamente la misma estructura de columnas.
+  document.getElementById('ins-consumo-sub').textContent=selTxt+' · '+nMovConsumo+' movimientos (Egreso de Stock)';
+  document.getElementById('ins-consumo').innerHTML = consumoOrd.length ? consumoOrd.map(o=>
+    `<tr><td>${o.nombre}</td><td>${o.proveedor}</td><td class="tr mono">${o.n}</td><td>${o.unidad}</td><td class="tr mono">${fmt2(o.cantidad)}</td></tr>`
+  ).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px">Sin consumo de insumos en el período</td></tr>';
 }
 
 function monthTotals(){ const t={}; D.meses.forEach(m=>t[m.k]={k:m.k,lbl:m.lbl,tot:0,ot:0,horas:0});
