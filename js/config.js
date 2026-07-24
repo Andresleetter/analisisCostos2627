@@ -1,7 +1,7 @@
 // ================== CONFIG ==================
 // Fuente de datos: un único .xlsx en GitHub raw (antes eran 3 CSV separados; ahora 3 hojas de
 // un mismo archivo, exportadas por Power Query: consultaOT, consultaCultivos, consultaInsumos).
-const REPO = "Andresleetter/dashboard-campania-26-27";
+const REPO = "Andresleetter/analisisCostos2627";
 const BRANCH = "main";
 const SRC_XLSX = "https://raw.githubusercontent.com/"+REPO+"/"+BRANCH+"/datosCampania2627.xlsx";
 const HOJA_OT = "consultaOT";
