@@ -10,6 +10,9 @@ document.addEventListener('DOMContentLoaded', function(){
   document.getElementById('cmes').addEventListener('change', renderCombustible);
   document.getElementById('cterc').addEventListener('change', renderCombustible);
   document.getElementById('imes').addEventListener('change', renderInsumos);
-  document.getElementById('itipo').addEventListener('change', renderInsumos);
+  // Tipo de Insumo es el filtro "padre" del dependiente Insumo: primero se repueblan sus opciones
+  // (y se limpia la seleccion si ya no corresponde al nuevo tipo), recien despues se re-renderiza.
+  document.getElementById('itipo').addEventListener('change', function(){ actualizarFiltroInsumo(); renderInsumos(); });
+  document.getElementById('iinsumo').addEventListener('change', renderInsumos);
   document.getElementById('aestado').addEventListener('change', renderAlertas);
 });
