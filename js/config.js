@@ -27,8 +27,8 @@ const OPERATIVAS = ['OPERATIVO','PARCELA ARROZ','PARCELA SOJA','PARCELA SORGO','
 // al inicio), separadas del Ingreso/Consumo porque no son un movimiento sino un saldo de partida.
 const TIPO_INSUMO_COMBUSTIBLE = 'COMBUSTIBLES';
 const MOV_EXISTENCIA_INICIAL = 'Existencia inicial';
-// Campania vigente: unico criterio de inclusion de filas de consultaOT y de movimientos de
-// consultaInsumos (Ingreso/Consumo). Las filas de "Existencia inicial" no tienen campania
-// (quedan fuera de este filtro adrede, ver data.js).
+// Campania vigente: criterio de inclusion de filas de consultaOT y de consultaCultivos
+// (proyeccionRTK) unicamente — ver data.js. consultaInsumos (combustible + modulo Insumos) NO
+// se filtra por campania: se procesa completo, tal como antes de introducir este filtro.
 const CAMPANIA_ACTUAL = '26/27';
 let D=null;

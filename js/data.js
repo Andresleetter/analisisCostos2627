@@ -11,10 +11,19 @@ function buildData(raw, proyecciones, insumos){
   //     ensayo/operativos como "A RECUPERAR RH", "OPERATIVO", "PARCELA MAIZ ZAFRIÑA") quedan
   //     fuera del plan RTK — igual que antes, solo importan los 6 cultivos de CULTIVOS.
   // El emparejamiento es case/acento-insensible para tolerar variaciones de export.
+  // Filtro de campania: consultaCultivos no trae un campo de texto "campania" propio (solo
+  // idCampania, un ID interno sin mapeo conocido), pero el sufijo "26/27" ya viene en 'nombre'
+  // (mismo string que se usa para derivar lote/cultivo). Se reusa ese sufijo para descartar
+  // filas de otras campañas, igual criterio que consultaOT — así el plan RTK no mezcla
+  // hectáreas planificadas de más de una campaña si el export llega a traerlas combinadas.
+  // Filas sin sufijo reconocible (formato histórico sin 'nombre' con campaña) pasan sin filtrar,
+  // ya que no hay forma de determinar su campania.
   const RTK={};
-  let n_proy_sin_ha=0, n_proy_filas=0;
+  let n_proy_sin_ha=0, n_proy_filas=0, n_proy_otra_campania=0;
   (proyecciones||[]).forEach(rowRaw=>{
     const row={}; for(const k in rowRaw){ row[normHdr(k)]=rowRaw[k]; }
+    const campSuf = String(row['nombre']||'').match(/(\d{2}\/\d{2})\s*$/);
+    if(campSuf && campSuf[1]!==CAMPANIA_ACTUAL){ n_proy_otra_campania++; return; }
     let cultivo, lote;
     const m = String(row['nombre']||'').match(/^LA TERESA\s+(\S+)\s+([A-ZÁÉÍÓÚÑ]+)\s+\d{2}\/\d{2}$/);
     if(m){ lote = normLote(m[1]); cultivo = m[2].toUpperCase(); }
@@ -32,6 +41,7 @@ function buildData(raw, proyecciones, insumos){
     if(!RTK[cultivo]) RTK[cultivo]={};
     RTK[cultivo][lote]=(RTK[cultivo][lote]||0)+ha;   // suma defensiva por si un lote se repite
   });
+  if(n_proy_otra_campania) console.log('consultaCultivos: '+n_proy_otra_campania+' filas de otra campaña descartadas (no '+CAMPANIA_ACTUAL+').');
   if(n_proy_sin_ha) console.warn('consultaCultivos: '+n_proy_sin_ha+' de '+n_proy_filas+' filas sin hectáreas válidas (ignoradas).');
   const RTK_TOT={}; for(const c in RTK){ RTK_TOT[c]=Object.values(RTK[c]).reduce((a,b)=>a+b,0); }
   // normalizar nombres de columnas (quita BOM y espacios)
@@ -208,7 +218,8 @@ function buildData(raw, proyecciones, insumos){
   // "Existencia inicial" (separadas antes de llegar acá — ver combustible_existencia_inicial).
   // combustibleRaw llega con la misma forma que tenía el viejo Movimiento_de_combustible.csv:
   // Fecha, Referencia (comprobante), Unidades (litros, en valor absoluto), Tercero y
-  // Descripción Tipo de Comprobante. Solo se toman fechas de 2026.
+  // Descripción Tipo de Comprobante. Sin filtro de campaña ni de fecha: consultaInsumos se
+  // procesa completo, tal como antes de introducir el filtro de campaña para consultaOT.
   // "Descripción Tipo de Comprobante" distingue el sentido del movimiento:
   //  - "Ingreso de Mercadería" = ENTRADA de combustible al depósito (compra a un proveedor, ej.
   //    VANE S.A.). No es consumo — mezclarlo con lo demás infla artificialmente el litraje de ese
@@ -225,7 +236,7 @@ function buildData(raw, proyecciones, insumos){
     tercero: String(row['tercero']||'').trim(),
     insumo: String(row['insumo']||'').trim(),
     tipoComp: String(row['descripcion tipo de comprobante']||'').trim(),
-  })).filter(r=> (!r.insumo || r.insumo.toUpperCase()==='GASOIL') && r.fecha && r.fecha.getFullYear()===2026);
+  })).filter(r=> (!r.insumo || r.insumo.toUpperCase()==='GASOIL') && r.fecha);
   const esIngreso = r => normEstadio(r.tipoComp).indexOf('ingreso')>-1;
 
   function agruparComb(list){
@@ -281,9 +292,9 @@ function buildData(raw, proyecciones, insumos){
   // "gasto", asi que no se fuerzan a un KPI.
   // "Gasto por Proveedor" NO se implementa: de las filas de egreso real, menos del 1% tiene
   // proveedor (el resto es Labor Propia) — no hay dato real que sostenga ese indicador.
-  // Se filtra por la campania vigente, igual que el resto del dashboard. Las filas crudas sin
-  // filtrar (todos los tipoMovimiento, todas las campanias) quedan en insumos_pendiente_modulo
-  // por si hace falta auditar o ampliar el modulo mas adelante.
+  // NO se filtra por campania acá: consultaInsumos se procesa completo (todas las campanias),
+  // a diferencia de consultaOT/consultaCultivos. Solo se aplica esEgresoInsumo (tipo de
+  // movimiento), no un recorte de fecha ni de campaña.
   // Se expone agregado por (mes, tipo) — no un total ya cerrado — porque el modulo tiene su
   // propio filtro de mes (igual que Combustible) y renderInsumos() recalcula todo en runtime.
   function esEgresoInsumo(tipoMov){
@@ -295,7 +306,6 @@ function buildData(raw, proyecciones, insumos){
     const row={}; for(const k in rowRaw){ row[normHdr(k)]=rowRaw[k]; }
     return {
       fecha: pdate(row['fecha']),
-      campania: String(row['campania']||'').trim(),
       tipoMov: String(row['tipomovimiento']||'').trim(),
       tipo: String(row['tipoinsumo']||'').trim(),
       nombre: String(row['nombre']||'').trim(),
@@ -303,7 +313,7 @@ function buildData(raw, proyecciones, insumos){
       cantidad: Math.abs(num(row['unidades'])),
       gasto: Math.abs(num(row['importemonedaextranjera'])),
     };
-  }).filter(r => r.campania===CAMPANIA_ACTUAL && esEgresoInsumo(r.tipoMov));
+  }).filter(r => esEgresoInsumo(r.tipoMov));
   // Gasto por (mes, tipo de insumo, unidad de medida). Se agrupa TAMBIEN por unidad, no solo
   // por tipo: un mismo tipoInsumo puede traer mas de una unidad real (ej. HERBICIDAS trae filas
   // en Kilos y en Litros a la vez) y mezclarlas en una sola fila haria que "Unidad de Medida"
