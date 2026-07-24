@@ -39,8 +39,9 @@
 
   <nav class="tabs">
     <button class="tab active">Resumen Ejecutivo <span class="badge" id="b-prob">0</span></button>
-    <button class="tab">Resumen de Gastos</button>
+    <button class="tab">Servicios</button>
     <button class="tab">Combustible</button>
+    <button class="tab">Insumos</button>
     <button class="tab">Control de Hectáreas <span class="badge" id="b-exc">0</span></button>
     <button class="tab">Alertas Operacionales <span class="badge" id="b-al">0</span></button>
   </nav>
@@ -101,7 +102,19 @@
       <table><thead><tr><th>Tercero</th><th class="tr">Registros</th><th class="tr">Litros</th><th class="tr">Participación</th><th class="tr">%</th></tr></thead><tbody id="combbody"></tbody></table></div>
   </section>
 
-  <!-- TAB 4 -->
+  <!-- TAB 4: Insumos -->
+  <section class="page">
+    <div class="gfilter">
+      <label for="imes">Mes</label>
+      <select id="imes"><option value="ALL">Toda la Campaña</option></select>
+      <span class="fnote" id="inote"></span>
+    </div>
+    <div class="kpis" id="ins-kpis"></div>
+    <div class="panel"><h3>Gasto por Tipo de Insumo <span id="ins-tipo-sub"></span></h3>
+      <table><thead><tr><th>Tipo de Insumo</th><th>Unidad de Medida</th><th class="tr">Movimientos</th><th class="tr">Gasto Acum.</th><th class="tr">Participación</th><th class="tr">%</th></tr></thead><tbody id="ins-tipo"></tbody></table></div>
+  </section>
+
+  <!-- TAB 5 -->
   <section class="page">
     <div class="kpis" id="ha-kpis"></div>
     <div class="panel"><h3>Lotes con Exceso de Superficie · Detalle de OT y Labores <span id="exc-sub"></span></h3>
@@ -110,8 +123,17 @@
       <div class="scroll"><table><thead><tr><th>OT</th><th>Cultivo</th><th>Lote</th><th>Actividad</th><th>Labor / Servicio</th><th class="tr">Ha Cargadas</th><th>Estado</th></tr></thead><tbody id="sinrtk"></tbody></table></div></div>
   </section>
 
-  <!-- TAB 5 -->
+  <!-- TAB 6 -->
   <section class="page">
+    <div class="gfilter">
+      <label for="aestado">Estado</label>
+      <select id="aestado">
+        <option value="ALL">Todas</option>
+        <option value="Pendiente">Pendiente</option>
+        <option value="En Ejecución">En Ejecución</option>
+      </select>
+      <span class="fnote" id="anote"></span>
+    </div>
     <div class="alert-kpis" id="al-kpis"></div>
     <div class="panel"><h3>OT Atrasadas <span id="al-sub"></span></h3>
       <div class="scroll"><table><thead><tr><th>Atraso</th><th>OT</th><th>Actividad</th><th>Servicio</th><th>Lote</th><th>Cultivo</th><th>Estado</th><th>F. Teórica</th></tr></thead><tbody id="al"></tbody></table></div></div>
