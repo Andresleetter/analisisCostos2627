@@ -71,6 +71,7 @@ function renderAll(){
   D.insumos_meses.forEach(m=>{const o=document.createElement('option');o.value=m.k;o.textContent=m.lbl;selIMes.appendChild(o);});
   const selITipo=document.getElementById('itipo'); selITipo.querySelectorAll('option:not([value=ALL])').forEach(o=>o.remove());
   D.insumos_tipos.forEach(t=>{const o=document.createElement('option');o.value=t;o.textContent=t;selITipo.appendChild(o);});
+  actualizarFiltroInsumo();
   document.getElementById('foot').innerHTML='Datos cargados automáticamente desde datosCampania2627.xlsx · solo OT confirmadas en importes · todo importe = Unidades/Dosis × Precio Unitario · litros = Unidades/Dosis · avance por Ha ejecutadas vs plan RTK · planificación desde consultaCultivos (clave de unión: cultivo=actividad + lote normalizado) · sin datos de rendimiento ni presupuesto · no se hallaron OT canceladas.<br>Desarrollos del Sur S.A. · Producción Agrícola-Ganadera · '+fdTxt;
   renderCombustible();
   renderG();
@@ -104,21 +105,37 @@ function renderAlertas(){
     : '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:16px">Sin OT atrasadas para el filtro seleccionado</td></tr>';
 }
 
-// ---- Insumos (no combustible): filtro global por Tipo de Insumo + Mes ----
+// ---- Insumos (no combustible): filtros dependientes Tipo de Insumo -> Insumo, + Mes ----
 // Ingreso y Consumo, en CANTIDAD real (Unidades), no en dinero, igual criterio que Combustible.
-// El filtro de Tipo de Insumo es GLOBAL a la pestaña: acota los KPIs, el flujo de Stock y las dos
+// Tipo de Insumo e Insumo son GLOBALES a la pestaña: acotan los KPIs, el flujo de Stock y las dos
 // tablas de detalle a la vez — nunca se calcula nada "sin filtrar" por debajo mientras se muestra
 // algo distinto arriba. Ni Ingreso ni Consumo muestran columna "Tipo de Insumo": esa info ya la da
 // el filtro, no hace falta repetirla por fila.
+// Cascada Tipo -> Insumo: actualizarFiltroInsumo() (llamada desde renderAll() y desde el 'change'
+// de #itipo, ver events.js) repuebla las opciones de #iinsumo y limpia la seleccion si ya no
+// pertenece al tipo elegido, ANTES de que renderInsumos() lea su valor.
+function actualizarFiltroInsumo(){
+  const tipoV=document.getElementById('itipo').value;
+  const nombres = tipoV==='ALL'
+    ? [...new Set(Object.values(D.insumos_por_tipo).flat())].sort((a,b)=>a.localeCompare(b,'es'))
+    : (D.insumos_por_tipo[tipoV]||[]);
+  const selIInsumo=document.getElementById('iinsumo');
+  const actual=selIInsumo.value;
+  selIInsumo.querySelectorAll('option:not([value=ALL])').forEach(o=>o.remove());
+  nombres.forEach(n=>{const o=document.createElement('option');o.value=n;o.textContent=n;selIInsumo.appendChild(o);});
+  selIInsumo.value = nombres.includes(actual) ? actual : 'ALL';
+}
 function renderInsumos(){
   const selV=document.getElementById('imes').value, sel=selV==='ALL'?'ALL':parseInt(selV);
   const selTxt=selV==='ALL'?'Toda la campaña':document.getElementById('imes').selectedOptions[0].text;
   const tipoV=document.getElementById('itipo').value;
-  const filtroTxt = selTxt+(tipoV!=='ALL'?' · '+tipoV:'');
+  const insumoV=document.getElementById('iinsumo').value;
+  const filtroTxt = selTxt+(tipoV!=='ALL'?' · '+tipoV:'')+(insumoV!=='ALL'?' · '+insumoV:'');
 
   let ingreso = sel==='ALL' ? D.insumos_ingreso : D.insumos_ingreso.filter(r=>r.mesnum===sel);
   let consumo = sel==='ALL' ? D.insumos_consumo : D.insumos_consumo.filter(r=>r.mesnum===sel);
   if(tipoV!=='ALL'){ ingreso=ingreso.filter(r=>r.tipo===tipoV); consumo=consumo.filter(r=>r.tipo===tipoV); }
+  if(insumoV!=='ALL'){ ingreso=ingreso.filter(r=>r.nombre===insumoV); consumo=consumo.filter(r=>r.nombre===insumoV); }
   const ingresoOrd = ingreso.slice().sort((a,b)=>b.cantidad-a.cantidad);
   const consumoOrd = consumo.slice().sort((a,b)=>b.cantidad-a.cantidad);
   const nMovIngreso = ingresoOrd.reduce((s,o)=>s+o.n,0);
@@ -126,25 +143,29 @@ function renderInsumos(){
 
   document.getElementById('inote').textContent=filtroTxt;
 
-  // ---- Stock dinamico por (Tipo de Insumo, Unidad de Medida): mismo arrastre mes a mes que
-  // Combustible (stockInicioDePeriodo(), ver utils.js), acotado al Tipo elegido en el filtro
-  // global (o a todas las combinaciones si está en "Todos"). Balance = Stock Inicial + Ingreso
-  // del período − Consumo del período; el balance de un mes ES el stock inicial del siguiente
-  // porque stockInicioDePeriodo() suma/resta TODO lo de los meses anteriores, sin reiniciar nada.
-  // Se presenta como 4 KPI (Stock Inicial -> Ingreso -> Consumo -> Balance): con un Tipo puntual
-  // de una sola unidad (el caso común) el KPI es exacto; si el Tipo elegido mezcla mas de una
-  // unidad, o se deja "Todos", el KPI totaliza sumando esas filas entre si (mismo criterio que ya
-  // pedía la tarea: sumar lo que ya calculaba flujoRows, sin nueva lógica de negocio). ----
-  const flujo = tipoV==='ALL' ? D.insumos_stock_flujo : D.insumos_stock_flujo.filter(f=>f.tipo===tipoV);
+  // ---- Stock dinamico por (Tipo de Insumo, Insumo, Unidad de Medida): mismo arrastre mes a mes
+  // que Combustible (stockInicioDePeriodo(), ver utils.js), acotado al Tipo e Insumo elegidos en
+  // los filtros globales (o a todas las combinaciones que correspondan si están en "Todos").
+  // Balance = Stock Inicial + Ingreso del período − Consumo del período; el balance de un mes ES
+  // el stock inicial del siguiente porque stockInicioDePeriodo() suma/resta TODO lo de los meses
+  // anteriores, sin reiniciar nada.
+  // Se presenta como 4 KPI (Stock Inicial -> Ingreso -> Consumo -> Balance): con un Insumo puntual
+  // de una sola unidad (el caso común) el KPI es exacto; si el filtro deja mas de una fila (varios
+  // insumos de un tipo, o mas de una unidad), el KPI totaliza sumando esas filas entre si (mismo
+  // criterio que ya pedía la tarea anterior: sumar lo que ya calculaba flujoRows, sin nueva lógica
+  // de negocio). ----
+  let flujo = D.insumos_stock_flujo;
+  if(tipoV!=='ALL') flujo = flujo.filter(f=>f.tipo===tipoV);
+  if(insumoV!=='ALL') flujo = flujo.filter(f=>f.nombre===insumoV);
   const flujoRows = flujo.map(f=>{
-    const movI = D.insumos_ingreso_mensual.filter(r=>r.tipo===f.tipo && r.unidad===f.unidad);
-    const movC = D.insumos_consumo_mensual.filter(r=>r.tipo===f.tipo && r.unidad===f.unidad);
+    const movI = D.insumos_ingreso_mensual.filter(r=>r.tipo===f.tipo && r.nombre===f.nombre && r.unidad===f.unidad);
+    const movC = D.insumos_consumo_mensual.filter(r=>r.tipo===f.tipo && r.nombre===f.nombre && r.unidad===f.unidad);
     const stockInicio = stockInicioDePeriodo(sel, f.stockInicial, movI, movC);
     const ingresoPeriodo = (sel==='ALL'?movI:movI.filter(r=>r.mesnum===sel)).reduce((s,r)=>s+r.cantidad,0);
     const consumoPeriodo = (sel==='ALL'?movC:movC.filter(r=>r.mesnum===sel)).reduce((s,r)=>s+r.cantidad,0);
     const balance = stockInicio+ingresoPeriodo-consumoPeriodo;
-    return {tipo:f.tipo,unidad:f.unidad,stockInicio,ingresoPeriodo,consumoPeriodo,balance};
-  }).sort((a,b)=>a.tipo.localeCompare(b.tipo,'es')||a.unidad.localeCompare(b.unidad,'es'));
+    return {tipo:f.tipo,nombre:f.nombre,unidad:f.unidad,stockInicio,ingresoPeriodo,consumoPeriodo,balance};
+  });
   // Presentación como 4 KPI (Stock Inicial -> Ingreso -> Consumo -> Balance), igual estilo que el
   // balance de Combustible — son las mismas sumas que ya traía flujoRows (fila a fila), solo que
   // acá se totalizan para mostrarlas como KPI en vez de como tabla por (Tipo, Unidad).

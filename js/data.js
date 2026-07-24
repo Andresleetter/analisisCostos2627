@@ -307,6 +307,12 @@ function buildData(raw, proyecciones, insumos){
     };
   });
   const insumos_tipos = [...new Set(insumosRowsAll.map(r=>r.tipo))].sort((a,b)=>a.localeCompare(b,'es'));
+  // Insumos (Nombre) agrupados por Tipo, para el filtro dependiente "Insumo" — solo incluye
+  // combinaciones que realmente aparecen en los datos (nunca vacias/sin registros asociados).
+  const insumosPorTipoSet={};
+  insumosRowsAll.forEach(r=>{ (insumosPorTipoSet[r.tipo]=insumosPorTipoSet[r.tipo]||new Set()).add(r.nombre); });
+  const insumos_por_tipo={};
+  Object.keys(insumosPorTipoSet).forEach(t=>{ insumos_por_tipo[t]=[...insumosPorTipoSet[t]].sort((a,b)=>a.localeCompare(b,'es')); });
   // ---- Ingreso y Consumo (detalle): Insumo, Proveedor, Registros, Unidad, Cantidad — agrupadas
   // por (mes, insumo, proveedor, unidad) para respetar el filtro de mes por Fecha. "tipo" viaja en
   // cada fila para poder filtrar por el selector global de Tipo de Insumo, pero NO se muestra como
@@ -341,45 +347,49 @@ function buildData(raw, proyecciones, insumos){
   const insumos_consumo = agruparConsumo();
   const insumos_meses = [...new Set([...insumos_ingreso,...insumos_consumo].map(o=>o.mesnum))].filter(m=>m>0).sort((a,b)=>a-b).map(m=>({k:m,lbl:MES[m]}));
 
-  // ---- Stock dinamico por (Tipo de Insumo, Unidad de Medida) — misma logica que Combustible ----
+  // ---- Stock dinamico por (Tipo de Insumo, Insumo, Unidad de Medida) — misma logica que
+  // Combustible ----
   // Combustible funciona con UN solo stock (un unico producto, Litros); Insumos mezcla muchos
   // productos con unidades incompatibles entre si (Kilos, Litros, Unidades, Dosis...), asi que el
   // flujo Stock Inicial -> Ingreso -> Consumo -> Balance se calcula por separado para cada
-  // combinacion (Tipo de Insumo, Unidad) — es la unidad minima donde sumar/restar tiene sentido.
-  // El filtro global de Tipo de Insumo simplemente elige que fila(s) de esa grilla mostrar.
+  // combinacion (Tipo, Insumo, Unidad) — es la unidad minima donde sumar/restar tiene sentido, y
+  // permite filtrar tanto por Tipo de Insumo como por el filtro dependiente "Insumo" sin cambiar la
+  // formula: los filtros solo deciden que fila(s) de esta grilla se suman para mostrar el KPI
+  // ("Todos los insumos" de un tipo = sumar todas sus filas, igual que "Todos" ya sumaba por tipo).
   // Stock Inicial sale de "Existencia inicial" + "Stock Inicial" (ambos sin valor monetario real,
   // ya verificado), sumados CON signo (no valor absoluto) por el mismo motivo que
   // combustible_existencia_inicial: traen signo mixto (ajustes por lote) y la suma neta es la que
   // da el stock real de arranque.
-  const stockInicialTipoMap={};
+  const stockInicialMap={};
   insumosRowsAll.filter(r=>r.tipoMov==='Existencia inicial' || r.tipoMov==='Stock Inicial').forEach(r=>{
-    const key = r.tipo+'|'+r.unidad;
-    if(!stockInicialTipoMap[key]) stockInicialTipoMap[key]={tipo:r.tipo,unidad:r.unidad,cantidad:0};
-    stockInicialTipoMap[key].cantidad += r.unidades;
+    const key = r.tipo+'|'+r.nombre+'|'+r.unidad;
+    if(!stockInicialMap[key]) stockInicialMap[key]={tipo:r.tipo,nombre:r.nombre,unidad:r.unidad,cantidad:0};
+    stockInicialMap[key].cantidad += r.unidades;
   });
-  function agruparPorTipoUnidadMes(tipoMov, absoluto){
+  function agruparPorInsumoMes(tipoMov, absoluto){
     const map={};
     insumosRowsAll.filter(r=>r.tipoMov===tipoMov).forEach(r=>{
       const m = r.fecha ? r.fecha.getMonth()+1 : 0;
-      const key = m+'|'+r.tipo+'|'+r.unidad;
-      if(!map[key]) map[key]={mesnum:m,tipo:r.tipo,unidad:r.unidad,cantidad:0};
+      const key = m+'|'+r.tipo+'|'+r.nombre+'|'+r.unidad;
+      if(!map[key]) map[key]={mesnum:m,tipo:r.tipo,nombre:r.nombre,unidad:r.unidad,cantidad:0};
       map[key].cantidad += absoluto ? Math.abs(r.unidades) : r.unidades;
     });
     return Object.values(map).map(o=>({...o,cantidad:Math.round(o.cantidad*100)/100}));
   }
-  const insumos_ingreso_mensual = agruparPorTipoUnidadMes(MOV_INGRESO, false);
-  const insumos_consumo_mensual = agruparPorTipoUnidadMes(MOV_CONSUMO, true);
-  // Union de combinaciones (Tipo, Unidad) que aparecen en Stock Inicial y/o en movimientos, para
-  // que el flujo se muestre aunque falte alguno de los tres (ej. stock sin movimiento este año).
-  const claveTU = new Set([
-    ...Object.keys(stockInicialTipoMap),
-    ...insumos_ingreso_mensual.map(o=>o.tipo+'|'+o.unidad),
-    ...insumos_consumo_mensual.map(o=>o.tipo+'|'+o.unidad),
-  ]);
-  const insumos_stock_flujo = [...claveTU].map(key=>{
-    const [tipo,unidad]=key.split('|');
-    return {tipo,unidad,stockInicial:Math.round((stockInicialTipoMap[key]?stockInicialTipoMap[key].cantidad:0)*100)/100};
-  }).sort((a,b)=>a.tipo.localeCompare(b.tipo,'es')||a.unidad.localeCompare(b.unidad,'es'));
+  const insumos_ingreso_mensual = agruparPorInsumoMes(MOV_INGRESO, false);
+  const insumos_consumo_mensual = agruparPorInsumoMes(MOV_CONSUMO, true);
+  // Union de combinaciones (Tipo, Insumo, Unidad) que aparecen en Stock Inicial y/o en
+  // movimientos, para que el flujo se muestre aunque falte alguno de los tres (ej. stock sin
+  // movimiento este año). Se arma desde los objetos ya tipados (no split de un string armado) para
+  // no depender de que "Insumo" nunca contenga el separador "|".
+  const flujoClaves={};
+  Object.values(stockInicialMap).forEach(o=>{ flujoClaves[o.tipo+'|'+o.nombre+'|'+o.unidad]={tipo:o.tipo,nombre:o.nombre,unidad:o.unidad}; });
+  insumos_ingreso_mensual.forEach(o=>{ const k=o.tipo+'|'+o.nombre+'|'+o.unidad; if(!flujoClaves[k]) flujoClaves[k]={tipo:o.tipo,nombre:o.nombre,unidad:o.unidad}; });
+  insumos_consumo_mensual.forEach(o=>{ const k=o.tipo+'|'+o.nombre+'|'+o.unidad; if(!flujoClaves[k]) flujoClaves[k]={tipo:o.tipo,nombre:o.nombre,unidad:o.unidad}; });
+  const insumos_stock_flujo = Object.keys(flujoClaves).map(key=>{
+    const {tipo,nombre,unidad}=flujoClaves[key];
+    return {tipo,nombre,unidad,stockInicial:Math.round((stockInicialMap[key]?stockInicialMap[key].cantidad:0)*100)/100};
+  }).sort((a,b)=>a.tipo.localeCompare(b.tipo,'es')||a.nombre.localeCompare(b.nombre,'es')||a.unidad.localeCompare(b.unidad,'es'));
 
   const gasto_total=gastos.reduce((s,d)=>s+d.propia+d.tercero+d.insumos,0);
   const gasoil_total=gasOT.reduce((s,o)=>s+o.imp,0), gasoil_litros_total=gasOT.reduce((s,o)=>s+o.lines.reduce((a,l)=>a+l.ud,0),0);
@@ -416,7 +426,7 @@ function buildData(raw, proyecciones, insumos){
     combustible,combustible_litros_total,combustible_n_total,combustible_meses,combustible_terceros,
     combustible_ingresos,combustible_ingresos_litros_total,combustible_ingresos_n_total,
     combustible_existencia_inicial,stock_inicial_combustible,
-    insumos_ingreso,insumos_consumo,insumos_meses,insumos_tipos,
+    insumos_ingreso,insumos_consumo,insumos_meses,insumos_tipos,insumos_por_tipo,
     insumos_stock_flujo,insumos_ingreso_mensual,insumos_consumo_mensual,
     insumos_pendiente_modulo:otrosInsumos||[],
     problemas:P,
