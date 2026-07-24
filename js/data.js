@@ -280,55 +280,67 @@ function buildData(raw, proyecciones, insumos){
   // columna en USD — importeMonedaFiscal es el mismo importe en Guaranies, con una relacion de
   // ~6060 entre ambas, consistente con el tipo de cambio; importeMonedaExtranjera es la que
   // corresponde para mostrar "US$" como ya hace el resto del dashboard).
-  // Cantidad consumida: NO se fuerza todo a litros — cada insumo tiene su propia unidadMedida
-  // real (litros, kilos, unidades, etc.) y un mismo tipoInsumo puede mezclar mas de una (ej.
-  // HERBICIDAS trae filas en Kilos y en Litros a la vez). Por eso la cantidad se agrega por
-  // (mes, unidadMedida) por separado del gasto por tipo, y se muestra desglosada por unidad —
-  // nunca sumando cantidades de unidades distintas entre si.
-  // Solo movimientos de egreso real (consumo real de stock): "...Egreso de Stock", "Egreso de
-  // Materia Prima", "Egreso de Mercaderia", "Remision por Venta". Quedan afuera "Existencia
-  // inicial"/"Stock Inicial" (saldo de arranque, no gasto) y "Transferencia.../Ajuste..." (mueven
-  // o corrigen stock, no son consumo) — no hay manera solida de convertir esos tipos en un
-  // "gasto", asi que no se fuerzan a un KPI.
-  // "Gasto por Proveedor" NO se implementa: de las filas de egreso real, menos del 1% tiene
-  // proveedor (el resto es Labor Propia) — no hay dato real que sostenga ese indicador.
+  // Tipos de movimiento reales encontrados en consultaInsumos (10 valores, verificados contra el
+  // .xlsx del repo — no 8 como se penso en un principio: aparecen ademas "Egreso de Materia
+  // Prima" y "Transferencia de Mercadería Electronica"):
+  //   Comprobante Automático de Egreso de Stock, Remision por Venta, Transferencia de Mercadería,
+  //   Ingreso de Mercaderia, Egreso de Materia Prima, Egreso de Mercaderia, Stock Inicial,
+  //   Transferencia de Mercadería Electronica, Ajuste en Mas -Stock, Existencia inicial.
+  // "Existencia inicial" tiene Importe Total/Precio Unitario 100% nulos (bienes ya en poder de la
+  // empresa antes de la campaña, sin transaccion monetaria) — pero a diferencia de lo asumido en
+  // un principio, NO trae siempre unidadMedida "General": mezcla Litros/Kilos/Unidades/Dosis/
+  // Bolsas/General/'.', asi que no se puede filtrar por unidad, solo por tipoMovimiento exacto.
+  // "Stock Inicial" es un tipo DISTINTO (con importe real) — no confundir con "Existencia inicial".
+  // Por ahora se muestran DOS cifras de gasto real, cada una de un unico tipoMovimiento, sin
+  // mezclarse entre si ni con ningun otro tipo: Compras (Ingreso de Mercaderia) y Consumo
+  // (Comprobante Automático de Egreso de Stock, en valor absoluto: estas filas vienen en
+  // negativo). Los demas tipos (Remision por Venta, Egreso de Mercaderia, Egreso de Materia
+  // Prima, Transferencia..., Ajuste..., Stock Inicial, Existencia inicial) quedan fuera de ambas
+  // cifras por el momento — no hay criterio funcional para asignarlos a Compras o Consumo.
+  // "Gasto por Proveedor" en Consumo NO se implementa: de esas filas, menos del 1% tiene
+  // proveedor (el resto es Labor Propia) — no hay dato real que sostenga ese indicador; en
+  // Compras sí se desglosa por proveedor (100% de las filas de Ingreso de Mercaderia lo traen).
   // NO se filtra por campania acá: consultaInsumos se procesa completo (todas las campanias),
-  // a diferencia de consultaOT/consultaCultivos. Solo se aplica esEgresoInsumo (tipo de
-  // movimiento), no un recorte de fecha ni de campaña.
-  // Se expone agregado por (mes, tipo) — no un total ya cerrado — porque el modulo tiene su
-  // propio filtro de mes (igual que Combustible) y renderInsumos() recalcula todo en runtime.
-  function esEgresoInsumo(tipoMov){
-    const t = normEstadio(tipoMov);
-    if(t.indexOf('ingreso')>-1 || t.indexOf('existencia inicial')>-1 || t.indexOf('stock inicial')>-1 || t.indexOf('transferencia')>-1 || t.indexOf('ajuste')>-1) return false;
-    return t.indexOf('egreso')>-1 || t.indexOf('remision por venta')>-1;
-  }
-  const insumosRows = (otrosInsumos||[]).map(rowRaw=>{
+  // a diferencia de consultaOT/consultaCultivos. Solo se aplica el tipoMovimiento exacto.
+  // Se expone agregado por mes — no un total ya cerrado — porque el modulo tiene su propio
+  // filtro de mes (igual que Combustible) y renderInsumos() recalcula todo en runtime.
+  const MOV_COMPRAS = 'Ingreso de Mercaderia';
+  const MOV_CONSUMO = 'Comprobante Automático de Egreso de Stock';
+  const insumosRowsAll = (otrosInsumos||[]).map(rowRaw=>{
     const row={}; for(const k in rowRaw){ row[normHdr(k)]=rowRaw[k]; }
     return {
       fecha: pdate(row['fecha']),
       tipoMov: String(row['tipomovimiento']||'').trim(),
       tipo: String(row['tipoinsumo']||'').trim(),
       nombre: String(row['nombre']||'').trim(),
+      proveedor: String(row['proveedor']||'').trim(),
       unidad: String(row['unidadmedida']||'').trim() || '(sin unidad)',
       cantidad: Math.abs(num(row['unidades'])),
       gasto: Math.abs(num(row['importemonedaextranjera'])),
     };
-  }).filter(r => esEgresoInsumo(r.tipoMov));
-  // Gasto por (mes, tipo de insumo, unidad de medida). Se agrupa TAMBIEN por unidad, no solo
-  // por tipo: un mismo tipoInsumo puede traer mas de una unidad real (ej. HERBICIDAS trae filas
-  // en Kilos y en Litros a la vez) y mezclarlas en una sola fila haria que "Unidad de Medida"
-  // no tenga un valor unico por fila. Cuando un tipo es mono-unidad (el caso comun) esto no
-  // cambia nada visualmente; cuando mezcla unidades, aparece como dos filas separadas en la
-  // tabla, cada una con su propio conteo de movimientos/gasto ya acotado a esa unidad.
-  const insumosAggMap={};
-  insumosRows.forEach(r=>{
+  });
+  // Compras: detalle por (mes, insumo, proveedor) — no por tipoInsumo — porque lo que importa acá
+  // es "qué se compró y a quién", y el 100% de estas filas trae proveedor real.
+  const comprasMap={};
+  insumosRowsAll.filter(r=>r.tipoMov===MOV_COMPRAS).forEach(r=>{
+    const m = r.fecha ? r.fecha.getMonth()+1 : 0;
+    const key = m+'|'+r.nombre+'|'+r.proveedor+'|'+r.unidad;
+    if(!comprasMap[key]) comprasMap[key]={mesnum:m,nombre:r.nombre,proveedor:r.proveedor||'(sin dato)',unidad:r.unidad,n:0,gasto:0};
+    const o=comprasMap[key]; o.n++; o.gasto+=r.gasto;
+  });
+  const insumos_compras = Object.values(comprasMap).map(o=>({...o,gasto:Math.round(o.gasto*100)/100}));
+  // Consumo: detalle por (mes, tipo de insumo, unidad de medida) — igual criterio que antes, un
+  // mismo tipoInsumo puede traer mas de una unidad real (ej. HERBICIDAS en Kilos y en Litros a la
+  // vez), asi que se agrupa tambien por unidad para no mezclar cantidades de unidades distintas.
+  const consumoMap={};
+  insumosRowsAll.filter(r=>r.tipoMov===MOV_CONSUMO).forEach(r=>{
     const m = r.fecha ? r.fecha.getMonth()+1 : 0;
     const key = m+'|'+r.tipo+'|'+r.unidad;
-    if(!insumosAggMap[key]) insumosAggMap[key]={mesnum:m,tipo:r.tipo,unidad:r.unidad,n:0,gasto:0};
-    const o=insumosAggMap[key]; o.n++; o.gasto+=r.gasto;
+    if(!consumoMap[key]) consumoMap[key]={mesnum:m,tipo:r.tipo,unidad:r.unidad,n:0,gasto:0};
+    const o=consumoMap[key]; o.n++; o.gasto+=r.gasto;
   });
-  const insumos_agg = Object.values(insumosAggMap).map(o=>({...o,gasto:Math.round(o.gasto*100)/100}));
-  const insumos_meses = [...new Set(insumos_agg.map(o=>o.mesnum))].filter(m=>m>0).sort((a,b)=>a-b).map(m=>({k:m,lbl:MES[m]}));
+  const insumos_consumo = Object.values(consumoMap).map(o=>({...o,gasto:Math.round(o.gasto*100)/100}));
+  const insumos_meses = [...new Set([...insumos_compras,...insumos_consumo].map(o=>o.mesnum))].filter(m=>m>0).sort((a,b)=>a-b).map(m=>({k:m,lbl:MES[m]}));
 
   const gasto_total=gastos.reduce((s,d)=>s+d.propia+d.tercero+d.insumos,0);
   const gasoil_total=gasOT.reduce((s,o)=>s+o.imp,0), gasoil_litros_total=gasOT.reduce((s,o)=>s+o.lines.reduce((a,l)=>a+l.ud,0),0);
@@ -365,7 +377,7 @@ function buildData(raw, proyecciones, insumos){
     combustible,combustible_litros_total,combustible_n_total,combustible_meses,combustible_terceros,
     combustible_ingresos,combustible_ingresos_litros_total,combustible_ingresos_n_total,
     combustible_existencia_inicial,stock_inicial_combustible,
-    insumos_agg,insumos_meses,
+    insumos_compras,insumos_consumo,insumos_meses,
     insumos_pendiente_modulo:otrosInsumos||[],
     problemas:P,
     fecha_datos:HOY,
