@@ -38,15 +38,13 @@ function hojaARows(wb, nombreHoja){
 //    (stock de arranque de campaña) — no son Ingreso ni Consumo, se agregan aparte.
 //  - otros: el resto de insumos (no combustible) — stub para el futuro módulo "insumos", sin
 //    transformar ni calcular nada todavía.
+// OJO: consultaInsumos NO se filtra por campaña acá (a diferencia de consultaOT/consultaCultivos)
+// — se procesa completa, sin recortar por fecha ni campania, tal como antes de introducir ese filtro.
 function separarInsumos(rows){
   var combustible = [], existenciaInicial = [], otros = [];
-  var n_comb_otra_campania = 0;
   rows.forEach(function(r){
     if(String(r.tipoInsumo||'').trim().toUpperCase() !== TIPO_INSUMO_COMBUSTIBLE){ otros.push(r); return; }
     if(String(r.tipoMovimiento||'').trim() === MOV_EXISTENCIA_INICIAL){ existenciaInicial.push(r); return; }
-    // Ingreso/Consumo real de combustible: igual que en consultaOT, solo entra la campaña
-    // vigente (Existencia inicial queda afuera de este filtro porque no tiene campania).
-    if(String(r.campania||'').trim() !== CAMPANIA_ACTUAL){ n_comb_otra_campania++; return; }
     combustible.push({
       'Fecha': r.fecha,
       'Referencia': r.referencia,
@@ -56,7 +54,6 @@ function separarInsumos(rows){
       'Descripción Tipo de Comprobante': r.tipoMovimiento,
     });
   });
-  if(n_comb_otra_campania) console.log('consultaInsumos: '+n_comb_otra_campania+' filas de combustible de otra campaña descartadas.');
   return {combustible:combustible, existenciaInicial:existenciaInicial, otros:otros};
 }
 
