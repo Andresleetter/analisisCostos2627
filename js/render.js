@@ -66,9 +66,11 @@ function renderAll(){
   D.combustible_meses.forEach(m=>{const o=document.createElement('option');o.value=m.k;o.textContent=m.lbl;selCMes.appendChild(o);});
   const selCTerc=document.getElementById('cterc'); selCTerc.querySelectorAll('option:not([value=ALL])').forEach(o=>o.remove());
   D.combustible_terceros.forEach(t=>{const o=document.createElement('option');o.value=t;o.textContent=t;selCTerc.appendChild(o);});
-  // filtro de mes de la pestaña Insumos (independiente del de Combustible, mismo comportamiento)
+  // filtros de la pestaña Insumos (Mes / Tipo de Insumo, independientes de Combustible)
   const selIMes=document.getElementById('imes'); selIMes.querySelectorAll('option:not([value=ALL])').forEach(o=>o.remove());
   D.insumos_meses.forEach(m=>{const o=document.createElement('option');o.value=m.k;o.textContent=m.lbl;selIMes.appendChild(o);});
+  const selITipo=document.getElementById('itipo'); selITipo.querySelectorAll('option:not([value=ALL])').forEach(o=>o.remove());
+  D.insumos_tipos.forEach(t=>{const o=document.createElement('option');o.value=t;o.textContent=t;selITipo.appendChild(o);});
   document.getElementById('foot').innerHTML='Datos cargados automáticamente desde datosCampania2627.xlsx · solo OT confirmadas en importes · todo importe = Unidades/Dosis × Precio Unitario · litros = Unidades/Dosis · avance por Ha ejecutadas vs plan RTK · planificación desde consultaCultivos (clave de unión: cultivo=actividad + lote normalizado) · sin datos de rendimiento ni presupuesto · no se hallaron OT canceladas.<br>Desarrollos del Sur S.A. · Producción Agrícola-Ganadera · '+fdTxt;
   renderCombustible();
   renderG();
@@ -102,44 +104,72 @@ function renderAlertas(){
     : '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:16px">Sin OT atrasadas para el filtro seleccionado</td></tr>';
 }
 
-// ---- Insumos (no combustible): Ingreso y Consumo, en CANTIDAD real (Unidades), no en dinero,
-// porque un mismo tipoInsumo mezcla unidades incompatibles entre si (Litros, Kilos, Unidades,
-// Dosis...) y no hay una sola cifra "total" que tenga sentido sumar entre insumos distintos (por
-// eso los KPIs son conteos, no cantidades sumadas). Modulo independiente de Combustible: propio
-// filtro de mes, propios datos (D.insumos_ingreso / D.insumos_consumo).
-// Sin Stock Inicial (a diferencia de Combustible): acá no alimenta ningún Balance ni cambia con
-// el filtro de Mes, así que mostrarlo como tabla suelta no aportaba nada — se descartó.
+// ---- Insumos (no combustible): filtro global por Tipo de Insumo + Mes ----
+// Ingreso y Consumo, en CANTIDAD real (Unidades), no en dinero, igual criterio que Combustible.
+// El filtro de Tipo de Insumo es GLOBAL a la pestaña: acota los KPIs, el flujo de Stock y las dos
+// tablas de detalle a la vez — nunca se calcula nada "sin filtrar" por debajo mientras se muestra
+// algo distinto arriba. Ni Ingreso ni Consumo muestran columna "Tipo de Insumo": esa info ya la da
+// el filtro, no hace falta repetirla por fila.
 function renderInsumos(){
   const selV=document.getElementById('imes').value, sel=selV==='ALL'?'ALL':parseInt(selV);
   const selTxt=selV==='ALL'?'Toda la campaña':document.getElementById('imes').selectedOptions[0].text;
+  const tipoV=document.getElementById('itipo').value;
+  const filtroTxt = selTxt+(tipoV!=='ALL'?' · '+tipoV:'');
 
-  const ingreso = sel==='ALL' ? D.insumos_ingreso : D.insumos_ingreso.filter(r=>r.mesnum===sel);
-  const consumo = sel==='ALL' ? D.insumos_consumo : D.insumos_consumo.filter(r=>r.mesnum===sel);
+  let ingreso = sel==='ALL' ? D.insumos_ingreso : D.insumos_ingreso.filter(r=>r.mesnum===sel);
+  let consumo = sel==='ALL' ? D.insumos_consumo : D.insumos_consumo.filter(r=>r.mesnum===sel);
+  if(tipoV!=='ALL'){ ingreso=ingreso.filter(r=>r.tipo===tipoV); consumo=consumo.filter(r=>r.tipo===tipoV); }
   const ingresoOrd = ingreso.slice().sort((a,b)=>b.cantidad-a.cantidad);
   const consumoOrd = consumo.slice().sort((a,b)=>b.cantidad-a.cantidad);
   const nMovIngreso = ingresoOrd.reduce((s,o)=>s+o.n,0);
   const nMovConsumo = consumoOrd.reduce((s,o)=>s+o.n,0);
-  const nInsumosMovidos = new Set([...ingresoOrd.map(o=>o.nombre),...consumoOrd.map(o=>o.nombre)]).size;
 
-  const K=[
-    ['Movimientos de Ingreso',nMovIngreso,selTxt],
-    ['Movimientos de Consumo',nMovConsumo,selTxt],
-    ['Insumos con Movimiento',nInsumosMovidos,selTxt],
-  ];
-  document.getElementById('ins-kpis').innerHTML=K.map(k=>`<div class="kpi"><div class="k-lab">${k[0]}</div><div class="k-val">${k[1]}</div><div class="k-foot">${k[2]}</div></div>`).join('');
-  document.getElementById('inote').textContent=selTxt;
+  document.getElementById('inote').textContent=filtroTxt;
 
-  document.getElementById('ins-ingreso-sub').textContent=selTxt+' · '+nMovIngreso+' movimientos (Ingreso de Mercadería)';
+  // ---- Stock dinamico por (Tipo de Insumo, Unidad de Medida): mismo arrastre mes a mes que
+  // Combustible (stockInicioDePeriodo(), ver utils.js), acotado al Tipo elegido en el filtro
+  // global (o a todas las combinaciones si está en "Todos"). Balance = Stock Inicial + Ingreso
+  // del período − Consumo del período; el balance de un mes ES el stock inicial del siguiente
+  // porque stockInicioDePeriodo() suma/resta TODO lo de los meses anteriores, sin reiniciar nada.
+  // Se presenta como 4 KPI (Stock Inicial -> Ingreso -> Consumo -> Balance): con un Tipo puntual
+  // de una sola unidad (el caso común) el KPI es exacto; si el Tipo elegido mezcla mas de una
+  // unidad, o se deja "Todos", el KPI totaliza sumando esas filas entre si (mismo criterio que ya
+  // pedía la tarea: sumar lo que ya calculaba flujoRows, sin nueva lógica de negocio). ----
+  const flujo = tipoV==='ALL' ? D.insumos_stock_flujo : D.insumos_stock_flujo.filter(f=>f.tipo===tipoV);
+  const flujoRows = flujo.map(f=>{
+    const movI = D.insumos_ingreso_mensual.filter(r=>r.tipo===f.tipo && r.unidad===f.unidad);
+    const movC = D.insumos_consumo_mensual.filter(r=>r.tipo===f.tipo && r.unidad===f.unidad);
+    const stockInicio = stockInicioDePeriodo(sel, f.stockInicial, movI, movC);
+    const ingresoPeriodo = (sel==='ALL'?movI:movI.filter(r=>r.mesnum===sel)).reduce((s,r)=>s+r.cantidad,0);
+    const consumoPeriodo = (sel==='ALL'?movC:movC.filter(r=>r.mesnum===sel)).reduce((s,r)=>s+r.cantidad,0);
+    const balance = stockInicio+ingresoPeriodo-consumoPeriodo;
+    return {tipo:f.tipo,unidad:f.unidad,stockInicio,ingresoPeriodo,consumoPeriodo,balance};
+  }).sort((a,b)=>a.tipo.localeCompare(b.tipo,'es')||a.unidad.localeCompare(b.unidad,'es'));
+  // Presentación como 4 KPI (Stock Inicial -> Ingreso -> Consumo -> Balance), igual estilo que el
+  // balance de Combustible — son las mismas sumas que ya traía flujoRows (fila a fila), solo que
+  // acá se totalizan para mostrarlas como KPI en vez de como tabla por (Tipo, Unidad).
+  const stockInicioTot = flujoRows.reduce((s,f)=>s+f.stockInicio,0);
+  const ingresoTot = flujoRows.reduce((s,f)=>s+f.ingresoPeriodo,0);
+  const consumoTot = flujoRows.reduce((s,f)=>s+f.consumoPeriodo,0);
+  const balanceTot = flujoRows.reduce((s,f)=>s+f.balance,0);
+  const balCol = balanceTot>=0?'g':'r';
+  document.getElementById('ins-stock-kpis').innerHTML=
+    `<div class="kpi"><div class="k-lab">Stock Inicial</div><div class="k-val c-g">${fmt2(stockInicioTot)}</div><div class="k-foot">${filtroTxt}</div></div>`+
+    `<div class="kpi"><div class="k-lab">Ingreso</div><div class="k-val c-g">${fmt2(ingresoTot)}</div><div class="k-foot">${filtroTxt}</div></div>`+
+    `<div class="kpi"><div class="k-lab">Consumo</div><div class="k-val c-o">${fmt2(consumoTot)}</div><div class="k-foot">${filtroTxt}</div></div>`+
+    `<div class="kpi"><div class="k-lab">Balance</div><div class="k-val c-${balCol}">${fmt2(balanceTot)}</div><div class="k-foot">${filtroTxt}</div></div>`;
+
+  document.getElementById('ins-ingreso-sub').textContent=filtroTxt+' · '+nMovIngreso+' movimientos (Ingreso de Mercadería)';
   document.getElementById('ins-ingreso').innerHTML = ingresoOrd.length ? ingresoOrd.map(o=>
     `<tr><td>${o.nombre}</td><td>${o.proveedor}</td><td class="tr mono">${o.n}</td><td>${o.unidad}</td><td class="tr mono">${fmt2(o.cantidad)}</td></tr>`
   ).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px">Sin ingresos de insumos en el período</td></tr>';
 
-  // Proveedor viene vacío en el 100% de las filas de Consumo reales (confirmado contra los datos
-  // del repo) — se muestra igual la columna, con "(sin dato)", para que Ingreso y Consumo
-  // compartan exactamente la misma estructura de columnas.
-  document.getElementById('ins-consumo-sub').textContent=selTxt+' · '+nMovConsumo+' movimientos (Egreso de Stock)';
+  // Proveedor SIEMPRE vacío en Consumo (nunca "(sin dato)", guion, ni ningun otro texto): no es
+  // un dato que exista para estos movimientos (0% de los casos reales lo trae), así que la celda
+  // se deja en blanco en vez de rellenarla con un valor por defecto.
+  document.getElementById('ins-consumo-sub').textContent=filtroTxt+' · '+nMovConsumo+' movimientos (Egreso de Stock)';
   document.getElementById('ins-consumo').innerHTML = consumoOrd.length ? consumoOrd.map(o=>
-    `<tr><td>${o.nombre}</td><td>${o.proveedor}</td><td class="tr mono">${o.n}</td><td>${o.unidad}</td><td class="tr mono">${fmt2(o.cantidad)}</td></tr>`
+    `<tr><td>${o.nombre}</td><td></td><td class="tr mono">${o.n}</td><td>${o.unidad}</td><td class="tr mono">${fmt2(o.cantidad)}</td></tr>`
   ).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px">Sin consumo de insumos en el período</td></tr>';
 }
 
@@ -164,10 +194,10 @@ function renderCombustible(){
   // de consultaInsumos); para un mes puntual es el stock que quedó acumulado al cierre del mes
   // anterior (stock inicial + todo lo ingresado/consumido en los meses previos). Así el Balance
   // de cada mes sigue naturalmente al del mes anterior en vez de recalcular desde cero.
-  const stockInicioPeriodo = mes==='ALL' ? D.stock_inicial_combustible :
-    D.stock_inicial_combustible
-    + D.combustible_ingresos.filter(r=>r.mesnum<mes).reduce((s,r)=>s+r.litros,0)
-    - D.combustible.filter(r=>r.mesnum<mes).reduce((s,r)=>s+r.litros,0);
+  // stockInicioDePeriodo() es generica (ver utils.js) — la reutiliza tambien Insumos.
+  const stockInicioPeriodo = stockInicioDePeriodo(mes, D.stock_inicial_combustible,
+    D.combustible_ingresos.map(r=>({mesnum:r.mesnum,cantidad:r.litros})),
+    D.combustible.map(r=>({mesnum:r.mesnum,cantidad:r.litros})));
   const balance=stockInicioPeriodo+totIngresoMes-totConsumoMes;
   const balCol=balance>=0?'g':'r';
   document.getElementById('comb-balance').innerHTML=
