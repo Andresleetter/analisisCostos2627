@@ -1,7 +1,7 @@
 .pill{padding:2px 9px;border-radius:var(--radius-pill);font-size:11px;font-weight:700;color:#fff}
 .pill-r{background:var(--r)} .pill-o{background:var(--o)} .pill-y{background:var(--y);color:#5a4500}
-.al-r{background:#fdf0ef} .al-o{background:#fdf6ef}
-.alert-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
-.ak{border-radius:var(--radius-md);padding:15px;color:#fff} .ak b{font-size:30px;font-weight:800;display:block} .ak span{font-size:11px;font-weight:600;opacity:.95}
-.ak.r{background:var(--r)} .ak.o{background:var(--o)} .ak.y{background:var(--y);color:#5a4500} .ak.t{background:var(--teal)}
-@media(max-width:900px){.alert-kpis{grid-template-columns:repeat(2,1fr)}}
+/* Color de fila por dias de atraso (tabla de OT atrasadas): <=7 sin color (no hay clase),
+   8-15 amarillo suave, 16-30 naranja fuerte, >30 rojo intenso. */
+.al-y{background:#fdf3d9}
+.al-o{background:#fbdec0}
+.al-r{background:#f8d2ce}

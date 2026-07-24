@@ -83,50 +83,68 @@ function renderAlertas(){
   const n_ejec_atraso = alertas.filter(a=>a.estado==='En Ejecución').length;
   const estTxt = estV==='ALL' ? 'Todas' : estV;
   document.getElementById('anote').textContent = estTxt;
+  // KPIs con el mismo estilo que el resto del dashboard (.kpi, fondo blanco) — Lotes con Exceso
+  // y OT sin Correspondencia RTK NO se repiten acá: ya se muestran en Control de Hectáreas.
   document.getElementById('al-kpis').innerHTML=
-    `<div class="ak r"><b>${n_atrasadas}</b><span>OT ATRASADAS</span></div>`+
-    `<div class="ak o"><b>${n_ejec_atraso}</b><span>OT EN EJECUCIÓN CON ATRASO</span></div>`+
-    `<div class="ak t"><b>${D.exc_kpi.n}</b><span>LOTES CON EXCESO DE HECTÁREAS</span></div>`+
-    `<div class="ak y"><b>${D.exc_kpi.n_sinrtk}</b><span>OT SIN CORRESPONDENCIA RTK</span></div>`;
+    `<div class="kpi"><div class="k-lab">OT Atrasadas</div><div class="k-val c-r">${n_atrasadas}</div><div class="k-foot">${estTxt}</div></div>`+
+    `<div class="kpi"><div class="k-lab">OT en Ejecución con Atraso</div><div class="k-val c-o">${n_ejec_atraso}</div><div class="k-foot">${estTxt}</div></div>`+
+    `<div class="kpi"><div class="k-lab">OT Pendientes</div><div class="k-val">${D.ot_pend}</div><div class="k-foot">Estado = Pendiente · toda la campaña</div></div>`;
   document.getElementById('al-sub').textContent=n_atrasadas+' registros · '+estTxt+' · ordenado por días de atraso';
-  document.getElementById('al').innerHTML = alertas.length ? alertas.map(a=>{ const sev=a.dias>60?'r':(a.dias>21?'o':'y');
+  document.getElementById('al').innerHTML = alertas.length ? alertas.map(a=>{
+    // Color por días de atraso, por FILA — puramente visual, no depende del filtro de Estado
+    // (que ya viene aplicado en `alertas` más arriba): <=7 sin color, 8-15 amarillo suave,
+    // 16-30 naranja fuerte, >30 rojo intenso.
+    const sev = a.dias>30?'r':(a.dias>15?'o':(a.dias>7?'y':null));
     const ft=a.ft?(('0'+a.ft.getDate()).slice(-2)+'/'+('0'+(a.ft.getMonth()+1)).slice(-2)+'/'+a.ft.getFullYear()):'-';
-    return `<tr class="al-${sev}"><td><span class="pill pill-${sev}">${a.dias}d</span></td><td class="mono">OT ${a.ot}</td><td>${a.act}</td><td>${a.serv}</td><td class="mono">${a.lote}</td><td>${a.cult}</td><td>${a.estado}</td><td class="mono">${ft}</td></tr>`;}).join('')
+    const rowCls = sev?` class="al-${sev}"`:'';
+    const diasCell = sev?`<span class="pill pill-${sev}">${a.dias}d</span>`:`<span class="mono">${a.dias}d</span>`;
+    return `<tr${rowCls}><td>${diasCell}</td><td class="mono">OT ${a.ot}</td><td>${a.act}</td><td>${a.serv}</td><td class="mono">${a.lote}</td><td>${a.cult}</td><td>${a.estado}</td><td class="mono">${ft}</td></tr>`;}).join('')
     : '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:16px">Sin OT atrasadas para el filtro seleccionado</td></tr>';
 }
 
-// ---- Insumos (no combustible): gasto por tipo, con su unidad de medida ----
+// ---- Insumos (no combustible): Compras vs Consumo, mostrados por separado ----
 // Modulo totalmente independiente de Combustible: propio filtro de mes, propios datos
-// (D.insumos_agg), sin sumar ni mostrar nada de D.combustible*.
-// D.insumos_agg ya viene agrupado por (mes, tipo, unidad) — si un tipo mezcla unidades reales
-// (ej. HERBICIDAS en Kilos y en Litros) aparece como dos filas separadas, cada una con su propia
-// unidad, movimientos y gasto acotados a esa unidad — nunca se mezclan cantidades de unidades
-// distintas en una misma fila.
+// (D.insumos_compras / D.insumos_consumo), sin sumar ni mostrar nada de D.combustible*.
+// Compras (Ingreso de Mercaderia) y Consumo (Comprobante Automático de Egreso de Stock) son
+// tipos de movimiento distintos y NUNCA se suman entre si ni con ningun otro tipo — ver el
+// comentario en data.js para la lista completa de tipos que quedan afuera de ambas cifras.
 function renderInsumos(){
   const selV=document.getElementById('imes').value, sel=selV==='ALL'?'ALL':parseInt(selV);
   const selTxt=selV==='ALL'?'Toda la campaña':document.getElementById('imes').selectedOptions[0].text;
-  const recs = sel==='ALL' ? D.insumos_agg : D.insumos_agg.filter(r=>r.mesnum===sel);
+  const compras = sel==='ALL' ? D.insumos_compras : D.insumos_compras.filter(r=>r.mesnum===sel);
+  const consumo = sel==='ALL' ? D.insumos_consumo : D.insumos_consumo.filter(r=>r.mesnum===sel);
+
+  const comprasOrd = compras.slice().sort((a,b)=>b.gasto-a.gasto);
+  const gastoCompras = comprasOrd.reduce((s,o)=>s+o.gasto,0);
+  const nMovCompras = comprasOrd.reduce((s,o)=>s+o.n,0);
+
   const byTipoUnidad={};
-  recs.forEach(r=>{ const key=r.tipo+'|'+r.unidad; if(!byTipoUnidad[key]) byTipoUnidad[key]={tipo:r.tipo,unidad:r.unidad,n:0,gasto:0};
+  consumo.forEach(r=>{ const key=r.tipo+'|'+r.unidad; if(!byTipoUnidad[key]) byTipoUnidad[key]={tipo:r.tipo,unidad:r.unidad,n:0,gasto:0};
     const o=byTipoUnidad[key]; o.n+=r.n; o.gasto+=r.gasto; });
-  const porTipo = Object.values(byTipoUnidad).sort((a,b)=>b.gasto-a.gasto);
-  const gastoTotal = porTipo.reduce((s,o)=>s+o.gasto,0);
-  const nMovimientos = porTipo.reduce((s,o)=>s+o.n,0);
-  const nTipos = new Set(porTipo.map(o=>o.tipo)).size;
+  const consumoOrd = Object.values(byTipoUnidad).sort((a,b)=>b.gasto-a.gasto);
+  const gastoConsumo = consumoOrd.reduce((s,o)=>s+o.gasto,0);
+  const nMovConsumo = consumoOrd.reduce((s,o)=>s+o.n,0);
 
   const K=[
-    ['Gasto Total de Insumos','US$ '+fmtUSD(gastoTotal),selTxt],
-    ['Movimientos',nMovimientos,'egresos de stock reales'],
-    ['Tipos de Insumo',nTipos,'categorías con gasto'],
-    ['Unidades de Medida',new Set(porTipo.map(o=>o.unidad)).size,'ej. Litros, Kilos'],
+    ['Compras','US$ '+fmtUSD(gastoCompras),selTxt],
+    ['Consumo','US$ '+fmtUSD(gastoConsumo),selTxt],
+    ['Movimientos de Compra',nMovCompras,'Ingreso de Mercadería'],
+    ['Movimientos de Consumo',nMovConsumo,'Egreso de Stock'],
   ];
   document.getElementById('ins-kpis').innerHTML=K.map(k=>`<div class="kpi"><div class="k-lab">${k[0]}</div><div class="k-val">${k[1]}</div><div class="k-foot">${k[2]}</div></div>`).join('');
   document.getElementById('inote').textContent=selTxt;
-  document.getElementById('ins-tipo-sub').textContent=nTipos+' tipos · US$ '+fmtUSD(gastoTotal)+' acumulado';
-  document.getElementById('ins-tipo').innerHTML = porTipo.length ? porTipo.map(o=>{
-    const part = gastoTotal ? Math.round(o.gasto/gastoTotal*1000)/10 : 0;
+
+  document.getElementById('ins-compras-sub').textContent=nMovCompras+' movimientos · US$ '+fmtUSD(gastoCompras)+' acumulado';
+  document.getElementById('ins-compras').innerHTML = comprasOrd.length ? comprasOrd.map(o=>{
+    const part = gastoCompras ? Math.round(o.gasto/gastoCompras*1000)/10 : 0;
+    return `<tr><td>${o.nombre}</td><td>${o.proveedor}</td><td>${o.unidad}</td><td class="tr mono">${o.n}</td><td class="tr mono">US$ ${fmtUSD(o.gasto)}</td><td class="tr"><div class="minibar"><div class="mb-fill f-o" style="width:${Math.min(part*2.5,100)}%"></div></div></td><td class="tr">${fmt1(part)}%</td></tr>`;
+  }).join('') : '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:16px">Sin compras de insumos en el período</td></tr>';
+
+  document.getElementById('ins-consumo-sub').textContent=consumoOrd.length+' tipos · US$ '+fmtUSD(gastoConsumo)+' acumulado';
+  document.getElementById('ins-consumo').innerHTML = consumoOrd.length ? consumoOrd.map(o=>{
+    const part = gastoConsumo ? Math.round(o.gasto/gastoConsumo*1000)/10 : 0;
     return `<tr><td>${o.tipo}</td><td>${o.unidad}</td><td class="tr mono">${o.n}</td><td class="tr mono">US$ ${fmtUSD(o.gasto)}</td><td class="tr"><div class="minibar"><div class="mb-fill f-o" style="width:${Math.min(part*2.5,100)}%"></div></div></td><td class="tr">${fmt1(part)}%</td></tr>`;
-  }).join('') : '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:16px">Sin movimientos de insumos en el período</td></tr>';
+  }).join('') : '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:16px">Sin consumo de insumos en el período</td></tr>';
 }
 
 function monthTotals(){ const t={}; D.meses.forEach(m=>t[m.k]={k:m.k,lbl:m.lbl,tot:0,ot:0,horas:0});
