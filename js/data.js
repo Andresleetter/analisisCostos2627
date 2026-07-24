@@ -36,6 +36,13 @@ function buildData(raw, proyecciones, insumos){
   const RTK_TOT={}; for(const c in RTK){ RTK_TOT[c]=Object.values(RTK[c]).reduce((a,b)=>a+b,0); }
   // normalizar nombres de columnas (quita BOM y espacios)
   raw = raw.map(row=>{ const o={}; for(const k in row){ o[String(k).replace(/\uFEFF/g,'').trim()]=row[k]; } return o; });
+  // Filtro de campania: consultaOT trae TODAS las campanias (25/26, 26/27, 26, 25 mezcladas,
+  // crecio de ~1200 a ~7300 filas al incluir la campania anterior completa). Solo entra la
+  // campania vigente (CAMPANIA_ACTUAL). Sin este filtro, todos los KPIs/cultivos/hectareas/
+  // alertas quedarian inflados con datos de la campania 25/26.
+  const n_ot_total_sin_filtrar = raw.length;
+  raw = raw.filter(row => String(row['campania']||'').trim() === CAMPANIA_ACTUAL);
+  console.log('consultaOT: '+raw.length+' de '+n_ot_total_sin_filtrar+' filas son de la campaña '+CAMPANIA_ACTUAL+' (resto descartado).');
   const rows = raw.map(r=>({
     ot:String(keyOf(r,['ordenTrabajo','OT','numeroOrdenTrabajo'])||'').trim(),
     act:String(keyOf(r,['actividad','Actividad'])||'').trim(),
@@ -257,6 +264,62 @@ function buildData(raw, proyecciones, insumos){
   });
   const stock_inicial_combustible = Math.round(combustible_existencia_inicial.reduce((s,r)=>s+r.unidades,0)*100)/100;
 
+  // ---- INSUMOS (modulo nuevo: todo lo de consultaInsumos que no es combustible) ----
+  // Gasto = importeMonedaExtranjera en valor absoluto (confirmado en los datos reales: es la
+  // columna en USD — importeMonedaFiscal es el mismo importe en Guaranies, con una relacion de
+  // ~6060 entre ambas, consistente con el tipo de cambio; importeMonedaExtranjera es la que
+  // corresponde para mostrar "US$" como ya hace el resto del dashboard).
+  // Cantidad consumida: NO se fuerza todo a litros — cada insumo tiene su propia unidadMedida
+  // real (litros, kilos, unidades, etc.) y un mismo tipoInsumo puede mezclar mas de una (ej.
+  // HERBICIDAS trae filas en Kilos y en Litros a la vez). Por eso la cantidad se agrega por
+  // (mes, unidadMedida) por separado del gasto por tipo, y se muestra desglosada por unidad —
+  // nunca sumando cantidades de unidades distintas entre si.
+  // Solo movimientos de egreso real (consumo real de stock): "...Egreso de Stock", "Egreso de
+  // Materia Prima", "Egreso de Mercaderia", "Remision por Venta". Quedan afuera "Existencia
+  // inicial"/"Stock Inicial" (saldo de arranque, no gasto) y "Transferencia.../Ajuste..." (mueven
+  // o corrigen stock, no son consumo) — no hay manera solida de convertir esos tipos en un
+  // "gasto", asi que no se fuerzan a un KPI.
+  // "Gasto por Proveedor" NO se implementa: de las filas de egreso real, menos del 1% tiene
+  // proveedor (el resto es Labor Propia) — no hay dato real que sostenga ese indicador.
+  // Se filtra por la campania vigente, igual que el resto del dashboard. Las filas crudas sin
+  // filtrar (todos los tipoMovimiento, todas las campanias) quedan en insumos_pendiente_modulo
+  // por si hace falta auditar o ampliar el modulo mas adelante.
+  // Se expone agregado por (mes, tipo) — no un total ya cerrado — porque el modulo tiene su
+  // propio filtro de mes (igual que Combustible) y renderInsumos() recalcula todo en runtime.
+  function esEgresoInsumo(tipoMov){
+    const t = normEstadio(tipoMov);
+    if(t.indexOf('ingreso')>-1 || t.indexOf('existencia inicial')>-1 || t.indexOf('stock inicial')>-1 || t.indexOf('transferencia')>-1 || t.indexOf('ajuste')>-1) return false;
+    return t.indexOf('egreso')>-1 || t.indexOf('remision por venta')>-1;
+  }
+  const insumosRows = (otrosInsumos||[]).map(rowRaw=>{
+    const row={}; for(const k in rowRaw){ row[normHdr(k)]=rowRaw[k]; }
+    return {
+      fecha: pdate(row['fecha']),
+      campania: String(row['campania']||'').trim(),
+      tipoMov: String(row['tipomovimiento']||'').trim(),
+      tipo: String(row['tipoinsumo']||'').trim(),
+      nombre: String(row['nombre']||'').trim(),
+      unidad: String(row['unidadmedida']||'').trim() || '(sin unidad)',
+      cantidad: Math.abs(num(row['unidades'])),
+      gasto: Math.abs(num(row['importemonedaextranjera'])),
+    };
+  }).filter(r => r.campania===CAMPANIA_ACTUAL && esEgresoInsumo(r.tipoMov));
+  // Gasto por (mes, tipo de insumo, unidad de medida). Se agrupa TAMBIEN por unidad, no solo
+  // por tipo: un mismo tipoInsumo puede traer mas de una unidad real (ej. HERBICIDAS trae filas
+  // en Kilos y en Litros a la vez) y mezclarlas en una sola fila haria que "Unidad de Medida"
+  // no tenga un valor unico por fila. Cuando un tipo es mono-unidad (el caso comun) esto no
+  // cambia nada visualmente; cuando mezcla unidades, aparece como dos filas separadas en la
+  // tabla, cada una con su propio conteo de movimientos/gasto ya acotado a esa unidad.
+  const insumosAggMap={};
+  insumosRows.forEach(r=>{
+    const m = r.fecha ? r.fecha.getMonth()+1 : 0;
+    const key = m+'|'+r.tipo+'|'+r.unidad;
+    if(!insumosAggMap[key]) insumosAggMap[key]={mesnum:m,tipo:r.tipo,unidad:r.unidad,n:0,gasto:0};
+    const o=insumosAggMap[key]; o.n++; o.gasto+=r.gasto;
+  });
+  const insumos_agg = Object.values(insumosAggMap).map(o=>({...o,gasto:Math.round(o.gasto*100)/100}));
+  const insumos_meses = [...new Set(insumos_agg.map(o=>o.mesnum))].filter(m=>m>0).sort((a,b)=>a-b).map(m=>({k:m,lbl:MES[m]}));
+
   const gasto_total=gastos.reduce((s,d)=>s+d.propia+d.tercero+d.insumos,0);
   const gasoil_total=gasOT.reduce((s,o)=>s+o.imp,0), gasoil_litros_total=gasOT.reduce((s,o)=>s+o.lines.reduce((a,l)=>a+l.ud,0),0);
   const gmes={}, glit={};
@@ -292,6 +355,7 @@ function buildData(raw, proyecciones, insumos){
     combustible,combustible_litros_total,combustible_n_total,combustible_meses,combustible_terceros,
     combustible_ingresos,combustible_ingresos_litros_total,combustible_ingresos_n_total,
     combustible_existencia_inicial,stock_inicial_combustible,
+    insumos_agg,insumos_meses,
     insumos_pendiente_modulo:otrosInsumos||[],
     problemas:P,
     fecha_datos:HOY,
