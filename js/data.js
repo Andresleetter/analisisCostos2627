@@ -276,13 +276,8 @@ function buildData(raw, proyecciones, insumos){
   const stock_inicial_combustible = Math.round(combustible_existencia_inicial.reduce((s,r)=>s+r.unidades,0)*100)/100;
 
   // ---- INSUMOS (modulo nuevo: todo lo de consultaInsumos que no es combustible) ----
-  // Ingreso y Consumo, en CANTIDAD real (columna "Unidades"), NUNCA en dinero — a diferencia de
-  // un diseño anterior de este modulo que mostraba gasto en US$, acá se replica el mismo criterio
+  // Ingreso y Consumo, en CANTIDAD real (columna "Unidades"), NUNCA en dinero — igual criterio
   // que ya usa Combustible (que tampoco muestra dinero, solo litros).
-  // Sin Stock Inicial: a diferencia de Combustible (donde Stock Inicial alimenta el Balance =
-  // Stock Inicial + Ingreso − Consumo), acá no hay una cifra de Balance que lo use ni varia con
-  // el filtro de Mes — mostrarlo como tabla suelta, sin relacion con Ingreso/Consumo, no aportaba
-  // nada. Se descartó (ver decisión del usuario) en vez de dejarlo como dato desconectado.
   // Tipos de movimiento reales encontrados en consultaInsumos (10 valores, verificados contra el
   // .xlsx del repo — no 8 como se penso en un principio: aparecen ademas "Egreso de Materia
   // Prima" y "Transferencia de Mercadería Electronica"):
@@ -304,32 +299,87 @@ function buildData(raw, proyecciones, insumos){
     return {
       fecha: pdate(row['fecha']),
       tipoMov: String(row['tipomovimiento']||'').trim(),
+      tipo: String(row['tipoinsumo']||'').trim() || '(sin tipo)',
       nombre: String(row['nombre']||'').trim(),
       proveedor: String(row['proveedor']||'').trim(),
       unidad: String(row['unidadmedida']||'').trim() || '(sin unidad)',
       unidades: num(row['unidades']),
     };
   });
-  // ---- Ingreso y Consumo: mismas columnas (Insumo, Proveedor, Registros, Unidad, Cantidad),
-  // agrupadas por (mes, insumo, proveedor, unidad) para respetar el filtro de mes por Fecha ----
+  const insumos_tipos = [...new Set(insumosRowsAll.map(r=>r.tipo))].sort((a,b)=>a.localeCompare(b,'es'));
+  // ---- Ingreso y Consumo (detalle): Insumo, Proveedor, Registros, Unidad, Cantidad — agrupadas
+  // por (mes, insumo, proveedor, unidad) para respetar el filtro de mes por Fecha. "tipo" viaja en
+  // cada fila para poder filtrar por el selector global de Tipo de Insumo, pero NO se muestra como
+  // columna en estas tablas (esa info ahora la da el filtro, no hace falta repetirla por fila).
   // Proveedor en Consumo viene vacío en el 100% de los casos reales (confirmado: 0 de 5.594 filas
-  // de "Comprobante Automático de Egreso de Stock" no-combustible traen proveedor) — se muestra
-  // igual la columna con "(sin dato)" en vez de omitirla, para que Ingreso y Consumo compartan
-  // exactamente la misma estructura de columnas.
-  function agruparInsumoMov(tipoMov, absoluto){
+  // de "Comprobante Automático de Egreso de Stock" no-combustible traen proveedor) — no se agrupa
+  // por proveedor en Consumo (no aporta nada agrupar por un campo que siempre es igual) y no se
+  // expone ese campo en el resultado: la columna Proveedor de Consumo debe quedar SIEMPRE vacía en
+  // el render, sin texto por defecto ni dato calculado.
+  function agruparIngreso(){
     const map={};
-    insumosRowsAll.filter(r=>r.tipoMov===tipoMov).forEach(r=>{
+    insumosRowsAll.filter(r=>r.tipoMov===MOV_INGRESO).forEach(r=>{
       const m = r.fecha ? r.fecha.getMonth()+1 : 0;
       const prov = r.proveedor || '(sin dato)';
-      const key = m+'|'+r.nombre+'|'+prov+'|'+r.unidad;
-      if(!map[key]) map[key]={mesnum:m,nombre:r.nombre,proveedor:prov,unidad:r.unidad,n:0,cantidad:0};
-      const o=map[key]; o.n++; o.cantidad += absoluto ? Math.abs(r.unidades) : r.unidades;
+      const key = m+'|'+r.tipo+'|'+r.nombre+'|'+prov+'|'+r.unidad;
+      if(!map[key]) map[key]={mesnum:m,tipo:r.tipo,nombre:r.nombre,proveedor:prov,unidad:r.unidad,n:0,cantidad:0};
+      const o=map[key]; o.n++; o.cantidad += r.unidades;
     });
     return Object.values(map).map(o=>({...o,cantidad:Math.round(o.cantidad*100)/100}));
   }
-  const insumos_ingreso = agruparInsumoMov(MOV_INGRESO, false);
-  const insumos_consumo = agruparInsumoMov(MOV_CONSUMO, true);
+  function agruparConsumo(){
+    const map={};
+    insumosRowsAll.filter(r=>r.tipoMov===MOV_CONSUMO).forEach(r=>{
+      const m = r.fecha ? r.fecha.getMonth()+1 : 0;
+      const key = m+'|'+r.tipo+'|'+r.nombre+'|'+r.unidad;
+      if(!map[key]) map[key]={mesnum:m,tipo:r.tipo,nombre:r.nombre,unidad:r.unidad,n:0,cantidad:0};
+      const o=map[key]; o.n++; o.cantidad += Math.abs(r.unidades);
+    });
+    return Object.values(map).map(o=>({...o,cantidad:Math.round(o.cantidad*100)/100}));
+  }
+  const insumos_ingreso = agruparIngreso();
+  const insumos_consumo = agruparConsumo();
   const insumos_meses = [...new Set([...insumos_ingreso,...insumos_consumo].map(o=>o.mesnum))].filter(m=>m>0).sort((a,b)=>a-b).map(m=>({k:m,lbl:MES[m]}));
+
+  // ---- Stock dinamico por (Tipo de Insumo, Unidad de Medida) — misma logica que Combustible ----
+  // Combustible funciona con UN solo stock (un unico producto, Litros); Insumos mezcla muchos
+  // productos con unidades incompatibles entre si (Kilos, Litros, Unidades, Dosis...), asi que el
+  // flujo Stock Inicial -> Ingreso -> Consumo -> Balance se calcula por separado para cada
+  // combinacion (Tipo de Insumo, Unidad) — es la unidad minima donde sumar/restar tiene sentido.
+  // El filtro global de Tipo de Insumo simplemente elige que fila(s) de esa grilla mostrar.
+  // Stock Inicial sale de "Existencia inicial" + "Stock Inicial" (ambos sin valor monetario real,
+  // ya verificado), sumados CON signo (no valor absoluto) por el mismo motivo que
+  // combustible_existencia_inicial: traen signo mixto (ajustes por lote) y la suma neta es la que
+  // da el stock real de arranque.
+  const stockInicialTipoMap={};
+  insumosRowsAll.filter(r=>r.tipoMov==='Existencia inicial' || r.tipoMov==='Stock Inicial').forEach(r=>{
+    const key = r.tipo+'|'+r.unidad;
+    if(!stockInicialTipoMap[key]) stockInicialTipoMap[key]={tipo:r.tipo,unidad:r.unidad,cantidad:0};
+    stockInicialTipoMap[key].cantidad += r.unidades;
+  });
+  function agruparPorTipoUnidadMes(tipoMov, absoluto){
+    const map={};
+    insumosRowsAll.filter(r=>r.tipoMov===tipoMov).forEach(r=>{
+      const m = r.fecha ? r.fecha.getMonth()+1 : 0;
+      const key = m+'|'+r.tipo+'|'+r.unidad;
+      if(!map[key]) map[key]={mesnum:m,tipo:r.tipo,unidad:r.unidad,cantidad:0};
+      map[key].cantidad += absoluto ? Math.abs(r.unidades) : r.unidades;
+    });
+    return Object.values(map).map(o=>({...o,cantidad:Math.round(o.cantidad*100)/100}));
+  }
+  const insumos_ingreso_mensual = agruparPorTipoUnidadMes(MOV_INGRESO, false);
+  const insumos_consumo_mensual = agruparPorTipoUnidadMes(MOV_CONSUMO, true);
+  // Union de combinaciones (Tipo, Unidad) que aparecen en Stock Inicial y/o en movimientos, para
+  // que el flujo se muestre aunque falte alguno de los tres (ej. stock sin movimiento este año).
+  const claveTU = new Set([
+    ...Object.keys(stockInicialTipoMap),
+    ...insumos_ingreso_mensual.map(o=>o.tipo+'|'+o.unidad),
+    ...insumos_consumo_mensual.map(o=>o.tipo+'|'+o.unidad),
+  ]);
+  const insumos_stock_flujo = [...claveTU].map(key=>{
+    const [tipo,unidad]=key.split('|');
+    return {tipo,unidad,stockInicial:Math.round((stockInicialTipoMap[key]?stockInicialTipoMap[key].cantidad:0)*100)/100};
+  }).sort((a,b)=>a.tipo.localeCompare(b.tipo,'es')||a.unidad.localeCompare(b.unidad,'es'));
 
   const gasto_total=gastos.reduce((s,d)=>s+d.propia+d.tercero+d.insumos,0);
   const gasoil_total=gasOT.reduce((s,o)=>s+o.imp,0), gasoil_litros_total=gasOT.reduce((s,o)=>s+o.lines.reduce((a,l)=>a+l.ud,0),0);
@@ -366,7 +416,8 @@ function buildData(raw, proyecciones, insumos){
     combustible,combustible_litros_total,combustible_n_total,combustible_meses,combustible_terceros,
     combustible_ingresos,combustible_ingresos_litros_total,combustible_ingresos_n_total,
     combustible_existencia_inicial,stock_inicial_combustible,
-    insumos_ingreso,insumos_consumo,insumos_meses,
+    insumos_ingreso,insumos_consumo,insumos_meses,insumos_tipos,
+    insumos_stock_flujo,insumos_ingreso_mensual,insumos_consumo_mensual,
     insumos_pendiente_modulo:otrosInsumos||[],
     problemas:P,
     fecha_datos:HOY,

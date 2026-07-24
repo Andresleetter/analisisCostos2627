@@ -21,3 +21,15 @@ const CATCOL={'Gastos':'#1E6B5C','Hectáreas':'#5AA02C','Avance':'#F57C00','Cont
 function normEstadio(s){ return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim(); }
 function stripAccents(s){ return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
 function normHdr(s){ return stripAccents(s).toLowerCase().replace(/\uFEFF/g,'').replace(/\s+/g,' ').trim(); }
+// Arrastre de stock mes a mes, reutilizable (misma logica que ya usaba Combustible antes de
+// refactorizarse para usar esta funcion): para "Toda la Campa\u00F1a" el stock inicial del periodo es
+// el stock base de arranque; para un mes puntual es ese stock base mas todo lo ingresado/consumido
+// en los meses ANTERIORES (mesnum < mes), asi el balance de cada mes sigue naturalmente al del mes
+// previo en vez de recalcularse desde cero. `movsIngreso`/`movsConsumo` son arrays con {mesnum,
+// cantidad} ya filtrados a la clave que corresponda (ej. un tercero, o un tipo+unidad de insumo).
+function stockInicioDePeriodo(mes, stockBase, movsIngreso, movsConsumo){
+  if(mes==='ALL') return stockBase;
+  return stockBase
+    + movsIngreso.filter(r=>r.mesnum<mes).reduce((s,r)=>s+r.cantidad,0)
+    - movsConsumo.filter(r=>r.mesnum<mes).reduce((s,r)=>s+r.cantidad,0);
+}

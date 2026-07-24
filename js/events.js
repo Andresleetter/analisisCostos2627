@@ -10,5 +10,6 @@ document.addEventListener('DOMContentLoaded', function(){
   document.getElementById('cmes').addEventListener('change', renderCombustible);
   document.getElementById('cterc').addEventListener('change', renderCombustible);
   document.getElementById('imes').addEventListener('change', renderInsumos);
+  document.getElementById('itipo').addEventListener('change', renderInsumos);
   document.getElementById('aestado').addEventListener('change', renderAlertas);
 });
