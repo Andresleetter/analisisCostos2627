@@ -76,6 +76,35 @@ function renderAll(){
   renderCombustible();
   renderG();
   renderInsumos();
+  renderAuditoria();
+}
+
+// ---- Auditoría: Presupuesto de Infraestructura vs ejecución real ----
+// D.auditoria_* ya viene cruzado (INFRA_MAP y constantes de puentes en config.js) entre
+// Especificación del presupuesto y Servicio real de OT — acá solo se renderiza, sin recalcular
+// nada. Items sin ninguna OT que matchee (tieneOT=false) se muestran igual, con 0 en todo, para
+// dejar en evidencia cuáles del presupuesto todavía no tienen ejecución cargada (o cargada con
+// otro nombre).
+function renderAuditoria(){
+  // Puentes por Unidad: Tercero (CONSTRUCCION PUENTE AGROVIAL) y Propia (CONSTRUCCION PUENTES
+  // LABOR PROPIA) — Ejecutadas = OT Confirmadas con ese Servicio exacto, no "En Ejecución".
+  document.getElementById('audit-puentes').innerHTML = D.auditoria_puentes.map(p=>
+    `<tr><td>${p.tipo}</td><td class="tr mono">${fmt2(p.presupuestado)}</td><td class="tr mono">${p.ejecutadas}</td><td class="tr mono">${p.avance!=null?fmt1(p.avance)+'%':'N/D'}</td></tr>`
+  ).join('');
+
+  // Gastos por Horas/Litros: "Construcción de puentes x horas" y "Desalijos" (ver nota en data.js
+  // sobre por qué Desalijos incluye dos grupos de texto distintos, por indicación del usuario).
+  document.getElementById('audit-gastos-sub').textContent = 'Costo = Costo Labor + Costo Insumo de esas OT (cuando está disponible)';
+  document.getElementById('audit-gastos').innerHTML = D.auditoria_gastos.map(g=>
+    `<tr><td>${g.trabajo}</td><td class="tr mono">${g.horas?fmt2(g.horas):'-'}</td><td class="tr mono">${g.litros?fmt2(g.litros):'-'}</td><td class="tr mono">US$ ${fmtUSD(g.costo)}</td><td class="tr mono">${g.nOT} (${g.nConfirmadas} conf.)</td></tr>`
+  ).join('');
+
+  document.getElementById('audit-items').innerHTML = D.auditoria_items.map(i=>
+    `<tr${i.tieneOT?'':' style="color:var(--muted)"'}><td>${i.especificacion}</td><td>${i.unidadMedida||'-'}</td><td class="tr mono">${i.cantidadPresupuestada?fmt2(i.cantidadPresupuestada):'-'}</td><td class="tr mono">${fmt2(i.horas)}</td><td class="tr mono">${i.otPropia}</td><td class="tr mono">${i.otTercero}</td></tr>`
+  ).join('');
+  document.getElementById('audit-metros').innerHTML = D.auditoria_metros.length ? D.auditoria_metros.map(i=>
+    `<tr><td>${i.especificacion}</td><td class="tr mono">${fmt2(i.metrosPresupuestados)}</td><td class="tr mono">${i.otConfirmadas} OT confirmadas <span style="color:var(--muted);font-size:10.5px">(aprox., no metros reales)</span></td><td class="tr" style="color:var(--muted)">N/D — sin metraje real en OT</td></tr>`
+  ).join('') : '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:16px">Sin ítems presupuestados en Metros</td></tr>';
 }
 
 // ---- Alertas Operacionales: filtro por Estado (Pendiente / En Ejecución / Todas) ----

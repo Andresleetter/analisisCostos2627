@@ -31,4 +31,76 @@ const MOV_EXISTENCIA_INICIAL = 'Existencia inicial';
 // (proyeccionRTK) unicamente — ver data.js. consultaInsumos (combustible + modulo Insumos) NO
 // se filtra por campania: se procesa completo, tal como antes de introducir este filtro.
 const CAMPANIA_ACTUAL = '26/27';
+
+// ---- AUDITORIA: Presupuesto de Infraestructura vs ejecucion real ----
+// Archivo aparte (subido al mismo repo), 1 sola hoja. Estructura fija verificada contra el .xlsx
+// real: fila 1 = titulo, fila 2 = vacia, fila 3 = encabezados, filas 4-13 = los 10 items de
+// presupuesto, fila 14 = fila de TOTAL. Filas 47-51 son calculos sueltos sin relacion a la tabla
+// de items (sin Especificacion ni Cta. Contable) — se excluyen del parseo.
+const INFRA_SRC_XLSX = "https://raw.githubusercontent.com/"+REPO+"/"+BRANCH+"/PRESUPUESTO%20ALISON%20INFRAESTRUTURA%2026-27.xlsx";
+const INFRA_HOJA = "INFRAESTRUTURA 26-27";
+// Indices de columna (0-based) dentro de cada fila de item, leida con header:1 (array crudo).
+// OJO: la cantidad presupuestada real NO esta en la columna "Cant. De trabajo" (viene vacia en
+// las 10 filas) sino en "PRESUPUESTO Aprob" (col 4) — confirmado contra el archivo real.
+const INFRA_COL = {especificacion:2, cantidadPresupuestada:4, unidadMedida:5, costo:6, importeTotal:7};
+// Cruce Especificacion (presupuesto) -> Servicio(s) reales de OT. Primer relevamiento (solo
+// Estadio="Infraestructura") encontraba 23 OT; una busqueda mas amplia por palabra clave en
+// Servicio (valo, muro, puente, camino, taipon...) SIN restringir por Estadio encontró muchas más
+// OT reales bajo otros Estadios (Preparacion de Suelo, Operativo, Mantenimientos de
+// infraestructura, Cuidados, Secadero) — se usan TODAS, tal como vienen cargadas, sin reinterpretar
+// ni "limpiar" el dato de origen.
+// No existe match de texto exacto para la mayoria de los items — este mapeo es MANUAL, revisado
+// con el usuario. Los "camino" se separaron en dos grupos por el verbo del Servicio: "Corte"/
+// "Construccion"/"Disqueada" (apertura de camino nuevo) vs "Reparacion"/"Arreglo"/"Cerrar"
+// (mantenimiento de camino existente) — es una interpretacion, no un campo explícito de origen.
+// "valo" y "muro" no distinguen tipo de intervención en el presupuesto (una sola línea cada uno),
+// así que TODOS los servicios de esa palabra clave entran en esa única línea presupuestada.
+// Especificacion sin Servicio(s) listados = sin ninguna OT que matchee todavia.
+// Puentes (Labor Tercero / Labor Propia) NO usan este mapeo generico: tienen su propia sección
+// ("Puentes por Unidad") mas abajo, con los Servicio exactos confirmados contra el dato real:
+//   - "CONSTRUCCION PUENTE AGROVIAL" (no "CONTRUCCION...", ojo con la ortografia) = Labor Tercero.
+//   - "CONSTRUCCION PUENTES LABOR PROPIA" (plural "PUENTES") = Labor Propia.
+// Y el trabajo de puentes medido en Horas ("Construccion de Puentes retro excavadora x Hs") tiene
+// su propia fila en la sección "Gastos" (por Horas), separado de estos dos por unidad.
+const INFRA_PUENTES_TERCERO_ESP = 'Contrucion puentes Labor Tercero';
+const INFRA_PUENTES_PROPIA_ESP = 'Contrucion puentes Labor Propia';
+const INFRA_PUENTES_TERCERO_SERV = 'CONSTRUCCION PUENTE AGROVIAL';
+const INFRA_PUENTES_PROPIA_SERV = 'CONSTRUCCION PUENTES LABOR PROPIA';
+const INFRA_PUENTES_HORAS_SERV = 'Construccion de Puentes retro excavadora x Hs';
+const INFRA_MAP = {
+  'Contrucion camino nuevo': [
+    'Construccion de Camino retro excavadora x Hs',
+    'Dreno Patrolita x Hs',
+    'Corte de camino retro excavadora x Hs',
+    'Corte de camino retropala x Hs',
+    'Disqueada de camino  tractor+disco x Hs',
+  ],
+  'Desmonte para camino nuevo': [],
+  'Compuertas': [],
+  'Tubos': [],
+  'Limpieza valo': [
+    'Limpieza de valo retro excavadora x Hs',
+    'Limpieza de valo retropala x Hs',
+    'Valo Drenaje retro excavadora x Hs',
+    'Profundizacion de Valo retro excavadora x Hs',
+  ],
+  'Reparacion de camino': [
+    'Reparacion de Camino retro excavadora x Hs',
+    'Arreglo de caminos retropala x Hs',
+    'Arreglo de camino tractor x Hs',
+    'Cerrar camino retro excavadora x Hs',
+    'Cerrar camino retropala x Hs',
+  ],
+  'Reparacion muro protecion': [
+    'Reparacion de Muro retro excavadora x Hs',
+    'Corte de Muro retro excavadora x Hs',
+    'Cierre de Muro retro pala x Hs',
+    'CIERRE DE MURO RETRO EXCAVADORA POR HORA',
+  ],
+  'Contrucion taipon chico': [
+    'Corte de taipon retro excavadora x Hs',
+    'Corte de taipon retropala x Hs',
+    'Remonte de taipa x Hs',
+  ],
+};
 let D=null;

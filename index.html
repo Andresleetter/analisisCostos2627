@@ -44,6 +44,7 @@
     <button class="tab">Insumos</button>
     <button class="tab">Control de Hectáreas <span class="badge" id="b-exc">0</span></button>
     <button class="tab">Alertas Operacionales <span class="badge" id="b-al">0</span></button>
+    <button class="tab">Auditoría</button>
   </nav>
 
   <div id="err-slot"></div>
@@ -143,6 +144,18 @@
     <div class="kpis" id="al-kpis"></div>
     <div class="panel"><h3>OT Atrasadas <span id="al-sub"></span></h3>
       <div class="scroll"><table><thead><tr><th>Atraso</th><th>OT</th><th>Actividad</th><th>Servicio</th><th>Lote</th><th>Cultivo</th><th>Estado</th><th>F. Teórica</th></tr></thead><tbody id="al"></tbody></table></div></div>
+  </section>
+
+  <!-- TAB AUDITORIA: Presupuesto de Infraestructura vs Ejecucion -->
+  <section class="page">
+    <div class="panel sub"><h3>Puentes por Unidad <span>PRESUPUESTO Aprob = unidades de puentes a construir · Ejecutadas = OT Confirmadas con ese Servicio exacto</span></h3>
+      <table><thead><tr><th>Tipo</th><th class="tr">Unidades Presupuestadas</th><th class="tr">Unidades Ejecutadas</th><th class="tr">% Avance</th></tr></thead><tbody id="audit-puentes"></tbody></table></div>
+    <div class="panel sub"><h3>Gastos (trabajos medidos en Horas o Litros) <span id="audit-gastos-sub"></span></h3>
+      <table><thead><tr><th>Trabajo</th><th class="tr">Horas Ejecutadas</th><th class="tr">Litros</th><th class="tr">Costo (Labor+Insumo)</th><th class="tr">OT (Confirmadas)</th></tr></thead><tbody id="audit-gastos"></tbody></table></div>
+    <div class="panel"><h3>Auditoría de Infraestructura <span>PRESUPUESTO_ALISON_INFRAESTRUTURA_26-27 · cruce Especificación (presupuesto) ↔ Servicio de OT — resto de los ítems (no puentes)</span></h3>
+      <div class="scroll"><table><thead><tr><th>Especificación</th><th>Unidad Medida</th><th class="tr">Presupuestado</th><th class="tr">Horas Ejecutadas</th><th class="tr">OT Labor Propia</th><th class="tr">OT Labor Tercero</th></tr></thead><tbody id="audit-items"></tbody></table></div></div>
+    <div class="panel sub"><h3>Metros Presupuestados vs. Avance Ejecutado <span>Sin dato de metraje real en las OT — se aproxima con cantidad de OT confirmadas, rotulado como tal</span></h3>
+      <table><thead><tr><th>Ítem</th><th class="tr">Metros Presupuestados</th><th class="tr">Avance Ejecutado</th><th class="tr">% Avance</th></tr></thead><tbody id="audit-metros"></tbody></table></div>
   </section>
 
   <footer class="foot" id="foot"></footer>
