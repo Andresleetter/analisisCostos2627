@@ -57,15 +57,38 @@ function separarInsumos(rows){
   return {combustible:combustible, existenciaInicial:existenciaInicial, otros:otros};
 }
 
+// Presupuesto de Infraestructura: estructura fija (ver INFRA_COL en config.js), filas 4-13 (indices
+// 3-12 en base 0) son los 10 items reales; fila 14 es el TOTAL y filas 47-51 son calculos sueltos
+// sin relacion a la tabla — ambas se excluyen tomando solo ese rango fijo, en vez de parsear todo
+// el archivo y filtrar despues.
+function leerPresupuestoInfra(wb){
+  var sheet = wb.Sheets[INFRA_HOJA];
+  if(!sheet) throw new Error('El presupuesto de infraestructura no contiene la hoja «'+INFRA_HOJA+'». Hojas disponibles: '+wb.SheetNames.join(', '));
+  var filas = XLSX.utils.sheet_to_json(sheet, {header:1, raw:true, defval:''});
+  return filas.slice(3,13).map(function(fila){
+    return {
+      especificacion: String(fila[INFRA_COL.especificacion]||'').trim(),
+      cantidadPresupuestada: num(fila[INFRA_COL.cantidadPresupuestada]),
+      unidadMedida: String(fila[INFRA_COL.unidadMedida]||'').trim(),
+      costo: num(fila[INFRA_COL.costo]),
+      importeTotal: num(fila[INFRA_COL.importeTotal]),
+    };
+  }).filter(function(item){ return item.especificacion; });
+}
+
 function loadData(){
   var ov=document.getElementById('overlay'); ov.classList.remove('err'); ov.style.display='flex';
   document.getElementById('ov-retry').style.display='none';
   document.getElementById('ov-title').textContent='Cargando datos de campaña…';
-  document.getElementById('ov-msg').textContent='Descargando datosCampania2627.xlsx desde GitHub…';
+  document.getElementById('ov-msg').textContent='Descargando datosCampania2627.xlsx y el presupuesto de infraestructura desde GitHub…';
   document.getElementById('app').style.display='none';
 
-  cargarXLSX('datosCampania2627.xlsx', SRC_XLSX)
-    .then(function(wb){
+  Promise.all([
+    cargarXLSX('datosCampania2627.xlsx', SRC_XLSX),
+    cargarXLSX('PRESUPUESTO ALISON INFRAESTRUTURA 26-27.xlsx', INFRA_SRC_XLSX)
+  ])
+    .then(function(wbs){
+      var wb = wbs[0], wbInfra = wbs[1];
       var consultaOT = hojaARows(wb, HOJA_OT);
       var consultaCultivos = hojaARows(wb, HOJA_CULTIVOS);
       var consultaInsumos = hojaARows(wb, HOJA_INSUMOS);
@@ -75,7 +98,9 @@ function loadData(){
       var insumos = separarInsumos(consultaInsumos);
       console.log('consultaInsumos separado: combustible='+insumos.combustible.length+
         ', existencia inicial='+insumos.existenciaInicial.length+', otros insumos='+insumos.otros.length);
-      try{ D = buildData(consultaOT, consultaCultivos, insumos); }
+      var presupuestoInfra = leerPresupuestoInfra(wbInfra);
+      console.log('Presupuesto de Infraestructura — items:', presupuestoInfra.length);
+      try{ D = buildData(consultaOT, consultaCultivos, insumos, presupuestoInfra); }
       catch(e){ console.error('Error al construir indicadores:', e); throw new Error('Error procesando los datos: '+e.message); }
       var conPlan=D.cultivos.filter(function(c){return c.tiene_rtk;}).length;
       console.log('Cultivos con plan (RTK) cruzados desde consultaCultivos:', conPlan);

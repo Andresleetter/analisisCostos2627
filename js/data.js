@@ -1,5 +1,5 @@
 // ================== BUILD DATA ==================
-function buildData(raw, proyecciones, insumos){
+function buildData(raw, proyecciones, insumos, presupuestoInfra){
   const { combustible: combustibleRaw, existenciaInicial, otros: otrosInsumos } = insumos || {};
   // ---- PLAN RTK desde consultaCultivos ----
   // Soporta dos formatos:
@@ -70,6 +70,7 @@ function buildData(raw, proyecciones, insumos){
     personal:String(keyOf(r,['personal','Personal'])||'').trim(),
     insumo:String(keyOf(r,['insumo','Insumo'])||'').trim(),
     unidad:String(keyOf(r,['unidadMedida','Unidad de medida'])||'').trim(),
+    obs:String(keyOf(r,['observaciones','Observación','Observacion'])||'').trim(),
   })).filter(r=>r.ot && r.ot!=='undefined' && r.ot!=='nan');
   rows.forEach(r=>{ r.imp=r.ud*r.pu; r.esHoras=r.unidad.toLowerCase()==='horas'; });
   if(!rows.length){
@@ -189,6 +190,83 @@ function buildData(raw, proyecciones, insumos){
   const atr=nc.filter(o=>o.ft && o.ft<HOY).map(o=>({ot:o.ot,cult:o.act,act:o.estadio||'-',serv:o.serv||'-',lote:o.lote,estado:o.estado,
       ft:o.ft, dias:Math.round((HOY-o.ft)/86400000)})).sort((a,b)=>b.dias-a.dias);
   const n_ot_atrasadas=atr.length, n_ejec_atraso=atr.filter(a=>a.estado==='En Ejecución').length;
+
+  // ---- AUDITORIA: Presupuesto de Infraestructura vs ejecución real ----
+  // Cruce definido en INFRA_MAP (config.js) entre "Especificacion" del presupuesto y "Servicio"
+  // real de las OT. Primer relevamiento (solo Estadio="Infraestructura") encontraba 23 OT; una
+  // búsqueda más amplia por palabra clave en Servicio (sin restringir por Estadio) encontró muchas
+  // más OT reales bajo otros Estadios (Preparacion de Suelo, Operativo, Mantenimientos de
+  // infraestructura, Cuidados, Secadero) — por eso acá NO se filtra por Estadio, solo por
+  // Servicio. No hay match de texto confiable para la mayoría de los items, así que el mapeo es
+  // MANUAL, no automático. Se usan todos los datos de OT tal como vienen cargados, sin
+  // reinterpretar el campo Servicio (ej. una OT de Puentes Tercero cuya Observación menciona un
+  // tubo se deja igual, no se "corrige" acá).
+  const infraServiciosMapeados = new Set(Object.values(INFRA_MAP).flat());
+  const infraRows = rows.filter(r=>infraServiciosMapeados.has(r.serv));
+  // Puentes (Tercero/Propia) NO van en esta tabla generica: tienen su propia sección de KPIs por
+  // unidad mas abajo (auditoria_puentes), con sus Servicio exactos confirmados.
+  const auditoria_items = (presupuestoInfra||[])
+    .filter(item=>item.especificacion!==INFRA_PUENTES_TERCERO_ESP && item.especificacion!==INFRA_PUENTES_PROPIA_ESP)
+    .map(item=>{
+      const servicios = INFRA_MAP[item.especificacion] || [];
+      const sub = infraRows.filter(r=>servicios.includes(r.serv));
+      const horas = Math.round(sub.filter(r=>r.esHoras).reduce((s,r)=>s+r.ud,0)*100)/100;
+      const otPropia = new Set(sub.filter(r=>r.tipo==='Labor Propia').map(r=>r.ot)).size;
+      const otTercero = new Set(sub.filter(r=>r.tipo==='Labor Tercero').map(r=>r.ot)).size;
+      const otConfirmadas = new Set(sub.filter(r=>r.estado==='Confirmado').map(r=>r.ot)).size;
+      return {especificacion:item.especificacion, unidadMedida:item.unidadMedida,
+        cantidadPresupuestada:item.cantidadPresupuestada, horas, otPropia, otTercero, otConfirmadas,
+        tieneOT: sub.length>0};
+    });
+  // Items presupuestados en Metros: no existe en las OT ningún campo de metraje/longitud real
+  // (confirmado — solo Unidades/Litros/Horas), así que NO se calcula un % de avance en metros: se
+  // muestra únicamente la cantidad de OT confirmadas como aproximación, rotulada como tal en el
+  // render (nunca como metros reales ni como % inventado).
+  const auditoria_metros = auditoria_items.filter(i=>i.unidadMedida==='Metros').map(i=>
+    ({especificacion:i.especificacion, metrosPresupuestados:i.cantidadPresupuestada, otConfirmadas:i.otConfirmadas}));
+
+  // ---- Sección 1: Puentes por Unidad ----
+  // "PRESUPUESTO Aprob" para estos dos items del presupuesto es UNIDADES de puentes (no metros ni
+  // importe): 28 Tercero, 14 Propia. Ejecutado = OT CONFIRMADAS con el Servicio exacto (confirmado
+  // contra el dato real, ver constantes en config.js) — no se usan las OT "En Ejecución"/
+  // "Pendiente" como ejecutadas, mismo criterio de "Confirmado" que el resto del dashboard.
+  function puentesPorUnidad(especificacion, servicio, tipoLabel){
+    const presu = (presupuestoInfra||[]).find(i=>i.especificacion===especificacion);
+    const presupuestado = presu ? presu.cantidadPresupuestada : 0;
+    const ejecutadas = new Set(rows.filter(r=>r.serv===servicio && r.estado==='Confirmado').map(r=>r.ot)).size;
+    const avance = presupuestado>0 ? Math.round(ejecutadas/presupuestado*1000)/10 : null;
+    return {tipo:tipoLabel, presupuestado, ejecutadas, avance};
+  }
+  const auditoria_puentes = [
+    puentesPorUnidad(INFRA_PUENTES_TERCERO_ESP, INFRA_PUENTES_TERCERO_SERV, 'Tercero'),
+    puentesPorUnidad(INFRA_PUENTES_PROPIA_ESP, INFRA_PUENTES_PROPIA_SERV, 'Propia'),
+  ];
+
+  // ---- Sección 2: Gastos (trabajos medidos en Horas o Litros, no en Unidades) ----
+  // "Construcción de puentes x horas": Servicio distinto de los dos de arriba (esos son por
+  // Unidad) — confirmado que existe medido en Horas: "Construccion de Puentes retro excavadora x
+  // Hs" (Labor Tercero).
+  // "Desalijos": no está en el presupuesto ni fue pedido antes — se buscó "desalijo"/"desalij" en
+  // Servicio y Observación (para descartar que en realidad fuera "desmonte": ese texto literal
+  // solo aparece 2 veces, ya contabilizadas en "Contrucion camino nuevo", así que NO se mezcla
+  // acá). Se encontraron DOS grupos con "desalijo": uno de descarga de silo bolsa de arroz
+  // (Servicio="Desalijo Silo Bolsa x Hs") y otro de desmalezado/despeje de palmera "karanda'y"
+  // (solo en Observación, Servicio vacío en la mayoría). Por indicación del usuario se usan TODAS
+  // las filas que mencionen "desalijo" en Servicio u Observación, sin distinguir el contexto.
+  const puentesHorasOT = rows.filter(r=>r.serv===INFRA_PUENTES_HORAS_SERV);
+  const desalijoOT = rows.filter(r=>normEstadio(r.serv).includes('desalij') || normEstadio(r.obs).includes('desalij'));
+  function gastoDeOTs(sub){
+    const horas = Math.round(sub.filter(r=>r.esHoras).reduce((s,r)=>s+r.ud,0)*100)/100;
+    const litros = Math.round(sub.filter(r=>r.unidad.toLowerCase()==='litros').reduce((s,r)=>s+r.ud,0)*100)/100;
+    const costo = Math.round(sub.reduce((s,r)=>s+r.cl+r.ci,0)*100)/100;
+    const nOT = new Set(sub.map(r=>r.ot)).size;
+    const nConfirmadas = new Set(sub.filter(r=>r.estado==='Confirmado').map(r=>r.ot)).size;
+    return {horas, litros, costo, nOT, nConfirmadas};
+  }
+  const auditoria_gastos = [
+    {trabajo:'Construcción de puentes x horas', ...gastoDeOTs(puentesHorasOT)},
+    {trabajo:"Desalijos (incluye 'Desalijo Silo Bolsa' y despeje de karanda'y/carandai)", ...gastoDeOTs(desalijoOT)},
+  ];
 
   // ---- GASTOS: detalle labores reales + gasoil por área ----
   const servOT=new Set(CONF.filter(o=>o.tieneServ).map(o=>o.ot));
@@ -421,6 +499,7 @@ function buildData(raw, proyecciones, insumos){
 
   return {total_ot,ot_conf,ot_ejec,ot_pend,costo_total,cultivos,operativas,oper_costo,oper_part,
     exceso,sinrtk,exc_kpi,alertas:atr,n_ot_atrasadas,n_ejec_atraso,
+    auditoria_items,auditoria_metros,auditoria_puentes,auditoria_gastos,
     gastos,gasoil_sec,meses,gasto_total,gasoil_total,gasoil_litros_total,gmes,glit,
     labores,estadios_labor,
     combustible,combustible_litros_total,combustible_n_total,combustible_meses,combustible_terceros,
