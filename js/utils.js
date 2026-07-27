@@ -33,3 +33,38 @@ function stockInicioDePeriodo(mes, stockBase, movsIngreso, movsConsumo){
     + movsIngreso.filter(r=>r.mesnum<mes).reduce((s,r)=>s+r.cantidad,0)
     - movsConsumo.filter(r=>r.mesnum<mes).reduce((s,r)=>s+r.cantidad,0);
 }
+// ---- Insumos: unidad de medida dinámica de los KPIs (Stock Inicial/Ingreso/Consumo/Balance) ----
+// La unidad de cada KPI se deriva de las filas de insumos_stock_flujo que quedan tras aplicar los
+// filtros activos (Tipo de Insumo + Insumo, y el período vía como se arma flujoRows en render.js).
+// No hay lista fija de unidades: sale 100% de la columna "Unidad de medida" de consultaInsumos, tal
+// como ya la trae cada fila. Se compara normalizada (normHdr: sin acentos/mayúsculas, espacios
+// colapsados) para no separar la misma unidad por una diferencia de tipeo, pero se conserva y
+// muestra siempre el texto original. Si hay más de una unidad real entre las filas, NO se suman
+// como si fueran homogéneas (litros + kilos no es una cantidad válida) — se devuelve el marcador
+// 'MULTI' para que el llamador (fmtKpiUnidad) nunca la muestre junto al valor.
+// OJO: el llamador (renderInsumos, en render.js) solo debe invocar esta función cuando el usuario
+// eligió un Insumo puntual en #iinsumo — con "Todos los Insumos" (o un Tipo sin Insumo elegido) la
+// unidad NO debe mostrarse aunque el conjunto resulte homogéneo; esa condición se decide por el
+// filtro elegido, no por si el resultado tiene una sola unidad.
+function unidadUnicaDe(filasConUnidad){
+  const porNorm = new Map();
+  (filasConUnidad||[]).forEach(f=>{
+    const u = String(f.unidad||'').trim();
+    if(!u || u==='(sin unidad)') return;
+    const k = normHdr(u);
+    if(!porNorm.has(k)) porNorm.set(k, u);
+  });
+  if(porNorm.size===0) return null;
+  if(porNorm.size===1) return [...porNorm.values()][0];
+  return 'MULTI';
+}
+// Formatea un KPI de Insumos combinando valor + unidad resuelta por unidadUnicaDe(): con una sola
+// unidad válida la agrega en <small>, mismo patrón ya usado en los KPI de Combustible
+// (fmt2(valor)+'<small> L</small>'). Sin unidad resuelta (null: no corresponde mostrarla porque
+// #iinsumo está en "Todos", o no hay unidad válida) o con 'MULTI' (el Insumo puntual elegido igual
+// tiene varias unidades) se deja el valor tal cual, SIN sufijo y sin ningún texto explicativo — no
+// se avisa "Múltiples unidades", simplemente no se muestra unidad.
+function fmtKpiUnidad(valor, unidadResuelta){
+  const u = (unidadResuelta && unidadResuelta!=='MULTI') ? unidadResuelta : null;
+  return fmt2(valor) + (u ? '<small> '+u+'</small>' : '');
+}

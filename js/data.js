@@ -243,28 +243,32 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
   ];
 
   // ---- Sección 2: Gastos (trabajos medidos en Horas o Litros, no en Unidades) ----
-  // "Construcción de puentes x horas": Servicio distinto de los dos de arriba (esos son por
-  // Unidad) — confirmado que existe medido en Horas: "Construccion de Puentes retro excavadora x
-  // Hs" (Labor Tercero).
-  // "Desalijos": no está en el presupuesto ni fue pedido antes — se buscó "desalijo"/"desalij" en
-  // Servicio y Observación (para descartar que en realidad fuera "desmonte": ese texto literal
-  // solo aparece 2 veces, ya contabilizadas en "Contrucion camino nuevo", así que NO se mezcla
-  // acá). Se encontraron DOS grupos con "desalijo": uno de descarga de silo bolsa de arroz
-  // (Servicio="Desalijo Silo Bolsa x Hs") y otro de desmalezado/despeje de palmera "karanda'y"
-  // (solo en Observación, Servicio vacío en la mayoría). Por indicación del usuario se usan TODAS
-  // las filas que mencionen "desalijo" en Servicio u Observación, sin distinguir el contexto —
-  // EXCEPTO las que ya tienen un Servicio contado en otra sección de Auditoría (ej. OT 3884,
-  // Servicio="Cerrar camino retro excavadora x Hs", cuya Observación menciona "Desalijo de
-  // carandai" de pasada: esa OT ya suma sus horas en "Reparacion de camino"; incluirla también acá
-  // la contaba dos veces).
+  // El nombre de "trabajo" en esta tabla es siempre el valor real del campo Servicio de la OT
+  // (nunca una descripción inventada) — a pedido del usuario, para que coincida 1 a 1 con lo que
+  // se ve en consultaOT. Cuando el Servicio viene vacío en la OT (pasa seguido en las filas de
+  // Desalijo), esas filas se agrupan aparte como "(Sin Servicio)" en vez de inventarles un nombre.
+  // "Construcción de puentes x horas": Servicio distinto de los dos de Puentes por Unidad (esos
+  // son por Unidad) — existe medido en Horas: "Construccion de Puentes retro excavadora x Hs"
+  // (Labor Tercero).
   const auditoriaServiciosUsados = new Set([
     ...infraServiciosMapeados,
     INFRA_PUENTES_TERCERO_SERV, INFRA_PUENTES_PROPIA_SERV, INFRA_PUENTES_HORAS_SERV,
   ]);
   const puentesHorasOT = rows.filter(r=>r.serv===INFRA_PUENTES_HORAS_SERV);
+  // "Desalijos": no está en el presupuesto ni fue pedido antes — se buscó "desalijo"/"desalij" en
+  // Servicio y Observación (para descartar que en realidad fuera "desmonte": ese texto literal
+  // solo aparece 2 veces, ya contabilizadas en "Contrucion camino nuevo", así que NO se mezcla
+  // acá). Se separan en 2 grupos según lo que describe la Observación (a pedido del usuario, en
+  // vez de una sola fila combinada como antes): descarga de silo bolsa de arroz ("Desalijo Silo
+  // Bolsa...") vs desmalezado/despeje de palmera "karanda'y"/"carandai" — EXCEPTO las filas que ya
+  // tienen un Servicio contado en otra sección de Auditoría (ej. OT 3884, Servicio="Cerrar camino
+  // retro excavadora x Hs", cuya Observación menciona "Desalijo de carandai" de pasada: esa OT ya
+  // suma sus horas en "Reparacion de camino"; incluirla también acá la contaba dos veces).
   const desalijoOT = rows.filter(r=>
     (normEstadio(r.serv).includes('desalij') || normEstadio(r.obs).includes('desalij'))
     && !auditoriaServiciosUsados.has(r.serv));
+  const desalijoSiloBolsaOT = desalijoOT.filter(r=>normEstadio(r.obs).includes('silo'));
+  const desalijoKarandayOT = desalijoOT.filter(r=>!normEstadio(r.obs).includes('silo'));
   function gastoDeOTs(sub){
     const horas = Math.round(sub.filter(r=>r.esHoras).reduce((s,r)=>s+r.ud,0)*100)/100;
     const litros = Math.round(sub.filter(r=>r.unidad.toLowerCase()==='litros').reduce((s,r)=>s+r.ud,0)*100)/100;
@@ -273,9 +277,19 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
     const nConfirmadas = new Set(sub.filter(r=>r.estado==='Confirmado').map(r=>r.ot)).size;
     return {horas, litros, costo, nOT, nConfirmadas};
   }
+  // Dentro de cada grupo de Desalijo, una fila por cada Servicio real distinto que aparece en la
+  // OT; las filas sin Servicio se juntan en una única fila "(Sin Servicio)" al final del grupo.
+  function filasPorServicioReal(sub, grupo){
+    const porServicio = {};
+    sub.forEach(r=>{ const key=r.serv||'(Sin Servicio)'; (porServicio[key]=porServicio[key]||[]).push(r); });
+    return Object.keys(porServicio)
+      .sort((a,b)=> (a==='(Sin Servicio)')-(b==='(Sin Servicio)') || a.localeCompare(b))
+      .map(trabajo=>({grupo, trabajo, ...gastoDeOTs(porServicio[trabajo])}));
+  }
   const auditoria_gastos = [
-    {trabajo:'Construcción de puentes x horas', ...gastoDeOTs(puentesHorasOT)},
-    {trabajo:"Desalijos (incluye 'Desalijo Silo Bolsa' y despeje de karanda'y/carandai)", ...gastoDeOTs(desalijoOT)},
+    {trabajo:INFRA_PUENTES_HORAS_SERV, ...gastoDeOTs(puentesHorasOT)},
+    ...filasPorServicioReal(desalijoSiloBolsaOT, 'Desalijo Silo Bolsa'),
+    ...filasPorServicioReal(desalijoKarandayOT, "Desalijo Karanda'y / Carandai"),
   ];
 
   // ---- GASTOS: detalle labores reales + gasoil por área ----
@@ -396,11 +410,31 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
   });
   const insumos_tipos = [...new Set(insumosRowsAll.map(r=>r.tipo))].sort((a,b)=>a.localeCompare(b,'es'));
   // Insumos (Nombre) agrupados por Tipo, para el filtro dependiente "Insumo" — solo incluye
-  // combinaciones que realmente aparecen en los datos (nunca vacias/sin registros asociados).
+  // insumos ACTIVOS: al menos un movimiento válido de Ingreso o Consumo (mismos MOV_INGRESO/
+  // MOV_CONSUMO de arriba — no se reinterpreta la clasificación ya usada por agruparIngreso()/
+  // agruparConsumo()). Tener únicamente "Existencia inicial"/"Stock Inicial" NO alcanza para
+  // aparecer acá (a pedido del usuario): ese stock sigue sumando al Balance más abajo, pero no
+  // habilita por sí solo la aparición en el filtro. La comparación usa una clave normalizada
+  // (normHdr: sin acentos/mayúsculas, espacios colapsados) para que una diferencia de tipeo entre
+  // el Ingreso y el Consumo de un mismo insumo no lo separe en dos ni lo deje afuera; el texto que
+  // se muestra en la interfaz es siempre el original tal cual viene en los datos, nunca el
+  // normalizado. Es dinámico: se recalcula en cada carga a partir de insumosRowsAll, sin lista
+  // manual de insumos.
+  const insumosActivosKeys = new Set();
+  insumosRowsAll.forEach(r=>{
+    if(!r.nombre) return;
+    if(r.tipoMov===MOV_INGRESO || r.tipoMov===MOV_CONSUMO) insumosActivosKeys.add(normHdr(r.tipo)+'|'+normHdr(r.nombre));
+  });
   const insumosPorTipoSet={};
-  insumosRowsAll.forEach(r=>{ (insumosPorTipoSet[r.tipo]=insumosPorTipoSet[r.tipo]||new Set()).add(r.nombre); });
+  insumosRowsAll.forEach(r=>{
+    if(!r.nombre) return;
+    const nombreNorm = normHdr(r.nombre);
+    if(!insumosActivosKeys.has(normHdr(r.tipo)+'|'+nombreNorm)) return;
+    const porNombre = insumosPorTipoSet[r.tipo] = insumosPorTipoSet[r.tipo] || new Map();
+    if(!porNombre.has(nombreNorm)) porNombre.set(nombreNorm, r.nombre);
+  });
   const insumos_por_tipo={};
-  Object.keys(insumosPorTipoSet).forEach(t=>{ insumos_por_tipo[t]=[...insumosPorTipoSet[t]].sort((a,b)=>a.localeCompare(b,'es')); });
+  Object.keys(insumosPorTipoSet).forEach(t=>{ insumos_por_tipo[t]=[...insumosPorTipoSet[t].values()].sort((a,b)=>a.localeCompare(b,'es')); });
   // ---- Ingreso y Consumo (detalle): Insumo, Proveedor, Registros, Unidad, Cantidad — agrupadas
   // por (mes, insumo, proveedor, unidad) para respetar el filtro de mes por Fecha. "tipo" viaja en
   // cada fila para poder filtrar por el selector global de Tipo de Insumo, pero NO se muestra como

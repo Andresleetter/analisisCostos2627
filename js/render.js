@@ -92,12 +92,20 @@ function renderAuditoria(){
     `<tr><td>${p.tipo}</td><td class="tr mono">${fmt2(p.presupuestado)}</td><td class="tr mono">${p.ejecutadas}</td><td class="tr mono">${p.avance!=null?fmt1(p.avance)+'%':'N/D'}</td></tr>`
   ).join('');
 
-  // Gastos por Horas/Litros: "Construcción de puentes x horas" y "Desalijos" (ver nota en data.js
-  // sobre por qué Desalijos incluye dos grupos de texto distintos, por indicación del usuario).
+  // Gastos por Horas/Litros: Construcción de puentes x horas, y Desalijo separado en 2 grupos
+  // (Silo Bolsa / Karanda'y-Carandai) — ver nota en data.js. Cada grupo de Desalijo se antecede
+  // por una fila-rótulo (${g.grupo}) la primera vez que aparece; "trabajo" es siempre el Servicio
+  // real de la OT, o "(Sin Servicio)" cuando la OT no trae ese campo cargado.
   document.getElementById('audit-gastos-sub').textContent = 'Costo = Costo Labor + Costo Insumo de esas OT (cuando está disponible)';
-  document.getElementById('audit-gastos').innerHTML = D.auditoria_gastos.map(g=>
-    `<tr><td>${g.trabajo}</td><td class="tr mono">${g.horas?fmt2(g.horas):'-'}</td><td class="tr mono">${g.litros?fmt2(g.litros):'-'}</td><td class="tr mono">US$ ${fmtUSD(g.costo)}</td><td class="tr mono">${g.nOT} (${g.nConfirmadas} conf.)</td></tr>`
-  ).join('');
+  let audGastosGrupoPrevio = null;
+  document.getElementById('audit-gastos').innerHTML = D.auditoria_gastos.map(g=>{
+    let rotulo = '';
+    if(g.grupo && g.grupo!==audGastosGrupoPrevio){
+      rotulo = `<tr class="audgrp"><td colspan="5">${g.grupo}</td></tr>`;
+      audGastosGrupoPrevio = g.grupo;
+    }
+    return rotulo + `<tr><td>${g.trabajo}</td><td class="tr mono">${g.horas?fmt2(g.horas):'-'}</td><td class="tr mono">${g.litros?fmt2(g.litros):'-'}</td><td class="tr mono">US$ ${fmtUSD(g.costo)}</td><td class="tr mono">${g.nOT} (${g.nConfirmadas} conf.)</td></tr>`;
+  }).join('');
 
   document.getElementById('audit-items').innerHTML = D.auditoria_items.map(i=>
     `<tr${i.tieneOT?'':' style="color:var(--muted)"'}><td>${i.especificacion}</td><td>${i.unidadMedida||'-'}</td><td class="tr mono">${i.cantidadPresupuestada?fmt2(i.cantidadPresupuestada):'-'}</td><td class="tr mono">${fmt2(i.horas)}</td><td class="tr mono">${i.otPropia}</td><td class="tr mono">${i.otTercero}</td></tr>`
@@ -203,11 +211,19 @@ function renderInsumos(){
   const consumoTot = flujoRows.reduce((s,f)=>s+f.consumoPeriodo,0);
   const balanceTot = flujoRows.reduce((s,f)=>s+f.balance,0);
   const balCol = balanceTot>=0?'g':'r';
+  // Unidad de medida de los 4 KPIs: SOLO se muestra cuando el usuario eligió un Insumo puntual en
+  // #iinsumo (insumoV!=='ALL') — ni "Todos los Insumos" ni un Tipo de Insumo por sí solo alcanzan,
+  // aunque ese conjunto resulte tener una sola unidad en los datos (a pedido del usuario: la
+  // condición depende explícitamente del filtro elegido, no de si el resultado es homogéneo). Con
+  // un Insumo puntual que igual tenga varias unidades (raro, pero posible), tampoco se inventa
+  // nada ni se avisa con texto: fmtKpiUnidad() trata 'MULTI' igual que "sin unidad", mostrando solo
+  // el número (ver utils.js).
+  const unidadKpis = insumoV!=='ALL' ? unidadUnicaDe(flujoRows) : null;
   document.getElementById('ins-stock-kpis').innerHTML=
-    `<div class="kpi"><div class="k-lab">Stock Inicial</div><div class="k-val c-g">${fmt2(stockInicioTot)}</div><div class="k-foot">${filtroTxt}</div></div>`+
-    `<div class="kpi"><div class="k-lab">Ingreso</div><div class="k-val c-g">${fmt2(ingresoTot)}</div><div class="k-foot">${filtroTxt}</div></div>`+
-    `<div class="kpi"><div class="k-lab">Consumo</div><div class="k-val c-o">${fmt2(consumoTot)}</div><div class="k-foot">${filtroTxt}</div></div>`+
-    `<div class="kpi"><div class="k-lab">Balance</div><div class="k-val c-${balCol}">${fmt2(balanceTot)}</div><div class="k-foot">${filtroTxt}</div></div>`;
+    `<div class="kpi"><div class="k-lab">Stock Inicial</div><div class="k-val c-g">${fmtKpiUnidad(stockInicioTot,unidadKpis)}</div><div class="k-foot">${filtroTxt}</div></div>`+
+    `<div class="kpi"><div class="k-lab">Ingreso</div><div class="k-val c-g">${fmtKpiUnidad(ingresoTot,unidadKpis)}</div><div class="k-foot">${filtroTxt}</div></div>`+
+    `<div class="kpi"><div class="k-lab">Consumo</div><div class="k-val c-o">${fmtKpiUnidad(consumoTot,unidadKpis)}</div><div class="k-foot">${filtroTxt}</div></div>`+
+    `<div class="kpi"><div class="k-lab">Balance</div><div class="k-val c-${balCol}">${fmtKpiUnidad(balanceTot,unidadKpis)}</div><div class="k-foot">${filtroTxt}</div></div>`;
 
   document.getElementById('ins-ingreso-sub').textContent=filtroTxt+' · '+nMovIngreso+' movimientos (Ingreso de Mercadería)';
   document.getElementById('ins-ingreso').innerHTML = ingresoOrd.length ? ingresoOrd.map(o=>
