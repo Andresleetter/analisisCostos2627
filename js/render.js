@@ -69,18 +69,15 @@ function kpiCard(lab,val,foot,col){
   return `<div class="kpi kpi-acc kpi-${col}"><div class="k-lab">${lab}</div><div class="k-val">${val}</div><div class="k-foot">${foot}</div></div>`;
 }
 
-// ---- 1. Estado general de la campaña: fila de KPIs ejecutivos ----
+// ---- 1. Estado general de la campaña: fila de KPIs operativos/financieros ----
+// Las hectáreas planificadas/ejecutadas y el avance general se retiraron de esta fila a pedido
+// del usuario — esa información vive ahora en "Detalle de Etapas por Cultivo" (por cultivo y por
+// estadio, ver renderCultivoDetalle()), no como un total general de campaña.
 function renderResumenKPIs(){
   const k=D.resumen.kpis;
-  const avanceTxt = k.sinPlan ? 'Sin plan' : (Math.round(k.avanceGeneral)+'%');
-  const avanceCol = k.sinPlan ? 'gris' : (k.sobreEjecucion ? 'o' : color(k.avanceGeneral));
   const atrasCol = k.otAtrasadas>0 ? (k.otAtrasadas>10?'r':'o') : 'g';
   const noAgriCol = k.gastoNoAgricolaPct>=40 ? 'o' : 'gris';
   document.getElementById('exec-kpis').innerHTML=[
-    kpiCard('Hectáreas Planificadas', fmt2(k.haPlan)+' ha', 'Plan RTK · campaña '+CAMPANIA_ACTUAL, 'gris'),
-    kpiCard('Hectáreas Ejecutadas', fmt2(k.haEjec)+' ha', 'Lotes confirmados ∩ RTK', 'g'),
-    kpiCard('Avance General', avanceTxt, k.sinPlan?'Sin plan disponible':(k.sobreEjecucion?'Posible sobre-ejecución':'Ha ejecutadas / planificadas'), avanceCol),
-    kpiCard('Hectáreas Pendientes', fmt2(k.haPend)+' ha', k.sinPlan?'Sin plan disponible':'Para completar el plan', 'gris'),
     kpiCard('OT Confirmadas', k.otConfirmadas, 'de '+D.total_ot+' totales', 'g'),
     kpiCard('OT Atrasadas', k.otAtrasadas, 'Pendiente/En Ejecución vencidas', atrasCol),
     kpiCard('Costo Ejecutado', 'US$ '+fmtUSD(k.costoEjecutado), 'Solo OT confirmadas', 'gris'),
@@ -165,11 +162,23 @@ function renderCultivoDetalle(){
         <div class="bar et-bar"><div class="bar-fill f-${col}" style="width:${w}%"></div></div>
         <div class="et-val c-${col}">${val}</div></div>`;
     }).join('') : '<div class="et-empty">Sin etapa registrada en OT confirmadas</div>';
+    // Ha Ejecutadas y OT Confirmadas/Totales corresponden SIEMPRE al mismo estadio que "Etapa
+    // actual" (el más reciente con actividad confirmada, último elemento de c.etapas) — nunca se
+    // mezclan con otro estadio. Sin ninguna etapa reconocida todavía (etapa_actual=null) no hay un
+    // estadio al que referirlos: se muestran en 0 ha / 0 de las OT totales del cultivo, consistente
+    // con el mensaje "Sin actividad confirmada aún" de arriba.
+    const ultimaEtapa = c.etapas.length ? c.etapas[c.etapas.length-1] : null;
+    const haEjec = fmt2(ultimaEtapa ? ultimaEtapa.ha_ejec : 0)+' ha';
+    const otTexto = ultimaEtapa ? ultimaEtapa.otConfirmadas+' / '+ultimaEtapa.otTotales : '0 / '+(c.conf+c.ejec+c.pend);
     return `<div class="cult-card">
       <div class="cc-name">${c.nombre}</div>
       ${c.etapa_actual?`<div class="cc-stage">Etapa actual: <b>${c.etapa_actual}</b></div>`:'<div class="cc-stage cc-stage-muted">Sin actividad confirmada aún</div>'}
       <div class="cc-etapas">${etapasHtml}</div>
-      <div class="cc-ha"><div><span>Ha plan.</span><b>${plan}</b></div><div><span>OT conf. / total</span><b>${c.conf}/${c.conf+c.ejec+c.pend}</b></div></div></div>`;}).join('');
+      <div class="cc-ha">
+        <div><span>Ha planificadas</span><b>${plan}</b></div>
+        <div><span>Ha ejecutadas</span><b>${haEjec}</b></div>
+        <div><span>OT conf. / total</span><b>${otTexto}</b></div>
+      </div></div>`;}).join('');
 }
 
 // ---- Auditoría: Presupuesto de Infraestructura vs ejecución real ----
