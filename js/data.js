@@ -252,9 +252,19 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
   // acá). Se encontraron DOS grupos con "desalijo": uno de descarga de silo bolsa de arroz
   // (Servicio="Desalijo Silo Bolsa x Hs") y otro de desmalezado/despeje de palmera "karanda'y"
   // (solo en Observación, Servicio vacío en la mayoría). Por indicación del usuario se usan TODAS
-  // las filas que mencionen "desalijo" en Servicio u Observación, sin distinguir el contexto.
+  // las filas que mencionen "desalijo" en Servicio u Observación, sin distinguir el contexto —
+  // EXCEPTO las que ya tienen un Servicio contado en otra sección de Auditoría (ej. OT 3884,
+  // Servicio="Cerrar camino retro excavadora x Hs", cuya Observación menciona "Desalijo de
+  // carandai" de pasada: esa OT ya suma sus horas en "Reparacion de camino"; incluirla también acá
+  // la contaba dos veces).
+  const auditoriaServiciosUsados = new Set([
+    ...infraServiciosMapeados,
+    INFRA_PUENTES_TERCERO_SERV, INFRA_PUENTES_PROPIA_SERV, INFRA_PUENTES_HORAS_SERV,
+  ]);
   const puentesHorasOT = rows.filter(r=>r.serv===INFRA_PUENTES_HORAS_SERV);
-  const desalijoOT = rows.filter(r=>normEstadio(r.serv).includes('desalij') || normEstadio(r.obs).includes('desalij'));
+  const desalijoOT = rows.filter(r=>
+    (normEstadio(r.serv).includes('desalij') || normEstadio(r.obs).includes('desalij'))
+    && !auditoriaServiciosUsados.has(r.serv));
   function gastoDeOTs(sub){
     const horas = Math.round(sub.filter(r=>r.esHoras).reduce((s,r)=>s+r.ud,0)*100)/100;
     const litros = Math.round(sub.filter(r=>r.unidad.toLowerCase()==='litros').reduce((s,r)=>s+r.ud,0)*100)/100;
