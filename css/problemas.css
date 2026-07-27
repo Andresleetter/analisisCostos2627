@@ -6,10 +6,20 @@
 .prob-head .ph-s{font-size:12px;color:var(--muted);margin-top:2px}
 .probs{display:flex;flex-direction:column;gap:10px;margin-bottom:22px}
 .prob{display:flex;align-items:stretch;gap:16px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius-md);padding:14px 18px;box-shadow:var(--shadow-sm);border-left:5px solid var(--green-l)}
+/* Color del borde izquierdo según severidad de la alerta (ver colorSeveridad() en utils.js) —
+   "informativa" usa el neutro (gris), no el verde, para no leerse como "todo bien". */
+.prob-r{border-left-color:var(--r)} .prob-o{border-left-color:var(--o)} .prob-y{border-left-color:var(--y)}
+.prob-g{border-left-color:var(--g)} .prob-gris{border-left-color:var(--muted)}
+.prob-ok{border-left-color:var(--g);justify-content:center;padding:22px 18px}
+.prob-ok .p-title{font-weight:600;color:var(--teal)}
 .p-left{flex:1}
 .p-tags{display:flex;gap:7px;margin-bottom:6px}
 .p-cat{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;padding:2px 9px;border-radius:var(--radius-pill);color:#fff}
+.p-cat.f-y{color:#5a4500} /* mismo criterio que .pill-y (alertas.css): texto oscuro sobre amarillo */
 .p-title{font-size:14px;font-weight:700;color:var(--ink)}
 .p-desc{font-size:12px;color:var(--muted);margin-top:3px;max-width:780px}
+.p-ctx{font-size:11px;color:var(--muted);font-style:italic;margin-top:4px;max-width:780px}
 .p-met{display:flex;align-items:center;font-size:16px;font-weight:800;color:var(--teal);text-align:right;white-space:nowrap;padding-left:10px}
+.prob-link{margin-top:9px;background:none;border:1.5px solid var(--teal);color:var(--teal);font-size:11px;font-weight:700;padding:4px 12px;border-radius:var(--radius-pill);cursor:pointer;font-family:inherit;display:inline-block}
+.prob-link:hover{background:var(--teal);color:#fff}
 @media(max-width:900px){.prob{flex-direction:column;gap:8px}.p-met{text-align:left;padding-left:0}}

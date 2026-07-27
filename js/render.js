@@ -3,37 +3,18 @@ function renderAll(){
   const fd=D.fecha_datos;
   const fdTxt=('0'+fd.getDate()).slice(-2)+'/'+('0'+(fd.getMonth()+1)).slice(-2)+'/'+fd.getFullYear();
   document.getElementById('t-date').textContent='Datos al '+fdTxt;
-  document.getElementById('b-prob').textContent=D.problemas.length;
   document.getElementById('b-exc').textContent=D.exc_kpi.n;
   document.getElementById('b-al').textContent=D.n_ot_atrasadas;
-  // TAB1 cultivos
-  document.getElementById('cults').innerHTML=D.cultivos.map(c=>{
-    const plan=c.tiene_rtk?fmt2(c.ha_plan)+' ha':'s/ RTK';
-    const etapasHtml = c.etapas.length ? c.etapas.map(e=>{
-      const col = e.avance==null ? 'o' : color(e.avance);
-      const val = e.avance!=null ? Math.round(e.avance)+'%' : e.n_lotes+' lotes';
-      const w = e.avance!=null ? Math.min(e.avance,100) : 0;
-      return `<div class="et-row"><div class="et-lbl">${e.nombre}</div>
-        <div class="bar et-bar"><div class="bar-fill f-${col}" style="width:${w}%"></div></div>
-        <div class="et-val c-${col}">${val}</div></div>`;
-    }).join('') : '<div class="et-empty">Sin etapa registrada en OT confirmadas</div>';
-    return `<div class="cult-card">
-      <div class="cc-name">${c.nombre}</div>
-      ${c.etapa_actual?`<div class="cc-stage">Etapa actual: <b>${c.etapa_actual}</b></div>`:'<div class="cc-stage cc-stage-muted">Sin actividad confirmada aún</div>'}
-      <div class="cc-etapas">${etapasHtml}</div>
-      <div class="cc-ha"><div><span>Ha plan.</span><b>${plan}</b></div><div><span>OT conf. / total</span><b>${c.conf}/${c.conf+c.ejec+c.pend}</b></div></div></div>`;}).join('');
-  document.getElementById('exec-kpis').innerHTML=
-    `<div class="kpi"><div class="k-lab">Avance de Campaña</div><div class="k-val c-g">${D.avance_glob}<small>%</small></div><div class="k-foot">${D.ot_conf} de ${D.total_ot} OT confirmadas</div></div>`+
-    `<div class="kpi"><div class="k-lab">Costo Ejecutado</div><div class="k-val" style="font-size:21px">US$ ${fmtUSD(D.costo_total)}</div><div class="k-foot">Solo OT confirmadas</div></div>`+
-    `<div class="kpi"><div class="k-lab">Gasto No Agrícola</div><div class="k-val c-o" style="font-size:21px">US$ ${fmtUSD(D.oper_costo)}</div><div class="k-foot">${Math.round(D.oper_part)}% del total</div></div>`+
-    `<div class="kpi"><div class="k-lab">Problemas Detectados</div><div class="k-val" style="color:var(--teal)">${D.problemas.length}</div><div class="k-foot">Para revisión de gestión</div></div>`;
-  document.getElementById('prob-n').textContent=D.problemas.length;
-  document.getElementById('probs').innerHTML=D.problemas.map(p=>
-    `<div class="prob"><div class="p-left"><div class="p-tags"><span class="p-cat" style="background:${CATCOL[p.cat]}">${p.cat}</span></div>
-      <div class="p-title">${p.titulo}</div><div class="p-desc">${p.desc}</div></div><div class="p-met">${p.met}</div></div>`).join('');
-  document.getElementById('oper-sub').textContent=Math.round(D.oper_part)+'% del costo ejecutado · US$ '+fmtUSD(D.oper_costo);
-  document.getElementById('oper').innerHTML=D.operativas.map(o=>
-    `<tr><td>${o.nombre}</td><td class="tr">${o.ot}</td><td class="tr mono">US$ ${fmtUSD(o.costo)}</td><td class="tr"><div class="minibar"><div class="mb-fill f-o" style="width:${Math.min(o.part*2.5,100)}%"></div></div></td><td class="tr">${fmt1(o.part)}%</td></tr>`).join('');
+  // TAB1: Resumen Ejecutivo (una función chica por bloque, ver detalle de cada una más abajo).
+  // "Detalle de Etapas por Cultivo" es el primer bloque analítico tras los KPIs — los gráficos de
+  // Avance General / Avance por Cultivo que iban antes se retiraron a pedido del usuario (ver
+  // README.md).
+  renderResumenKPIs();
+  renderCultivoDetalle();
+  renderEstadosOT();
+  renderActividadMensual();
+  renderDistribucionGasto();
+  renderProblemasResumen();
   // TAB3 control ha
   document.getElementById('ha-kpis').innerHTML=
     `<div class="kpi"><div class="k-lab">Lotes con Exceso</div><div class="k-val c-r">${D.exc_kpi.n}</div><div class="k-foot">Superficie ejecutada &gt; planificada</div></div>`+
@@ -79,6 +60,118 @@ function renderAll(){
   renderAuditoria();
 }
 
+// ================== RESUMEN EJECUTIVO ==================
+// D.resumen.* ya viene calculado en buildData() (data.js) — acá solo se renderiza, sin recalcular
+// nada. Una función chica por bloque visual (KPIs, avance general, avance por cultivo, estado de
+// OT, actividad mensual, distribución del gasto, problemas), en el orden pedido por el usuario.
+
+function kpiCard(lab,val,foot,col){
+  return `<div class="kpi kpi-acc kpi-${col}"><div class="k-lab">${lab}</div><div class="k-val">${val}</div><div class="k-foot">${foot}</div></div>`;
+}
+
+// ---- 1. Estado general de la campaña: fila de KPIs ejecutivos ----
+function renderResumenKPIs(){
+  const k=D.resumen.kpis;
+  const avanceTxt = k.sinPlan ? 'Sin plan' : (Math.round(k.avanceGeneral)+'%');
+  const avanceCol = k.sinPlan ? 'gris' : (k.sobreEjecucion ? 'o' : color(k.avanceGeneral));
+  const atrasCol = k.otAtrasadas>0 ? (k.otAtrasadas>10?'r':'o') : 'g';
+  const noAgriCol = k.gastoNoAgricolaPct>=40 ? 'o' : 'gris';
+  document.getElementById('exec-kpis').innerHTML=[
+    kpiCard('Hectáreas Planificadas', fmt2(k.haPlan)+' ha', 'Plan RTK · campaña '+CAMPANIA_ACTUAL, 'gris'),
+    kpiCard('Hectáreas Ejecutadas', fmt2(k.haEjec)+' ha', 'Lotes confirmados ∩ RTK', 'g'),
+    kpiCard('Avance General', avanceTxt, k.sinPlan?'Sin plan disponible':(k.sobreEjecucion?'Posible sobre-ejecución':'Ha ejecutadas / planificadas'), avanceCol),
+    kpiCard('Hectáreas Pendientes', fmt2(k.haPend)+' ha', k.sinPlan?'Sin plan disponible':'Para completar el plan', 'gris'),
+    kpiCard('OT Confirmadas', k.otConfirmadas, 'de '+D.total_ot+' totales', 'g'),
+    kpiCard('OT Atrasadas', k.otAtrasadas, 'Pendiente/En Ejecución vencidas', atrasCol),
+    kpiCard('Costo Ejecutado', 'US$ '+fmtUSD(k.costoEjecutado), 'Solo OT confirmadas', 'gris'),
+    kpiCard('Gasto No Agrícola', 'US$ '+fmtUSD(k.gastoNoAgricola), Math.round(k.gastoNoAgricolaPct)+'% del total', noAgriCol),
+  ].join('');
+}
+
+// ---- 3a. Ejecución operacional: estado de las OT (barra apilada + leyenda), categorías reales
+// (ver D.resumen.estadosOT en data.js — "Otros" solo aparece si hay algún estado real distinto de
+// los 3 conocidos, con el detalle de cuáles). ----
+function renderEstadosOT(){
+  const list=D.resumen.estadosOT;
+  const cont=document.getElementById('resumen-estados-ot');
+  document.getElementById('resumen-ot-sub').textContent=D.total_ot+' OT totales · campaña '+CAMPANIA_ACTUAL;
+  if(!list.length){ cont.innerHTML='<div class="resumen-empty">Sin OT registradas.</div>'; return; }
+  const ESTADO_COL={'Confirmado':'g','En Ejecución':'y','Pendiente':'o','Otros':'gris'};
+  const bar=list.map(e=>`<div class="estbar-seg f-${ESTADO_COL[e.estado]||'gris'}" style="width:${e.pct}%" title="${e.estado}: ${e.n} (${e.pct}%)"></div>`).join('');
+  const legend=list.map(e=>`<div class="estbar-leg"><span class="estbar-dot f-${ESTADO_COL[e.estado]||'gris'}"></span>${e.estado}<b>${e.n}</b><small>${e.pct}%</small>${e.detalle?` <span title="${e.detalle}">(?)</span>`:''}</div>`).join('');
+  cont.innerHTML=`<div class="estbar-track">${bar}</div><div class="estbar-legend">${legend}</div>`;
+}
+
+// ---- 3b. Ejecución operacional: actividad por mes (OT confirmadas, Fecha Real) ----
+function renderActividadMensual(){
+  const list=D.resumen.actividadMensual;
+  const cont=document.getElementById('resumen-actividad-mensual');
+  if(!list.length){ cont.innerHTML='<div class="resumen-empty">Sin fechas válidas para graficar actividad mensual.</div>'; return; }
+  const max=Math.max(1,...list.map(m=>m.otConfirmadas));
+  cont.innerHTML=`<div class="colchart">${list.map(m=>{
+    const h=Math.round(m.otConfirmadas/max*100);
+    return `<div class="colchart-col"><div class="colchart-bar-wrap"><div class="colchart-bar" style="height:${h}%" title="${m.lbl}: ${m.otConfirmadas} OT confirmadas"></div></div>
+      <div class="colchart-val">${m.otConfirmadas}</div><div class="colchart-lbl">${m.lbl}</div></div>`;
+  }).join('')}</div><div class="colchart-note">OT confirmadas por mes (Fecha Real) — no representa hectáreas</div>`;
+}
+
+// ---- 4. Distribución de recursos: gasto en áreas no agrícolas (reutiliza D.operativas tal cual,
+// ya calculado y ordenado por costo desc — ver data.js). Antes era una tabla; ahora barras
+// horizontales para lectura más rápida, mismos datos, sin duplicar el cálculo. ----
+function renderDistribucionGasto(){
+  const list=D.operativas;
+  document.getElementById('oper-sub').textContent=Math.round(D.oper_part)+'% del costo ejecutado · US$ '+fmtUSD(D.oper_costo);
+  const cont=document.getElementById('resumen-gasto');
+  if(!list.length){ cont.innerHTML='<div class="resumen-empty">Sin gasto en áreas no agrícolas.</div>'; return; }
+  const max=Math.max(1,...list.map(o=>o.costo));
+  cont.innerHTML=list.map(o=>
+    `<div class="gbar-row"><div class="gbar-lbl" title="${o.nombre}">${o.nombre}</div>
+      <div class="gbar-track"><div class="gbar-fill" style="width:${(o.costo/max*100).toFixed(1)}%"></div></div>
+      <div class="gbar-val">US$ ${fmtUSD(o.costo)} <small>${fmt1(o.part)}%</small></div></div>`).join('');
+}
+
+// ---- 5. Posibles problemas en la campaña: tarjetas de alerta por severidad (ver reglas y orden
+// en data.js). "Ver detalle" usa data-tab + delegación de evento en events.js (reutiliza show(),
+// nunca onclick inline). Sin problemas => estado positivo explícito, nunca la sección vacía. ----
+function renderProblemasResumen(){
+  const list=D.resumen.problemas;
+  document.getElementById('prob-n').textContent=list.length;
+  document.getElementById('b-prob').textContent=list.length;
+  const cont=document.getElementById('probs');
+  if(!list.length){
+    cont.innerHTML='<div class="prob prob-ok"><div class="p-left"><div class="p-title">No se detectaron problemas relevantes con las reglas actuales.</div></div></div>';
+    return;
+  }
+  cont.innerHTML=list.map(p=>{
+    const col=colorSeveridad(p.severidad);
+    const accion=(p.accion && p.destinoTab!=null)?`<button type="button" class="prob-link" data-tab="${p.destinoTab}">${p.accion}</button>`:'';
+    return `<div class="prob prob-${col}"><div class="p-left"><div class="p-tags"><span class="p-cat f-${col}">${labelSeveridad(p.severidad)}</span></div>
+      <div class="p-title">${p.titulo}</div><div class="p-desc">${p.descripcion}</div>
+      ${p.contexto?`<div class="p-ctx">${p.contexto}</div>`:''}${accion}</div>
+      <div class="p-met">${p.metrica}</div></div>`;
+  }).join('');
+}
+
+// ---- Detalle de Etapas por Cultivo: primer bloque analítico tras los KPIs (Preparación de
+// Suelo, Siembra, Cuidados, Cosecha por cada cultivo). ----
+function renderCultivoDetalle(){
+  document.getElementById('cults').innerHTML=D.cultivos.map(c=>{
+    const plan=c.tiene_rtk?fmt2(c.ha_plan)+' ha':'s/ RTK';
+    const etapasHtml = c.etapas.length ? c.etapas.map(e=>{
+      const col = e.avance==null ? 'o' : color(e.avance);
+      const val = e.avance!=null ? Math.round(e.avance)+'%' : e.n_lotes+' lotes';
+      const w = e.avance!=null ? Math.min(e.avance,100) : 0;
+      return `<div class="et-row"><div class="et-lbl">${e.nombre}</div>
+        <div class="bar et-bar"><div class="bar-fill f-${col}" style="width:${w}%"></div></div>
+        <div class="et-val c-${col}">${val}</div></div>`;
+    }).join('') : '<div class="et-empty">Sin etapa registrada en OT confirmadas</div>';
+    return `<div class="cult-card">
+      <div class="cc-name">${c.nombre}</div>
+      ${c.etapa_actual?`<div class="cc-stage">Etapa actual: <b>${c.etapa_actual}</b></div>`:'<div class="cc-stage cc-stage-muted">Sin actividad confirmada aún</div>'}
+      <div class="cc-etapas">${etapasHtml}</div>
+      <div class="cc-ha"><div><span>Ha plan.</span><b>${plan}</b></div><div><span>OT conf. / total</span><b>${c.conf}/${c.conf+c.ejec+c.pend}</b></div></div></div>`;}).join('');
+}
+
 // ---- Auditoría: Presupuesto de Infraestructura vs ejecución real ----
 // D.auditoria_* ya viene cruzado (INFRA_MAP y constantes de puentes en config.js) entre
 // Especificación del presupuesto y Servicio real de OT — acá solo se renderiza, sin recalcular
@@ -92,20 +185,17 @@ function renderAuditoria(){
     `<tr><td>${p.tipo}</td><td class="tr mono">${fmt2(p.presupuestado)}</td><td class="tr mono">${p.ejecutadas}</td><td class="tr mono">${p.avance!=null?fmt1(p.avance)+'%':'N/D'}</td></tr>`
   ).join('');
 
-  // Gastos por Horas/Litros: Construcción de puentes x horas, y Desalijo separado en 2 grupos
-  // (Silo Bolsa / Karanda'y-Carandai) — ver nota en data.js. Cada grupo de Desalijo se antecede
-  // por una fila-rótulo (${g.grupo}) la primera vez que aparece; "trabajo" es siempre el Servicio
-  // real de la OT, o "(Sin Servicio)" cuando la OT no trae ese campo cargado.
+  // Gastos: un único concepto, "Desalijo Karanda'y / Carandai" (AUDITORIA_GASTO_DESALIJO,
+  // config.js) — ver nota en data.js sobre el criterio de coincidencia (concepto puntual dentro
+  // de Servicio/Observación, no la frase completa ni la palabra "desalijo" sola). Si nOT===0 (sin
+  // ninguna OT que coincida) se muestra el estado vacío explícito en vez de una fila con puros
+  // ceros silenciosos, y nunca se completa con otro trabajo para evitar dejarla vacía.
   document.getElementById('audit-gastos-sub').textContent = 'Costo = Costo Labor + Costo Insumo de esas OT (cuando está disponible)';
-  let audGastosGrupoPrevio = null;
-  document.getElementById('audit-gastos').innerHTML = D.auditoria_gastos.map(g=>{
-    let rotulo = '';
-    if(g.grupo && g.grupo!==audGastosGrupoPrevio){
-      rotulo = `<tr class="audgrp"><td colspan="5">${g.grupo}</td></tr>`;
-      audGastosGrupoPrevio = g.grupo;
-    }
-    return rotulo + `<tr><td>${g.trabajo}</td><td class="tr mono">${g.horas?fmt2(g.horas):'-'}</td><td class="tr mono">${g.litros?fmt2(g.litros):'-'}</td><td class="tr mono">US$ ${fmtUSD(g.costo)}</td><td class="tr mono">${g.nOT} (${g.nConfirmadas} conf.)</td></tr>`;
-  }).join('');
+  document.getElementById('audit-gastos').innerHTML = D.auditoria_gastos.map(g=>
+    g.nOT
+      ? `<tr><td>${g.trabajo}</td><td class="tr mono">${g.horas?fmt2(g.horas):'-'}</td><td class="tr mono">${g.litros?fmt2(g.litros):'-'}</td><td class="tr mono">US$ ${fmtUSD(g.costo)}</td><td class="tr mono">${g.nOT} (${g.nConfirmadas} conf.)</td></tr>`
+      : `<tr><td>${g.trabajo}</td><td class="tr mono">0,00</td><td class="tr mono">0,00</td><td class="tr mono">US$ 0,00</td><td class="tr" style="color:var(--muted)">Sin ejecución registrada</td></tr>`
+  ).join('');
 
   document.getElementById('audit-items').innerHTML = D.auditoria_items.map(i=>
     `<tr${i.tieneOT?'':' style="color:var(--muted)"'}><td>${i.especificacion}</td><td>${i.unidadMedida||'-'}</td><td class="tr mono">${i.cantidadPresupuestada?fmt2(i.cantidadPresupuestada):'-'}</td><td class="tr mono">${fmt2(i.horas)}</td><td class="tr mono">${i.otPropia}</td><td class="tr mono">${i.otTercero}</td></tr>`

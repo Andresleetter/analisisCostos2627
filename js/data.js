@@ -117,12 +117,17 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
   // ---- CULTIVOS ----
   const cultivos=CULTIVOS.map(c=>{
     const sub=OTS.filter(o=>o.act.toUpperCase()===c);
-    if(!sub.length) return null;
+    const ha_plan=RTK_TOT[c]||0;
+    // Antes se descartaba todo cultivo sin ninguna OT (sub.length===0), lo que ocultaba por
+    // completo un cultivo planificado (RTK>0) que todavía no tiene ninguna OT cargada — caso real
+    // que el Resumen Ejecutivo necesita poder detectar ("cultivo planificado sin ejecución", ver
+    // resumen.problemas más abajo). Ahora solo se descarta si NO tiene ni OT ni plan (irrelevante
+    // para la campaña). No cambia nada para los cultivos que ya tenían OT.
+    if(!sub.length && !ha_plan) return null;
     const conf=sub.filter(o=>o.estado==='Confirmado').length,
       ejec=sub.filter(o=>o.estado==='En Ejecución').length,
       pend=sub.filter(o=>o.estado==='Pendiente').length;
     const costo=sub.filter(o=>o.estado==='Confirmado').reduce((s,o)=>s+o.imp,0);
-    const ha_plan=RTK_TOT[c]||0;
     const lotConf=new Set(sub.filter(o=>o.estado==='Confirmado').map(o=>normLote(o.lote)));
     let ha_ejec=0; if(RTK[c]) lotConf.forEach(k=>{ if(k in RTK[c]) ha_ejec+=RTK[c][k]; });
     ha_ejec=Math.round(ha_ejec*100)/100;
@@ -242,33 +247,31 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
     puentesPorUnidad(INFRA_PUENTES_PROPIA_ESP, INFRA_PUENTES_PROPIA_SERV, 'Propia'),
   ];
 
-  // ---- Sección 2: Gastos (trabajos medidos en Horas o Litros, no en Unidades) ----
-  // El nombre de "trabajo" en esta tabla es siempre el valor real del campo Servicio de la OT
-  // (nunca una descripción inventada) — a pedido del usuario, para que coincida 1 a 1 con lo que
-  // se ve en consultaOT. Cuando el Servicio viene vacío en la OT (pasa seguido en las filas de
-  // Desalijo), esas filas se agrupan aparte como "(Sin Servicio)" en vez de inventarles un nombre.
-  // "Construcción de puentes x horas": Servicio distinto de los dos de Puentes por Unidad (esos
-  // son por Unidad) — existe medido en Horas: "Construccion de Puentes retro excavadora x Hs"
-  // (Labor Tercero).
+  // ---- Sección 2: Gastos — "Desalijo Karanda'y / Carandai" ----
+  // Antes esta sección incluía también "Construccion de Puentes retro excavadora x Hs" y un
+  // segundo grupo ("Desalijo Silo Bolsa"). A pedido del usuario se angosta a un ÚNICO concepto,
+  // AUDITORIA_GASTO_DESALIJO (config.js) — pero el match NO es de la frase completa exacta (eso
+  // dejaba la sección en 0 pese a que sí hay trabajo real cargado, verificado contra el .xlsx):
+  // Servicio nunca trae ese texto, y ninguna Observación real coincide palabra por palabra con el
+  // rótulo completo. Se busca en cambio el CONCEPTO puntual dentro de la Observación (que es el
+  // campo real donde está cargado, confirmado en la inspección) — "desalijo" JUNTO con la palabra
+  // "karanda"/"caranda" (normalizada con normEstadio ya existente: sin acentos/mayúsculas), que
+  // cubre las variantes reales de ortografía encontradas (karanda'y, caranda'y, karanday, karandai,
+  // karandaý...) sin ampliarse a otros trabajos: "Desalijo Silo Bolsa..." NO menciona
+  // karanda/caranda y queda afuera; una fila como "Desalijo de madera para puente..." tampoco la
+  // menciona y también queda afuera (no es este trabajo, aunque comparta la palabra "desalijo").
+  // Se excluyen además las OT cuyo Servicio ya se cuenta en otra sección de Auditoría (ej. OT 3884,
+  // Servicio="Cerrar camino retro excavadora x Hs", ya contado en "Reparacion de camino"; su
+  // Observación menciona "carandai" de pasada, no es el trabajo de desalijo en sí).
   const auditoriaServiciosUsados = new Set([
     ...infraServiciosMapeados,
     INFRA_PUENTES_TERCERO_SERV, INFRA_PUENTES_PROPIA_SERV, INFRA_PUENTES_HORAS_SERV,
   ]);
-  const puentesHorasOT = rows.filter(r=>r.serv===INFRA_PUENTES_HORAS_SERV);
-  // "Desalijos": no está en el presupuesto ni fue pedido antes — se buscó "desalijo"/"desalij" en
-  // Servicio y Observación (para descartar que en realidad fuera "desmonte": ese texto literal
-  // solo aparece 2 veces, ya contabilizadas en "Contrucion camino nuevo", así que NO se mezcla
-  // acá). Se separan en 2 grupos según lo que describe la Observación (a pedido del usuario, en
-  // vez de una sola fila combinada como antes): descarga de silo bolsa de arroz ("Desalijo Silo
-  // Bolsa...") vs desmalezado/despeje de palmera "karanda'y"/"carandai" — EXCEPTO las filas que ya
-  // tienen un Servicio contado en otra sección de Auditoría (ej. OT 3884, Servicio="Cerrar camino
-  // retro excavadora x Hs", cuya Observación menciona "Desalijo de carandai" de pasada: esa OT ya
-  // suma sus horas en "Reparacion de camino"; incluirla también acá la contaba dos veces).
-  const desalijoOT = rows.filter(r=>
-    (normEstadio(r.serv).includes('desalij') || normEstadio(r.obs).includes('desalij'))
-    && !auditoriaServiciosUsados.has(r.serv));
-  const desalijoSiloBolsaOT = desalijoOT.filter(r=>normEstadio(r.obs).includes('silo'));
-  const desalijoKarandayOT = desalijoOT.filter(r=>!normEstadio(r.obs).includes('silo'));
+  const desalijoKarandayOT = rows.filter(r=>
+    !auditoriaServiciosUsados.has(r.serv) &&
+    (normEstadio(r.serv).includes('desalij') || normEstadio(r.obs).includes('desalij')) &&
+    (normEstadio(r.serv).includes('karand') || normEstadio(r.serv).includes('carand') ||
+     normEstadio(r.obs).includes('karand') || normEstadio(r.obs).includes('carand')));
   function gastoDeOTs(sub){
     const horas = Math.round(sub.filter(r=>r.esHoras).reduce((s,r)=>s+r.ud,0)*100)/100;
     const litros = Math.round(sub.filter(r=>r.unidad.toLowerCase()==='litros').reduce((s,r)=>s+r.ud,0)*100)/100;
@@ -277,19 +280,8 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
     const nConfirmadas = new Set(sub.filter(r=>r.estado==='Confirmado').map(r=>r.ot)).size;
     return {horas, litros, costo, nOT, nConfirmadas};
   }
-  // Dentro de cada grupo de Desalijo, una fila por cada Servicio real distinto que aparece en la
-  // OT; las filas sin Servicio se juntan en una única fila "(Sin Servicio)" al final del grupo.
-  function filasPorServicioReal(sub, grupo){
-    const porServicio = {};
-    sub.forEach(r=>{ const key=r.serv||'(Sin Servicio)'; (porServicio[key]=porServicio[key]||[]).push(r); });
-    return Object.keys(porServicio)
-      .sort((a,b)=> (a==='(Sin Servicio)')-(b==='(Sin Servicio)') || a.localeCompare(b))
-      .map(trabajo=>({grupo, trabajo, ...gastoDeOTs(porServicio[trabajo])}));
-  }
   const auditoria_gastos = [
-    {trabajo:INFRA_PUENTES_HORAS_SERV, ...gastoDeOTs(puentesHorasOT)},
-    ...filasPorServicioReal(desalijoSiloBolsaOT, 'Desalijo Silo Bolsa'),
-    ...filasPorServicioReal(desalijoKarandayOT, "Desalijo Karanda'y / Carandai"),
+    {trabajo:AUDITORIA_GASTO_DESALIJO, ...gastoDeOTs(desalijoKarandayOT)},
   ];
 
   // ---- GASTOS: detalle labores reales + gasoil por área ----
@@ -521,25 +513,179 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
   const labores=[...new Set(gastos.map(d=>d.labor))].sort((a,b)=>a.localeCompare(b,'es'));
   const estadios_labor=[...new Set(gastos.map(d=>d.estadio))].sort((a,b)=>a.localeCompare(b,'es'));
 
-  // ---- PROBLEMAS (neutral, por categoría) ----
-  const P=[]; const cd={}; cultivos.forEach(c=>cd[c.nombre]=c);
-  ['MAIZ','SOJA','SORGO','ARROZ'].forEach(c=>{ const o=cd[c]; if(o&&o.tiene_rtk&&o.avance<80)
-    P.push({cat:'Avance',titulo:c.charAt(0)+c.slice(1).toLowerCase()+': avance '+Math.round(o.avance)+'% del plan',
-      met:fmt(o.ha_ejec)+' / '+fmt(o.ha_plan)+' ha',desc:'Ejecutadas '+fmt(o.ha_ejec)+' ha de '+fmt(o.ha_plan)+' planificadas en RTK. '+(o.pend+o.ejec)+' OT sin confirmar.'}); });
-  P.push({cat:'Hectáreas',titulo:exc_kpi.n+' lotes con superficie ejecutada mayor a la planificada',met:'+'+fmt2(exc_kpi.ha)+' ha en exceso',
-    desc:'La superficie cargada en OT supera el RTK (mayor caso +'+fmt2(exc_kpi.mayor)+' ha). Posible error de carga que distorsiona costos por hectárea.'});
-  P.push({cat:'Controles',titulo:sinrtk.length+' OT sin correspondencia en el plan RTK',met:sinrtk.length+' OT',
-    desc:'Órdenes cargadas en lotes que no existen en la planificación RTK. Requieren revisión de nomenclatura o alta de superficie.'});
-  const terc=CONF.reduce((s,o)=>s+o.tercero,0), prop=CONF.reduce((s,o)=>s+o.propia,0);
-  P.push({cat:'Gastos',titulo:'El 100% del costo de labor corresponde a terceros',met:'US$ '+fmtUSD(terc),
-    desc:'No se registra costo de labor propia (US$ '+fmtUSD(prop)+'). Impide comparar el uso de maquinaria propia vs contratada y controlar el gasto tercerizado.'});
-  P.push({cat:'Gastos',titulo:'Actividades no agrícolas concentran el '+Math.round(oper_part)+'% del gasto',met:'US$ '+fmtUSD(oper_costo),
-    desc:'Operativos, parcelas de ensayo, infraestructura y cuidados suman US$ '+fmtUSD(oper_costo)+' de gasto ejecutado que no corresponde a producción de cultivos.'});
-  const disco=gastos.filter(d=>/^[12]° Disco$/.test(d.labor)).reduce((s,d)=>s+d.propia+d.tercero+d.insumos,0);
-  if(disco>0) P.push({cat:'Gastos',titulo:'Alta concentración del gasto en preparación de suelo (disco)',met:'US$ '+fmtUSD(disco)+' · '+Math.round(disco/costo_total*100)+'%',
-    desc:'1° y 2° Disco representan el '+Math.round(disco/costo_total*100)+'% del gasto ejecutado de campaña.'});
-  const catord={'Avance':0,'Gastos':1,'Hectáreas':2,'Controles':3};
-  P.sort((a,b)=>(catord[a.cat]-catord[b.cat])||(a.titulo<b.titulo?-1:1));
+  // ================= RESUMEN EJECUTIVO =================
+  // Todo lo que sigue alimenta exclusivamente la pestaña Resumen Ejecutivo. Se calcula UNA sola
+  // vez acá (no en render.js) y se reutilizan colecciones ya construidas arriba (cultivos, atr,
+  // exceso, sinrtk, gastos, operativas) — nunca se vuelve a filtrar OTS/rows desde cero para esto.
+
+  // ---- Avance general de campaña: Ha Ejecutadas / Ha Planificadas, sobre TODOS los cultivos con
+  // datos (cultivos ya incluye, desde el fix de arriba, los planificados sin ninguna OT todavía).
+  // "Hectáreas planificadas" = RTK_TOT sumado (cultivos.ha_plan); "Hectáreas ejecutadas" = el
+  // mismo cálculo de ha_ejec que ya usa "Avance por Cultivo" (lotes confirmados ∩ RTK). Sin
+  // división por cero (pctSeguro) y sin techo silencioso en 100%: si se ejecuta más de lo
+  // planificado se marca explícitamente como posible sobre-ejecución, nunca se recorta el valor.
+  const resumen_haPlan = Math.round(cultivos.reduce((s,c)=>s+c.ha_plan,0)*100)/100;
+  const resumen_haEjec = Math.round(cultivos.reduce((s,c)=>s+c.ha_ejec,0)*100)/100;
+  const resumen_haPend = Math.max(Math.round((resumen_haPlan-resumen_haEjec)*100)/100, 0);
+  const resumen_sinPlan = resumen_haPlan<=0;
+  const resumen_avance = pctSeguro(resumen_haEjec, resumen_haPlan);
+  const resumen_sobreEjecucion = resumen_avance!=null && resumen_avance>100;
+  // resumen_haPlan/haEjec/haPend/sinPlan/avance/sobreEjecucion alimentan los KPIs de arriba
+  // (Hectáreas Planificadas/Ejecutadas/Pendientes, Avance General). El gráfico que antes comparaba
+  // cultivos entre sí (barras ordenadas por desviación) se retiró a pedido del usuario — no
+  // quedó ninguna otra referencia a esos cálculos, así que no se recalculan acá.
+
+  // ---- Estado de las OT: categorías REALES encontradas en consultaOT (no una lista fija) — los 3
+  // estados conocidos (Confirmado/En Ejecución/Pendiente) en orden fijo, y cualquier otro valor
+  // real que aparezca se agrupa como "Otros" (con el detalle de qué valores incluye, nunca oculto).
+  const OT_ESTADO_ORDEN=['Confirmado','En Ejecución','Pendiente'];
+  const otEstadoCount={};
+  OTS.forEach(o=>{ const e=o.estado||'(Sin estado)'; otEstadoCount[e]=(otEstadoCount[e]||0)+1; });
+  const otrosEstadosNombres=Object.keys(otEstadoCount).filter(e=>!OT_ESTADO_ORDEN.includes(e));
+  const nOtrosEstados=otrosEstadosNombres.reduce((s,e)=>s+otEstadoCount[e],0);
+  const resumen_estadosOT=[
+    ...OT_ESTADO_ORDEN.filter(e=>otEstadoCount[e]).map(e=>({estado:e,n:otEstadoCount[e]})),
+    ...(nOtrosEstados?[{estado:'Otros',n:nOtrosEstados,detalle:otrosEstadosNombres.join(', ')}]:[]),
+  ].map(e=>({...e,pct:pctSeguro(e.n,total_ot)||0}));
+
+  // ---- Actividad operacional por mes: cantidad de OT CONFIRMADAS por mes de Fecha Real (mismo
+  // campo/criterio que ya usa Servicios para agrupar por mes — o.fr.getMonth()+1). Se usa conteo
+  // de OT y no hectáreas: no todas las OT traen Has. Reales (solo las de tierra/RTK_CROPS), así
+  // que un total en hectáreas dejaría meses enteros en 0 aunque hubo actividad real. Se etiqueta
+  // explícitamente como "OT" en el render para que no se confunda con hectáreas. Fechas inválidas
+  // (fr null) se excluyen, igual criterio que el resto del dashboard; orden cronológico (mesnum),
+  // nunca alfabético.
+  const resumenActMap={};
+  CONF.forEach(o=>{ if(!o.fr) return; const m=o.fr.getMonth()+1; resumenActMap[m]=(resumenActMap[m]||0)+1; });
+  const resumen_actividadMensual=Object.keys(resumenActMap).map(Number).sort((a,b)=>a-b)
+    .map(m=>({mesnum:m,lbl:MES[m],otConfirmadas:resumenActMap[m]}));
+
+  // ---- Posibles problemas en la campaña: reglas separadas y trazables, cada una produce 0..N
+  // tarjetas con severidad (critica/alta/media/informativa), reutilizando SIEMPRE una colección ya
+  // calculada arriba (nunca se recorren OTS/rows de nuevo). Los umbrales usados están en
+  // config.js (RESUMEN_*), no hardcodeados acá. Ninguna regla afirma una conclusión definitiva
+  // sobre el campo — todas se redactan como desviación/posible problema para revisión.
+  const RP=[];
+
+  // 1) OT atrasadas — MISMA lógica exacta que Alertas Operacionales (atr/n_ot_atrasadas ya
+  // calculados arriba). Severidad = la del atraso MÁXIMO encontrado (atr ya viene ordenado desc
+  // por días). "OT Pendientes" no es lo mismo que "OT Atrasadas": acá solo entran las que además
+  // tienen Fecha Teórica vencida, igual que en Alertas Operacionales.
+  if(atr.length){
+    const maxDias=atr[0].dias;
+    const sev = maxDias>30?'critica':(maxDias>15?'alta':(maxDias>7?'media':'informativa'));
+    const porServicio={}; atr.forEach(a=>{ const k=a.serv&&a.serv!=='-'?a.serv:'(Sin servicio)'; porServicio[k]=(porServicio[k]||0)+1; });
+    const top=Object.entries(porServicio).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([k,v])=>k+' ('+v+')').join(', ');
+    RP.push({id:'delayed_work_orders', severidad:sev, titulo:'Órdenes de trabajo atrasadas',
+      descripcion:atr.length+' OT (Pendiente o En Ejecución) con Fecha Teórica ya vencida. Atraso máximo: '+maxDias+' día(s).',
+      metrica:atr.length+' OT', contexto:'Servicios más afectados: '+top,
+      accion:'Ver Alertas Operacionales', destinoTab:5, impacto:atr.length});
+  }
+
+  // 2) Cultivos con avance por debajo del promedio de campaña — desviación RELATIVA (avance del
+  // cultivo vs. avance general en hectáreas), nunca contra una curva agronómica o fecha objetivo
+  // que no existe en los archivos. Rotulado explícitamente como desviación relativa, no como
+  // atraso agronómico confirmado. No se asigna un destino de pestaña: el detalle ya está a la
+  // vista en el gráfico "Avance por Cultivo" de esta misma página.
+  if(resumen_avance!=null){
+    cultivos.filter(c=>c.tiene_rtk).forEach(c=>{
+      const diff=resumen_avance-c.avance;
+      if(diff>=RESUMEN_DESVIACION_CULTIVO_MEDIA){
+        const sev = diff>=RESUMEN_DESVIACION_CULTIVO_ALTA?'alta':'media';
+        const nombreCap=c.nombre.charAt(0)+c.nombre.slice(1).toLowerCase();
+        RP.push({id:'crop_underperformance', severidad:sev,
+          titulo:nombreCap+': avance por debajo del promedio de la campaña',
+          descripcion:'Avance de '+Math.round(c.avance)+'% vs. '+Math.round(resumen_avance)+'% general — desviación relativa, no confirma atraso agronómico.',
+          metrica:Math.round(c.avance)+'%', contexto:fmt2(c.ha_ejec)+' de '+fmt2(c.ha_plan)+' ha ejecutadas',
+          accion:null, destinoTab:null, impacto:diff});
+      }
+    });
+  }
+
+  // 3) Superficie ejecutada superior al plan — reutiliza exceso/exc_kpi ya calculados en Control
+  // de Hectáreas, sin recalcular nada. Severidad según el % de exceso del PEOR caso encontrado.
+  if(exc_kpi.n){
+    const pctMayor = exceso.length ? Math.max(...exceso.map(e=>e.pdiff)) : 0;
+    const sev = pctMayor>=RESUMEN_SOBREEJECUCION_CRITICA?'critica':(pctMayor>=RESUMEN_SOBREEJECUCION_ALTA?'alta':'media');
+    RP.push({id:'crop_overexecution', severidad:sev, titulo:'Superficie ejecutada superior al plan',
+      descripcion:exc_kpi.n+' lote(s) con hectáreas ejecutadas por encima de lo planificado (RTK).',
+      metrica:'+'+fmt2(exc_kpi.ha)+' ha', contexto:'Mayor caso: +'+fmt2(exc_kpi.mayor)+' ha ('+Math.round(pctMayor)+'% de exceso)',
+      accion:'Ver Control de Hectáreas', destinoTab:4, impacto:exc_kpi.ha});
+  }
+
+  // 4) OT sin correspondencia en el plan — reutiliza sinrtk ya calculado en Control de Hectáreas.
+  if(sinrtk.length){
+    const porCultivo={}; sinrtk.forEach(r=>{ porCultivo[r.cult]=(porCultivo[r.cult]||0)+1; });
+    const top=Object.entries(porCultivo).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([k,v])=>k+' ('+v+')').join(', ');
+    const sev = sinrtk.length>=RESUMEN_SINRTK_ALTA?'alta':'media';
+    RP.push({id:'unmatched_orders', severidad:sev, titulo:'OT sin correspondencia en el plan RTK',
+      descripcion:sinrtk.length+' OT cargadas en lotes que no existen en la planificación RTK.',
+      metrica:sinrtk.length+' OT', contexto:'Principales cultivos: '+top,
+      accion:'Ver Control de Hectáreas', destinoTab:4, impacto:sinrtk.length});
+  }
+
+  // 5) Cultivos planificados sin ejecución registrada — posible gracias al fix de "cultivos" de
+  // arriba (ya no se descartan los que no tienen ninguna OT todavía). Redactado como "sin
+  // ejecución REGISTRADA": no afirma que el trabajo físico no se haya realizado.
+  cultivos.filter(c=>c.tiene_rtk && c.ha_ejec<=0).forEach(c=>{
+    const nombreCap=c.nombre.charAt(0)+c.nombre.slice(1).toLowerCase();
+    RP.push({id:'inactive_planned_crops', severidad:'media', titulo:nombreCap+': sin ejecución registrada',
+      descripcion:'Tiene '+fmt2(c.ha_plan)+' ha planificadas y 0 ha ejecutadas en OT confirmadas.',
+      metrica:fmt2(c.ha_plan)+' ha planificadas', contexto:'No implica necesariamente que el trabajo físico no se haya realizado.',
+      accion:null, destinoTab:null, impacto:c.ha_plan});
+  });
+
+  // 6) Concentración elevada del gasto — generalización de la vieja verificación fija de "1°/2°
+  // Disco": acá se busca dinámicamente qué LABOR real concentra más costo (reutilizando `gastos`,
+  // ya agregado por labor/mes) en vez de un nombre de labor hardcodeado, para que siga
+  // funcionando si cambian los nombres de labor de una campaña a otra.
+  if(costo_total>0){
+    const porLabor={};
+    gastos.forEach(g=>{ porLabor[g.labor]=(porLabor[g.labor]||0)+g.propia+g.tercero+g.insumos; });
+    const top=Object.entries(porLabor).sort((a,b)=>b[1]-a[1])[0];
+    if(top){
+      const pct=Math.round(top[1]/costo_total*1000)/10;
+      if(pct>=RESUMEN_CONCENTRACION_GASTO){
+        const sev = pct>=RESUMEN_CONCENTRACION_GASTO_ALTA?'alta':'media';
+        RP.push({id:'high_cost_concentration', severidad:sev, titulo:'Concentración elevada del gasto en "'+top[0]+'"',
+          descripcion:'Una sola labor concentra '+pct+'% del costo ejecutado de la campaña — para revisión, no implica error.',
+          metrica:pct+'%', contexto:'US$ '+fmtUSD(top[1])+' de US$ '+fmtUSD(costo_total)+' del total',
+          accion:'Ver Servicios', destinoTab:1, impacto:pct});
+      }
+    }
+  }
+
+  // 7) Datos incompletos o inconsistentes — solo se cuentan campos que SÍ son obligatorios según
+  // la estructura real: Actividad (sin ella la OT no entra en ningún cultivo ni área operativa) y
+  // Fecha Teórica (sin ella nunca puede detectarse como atrasada). El campo Servicio NO se cuenta
+  // acá: hay OT reales sin Servicio por diseño (las de gasoil, ver gasOT) — no es un dato faltante.
+  const otSinActividad=OTS.filter(o=>!o.act).length;
+  const otSinFechaTeorica=OTS.filter(o=>!o.ft).length;
+  if(otSinActividad || otSinFechaTeorica){
+    const partes=[];
+    if(otSinActividad) partes.push(otSinActividad+' OT sin Actividad/Cultivo');
+    if(otSinFechaTeorica) partes.push(otSinFechaTeorica+' OT sin Fecha Teórica');
+    const nTot=otSinActividad+otSinFechaTeorica;
+    const sev = total_ot && (nTot/total_ot*100)>=RESUMEN_DATOS_INCOMPLETOS_PCT ? 'media' : 'informativa';
+    RP.push({id:'missing_or_invalid_data', severidad:sev, titulo:'Datos incompletos en algunas OT',
+      descripcion:partes.join(' · ')+'.', metrica:nTot+' OT', contexto:'Puede limitar la precisión de otros indicadores (avance, atrasos).',
+      accion:null, destinoTab:null, impacto:nTot});
+  }
+
+  const SEV_ORDEN={critica:0,alta:1,media:2,informativa:3};
+  RP.sort((a,b)=>(SEV_ORDEN[a.severidad]-SEV_ORDEN[b.severidad])||(b.impacto-a.impacto));
+
+  const resumen = {
+    kpis:{
+      haPlan:resumen_haPlan, haEjec:resumen_haEjec, haPend:resumen_haPend,
+      avanceGeneral:resumen_avance, sobreEjecucion:resumen_sobreEjecucion, sinPlan:resumen_sinPlan,
+      otAtrasadas:n_ot_atrasadas, otConfirmadas:ot_conf,
+      costoEjecutado:costo_total, gastoNoAgricola:oper_costo, gastoNoAgricolaPct:oper_part,
+    },
+    estadosOT:resumen_estadosOT,
+    actividadMensual:resumen_actividadMensual,
+    problemas:RP,
+  };
 
   return {total_ot,ot_conf,ot_ejec,ot_pend,costo_total,cultivos,operativas,oper_costo,oper_part,
     exceso,sinrtk,exc_kpi,alertas:atr,n_ot_atrasadas,n_ejec_atraso,
@@ -552,7 +698,6 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
     insumos_ingreso,insumos_consumo,insumos_meses,insumos_tipos,insumos_por_tipo,
     insumos_stock_flujo,insumos_ingreso_mensual,insumos_consumo_mensual,
     insumos_pendiente_modulo:otrosInsumos||[],
-    problemas:P,
-    fecha_datos:HOY,
-    avance_glob:Math.round(ot_conf/total_ot*100)};
+    resumen,
+    fecha_datos:HOY};
 }

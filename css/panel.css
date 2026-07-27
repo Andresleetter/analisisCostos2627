@@ -4,5 +4,5 @@
 .panel.hero-panel{border:2px solid var(--teal);box-shadow:0 3px 10px rgba(30,107,92,.10)}
 .panel.hero-panel h3{font-size:15px}
 .panel.sub h3{font-size:12px}
-.c-g{color:var(--g)} .c-y{color:var(--y)} .c-o{color:var(--o)} .c-r{color:var(--r)}
-.f-g{background:var(--g)} .f-y{background:var(--y)} .f-o{background:var(--o)} .f-r{background:var(--r)}
+.c-g{color:var(--g)} .c-y{color:var(--y)} .c-o{color:var(--o)} .c-r{color:var(--r)} .c-gris{color:var(--muted)}
+.f-g{background:var(--g)} .f-y{background:var(--y)} .f-o{background:var(--o)} .f-r{background:var(--r)} .f-gris{background:var(--muted)}

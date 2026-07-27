@@ -13,6 +13,7 @@
 <link rel="stylesheet" href="css/kpis.css">
 <link rel="stylesheet" href="css/cultivos.css">
 <link rel="stylesheet" href="css/problemas.css">
+<link rel="stylesheet" href="css/resumen.css">
 <link rel="stylesheet" href="css/tables.css">
 <link rel="stylesheet" href="css/gastos.css">
 <link rel="stylesheet" href="css/alertas.css">
@@ -49,18 +50,35 @@
 
   <div id="err-slot"></div>
 
-  <!-- TAB 1 -->
+  <!-- TAB 1: Resumen Ejecutivo -->
   <section class="page active">
-    <div class="panel"><h3>Avance por Cultivo <span>etapas consideradas: Preparación de Suelo, Siembra, Cuidados, Cosecha · vs plan RTK</span></h3><div class="cults" id="cults"></div></div>
-    <div class="kpis" id="exec-kpis"></div>
+
+    <!-- 1. Estado general de la campaña -->
+    <div class="kpis kpis-exec" id="exec-kpis"></div>
+
+    <!-- 2. Detalle de Etapas por Cultivo: primer bloque analítico tras los KPIs -->
+    <div class="panel"><h3>Detalle de Etapas por Cultivo <span>Preparación de Suelo, Siembra, Cuidados, Cosecha</span></h3>
+      <div class="cults" id="cults"></div></div>
+
+    <!-- 3. Ejecución operacional -->
+    <div class="resumen-grid-2">
+      <div class="panel"><h3>Estado de las Órdenes de Trabajo <span id="resumen-ot-sub"></span></h3>
+        <div id="resumen-estados-ot"></div></div>
+      <div class="panel"><h3>Actividad Operacional por Período <span>OT confirmadas por mes</span></h3>
+        <div id="resumen-actividad-mensual"></div></div>
+    </div>
+
+    <!-- 4. Distribución de recursos -->
+    <div class="panel"><h3>Distribución del Gasto: Áreas No Agrícolas <span id="oper-sub"></span></h3>
+      <div id="resumen-gasto"></div></div>
+
+    <!-- 5. Posibles problemas en la campaña -->
     <div class="prob-head">
       <div class="prob-count"><b id="prob-n">0</b><span>Problemas</span></div>
-      <div><div class="ph-t">Problemas Detectados en la Campaña</div>
-        <div class="ph-s">Desviaciones, excesos, sobrecostos, incumplimientos y observaciones para evaluación de la gerencia</div></div>
+      <div><div class="ph-t">Posibles Problemas en la Campaña</div>
+        <div class="ph-s">Desviaciones detectadas automáticamente a partir de los datos actuales — señalan puntos para revisión de gestión, no confirman necesariamente un problema físico en el campo.</div></div>
     </div>
     <div class="probs" id="probs"></div>
-    <div class="panel"><h3>Distribución del Gasto: Áreas No Agrícolas <span id="oper-sub"></span></h3>
-      <table><thead><tr><th>Categoría</th><th class="tr">OT</th><th class="tr">Costo Acum.</th><th class="tr">Participación</th><th class="tr">%</th></tr></thead><tbody id="oper"></tbody></table></div>
   </section>
 
   <!-- TAB 2 -->
