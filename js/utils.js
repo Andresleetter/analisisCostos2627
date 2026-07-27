@@ -17,7 +17,20 @@ function pdate(v){ if(!v) return null;
   const d=new Date(s); return isNaN(d)?null:d; }
 function keyOf(row,names){ for(const n of names){ if(n in row) return row[n]; const k=Object.keys(row).find(k=>k.trim()===n.trim()); if(k) return row[k]; } return undefined; }
 function color(av){ return av>=95?'g':(av>=80?'y':(av>=50?'o':'r')); }
-const CATCOL={'Gastos':'#1E6B5C','Hectáreas':'#5AA02C','Avance':'#F57C00','Controles':'#8e6a1f'};
+// Porcentaje seguro: evita division por cero devolviendo null (no NaN/Infinity) cuando no hay una
+// base valida — el llamador decide como mostrar la ausencia de dato (ej. "Sin plan disponible"),
+// en vez de que un 0 o un NaN se cuele silenciosamente en un KPI.
+function pctSeguro(parte,total){ if(!total) return null; return Math.round((parte/total)*1000)/10; }
+// Severidad de "Posibles problemas" (Resumen Ejecutivo): reutiliza los mismos colores de estado ya
+// usados en el resto del dashboard (c-g/c-y/c-o/c-r + el neutro c-gris, ver panel.css). Se separa
+// de color() porque la escala de severidad no es un porcentaje de avance sino una clasificación
+// categórica de 4 niveles fija (critica/alta/media/informativa) — "informativa" usa el neutro
+// (gris), no el verde, para no leerse como "todo bien" cuando en realidad es una desviación,
+// aunque de baja severidad.
+const SEVERIDAD_COLOR={critica:'r',alta:'o',media:'y',informativa:'gris'};
+const SEVERIDAD_LABEL={critica:'Crítica',alta:'Alta',media:'Media',informativa:'Informativa'};
+function colorSeveridad(sev){ return SEVERIDAD_COLOR[sev]||'gris'; }
+function labelSeveridad(sev){ return SEVERIDAD_LABEL[sev]||'Info'; }
 function normEstadio(s){ return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim(); }
 function stripAccents(s){ return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
 function normHdr(s){ return stripAccents(s).toLowerCase().replace(/\uFEFF/g,'').replace(/\s+/g,' ').trim(); }

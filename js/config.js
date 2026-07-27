@@ -67,6 +67,14 @@ const INFRA_PUENTES_PROPIA_ESP = 'Contrucion puentes Labor Propia';
 const INFRA_PUENTES_TERCERO_SERV = 'CONSTRUCCION PUENTE AGROVIAL';
 const INFRA_PUENTES_PROPIA_SERV = 'CONSTRUCCION PUENTES LABOR PROPIA';
 const INFRA_PUENTES_HORAS_SERV = 'Construccion de Puentes retro excavadora x Hs';
+// Sección "Gastos" de Auditoría: ÚNICO concepto que debe mostrarse (a pedido del usuario, en
+// reemplazo de la vieja búsqueda amplia por la palabra suelta "desalijo", que mezclaba también
+// "Desalijo Silo Bolsa" y "Construccion de Puentes...x Hs"). Fuente única de verdad para la
+// ETIQUETA mostrada en el render — el filtro real (ver data.js) no compara esta frase completa
+// contra los datos (ninguna OT la trae así, verificado contra el .xlsx), sino que busca el
+// concepto puntual ("desalijo" + "karanda"/"caranda", tolerando variantes de ortografía) dentro
+// de Servicio/Observación de consultaOT.
+const AUDITORIA_GASTO_DESALIJO = "Desalijo Karanda'y / Carandai";
 const INFRA_MAP = {
   'Contrucion camino nuevo': [
     'Construccion de Camino retro excavadora x Hs',
@@ -103,4 +111,17 @@ const INFRA_MAP = {
     'Remonte de taipa x Hs',
   ],
 };
+// ---- RESUMEN EJECUTIVO: umbrales de las reglas de "posibles problemas" ----
+// Centralizados acá (no hardcodeados en data.js) para que sean trazables y ajustables sin tocar
+// la lógica de cada regla. Todos son heurísticas explícitas, no curvas agronómicas ni metas
+// temporales inventadas — ver comentarios en data.js junto a cada regla que los usa.
+const RESUMEN_DESVIACION_CULTIVO_MEDIA = 20;   // puntos por debajo del avance general -> severidad media
+const RESUMEN_DESVIACION_CULTIVO_ALTA = 40;    // puntos por debajo del avance general -> severidad alta
+const RESUMEN_SOBREEJECUCION_ALTA = 20;        // % de exceso sobre RTK -> severidad alta
+const RESUMEN_SOBREEJECUCION_CRITICA = 50;     // % de exceso sobre RTK -> severidad critica
+const RESUMEN_SINRTK_ALTA = 20;                // cantidad de OT sin correspondencia -> severidad alta
+const RESUMEN_CONCENTRACION_GASTO = 50;        // % del costo total en una sola labor -> severidad media (umbral base pedido por el usuario)
+const RESUMEN_CONCENTRACION_GASTO_ALTA = 70;   // % del costo total en una sola labor -> severidad alta
+const RESUMEN_DATOS_INCOMPLETOS_PCT = 10;      // % de OT con datos faltantes -> severidad media (si no, informativa)
+
 let D=null;
