@@ -150,7 +150,13 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
       let ha_e=0; if(RTK[c]) e.lotes.forEach(l=>{ if(l in RTK[c]) ha_e+=RTK[c][l]; });
       ha_e=Math.round(ha_e*100)/100;
       const av_e = ha_plan>0 ? Math.round(ha_e/ha_plan*1000)/10 : null;
-      return {nombre:e.nombre, ha_ejec:ha_e, avance:av_e, n_lotes:e.lotes.size};
+      // OT de ESTE estadio puntual (cualquier Estado, no solo Confirmado) — para que "OT
+      // Confirmadas/Totales" del Detalle de Etapas por Cultivo nunca mezcle OT de otro estadio.
+      // "ha_plan" se repite tal cual (mismo valor que el cultivo): el plan RTK no tiene desglose
+      // por estadio, así que la referencia planificada es siempre la meta de toda la campaña.
+      const subEtapa = sub.filter(o=>normEstadio(o.estadio)===k);
+      return {nombre:e.nombre, ha_ejec:ha_e, avance:av_e, n_lotes:e.lotes.size, ha_plan,
+        otConfirmadas: subEtapa.filter(o=>o.estado==='Confirmado').length, otTotales: subEtapa.length};
     });
     const etapa_actual = etapas.length? etapas[etapas.length-1].nombre : null;
 
@@ -518,22 +524,16 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
   // vez acá (no en render.js) y se reutilizan colecciones ya construidas arriba (cultivos, atr,
   // exceso, sinrtk, gastos, operativas) — nunca se vuelve a filtrar OTS/rows desde cero para esto.
 
-  // ---- Avance general de campaña: Ha Ejecutadas / Ha Planificadas, sobre TODOS los cultivos con
-  // datos (cultivos ya incluye, desde el fix de arriba, los planificados sin ninguna OT todavía).
-  // "Hectáreas planificadas" = RTK_TOT sumado (cultivos.ha_plan); "Hectáreas ejecutadas" = el
-  // mismo cálculo de ha_ejec que ya usa "Avance por Cultivo" (lotes confirmados ∩ RTK). Sin
-  // división por cero (pctSeguro) y sin techo silencioso en 100%: si se ejecuta más de lo
-  // planificado se marca explícitamente como posible sobre-ejecución, nunca se recorta el valor.
-  const resumen_haPlan = Math.round(cultivos.reduce((s,c)=>s+c.ha_plan,0)*100)/100;
-  const resumen_haEjec = Math.round(cultivos.reduce((s,c)=>s+c.ha_ejec,0)*100)/100;
-  const resumen_haPend = Math.max(Math.round((resumen_haPlan-resumen_haEjec)*100)/100, 0);
-  const resumen_sinPlan = resumen_haPlan<=0;
-  const resumen_avance = pctSeguro(resumen_haEjec, resumen_haPlan);
-  const resumen_sobreEjecucion = resumen_avance!=null && resumen_avance>100;
-  // resumen_haPlan/haEjec/haPend/sinPlan/avance/sobreEjecucion alimentan los KPIs de arriba
-  // (Hectáreas Planificadas/Ejecutadas/Pendientes, Avance General). El gráfico que antes comparaba
-  // cultivos entre sí (barras ordenadas por desviación) se retiró a pedido del usuario — no
-  // quedó ninguna otra referencia a esos cálculos, así que no se recalculan acá.
+  // ---- Avance general de campaña (Ha Ejecutadas / Ha Planificadas, todos los cultivos) ----
+  // Ya NO se muestra como KPI ni como gráfico (ambos se retiraron a pedido del usuario): la
+  // superficie planificada/ejecutada ahora se presenta únicamente dentro de "Detalle de Etapas
+  // por Cultivo" (por cultivo y por estadio, ver etapas más arriba). Este promedio general se
+  // conserva SOLO porque la regla de "posibles problemas" crop_underperformance lo sigue usando
+  // como referencia de comparación (avance del cultivo vs. avance general) — pctSeguro() evita
+  // la división por cero devolviendo null en vez de inventar un 0%.
+  const resumen_avance = pctSeguro(
+    Math.round(cultivos.reduce((s,c)=>s+c.ha_ejec,0)*100)/100,
+    Math.round(cultivos.reduce((s,c)=>s+c.ha_plan,0)*100)/100);
 
   // ---- Estado de las OT: categorías REALES encontradas en consultaOT (no una lista fija) — los 3
   // estados conocidos (Confirmado/En Ejecución/Pendiente) en orden fijo, y cualquier otro valor
@@ -676,9 +676,10 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
   RP.sort((a,b)=>(SEV_ORDEN[a.severidad]-SEV_ORDEN[b.severidad])||(b.impacto-a.impacto));
 
   const resumen = {
+    // Solo los 4 KPIs operativos/financieros generales — las hectáreas planificadas/ejecutadas y
+    // el avance general se retiraron de esta fila (ver "Detalle de Etapas por Cultivo" para esa
+    // información, ahora desglosada por cultivo y por estadio en vez de un total de campaña).
     kpis:{
-      haPlan:resumen_haPlan, haEjec:resumen_haEjec, haPend:resumen_haPend,
-      avanceGeneral:resumen_avance, sobreEjecucion:resumen_sobreEjecucion, sinPlan:resumen_sinPlan,
       otAtrasadas:n_ot_atrasadas, otConfirmadas:ot_conf,
       costoEjecutado:costo_total, gastoNoAgricola:oper_costo, gastoNoAgricolaPct:oper_part,
     },

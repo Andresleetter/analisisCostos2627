@@ -13,11 +13,15 @@
 
 /* ---- KPIs ejecutivos: mismo componente .kpi de kpis.css, con acento de color a la izquierda en
    vez de pintar toda la tarjeta (kpi_visual_rules: "no pintar todo el componente con colores
-   fuertes"). .kpis-exec ajusta el tamaño de valor para que quepan 8 tarjetas sin desbordar. ---- */
+   fuertes"). .kpis-exec ajusta el tamaño de valor para acomodar los 4 KPIs cómodamente. La grilla
+   de 4/2 columnas la hereda de .kpis (kpis.css, compartida con las demás pestañas); acá solo se
+   agrega el paso final a 1 columna en pantallas muy angostas, con un selector propio
+   (.kpis-exec) para no tocar el comportamiento de .kpis en el resto del dashboard. ---- */
 .kpis-exec .k-val{font-size:19px}
 .kpi-acc{border-left-width:4px;border-left-style:solid}
 .kpi-g{border-left-color:var(--g)} .kpi-y{border-left-color:var(--y)} .kpi-o{border-left-color:var(--o)}
 .kpi-r{border-left-color:var(--r)} .kpi-gris{border-left-color:var(--muted)}
+@media(max-width:480px){.kpis-exec{grid-template-columns:1fr}}
 
 /* ---- Estado de las OT: barra apilada + leyenda ---- */
 .estbar-track{display:flex;height:22px;border-radius:11px;overflow:hidden;background:#eef2ec;margin-bottom:16px}
