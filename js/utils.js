@@ -14,6 +14,10 @@ function fmtCantidadUnidad(cantidad, unidad){
   const u = String(unidad||'').trim();
   return (u && u!=='(sin unidad)') ? fmt2(cantidad)+' '+u : fmt2(cantidad);
 }
+function fmtMovimientos(n){
+  if(!n) return 'Sin movimientos';
+  return n===1 ? '1 movimiento' : n+' movimientos';
+}
 function normLote(x){ let s=String(x==null?'':x).trim().replace(/^\.+/,'').trim().toUpperCase(); s=s.replace(/^0+(?=\d)/,''); return s; }
 function pdate(v){ if(!v) return null;
   // SheetJS (lectura del .xlsx con cellDates:true) entrega las celdas de fecha como Date nativos.

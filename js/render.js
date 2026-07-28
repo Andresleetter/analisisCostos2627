@@ -94,7 +94,7 @@ function renderResumenKPIs(){
 function renderEstadosOT(){
   const list=D.resumen.estadosOT;
   const cont=document.getElementById('resumen-estados-ot');
-  document.getElementById('resumen-ot-sub').textContent=D.total_ot+' OT totales · campaña '+CAMPANIA_ACTUAL;
+  document.getElementById('resumen-ot-sub').textContent=D.total_ot+' OT totales';
   if(!list.length){ cont.innerHTML='<div class="resumen-empty">Sin OT registradas.</div>'; return; }
   const ESTADO_COL={'Confirmado':'g','En Ejecución':'y','Pendiente':'o','Otros':'gris'};
   const bar=list.map(e=>`<div class="estbar-seg f-${ESTADO_COL[e.estado]||'gris'}" style="width:${e.pct}%" title="${e.estado}: ${e.n} (${e.pct}%)"></div>`).join('');
@@ -228,10 +228,10 @@ function renderAlertas(){
   // KPIs con el mismo estilo que el resto del dashboard (.kpi, fondo blanco) — Lotes con Exceso
   // y OT sin Correspondencia RTK NO se repiten acá: ya se muestran en Control de Hectáreas.
   document.getElementById('al-kpis').innerHTML=
-    `<div class="kpi"><div class="k-lab">OT Atrasadas</div><div class="k-val c-r">${n_atrasadas}</div><div class="k-foot">${estTxt}</div></div>`+
-    `<div class="kpi"><div class="k-lab">OT en Ejecución con Atraso</div><div class="k-val c-o">${n_ejec_atraso}</div><div class="k-foot">${estTxt}</div></div>`+
+    `<div class="kpi"><div class="k-lab">OT Atrasadas</div><div class="k-val c-r">${n_atrasadas}</div></div>`+
+    `<div class="kpi"><div class="k-lab">OT en Ejecución con Atraso</div><div class="k-val c-o">${n_ejec_atraso}</div></div>`+
     `<div class="kpi"><div class="k-lab">OT Pendientes</div><div class="k-val">${D.ot_pend}</div><div class="k-foot">Estado = Pendiente · toda la campaña</div></div>`;
-  document.getElementById('al-sub').textContent=n_atrasadas+' registros · '+estTxt+' · ordenado por días de atraso';
+  document.getElementById('al-sub').textContent=n_atrasadas+' registros · ordenado por días de atraso';
   document.getElementById('al').innerHTML = alertas.length ? alertas.map(a=>{
     // Color por días de atraso, por FILA — puramente visual, no depende del filtro de Estado
     // (que ya viene aplicado en `alertas` más arriba): <=7 sin color, 8-15 amarillo suave,
@@ -316,10 +316,8 @@ function renderModoInsumosEspecifico(flujoRows, unidadInsumo, insumoMultiUnidad)
 }
 function renderInsumos(){
   const selV=document.getElementById('imes').value, sel=selV==='ALL'?'ALL':parseInt(selV);
-  const selTxt=selV==='ALL'?'Toda la campaña':document.getElementById('imes').selectedOptions[0].text;
   const tipoV=document.getElementById('itipo').value;
   const insumoV=document.getElementById('iinsumo').value;
-  const filtroTxt = selTxt+(tipoV!=='ALL'?' · '+tipoV:'')+(insumoV!=='ALL'?' · '+insumoV:'');
 
   let ingreso = sel==='ALL' ? D.insumos_ingreso : D.insumos_ingreso.filter(r=>r.mesnum===sel);
   let consumo = sel==='ALL' ? D.insumos_consumo : D.insumos_consumo.filter(r=>r.mesnum===sel);
@@ -329,8 +327,6 @@ function renderInsumos(){
   const consumoOrd = consumo.slice().sort((a,b)=>b.cantidad-a.cantidad);
   const nMovIngreso = ingresoOrd.reduce((s,o)=>s+o.n,0);
   const nMovConsumo = consumoOrd.reduce((s,o)=>s+o.n,0);
-
-  document.getElementById('inote').textContent=filtroTxt;
 
   // Stock por (Tipo, Insumo, Unidad), mismo arrastre mes a mes que Combustible
   // (stockInicioDePeriodo(), utils.js). Balance = Stock Inicial + Ingreso − Consumo del período.
@@ -355,15 +351,13 @@ function renderInsumos(){
   if(modo==='summary') renderModoInsumosResumen(flujoRows, nMovIngreso, nMovConsumo);
   else renderModoInsumosEspecifico(flujoRows, unidadInsumo, insumoMultiUnidad);
 
-  // Cantidad + Unidad en una sola celda (fmtCantidadUnidad(), utils.js): "Movimientos" es la
-  // cantidad de registros agrupados, no una magnitud física, por eso no comparte celda con Cantidad.
-  document.getElementById('ins-ingreso-sub').textContent=nMovIngreso+' movimientos · Ingreso de Mercadería';
+  document.getElementById('ins-ingreso-sub').textContent=fmtMovimientos(nMovIngreso);
   document.getElementById('ins-ingreso').innerHTML = ingresoOrd.length ? ingresoOrd.map(o=>
     `<tr><td>${o.nombre}</td><td>${o.proveedor}</td><td class="tr mono">${o.n}</td><td class="tr mono qty-unit">${fmtCantidadUnidad(o.cantidad,o.unidad)}</td></tr>`
   ).join('') : '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:16px">Sin ingresos de insumos en el período</td></tr>';
 
   // Proveedor siempre vacío en Consumo: no es un dato que exista para estos movimientos.
-  document.getElementById('ins-consumo-sub').textContent=nMovConsumo+' movimientos · Egreso de Stock';
+  document.getElementById('ins-consumo-sub').textContent=fmtMovimientos(nMovConsumo);
   document.getElementById('ins-consumo').innerHTML = consumoOrd.length ? consumoOrd.map(o=>
     `<tr><td>${o.nombre}</td><td></td><td class="tr mono">${o.n}</td><td class="tr mono qty-unit">${fmtCantidadUnidad(o.cantidad,o.unidad)}</td></tr>`
   ).join('') : '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:16px">Sin consumo de insumos en el período</td></tr>';
@@ -397,9 +391,9 @@ function renderCombustible(){
   const balance=stockInicioPeriodo+totIngresoMes-totConsumoMes;
   const balCol=balance>=0?'g':'r';
   document.getElementById('comb-balance').innerHTML=
-    `<div class="kpi"><div class="k-lab">Stock Inicial</div><div class="k-val c-g">${fmt2(stockInicioPeriodo)}<small> L</small></div><div class="k-foot">Campaña 26/27</div></div>`+
-    `<div class="kpi"><div class="k-lab">Ingreso de Combustible</div><div class="k-val c-g">${fmt2(totIngresoMes)}<small> L</small></div><div class="k-foot">${selTxt}</div></div>`+
-    `<div class="kpi"><div class="k-lab">Consumo de Combustible</div><div class="k-val c-o">${fmt2(totConsumoMes)}<small> L</small></div><div class="k-foot">${selTxt}</div></div>`+
+    `<div class="kpi"><div class="k-lab">Stock Inicial</div><div class="k-val c-g">${fmt2(stockInicioPeriodo)}<small> L</small></div></div>`+
+    `<div class="kpi"><div class="k-lab">Ingreso</div><div class="k-val c-g">${fmt2(totIngresoMes)}<small> L</small></div></div>`+
+    `<div class="kpi"><div class="k-lab">Consumo</div><div class="k-val c-o">${fmt2(totConsumoMes)}<small> L</small></div></div>`+
     `<div class="kpi"><div class="k-lab">Balance (Stock Inicial + Ingreso − Consumo)</div><div class="k-val c-${balCol}">${fmt2(balance)}<small> L</small></div><div class="k-foot">${balance>=0?'Queda stock disponible':'Stock consumido en exceso'}</div></div>`;
 
   // ---- Ingresos de Combustible (arriba): solo respeta el filtro de Mes ----
@@ -427,7 +421,6 @@ function renderCombustible(){
 
 function renderG(){
   const selV=document.getElementById('gmes').value, sel=selV==='ALL'?'ALL':parseInt(selV);
-  const selTxt=selV==='ALL'?'Toda la campaña':document.getElementById('gmes').selectedOptions[0].text;
   const mt=monthTotals(); const recs=sel==='ALL'?D.gastos:D.gastos.filter(r=>r.mesnum===sel);
   const by={}; recs.forEach(r=>{ if(!by[r.labor])by[r.labor]={labor:r.labor,esH:r.esH,n:0,ha:0,horas:0,prop:0,terc:0,ins:0};
     const o=by[r.labor];o.n+=r.n;o.ha+=r.ha;o.horas+=r.horas;o.prop+=r.propia;o.terc+=r.tercero;o.ins+=r.insumos; });
@@ -435,7 +428,7 @@ function renderG(){
   const gasto=labs.reduce((s,l)=>s+l.tot,0), nOT=labs.reduce((s,l)=>s+l.n,0);
   const totTerc=labs.reduce((s,l)=>s+l.terc,0), totIns=labs.reduce((s,l)=>s+l.ins,0);
   const gasoil=sel==='ALL'?D.gasoil_total:(D.gmes[sel]||0), gasoilL=sel==='ALL'?D.gasoil_litros_total:(D.glit[sel]||0);
-  const K=[['Gasto Total (labores)','US$ '+fmtUSD(gasto),selTxt],['OT Confirmadas',nOT,'con labor'],['Labores Ejecutadas',labs.length,'tipos de labor'],
+  const K=[['Gasto Total (labores)','US$ '+fmtUSD(gasto),''],['OT Confirmadas',nOT,'con labor'],['Labores Ejecutadas',labs.length,'tipos de labor'],
     ['Costo Labor Tercero','US$ '+fmtUSD(totTerc),gasto?Math.round(totTerc/gasto*100)+'% del gasto':''],
     ['Costo Insumos','US$ '+fmtUSD(totIns),gasto?Math.round(totIns/gasto*100)+'% del gasto':''],
     ['Gasto de Gasoil','US$ '+fmtUSD(gasoil),fmt1(gasoilL)+' L']];
@@ -460,7 +453,6 @@ function renderG(){
 // pertenece a un único contratista, o a "No aplica"/"Sin contratista" cuando corresponde).
 function renderLaborDetalle(){
   const selV=document.getElementById('gmes').value, sel=selV==='ALL'?'ALL':parseInt(selV);
-  const selTxt=selV==='ALL'?'Toda la campaña':document.getElementById('gmes').selectedOptions[0].text;
   const laborV=document.getElementById('glabor').value, estV=document.getElementById('gestadio').value;
   const contV=document.getElementById('gcontratista').value;
   let recs=sel==='ALL'?D.gastos:D.gastos.filter(r=>r.mesnum===sel);
@@ -472,8 +464,7 @@ function renderLaborDetalle(){
     if(!by[key]) by[key]={labor:r.labor,estadio:r.estadio,contratista:r.contratista,esH:r.esH,n:0,ha:0,horas:0,prop:0,propUd:0,terc:0,ins:0};
     const o=by[key]; o.n+=r.n; o.ha+=r.ha; o.horas+=r.horas; o.prop+=r.propia; o.propUd+=r.propia_ud; o.terc+=r.tercero; o.ins+=r.insumos; });
   const labs=Object.values(by).map(o=>({...o,tot:o.prop+o.terc+o.ins})).sort((a,b)=>b.tot-a.tot);
-  const filtro=[laborV!=='ALL'?'Labor: '+laborV:null, estV!=='ALL'?'Etapa: '+estV:null, contV!=='ALL'?'Contratista: '+labelContratista(contV):null].filter(Boolean).join(' · ');
-  document.getElementById('gld-sub').textContent=selTxt+(filtro?' · '+filtro:'')+' · '+labs.length+' combinación(es) labor/etapa/contratista · ordenado por costo total';
+  document.getElementById('gld-sub').textContent=labs.length+' combinación(es) labor/etapa/contratista · ordenado por costo total';
   document.getElementById('gld').innerHTML= labs.length ? labs.map(l=>{
     const ha=l.esH?'<span style="color:var(--muted)">—</span>':fmt2(l.ha), hr=l.esH?fmt2(l.horas):'<span style="color:var(--muted)">—</span>';
     const chip=l.esH?'<span class="chip chip-hr">horas</span>':'<span class="chip chip-ha">ha</span>';
