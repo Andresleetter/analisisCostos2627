@@ -27,6 +27,16 @@ const OPERATIVAS = ['OPERATIVO','PARCELA ARROZ','PARCELA SOJA','PARCELA SORGO','
 // al inicio), separadas del Ingreso/Consumo porque no son un movimiento sino un saldo de partida.
 const TIPO_INSUMO_COMBUSTIBLE = 'COMBUSTIBLES';
 const MOV_EXISTENCIA_INICIAL = 'Existencia inicial';
+// Insumos excluidos por completo del módulo Insumos (a pedido del usuario) — no participan de
+// ningún filtro, KPI, tabla ni resumen visible; se separan en loader.js (separarInsumos()) antes
+// de que data.js construya nada, y se conservan aparte solo para trazabilidad (D.insumos_excluidos).
+// Verificado contra el .xlsx real: "Afrecho de Arroz - CH" es a la vez un Tipo de Insumo y un
+// Insumo (mismo texto, solo difieren en mayúsculas: Tipo="Afrecho de arroz - CH"), único insumo
+// bajo ese Tipo — al excluirlo por nombre, el Tipo desaparece solo. La comparación usa
+// normInsumoNombre() (utils.js: normHdr + colapso de espacios alrededor del guion) para tolerar
+// variantes razonables de tipeo, sin ampliarse a otros insumos que solo compartan las palabras
+// "arroz" o "afrecho" (ej. "Semilla de Arroz...").
+const INSUMOS_EXCLUIDOS = ["Afrecho de Arroz - CH"];
 // Campania vigente: criterio de inclusion de filas de consultaOT y de consultaCultivos
 // (proyeccionRTK) unicamente — ver data.js. consultaInsumos (combustible + modulo Insumos) NO
 // se filtra por campania: se procesa completo, tal como antes de introducir este filtro.

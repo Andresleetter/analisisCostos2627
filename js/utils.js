@@ -81,3 +81,29 @@ function fmtKpiUnidad(valor, unidadResuelta){
   const u = (unidadResuelta && unidadResuelta!=='MULTI') ? unidadResuelta : null;
   return fmt2(valor) + (u ? '<small> '+u+'</small>' : '');
 }
+// Normaliza un nombre de insumo/tipo para COMPARAR (nunca para mostrar): se compone sobre normHdr
+// ya existente (acentos/mayúsculas/espacios) y además colapsa los espacios alrededor de un guion
+// ("Arroz - CH" y "Arroz-CH" quedan iguales) — variantes de tipeo explícitamente pedidas para la
+// exclusión de insumos (ver INSUMOS_EXCLUIDOS en config.js). No amplía la coincidencia a otros
+// insumos que solo compartan una palabra: sigue siendo una comparación de cadena completa.
+function normInsumoNombre(s){ return normHdr(s).replace(/\s*-\s*/g,'-'); }
+// Agrupa filas de flujo de Insumos (ya filtradas por Tipo/Insumo/Mes en render.js, a partir de las
+// colecciones precomputadas en data.js) por Unidad de Medida — nunca suma cantidades de unidades
+// distintas en un solo total. Cada fila resultante es matemáticamente independiente de las demás.
+// "cantidadInsumos" cuenta insumos distintos (Tipo+Nombre) presentes en esa unidad dentro del
+// filtro activo, mismo criterio que ya usaba Stock Inicial (incluye insumos con solo Stock Inicial,
+// no solo los "activos" por Ingreso/Consumo — el selector de Insumo ya los excluye aparte).
+function resumenInsumosPorUnidad(filasDeFlujo){
+  const porUnidad = new Map();
+  (filasDeFlujo||[]).forEach(f=>{
+    const key = normHdr(f.unidad) || '(sin unidad)';
+    if(!porUnidad.has(key)) porUnidad.set(key, {unidad:f.unidad||'(sin unidad)', stockInicial:0, ingreso:0, consumo:0, balance:0, insumos:new Set()});
+    const o = porUnidad.get(key);
+    o.stockInicial+=f.stockInicio; o.ingreso+=f.ingresoPeriodo; o.consumo+=f.consumoPeriodo; o.balance+=f.balance;
+    o.insumos.add(f.tipo+'|'+f.nombre);
+  });
+  return [...porUnidad.values()].map(o=>({
+    unidad:o.unidad, stockInicial:Math.round(o.stockInicial*100)/100, ingreso:Math.round(o.ingreso*100)/100,
+    consumo:Math.round(o.consumo*100)/100, balance:Math.round(o.balance*100)/100, cantidadInsumos:o.insumos.size,
+  })).sort((a,b)=> b.cantidadInsumos-a.cantidadInsumos || a.unidad.localeCompare(b.unidad,'es'));
+}
