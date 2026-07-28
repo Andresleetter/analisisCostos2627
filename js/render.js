@@ -245,15 +245,9 @@ function renderAlertas(){
 }
 
 // ---- Insumos (no combustible): filtros dependientes Tipo de Insumo -> Insumo, + Mes ----
-// Ingreso y Consumo, en CANTIDAD real (Unidades), no en dinero, igual criterio que Combustible.
-// Tipo de Insumo e Insumo son GLOBALES a la pestaña: acotan los KPIs, el flujo de Stock y las dos
-// tablas de detalle a la vez — nunca se calcula nada "sin filtrar" por debajo mientras se muestra
-// algo distinto arriba. Ni Ingreso ni Consumo muestran columna "Tipo de Insumo": esa info ya la da
-// el filtro, no hace falta repetirla por fila. "Afrecho de Arroz - CH" ya no llega ni siquiera a
-// D.insumos_* — se excluye en loader.js (separarInsumos()) antes de construir nada acá.
-// Cascada Tipo -> Insumo: actualizarFiltroInsumo() (llamada desde renderAll() y desde el 'change'
-// de #itipo, ver events.js) repuebla las opciones de #iinsumo y limpia la seleccion si ya no
-// pertenece al tipo elegido, ANTES de que renderInsumos() lea su valor.
+// Ingreso y Consumo en CANTIDAD real, no en dinero. "Afrecho de Arroz - CH" se excluye antes de
+// llegar acá (separarInsumos(), loader.js). Cascada Tipo -> Insumo: repuebla #iinsumo y limpia la
+// selección si ya no pertenece al tipo elegido, antes de que renderInsumos() lea su valor.
 function actualizarFiltroInsumo(){
   const tipoV=document.getElementById('itipo').value;
   const nombres = tipoV==='ALL'
@@ -267,81 +261,57 @@ function actualizarFiltroInsumo(){
 }
 
 // ---- Insumos: modos visuales mutuamente excluyentes ----
-// Solo 2 modos, y dependen ÚNICAMENTE de #iinsumo (el Tipo de Insumo NUNCA cambia cuál modo está
-// activo, solo acota los datos DENTRO del modo elegido): "summary" mientras Insumo="Todos los
-// Insumos" (con o sin Tipo elegido — los 4 KPIs de actividad y el resumen por unidad se ven
-// SIEMPRE que no haya un Insumo puntual, recalculados para el Tipo si corresponde) y
-// "specific_item" en cuanto se elige un Insumo puntual. Si ese insumo igual tiene más de una
-// unidad, eso decide CÓMO se presenta DENTRO de "specific_item" (KPIs tradicionales vs. aviso +
-// resumen por unidad), no cuál modo está activo. Se determina una sola vez acá; ningún otro lugar
-// del código repite esta condición.
+// "summary" mientras Insumo="Todos los Insumos" (con o sin Tipo elegido); "specific_item" en
+// cuanto se elige un Insumo puntual. El Tipo de Insumo nunca cambia cuál modo está activo, solo
+// acota los datos dentro del modo elegido.
 function determinarModoInsumos(insumoV){
   return insumoV!=='ALL' ? 'specific_item' : 'summary';
 }
-// Oculta Y limpia los 4 bloques de Insumos (KPIs específicos, KPIs globales, resumen por unidad,
-// aviso de múltiples unidades) SIEMPRE al principio del render, antes de decidir qué mostrar. Así
-// ningún residuo del modo anterior (valores, unidad, nombre, color, mensaje) puede sobrevivir a un
-// cambio de filtro, sin importar cuántas veces se alterne entre modos.
-function ocultarTodosLosBloquesInsumos(){
-  ['ins-stock-kpis','ins-activity-kpis','ins-resumen-unidades-panel','ins-multi-unidad-warning'].forEach(id=>{
-    document.getElementById(id).classList.add('hidden');
-  });
-  document.getElementById('ins-stock-kpis').innerHTML='';
-  document.getElementById('ins-activity-kpis').innerHTML='';
-  document.getElementById('ins-resumen-unidades').innerHTML='';
-  document.getElementById('ins-multi-unidad-warning').textContent='';
+// Visibilidad centralizada acá — cada bloque usa .hidden (display:none) y no ocupa espacio cuando
+// está oculto. insumoMultiUnidad es el único caso donde, en modo específico, el resumen por unidad
+// se muestra en vez de los 4 KPIs tradicionales.
+function actualizarVisibilidadInsumos(modo, insumoMultiUnidad){
+  document.getElementById('ins-stock-kpis').classList.toggle('hidden', !(modo==='specific_item' && !insumoMultiUnidad));
+  document.getElementById('ins-activity-kpis').classList.toggle('hidden', modo!=='summary');
+  document.getElementById('ins-multi-unidad-warning').classList.toggle('hidden', !insumoMultiUnidad);
+  document.getElementById('ins-resumen-unidades-panel').classList.toggle('hidden', !(modo==='summary' || insumoMultiUnidad));
 }
-// Resumen de cantidades por unidad (tabla compartida por el modo "summary" y por el sub-caso de
-// Insumo puntual con varias unidades dentro de "specific_item") — mismos datos de siempre
-// (resumenInsumosPorUnidad(), utils.js), solo cambia qué subconjunto de flujoRows le llega.
-function renderResumenUnidadesInsumos(flujoRows, filtroTxt){
-  document.getElementById('ins-resumen-unidades-panel').classList.remove('hidden');
+function renderResumenUnidadesInsumos(flujoRows){
   const resumenUnidades = resumenInsumosPorUnidad(flujoRows);
-  document.getElementById('ins-resumen-unidades-sub').textContent = filtroTxt;
   document.getElementById('ins-resumen-unidades').innerHTML = resumenUnidades.length ? resumenUnidades.map(u=>
     `<tr><td class="tr mono">${u.cantidadInsumos}</td><td class="tr mono qty-unit">${fmtCantidadUnidad(u.stockInicial,u.unidad)}</td><td class="tr mono qty-unit">${fmtCantidadUnidad(u.ingreso,u.unidad)}</td><td class="tr mono qty-unit">${fmtCantidadUnidad(u.consumo,u.unidad)}</td><td class="tr mono qty-unit">${fmtCantidadUnidad(u.balance,u.unidad)}</td></tr>`
   ).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px">Sin datos para el filtro seleccionado</td></tr>';
 }
-// Modo "summary" (Insumo=Todos los Insumos, con Tipo=Todos o un Tipo específico): los mismos 4
-// KPIs de actividad y el mismo resumen por unidad se muestran SIEMPRE en este modo — elegir un
-// Tipo de Insumo nunca los oculta, solo acota qué filas de flujoRows los alimentan (si Tipo=Todos,
-// flujoRows ya viene sin filtrar por tipo; si hay un Tipo elegido, flujoRows ya viene filtrado a
-// ese tipo desde renderInsumos() — acá no hace falta volver a distinguir el caso). "Insumos con
-// Movimiento" solo cuenta filas con Ingreso o Consumo en el período (Stock Inicial solo no
-// habilita, mismo criterio del selector).
-function renderModoInsumosResumen(flujoRows, filtroTxt, nMovIngreso, nMovConsumo){
-  document.getElementById('ins-activity-kpis').classList.remove('hidden');
+// Modo "summary": 4 KPIs de actividad + resumen por unidad. "Insumos con Movimiento" solo cuenta
+// filas con Ingreso o Consumo en el período (Stock Inicial solo no habilita).
+function renderModoInsumosResumen(flujoRows, nMovIngreso, nMovConsumo){
   const insumosConMovimiento = new Set(flujoRows.filter(f=>f.ingresoPeriodo!==0||f.consumoPeriodo!==0).map(f=>f.tipo+'|'+f.nombre)).size;
   const unidadesDistintas = new Set(flujoRows.map(f=>normHdr(f.unidad)||'(sin unidad)')).size;
   document.getElementById('ins-activity-kpis').innerHTML =
-    kpiCard('Insumos con Movimiento', insumosConMovimiento, filtroTxt, 'g')+
-    kpiCard('Unidades de Medida', unidadesDistintas, filtroTxt, 'gris')+
-    kpiCard('Movimientos de Ingreso', nMovIngreso, filtroTxt, 'g')+
-    kpiCard('Movimientos de Consumo', nMovConsumo, filtroTxt, 'o');
-  renderResumenUnidadesInsumos(flujoRows, filtroTxt);
+    kpiCard('Insumos con Movimiento', insumosConMovimiento, '', 'g')+
+    kpiCard('Unidades de Medida', unidadesDistintas, '', 'gris')+
+    kpiCard('Movimientos de Ingreso', nMovIngreso, '', 'g')+
+    kpiCard('Movimientos de Consumo', nMovConsumo, '', 'o');
+  renderResumenUnidadesInsumos(flujoRows);
 }
-// Modo "specific_item" (Insumo puntual, cualquier Tipo): si resuelve a una única unidad real, los
-// 4 KPIs tradicionales con esa unidad como sufijo (fmtKpiUnidad()); si el insumo igual tiene más
-// de una unidad, NO se inventa ni se suma nada — aviso compacto + el mismo resumen por unidad
-// (acotado a este único insumo, nunca los KPIs globales de la pestaña).
-function renderModoInsumosEspecifico(flujoRows, filtroTxt, unidadInsumo, insumoMultiUnidad){
+// Modo "specific_item": si el insumo resuelve a una única unidad real, los 4 KPIs tradicionales;
+// si tiene más de una unidad, no se suma nada — aviso + resumen por unidad acotado a ese insumo.
+function renderModoInsumosEspecifico(flujoRows, unidadInsumo, insumoMultiUnidad){
   if(!insumoMultiUnidad){
-    document.getElementById('ins-stock-kpis').classList.remove('hidden');
     const stockInicioTot = flujoRows.reduce((s,f)=>s+f.stockInicio,0);
     const ingresoTot = flujoRows.reduce((s,f)=>s+f.ingresoPeriodo,0);
     const consumoTot = flujoRows.reduce((s,f)=>s+f.consumoPeriodo,0);
     const balanceTot = flujoRows.reduce((s,f)=>s+f.balance,0);
     const balCol = balanceTot>=0?'g':'r';
     document.getElementById('ins-stock-kpis').innerHTML=
-      `<div class="kpi"><div class="k-lab">Stock Inicial</div><div class="k-val c-g">${fmtKpiUnidad(stockInicioTot,unidadInsumo)}</div><div class="k-foot">${filtroTxt}</div></div>`+
-      `<div class="kpi"><div class="k-lab">Ingreso</div><div class="k-val c-g">${fmtKpiUnidad(ingresoTot,unidadInsumo)}</div><div class="k-foot">${filtroTxt}</div></div>`+
-      `<div class="kpi"><div class="k-lab">Consumo</div><div class="k-val c-o">${fmtKpiUnidad(consumoTot,unidadInsumo)}</div><div class="k-foot">${filtroTxt}</div></div>`+
-      `<div class="kpi"><div class="k-lab">Balance</div><div class="k-val c-${balCol}">${fmtKpiUnidad(balanceTot,unidadInsumo)}</div><div class="k-foot">${filtroTxt}</div></div>`;
+      `<div class="kpi"><div class="k-lab">Stock Inicial</div><div class="k-val c-g">${fmtKpiUnidad(stockInicioTot,unidadInsumo)}</div></div>`+
+      `<div class="kpi"><div class="k-lab">Ingreso</div><div class="k-val c-g">${fmtKpiUnidad(ingresoTot,unidadInsumo)}</div></div>`+
+      `<div class="kpi"><div class="k-lab">Consumo</div><div class="k-val c-o">${fmtKpiUnidad(consumoTot,unidadInsumo)}</div></div>`+
+      `<div class="kpi"><div class="k-lab">Balance</div><div class="k-val c-${balCol}">${fmtKpiUnidad(balanceTot,unidadInsumo)}</div></div>`;
   } else {
-    document.getElementById('ins-multi-unidad-warning').classList.remove('hidden');
     document.getElementById('ins-multi-unidad-warning').textContent =
       'Este insumo tiene movimientos registrados en más de una unidad de medida.';
-    renderResumenUnidadesInsumos(flujoRows, filtroTxt);
+    renderResumenUnidadesInsumos(flujoRows);
   }
 }
 function renderInsumos(){
@@ -362,12 +332,8 @@ function renderInsumos(){
 
   document.getElementById('inote').textContent=filtroTxt;
 
-  // ---- Stock dinamico por (Tipo de Insumo, Insumo, Unidad de Medida): mismo arrastre mes a mes
-  // que Combustible (stockInicioDePeriodo(), ver utils.js), acotado al Tipo e Insumo elegidos en
-  // los filtros globales (o a todas las combinaciones que correspondan si están en "Todos").
-  // Balance = Stock Inicial + Ingreso del período − Consumo del período; el balance de un mes ES
-  // el stock inicial del siguiente porque stockInicioDePeriodo() suma/resta TODO lo de los meses
-  // anteriores, sin reiniciar nada.
+  // Stock por (Tipo, Insumo, Unidad), mismo arrastre mes a mes que Combustible
+  // (stockInicioDePeriodo(), utils.js). Balance = Stock Inicial + Ingreso − Consumo del período.
   let flujo = D.insumos_stock_flujo;
   if(tipoV!=='ALL') flujo = flujo.filter(f=>f.tipo===tipoV);
   if(insumoV!=='ALL') flujo = flujo.filter(f=>f.nombre===insumoV);
@@ -381,34 +347,23 @@ function renderInsumos(){
     return {tipo:f.tipo,nombre:f.nombre,unidad:f.unidad,stockInicio,ingresoPeriodo,consumoPeriodo,balance};
   });
 
-  // ---- Modo visual: fuente ÚNICA de verdad para qué bloque de KPIs/resumen se muestra — nunca se
-  // suman cantidades de unidades incompatibles en un solo total. Exactamente uno de los dos modos
-  // está activo en cada renderizado; determinarModoInsumos() decide, ocultarTodosLosBloques-
-  // Insumos() limpia y oculta TODO antes de mostrar nada (así nunca queda contenido/altura/clases
-  // del modo anterior), y cada renderModoX() muestra y llena únicamente lo suyo.
   const modo = determinarModoInsumos(insumoV);
   const unidadInsumo = modo==='specific_item' ? unidadUnicaDe(flujoRows) : null;
   const insumoMultiUnidad = modo==='specific_item' && unidadInsumo==='MULTI';
 
-  ocultarTodosLosBloquesInsumos();
-  if(modo==='summary') renderModoInsumosResumen(flujoRows, filtroTxt, nMovIngreso, nMovConsumo);
-  else renderModoInsumosEspecifico(flujoRows, filtroTxt, unidadInsumo, insumoMultiUnidad);
+  actualizarVisibilidadInsumos(modo, insumoMultiUnidad);
+  if(modo==='summary') renderModoInsumosResumen(flujoRows, nMovIngreso, nMovConsumo);
+  else renderModoInsumosEspecifico(flujoRows, unidadInsumo, insumoMultiUnidad);
 
-  // Cantidad + Unidad van juntas en una sola celda (fmtCantidadUnidad(), utils.js) para que
-  // "Movimientos" (cantidad de registros agrupados) nunca se confunda con la cantidad física del
-  // insumo — antes "Registros" y "Unidad de Medida" quedaban pegadas a "Cantidad" y una fila como
-  // "11 | Kilos | 366.480,00" podía leerse como "11 Kilos" en vez de 11 movimientos de 366.480,00
-  // Kilos. La columna Unidad de Medida independiente se elimina; Movimientos muestra solo el
-  // número (el encabezado, con tooltip, ya da el contexto).
-  document.getElementById('ins-ingreso-sub').textContent=filtroTxt+' · '+nMovIngreso+' movimientos (Ingreso de Mercadería)';
+  // Cantidad + Unidad en una sola celda (fmtCantidadUnidad(), utils.js): "Movimientos" es la
+  // cantidad de registros agrupados, no una magnitud física, por eso no comparte celda con Cantidad.
+  document.getElementById('ins-ingreso-sub').textContent=nMovIngreso+' movimientos · Ingreso de Mercadería';
   document.getElementById('ins-ingreso').innerHTML = ingresoOrd.length ? ingresoOrd.map(o=>
     `<tr><td>${o.nombre}</td><td>${o.proveedor}</td><td class="tr mono">${o.n}</td><td class="tr mono qty-unit">${fmtCantidadUnidad(o.cantidad,o.unidad)}</td></tr>`
   ).join('') : '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:16px">Sin ingresos de insumos en el período</td></tr>';
 
-  // Proveedor SIEMPRE vacío en Consumo (nunca "(sin dato)", guion, ni ningun otro texto): no es
-  // un dato que exista para estos movimientos (0% de los casos reales lo trae), así que la celda
-  // se deja en blanco en vez de rellenarla con un valor por defecto.
-  document.getElementById('ins-consumo-sub').textContent=filtroTxt+' · '+nMovConsumo+' movimientos (Egreso de Stock)';
+  // Proveedor siempre vacío en Consumo: no es un dato que exista para estos movimientos.
+  document.getElementById('ins-consumo-sub').textContent=nMovConsumo+' movimientos · Egreso de Stock';
   document.getElementById('ins-consumo').innerHTML = consumoOrd.length ? consumoOrd.map(o=>
     `<tr><td>${o.nombre}</td><td></td><td class="tr mono">${o.n}</td><td class="tr mono qty-unit">${fmtCantidadUnidad(o.cantidad,o.unidad)}</td></tr>`
   ).join('') : '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:16px">Sin consumo de insumos en el período</td></tr>';
