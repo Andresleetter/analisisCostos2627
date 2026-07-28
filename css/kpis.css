@@ -1,7 +1,10 @@
 .sec-h{font-size:14px;color:var(--teal);font-weight:700;text-transform:uppercase;letter-spacing:.3px;margin:0 0 14px 2px}
 .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:22px}
-.kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-lg);padding:14px 15px;box-shadow:var(--shadow-sm)}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-lg);padding:14px 15px;box-shadow:var(--shadow-sm);min-height:96px}
 .kpi .k-lab{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.4px}
-.kpi .k-val{font-size:26px;font-weight:800;margin-top:6px} .kpi .k-val small{font-size:14px;font-weight:700;color:var(--muted)}
-.kpi .k-foot{font-size:11px;color:var(--muted);margin-top:4px}
+/* white-space:nowrap + ellipsis en vez de dejar que un valor o pie de texto largo se parta en dos
+   líneas — así "0,00" y "88.800,00 Kilos" (o un pie de filtro largo) ocupan siempre el mismo alto
+   de tarjeta, sin importar la longitud del contenido. */
+.kpi .k-val{font-size:26px;font-weight:800;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis} .kpi .k-val small{font-size:14px;font-weight:700;color:var(--muted)}
+.kpi .k-foot{font-size:11px;color:var(--muted);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @media(max-width:900px){.kpis{grid-template-columns:repeat(2,1fr)}}

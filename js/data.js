@@ -294,12 +294,20 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
   const servOT=new Set(CONF.filter(o=>o.tieneServ).map(o=>o.ot));
   const detOT=CONF.filter(o=>servOT.has(o.ot));
   const gasOT=CONF.filter(o=>!servOT.has(o.ot));
-  // detalle (mes,labor,etapa) — se incluye la etapa (Estadio) porque una misma labor puede
-  // ejecutarse en más de una etapa del ciclo del cultivo a lo largo de la campaña.
+  // detalle (mes,labor,etapa,contratista) — se incluye la etapa (Estadio) porque una misma labor
+  // puede ejecutarse en más de una etapa del ciclo del cultivo a lo largo de la campaña, y el
+  // Contratista (campo real "contratista" de consultaOT — verificado 100% completo en OT de
+  // Labor Tercero y 100% vacío en Labor Propia contra el .xlsx real) porque agrupar solo por
+  // labor+etapa mezclaba más de un contratista real en ~19% de esos grupos. Marcadores internos
+  // para las OT sin contratista real: '(Labor Propia)' cuando la OT no tiene costo de tercero,
+  // '(Sin contratista)' si tuviera costo de tercero sin ese campo cargado (no ocurre hoy, pero se
+  // contempla) — nunca se inventa un nombre. labelContratista() (utils.js) traduce estos
+  // marcadores al texto que se muestra en la interfaz.
   const dmap={};
   detOT.forEach(o=>{ const m=o.fr?o.fr.getMonth()+1:0; const est=o.estadio&&o.estadio.trim()?o.estadio.trim():'(Sin etapa)';
-    const key=m+'|'+o.serv+'|'+est+'|'+(o.lines.every(l=>l.esHoras));
-    if(!dmap[key]) dmap[key]={mesnum:m,labor:o.serv,estadio:est,esH:o.lines.every(l=>l.esHoras),n:0,ha:0,horas:0,propia:0,propia_ud:0,tercero:0,insumos:0};
+    const contratista = o.contr && o.contr.trim() ? o.contr.trim() : (o.tercero>0 ? '(Sin contratista)' : '(Labor Propia)');
+    const key=m+'|'+o.serv+'|'+est+'|'+(o.lines.every(l=>l.esHoras))+'|'+contratista;
+    if(!dmap[key]) dmap[key]={mesnum:m,labor:o.serv,estadio:est,esH:o.lines.every(l=>l.esHoras),contratista,n:0,ha:0,horas:0,propia:0,propia_ud:0,tercero:0,insumos:0};
     const d=dmap[key]; d.n++; d.ha+=(o.ha||0); d.horas+=o.horas; d.propia+=o.propia; d.propia_ud+=o.propia_ud; d.tercero+=o.tercero; d.insumos+=o.insumos; });
   const gastos=Object.values(dmap).map(d=>({...d,ha:Math.round(d.ha*100)/100,horas:Math.round(d.horas*100)/100,
     propia:Math.round(d.propia*100)/100,propia_ud:Math.round(d.propia_ud*100)/100,tercero:Math.round(d.tercero*100)/100,insumos:Math.round(d.insumos*100)/100}));
@@ -518,6 +526,14 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
   const meses=[...new Set([...gastos.map(d=>d.mesnum),...gasoil_sec.map(g=>g.mesnum)])].filter(m=>m>0).sort((a,b)=>a-b).map(m=>({k:m,lbl:MES[m]}));
   const labores=[...new Set(gastos.map(d=>d.labor))].sort((a,b)=>a.localeCompare(b,'es'));
   const estadios_labor=[...new Set(gastos.map(d=>d.estadio))].sort((a,b)=>a.localeCompare(b,'es'));
+  // Contratistas reales de "Detalle por Labor" (para el filtro dependiente), con los marcadores
+  // '(Labor Propia)'/'(Sin contratista)' siempre al final — labelContratista() (utils.js) los
+  // traduce al texto que se muestra tanto en el filtro como en la columna de la tabla.
+  const contratistas_labor=[...new Set(gastos.map(d=>d.contratista))].sort((a,b)=>{
+    const esp=k=>k==='(Labor Propia)'||k==='(Sin contratista)';
+    if(esp(a)&&!esp(b)) return 1; if(!esp(a)&&esp(b)) return -1;
+    return labelContratista(a).localeCompare(labelContratista(b),'es');
+  });
 
   // ================= RESUMEN EJECUTIVO =================
   // Todo lo que sigue alimenta exclusivamente la pestaña Resumen Ejecutivo. Se calcula UNA sola
@@ -692,7 +708,7 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
     exceso,sinrtk,exc_kpi,alertas:atr,n_ot_atrasadas,n_ejec_atraso,
     auditoria_items,auditoria_metros,auditoria_puentes,auditoria_gastos,
     gastos,gasoil_sec,meses,gasto_total,gasoil_total,gasoil_litros_total,gmes,glit,
-    labores,estadios_labor,
+    labores,estadios_labor,contratistas_labor,
     combustible,combustible_litros_total,combustible_n_total,combustible_meses,combustible_terceros,
     combustible_ingresos,combustible_ingresos_litros_total,combustible_ingresos_n_total,
     combustible_existencia_inicial,stock_inicial_combustible,

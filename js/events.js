@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', function(){
   document.getElementById('gmes').addEventListener('change', renderG);
   document.getElementById('glabor').addEventListener('change', renderLaborDetalle);
   document.getElementById('gestadio').addEventListener('change', renderLaborDetalle);
+  document.getElementById('gcontratista').addEventListener('change', renderLaborDetalle);
   document.getElementById('cmes').addEventListener('change', renderCombustible);
   document.getElementById('cterc').addEventListener('change', renderCombustible);
   document.getElementById('imes').addEventListener('change', renderInsumos);
