@@ -1,6 +1,6 @@
 // ================== BUILD DATA ==================
 function buildData(raw, proyecciones, insumos, presupuestoInfra){
-  const { combustible: combustibleRaw, existenciaInicial, otros: otrosInsumos } = insumos || {};
+  const { combustible: combustibleRaw, existenciaInicial, otros: otrosInsumos, excluidos: insumosExcluidosRaw } = insumos || {};
   // ---- PLAN RTK desde consultaCultivos ----
   // Soporta dos formatos:
   //  a) columnas separadas de lote/cultivo (export histórico "Proyecciones", o 'actividad_1'/
@@ -699,6 +699,9 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
     insumos_ingreso,insumos_consumo,insumos_meses,insumos_tipos,insumos_por_tipo,
     insumos_stock_flujo,insumos_ingreso_mensual,insumos_consumo_mensual,
     insumos_pendiente_modulo:otrosInsumos||[],
+    // Filas excluidas del módulo Insumos (hoy solo "Afrecho de Arroz - CH", ver INSUMOS_EXCLUIDOS
+    // en config.js) — se conservan crudas acá solo para trazabilidad, ningún render.js las lee.
+    insumos_excluidos:insumosExcluidosRaw||[],
     resumen,
     fecha_datos:HOY};
 }

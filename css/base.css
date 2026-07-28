@@ -32,3 +32,6 @@
 body{font-family:var(--font-sans);background:var(--bg);color:var(--ink);line-height:1.4;-webkit-font-smoothing:antialiased}
 .wrap{max-width:1220px;margin:0 auto;padding:22px 26px 60px}
 #app{display:none}
+/* Utilidad genérica para mostrar/ocultar bloques vía classList.toggle() desde JS (ej. modos de
+   presentación de Insumos) — nunca style="display:none" inline en el markup. */
+.hidden{display:none}

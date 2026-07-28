@@ -246,7 +246,8 @@ function renderAlertas(){
 // Tipo de Insumo e Insumo son GLOBALES a la pestaña: acotan los KPIs, el flujo de Stock y las dos
 // tablas de detalle a la vez — nunca se calcula nada "sin filtrar" por debajo mientras se muestra
 // algo distinto arriba. Ni Ingreso ni Consumo muestran columna "Tipo de Insumo": esa info ya la da
-// el filtro, no hace falta repetirla por fila.
+// el filtro, no hace falta repetirla por fila. "Afrecho de Arroz - CH" ya no llega ni siquiera a
+// D.insumos_* — se excluye en loader.js (separarInsumos()) antes de construir nada acá.
 // Cascada Tipo -> Insumo: actualizarFiltroInsumo() (llamada desde renderAll() y desde el 'change'
 // de #itipo, ver events.js) repuebla las opciones de #iinsumo y limpia la seleccion si ya no
 // pertenece al tipo elegido, ANTES de que renderInsumos() lea su valor.
@@ -302,27 +303,58 @@ function renderInsumos(){
     const balance = stockInicio+ingresoPeriodo-consumoPeriodo;
     return {tipo:f.tipo,nombre:f.nombre,unidad:f.unidad,stockInicio,ingresoPeriodo,consumoPeriodo,balance};
   });
-  // Presentación como 4 KPI (Stock Inicial -> Ingreso -> Consumo -> Balance), igual estilo que el
-  // balance de Combustible — son las mismas sumas que ya traía flujoRows (fila a fila), solo que
-  // acá se totalizan para mostrarlas como KPI en vez de como tabla por (Tipo, Unidad).
-  const stockInicioTot = flujoRows.reduce((s,f)=>s+f.stockInicio,0);
-  const ingresoTot = flujoRows.reduce((s,f)=>s+f.ingresoPeriodo,0);
-  const consumoTot = flujoRows.reduce((s,f)=>s+f.consumoPeriodo,0);
-  const balanceTot = flujoRows.reduce((s,f)=>s+f.balance,0);
-  const balCol = balanceTot>=0?'g':'r';
-  // Unidad de medida de los 4 KPIs: SOLO se muestra cuando el usuario eligió un Insumo puntual en
-  // #iinsumo (insumoV!=='ALL') — ni "Todos los Insumos" ni un Tipo de Insumo por sí solo alcanzan,
-  // aunque ese conjunto resulte tener una sola unidad en los datos (a pedido del usuario: la
-  // condición depende explícitamente del filtro elegido, no de si el resultado es homogéneo). Con
-  // un Insumo puntual que igual tenga varias unidades (raro, pero posible), tampoco se inventa
-  // nada ni se avisa con texto: fmtKpiUnidad() trata 'MULTI' igual que "sin unidad", mostrando solo
-  // el número (ver utils.js).
-  const unidadKpis = insumoV!=='ALL' ? unidadUnicaDe(flujoRows) : null;
-  document.getElementById('ins-stock-kpis').innerHTML=
-    `<div class="kpi"><div class="k-lab">Stock Inicial</div><div class="k-val c-g">${fmtKpiUnidad(stockInicioTot,unidadKpis)}</div><div class="k-foot">${filtroTxt}</div></div>`+
-    `<div class="kpi"><div class="k-lab">Ingreso</div><div class="k-val c-g">${fmtKpiUnidad(ingresoTot,unidadKpis)}</div><div class="k-foot">${filtroTxt}</div></div>`+
-    `<div class="kpi"><div class="k-lab">Consumo</div><div class="k-val c-o">${fmtKpiUnidad(consumoTot,unidadKpis)}</div><div class="k-foot">${filtroTxt}</div></div>`+
-    `<div class="kpi"><div class="k-lab">Balance</div><div class="k-val c-${balCol}">${fmtKpiUnidad(balanceTot,unidadKpis)}</div><div class="k-foot">${filtroTxt}</div></div>`;
+  // ---- Modo de presentación: nunca se suman cantidades de unidades incompatibles en un solo
+  // total. "Específico" solo cuando el usuario eligió un Insumo puntual en #iinsumo Y ese conjunto
+  // resuelve a una ÚNICA unidad real (unidadUnicaDe(), ver utils.js) — en cualquier otro caso
+  // ("Todos los Insumos", un Tipo de Insumo sin Insumo elegido, o un Insumo puntual que igual
+  // tenga varias unidades) se usa el modo de actividad + resumen por unidad, nunca los 4 KPI
+  // tradicionales con una suma heterogénea.
+  const unidadInsumo = insumoV!=='ALL' ? unidadUnicaDe(flujoRows) : null;
+  const modoEspecifico = insumoV!=='ALL' && !!unidadInsumo && unidadInsumo!=='MULTI';
+  const insumoMultiUnidad = insumoV!=='ALL' && unidadInsumo==='MULTI';
+
+  document.getElementById('ins-stock-kpis').classList.toggle('hidden', !modoEspecifico);
+  document.getElementById('ins-activity-kpis').classList.toggle('hidden', modoEspecifico);
+  document.getElementById('ins-resumen-unidades-panel').classList.toggle('hidden', modoEspecifico);
+  document.getElementById('ins-multi-unidad-warning').classList.toggle('hidden', !insumoMultiUnidad);
+
+  if(modoEspecifico){
+    // Mismos 4 KPI de siempre (Stock Inicial -> Ingreso -> Consumo -> Balance), ahora garantizado
+    // en UNA sola unidad — se le agrega el sufijo con fmtKpiUnidad() (ver utils.js).
+    const stockInicioTot = flujoRows.reduce((s,f)=>s+f.stockInicio,0);
+    const ingresoTot = flujoRows.reduce((s,f)=>s+f.ingresoPeriodo,0);
+    const consumoTot = flujoRows.reduce((s,f)=>s+f.consumoPeriodo,0);
+    const balanceTot = flujoRows.reduce((s,f)=>s+f.balance,0);
+    const balCol = balanceTot>=0?'g':'r';
+    document.getElementById('ins-stock-kpis').innerHTML=
+      `<div class="kpi"><div class="k-lab">Stock Inicial</div><div class="k-val c-g">${fmtKpiUnidad(stockInicioTot,unidadInsumo)}</div><div class="k-foot">${filtroTxt}</div></div>`+
+      `<div class="kpi"><div class="k-lab">Ingreso</div><div class="k-val c-g">${fmtKpiUnidad(ingresoTot,unidadInsumo)}</div><div class="k-foot">${filtroTxt}</div></div>`+
+      `<div class="kpi"><div class="k-lab">Consumo</div><div class="k-val c-o">${fmtKpiUnidad(consumoTot,unidadInsumo)}</div><div class="k-foot">${filtroTxt}</div></div>`+
+      `<div class="kpi"><div class="k-lab">Balance</div><div class="k-val c-${balCol}">${fmtKpiUnidad(balanceTot,unidadInsumo)}</div><div class="k-foot">${filtroTxt}</div></div>`;
+  } else {
+    // Modo global/multiunidad: KPIs de actividad (agregables sin mezclar unidades) + resumen de
+    // cantidades por unidad — nunca un total de Stock/Ingreso/Consumo/Balance que combine litros
+    // con kilos con unidades. "Insumos con Movimiento" solo cuenta filas con Ingreso o Consumo en
+    // el período (no habilita el Stock Inicial solo, mismo criterio que ya usa el selector). Las
+    // demás cifras (nMovIngreso/nMovConsumo) ya venían calculadas arriba para las tablas de detalle.
+    if(insumoMultiUnidad){
+      document.getElementById('ins-multi-unidad-warning').textContent =
+        'Este insumo tiene movimientos registrados en más de una unidad de medida.';
+    }
+    const insumosConMovimiento = new Set(flujoRows.filter(f=>f.ingresoPeriodo!==0||f.consumoPeriodo!==0).map(f=>f.tipo+'|'+f.nombre)).size;
+    const unidadesDistintas = new Set(flujoRows.map(f=>normHdr(f.unidad)||'(sin unidad)')).size;
+    document.getElementById('ins-activity-kpis').innerHTML =
+      kpiCard('Insumos con Movimiento', insumosConMovimiento, filtroTxt, 'g')+
+      kpiCard('Unidades de Medida', unidadesDistintas, filtroTxt, 'gris')+
+      kpiCard('Movimientos de Ingreso', nMovIngreso, filtroTxt, 'g')+
+      kpiCard('Movimientos de Consumo', nMovConsumo, filtroTxt, 'o');
+
+    const resumenUnidades = resumenInsumosPorUnidad(flujoRows);
+    document.getElementById('ins-resumen-unidades-sub').textContent = filtroTxt;
+    document.getElementById('ins-resumen-unidades').innerHTML = resumenUnidades.length ? resumenUnidades.map(u=>
+      `<tr><td>${u.unidad}</td><td class="tr mono">${u.cantidadInsumos}</td><td class="tr mono">${fmt2(u.stockInicial)}</td><td class="tr mono">${fmt2(u.ingreso)}</td><td class="tr mono">${fmt2(u.consumo)}</td><td class="tr mono">${fmt2(u.balance)}</td></tr>`
+    ).join('') : '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:16px">Sin datos para el filtro seleccionado</td></tr>';
+  }
 
   document.getElementById('ins-ingreso-sub').textContent=filtroTxt+' · '+nMovIngreso+' movimientos (Ingreso de Mercadería)';
   document.getElementById('ins-ingreso').innerHTML = ingresoOrd.length ? ingresoOrd.map(o=>

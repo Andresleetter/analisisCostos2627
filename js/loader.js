@@ -29,21 +29,31 @@ function hojaARows(wb, nombreHoja){
   if(!rows.length) throw new Error('La hoja «'+nombreHoja+'» no contiene filas.');
   return rows;
 }
-// Separa consultaInsumos (trae TODOS los insumos) en tres grupos:
+// Separa consultaInsumos (trae TODOS los insumos) en cuatro grupos:
 //  - combustible: filas de tipoInsumo=COMBUSTIBLES que son Ingreso/Consumo real, transformadas
 //    a la MISMA forma que tenía el viejo Movimiento_de_combustible.csv (para no tocar buildData).
 //    Nota: en esta hoja 'unidades' viene con signo (negativo=egreso); se pasa en valor absoluto,
 //    igual que el CSV anterior.
 //  - existenciaInicial: filas de tipoInsumo=COMBUSTIBLES con tipoMovimiento="Existencia inicial"
 //    (stock de arranque de campaña) — no son Ingreso ni Consumo, se agregan aparte.
-//  - otros: el resto de insumos (no combustible) — stub para el futuro módulo "insumos", sin
-//    transformar ni calcular nada todavía.
+//  - excluidos: filas cuyo insumo está en INSUMOS_EXCLUIDOS (config.js) — hoy solo "Afrecho de
+//    Arroz - CH". Se separan ACÁ, antes de que data.js construya ningún filtro/KPI/tabla del
+//    módulo Insumos, para que no participen de nada visible. Se conservan en su propia colección
+//    (nunca se descartan del todo) solo para trazabilidad — no se usan en ningún cálculo.
+//  - otros: el resto de insumos (no combustible, no excluidos) — alimenta el módulo Insumos.
 // OJO: consultaInsumos NO se filtra por campaña acá (a diferencia de consultaOT/consultaCultivos)
 // — se procesa completa, sin recortar por fecha ni campania, tal como antes de introducir ese filtro.
+function esInsumoExcluido(nombre){
+  var nombreNorm = normInsumoNombre(nombre);
+  return INSUMOS_EXCLUIDOS.some(function(ex){ return normInsumoNombre(ex)===nombreNorm; });
+}
 function separarInsumos(rows){
-  var combustible = [], existenciaInicial = [], otros = [];
+  var combustible = [], existenciaInicial = [], otros = [], excluidos = [];
   rows.forEach(function(r){
-    if(String(r.tipoInsumo||'').trim().toUpperCase() !== TIPO_INSUMO_COMBUSTIBLE){ otros.push(r); return; }
+    if(String(r.tipoInsumo||'').trim().toUpperCase() !== TIPO_INSUMO_COMBUSTIBLE){
+      if(esInsumoExcluido(r.nombre)){ excluidos.push(r); return; }
+      otros.push(r); return;
+    }
     if(String(r.tipoMovimiento||'').trim() === MOV_EXISTENCIA_INICIAL){ existenciaInicial.push(r); return; }
     combustible.push({
       'Fecha': r.fecha,
@@ -54,7 +64,7 @@ function separarInsumos(rows){
       'Descripción Tipo de Comprobante': r.tipoMovimiento,
     });
   });
-  return {combustible:combustible, existenciaInicial:existenciaInicial, otros:otros};
+  return {combustible:combustible, existenciaInicial:existenciaInicial, otros:otros, excluidos:excluidos};
 }
 
 // Presupuesto de Infraestructura: estructura fija (ver INFRA_COL en config.js), filas 4-13 (indices
@@ -97,7 +107,8 @@ function loadData(){
       console.log('consultaInsumos — registros:', consultaInsumos.length);
       var insumos = separarInsumos(consultaInsumos);
       console.log('consultaInsumos separado: combustible='+insumos.combustible.length+
-        ', existencia inicial='+insumos.existenciaInicial.length+', otros insumos='+insumos.otros.length);
+        ', existencia inicial='+insumos.existenciaInicial.length+', otros insumos='+insumos.otros.length+
+        ', excluidos='+insumos.excluidos.length+' ('+INSUMOS_EXCLUIDOS.join(', ')+')');
       var presupuestoInfra = leerPresupuestoInfra(wbInfra);
       console.log('Presupuesto de Infraestructura — items:', presupuestoInfra.length);
       try{ D = buildData(consultaOT, consultaCultivos, insumos, presupuestoInfra); }
