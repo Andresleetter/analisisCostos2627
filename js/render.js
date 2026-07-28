@@ -37,11 +37,14 @@ function renderAll(){
   // filtro meses
   const sel=document.getElementById('gmes'); sel.querySelectorAll('option:not([value=ALL])').forEach(o=>o.remove());
   D.meses.forEach(m=>{const o=document.createElement('option');o.value=m.k;o.textContent=m.lbl;sel.appendChild(o);});
-  // filtros de Detalle por Labor (Labor / Etapa) — opciones de toda la campaña, no dependen del mes
+  // filtros de Detalle por Labor (Labor / Etapa / Contratista) — opciones de toda la campaña, no
+  // dependen del mes
   const selLab=document.getElementById('glabor'); selLab.querySelectorAll('option:not([value=ALL])').forEach(o=>o.remove());
   D.labores.forEach(l=>{const o=document.createElement('option');o.value=l;o.textContent=l;selLab.appendChild(o);});
   const selEst=document.getElementById('gestadio'); selEst.querySelectorAll('option:not([value=ALL])').forEach(o=>o.remove());
   D.estadios_labor.forEach(e=>{const o=document.createElement('option');o.value=e;o.textContent=e;selEst.appendChild(o);});
+  const selCont=document.getElementById('gcontratista'); selCont.querySelectorAll('option:not([value=ALL])').forEach(o=>o.remove());
+  D.contratistas_labor.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=labelContratista(c);selCont.appendChild(o);});
   // filtros de la pestaña Combustible (Mes / Tercero)
   const selCMes=document.getElementById('cmes'); selCMes.querySelectorAll('option:not([value=ALL])').forEach(o=>o.remove());
   D.combustible_meses.forEach(m=>{const o=document.createElement('option');o.value=m.k;o.textContent=m.lbl;selCMes.appendChild(o);});
@@ -262,6 +265,85 @@ function actualizarFiltroInsumo(){
   nombres.forEach(n=>{const o=document.createElement('option');o.value=n;o.textContent=n;selIInsumo.appendChild(o);});
   selIInsumo.value = nombres.includes(actual) ? actual : 'ALL';
 }
+
+// ---- Insumos: modos visuales mutuamente excluyentes ----
+// Solo 2 modos, y dependen ÚNICAMENTE de #iinsumo (el Tipo de Insumo NUNCA cambia cuál modo está
+// activo, solo acota los datos DENTRO del modo elegido): "summary" mientras Insumo="Todos los
+// Insumos" (con o sin Tipo elegido — los 4 KPIs de actividad y el resumen por unidad se ven
+// SIEMPRE que no haya un Insumo puntual, recalculados para el Tipo si corresponde) y
+// "specific_item" en cuanto se elige un Insumo puntual. Si ese insumo igual tiene más de una
+// unidad, eso decide CÓMO se presenta DENTRO de "specific_item" (KPIs tradicionales vs. aviso +
+// resumen por unidad), no cuál modo está activo. Se determina una sola vez acá; ningún otro lugar
+// del código repite esta condición.
+function determinarModoInsumos(insumoV){
+  return insumoV!=='ALL' ? 'specific_item' : 'summary';
+}
+// Oculta Y limpia los 4 bloques de Insumos (KPIs específicos, KPIs globales, resumen por unidad,
+// aviso de múltiples unidades) SIEMPRE al principio del render, antes de decidir qué mostrar. Así
+// ningún residuo del modo anterior (valores, unidad, nombre, color, mensaje) puede sobrevivir a un
+// cambio de filtro, sin importar cuántas veces se alterne entre modos.
+function ocultarTodosLosBloquesInsumos(){
+  ['ins-stock-kpis','ins-activity-kpis','ins-resumen-unidades-panel','ins-multi-unidad-warning'].forEach(id=>{
+    document.getElementById(id).classList.add('hidden');
+  });
+  document.getElementById('ins-stock-kpis').innerHTML='';
+  document.getElementById('ins-activity-kpis').innerHTML='';
+  document.getElementById('ins-resumen-unidades').innerHTML='';
+  document.getElementById('ins-multi-unidad-warning').textContent='';
+}
+// Resumen de cantidades por unidad (tabla compartida por el modo "summary" y por el sub-caso de
+// Insumo puntual con varias unidades dentro de "specific_item") — mismos datos de siempre
+// (resumenInsumosPorUnidad(), utils.js), solo cambia qué subconjunto de flujoRows le llega.
+function renderResumenUnidadesInsumos(flujoRows, filtroTxt){
+  document.getElementById('ins-resumen-unidades-panel').classList.remove('hidden');
+  const resumenUnidades = resumenInsumosPorUnidad(flujoRows);
+  document.getElementById('ins-resumen-unidades-sub').textContent = filtroTxt;
+  document.getElementById('ins-resumen-unidades').innerHTML = resumenUnidades.length ? resumenUnidades.map(u=>
+    `<tr><td class="tr mono">${u.cantidadInsumos}</td><td class="tr mono qty-unit">${fmtCantidadUnidad(u.stockInicial,u.unidad)}</td><td class="tr mono qty-unit">${fmtCantidadUnidad(u.ingreso,u.unidad)}</td><td class="tr mono qty-unit">${fmtCantidadUnidad(u.consumo,u.unidad)}</td><td class="tr mono qty-unit">${fmtCantidadUnidad(u.balance,u.unidad)}</td></tr>`
+  ).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px">Sin datos para el filtro seleccionado</td></tr>';
+}
+// Modo "summary" (Insumo=Todos los Insumos, con Tipo=Todos o un Tipo específico): los mismos 4
+// KPIs de actividad y el mismo resumen por unidad se muestran SIEMPRE en este modo — elegir un
+// Tipo de Insumo nunca los oculta, solo acota qué filas de flujoRows los alimentan (si Tipo=Todos,
+// flujoRows ya viene sin filtrar por tipo; si hay un Tipo elegido, flujoRows ya viene filtrado a
+// ese tipo desde renderInsumos() — acá no hace falta volver a distinguir el caso). "Insumos con
+// Movimiento" solo cuenta filas con Ingreso o Consumo en el período (Stock Inicial solo no
+// habilita, mismo criterio del selector).
+function renderModoInsumosResumen(flujoRows, filtroTxt, nMovIngreso, nMovConsumo){
+  document.getElementById('ins-activity-kpis').classList.remove('hidden');
+  const insumosConMovimiento = new Set(flujoRows.filter(f=>f.ingresoPeriodo!==0||f.consumoPeriodo!==0).map(f=>f.tipo+'|'+f.nombre)).size;
+  const unidadesDistintas = new Set(flujoRows.map(f=>normHdr(f.unidad)||'(sin unidad)')).size;
+  document.getElementById('ins-activity-kpis').innerHTML =
+    kpiCard('Insumos con Movimiento', insumosConMovimiento, filtroTxt, 'g')+
+    kpiCard('Unidades de Medida', unidadesDistintas, filtroTxt, 'gris')+
+    kpiCard('Movimientos de Ingreso', nMovIngreso, filtroTxt, 'g')+
+    kpiCard('Movimientos de Consumo', nMovConsumo, filtroTxt, 'o');
+  renderResumenUnidadesInsumos(flujoRows, filtroTxt);
+}
+// Modo "specific_item" (Insumo puntual, cualquier Tipo): si resuelve a una única unidad real, los
+// 4 KPIs tradicionales con esa unidad como sufijo (fmtKpiUnidad()); si el insumo igual tiene más
+// de una unidad, NO se inventa ni se suma nada — aviso compacto + el mismo resumen por unidad
+// (acotado a este único insumo, nunca los KPIs globales de la pestaña).
+function renderModoInsumosEspecifico(flujoRows, filtroTxt, unidadInsumo, insumoMultiUnidad){
+  if(!insumoMultiUnidad){
+    document.getElementById('ins-stock-kpis').classList.remove('hidden');
+    const stockInicioTot = flujoRows.reduce((s,f)=>s+f.stockInicio,0);
+    const ingresoTot = flujoRows.reduce((s,f)=>s+f.ingresoPeriodo,0);
+    const consumoTot = flujoRows.reduce((s,f)=>s+f.consumoPeriodo,0);
+    const balanceTot = flujoRows.reduce((s,f)=>s+f.balance,0);
+    const balCol = balanceTot>=0?'g':'r';
+    document.getElementById('ins-stock-kpis').innerHTML=
+      `<div class="kpi"><div class="k-lab">Stock Inicial</div><div class="k-val c-g">${fmtKpiUnidad(stockInicioTot,unidadInsumo)}</div><div class="k-foot">${filtroTxt}</div></div>`+
+      `<div class="kpi"><div class="k-lab">Ingreso</div><div class="k-val c-g">${fmtKpiUnidad(ingresoTot,unidadInsumo)}</div><div class="k-foot">${filtroTxt}</div></div>`+
+      `<div class="kpi"><div class="k-lab">Consumo</div><div class="k-val c-o">${fmtKpiUnidad(consumoTot,unidadInsumo)}</div><div class="k-foot">${filtroTxt}</div></div>`+
+      `<div class="kpi"><div class="k-lab">Balance</div><div class="k-val c-${balCol}">${fmtKpiUnidad(balanceTot,unidadInsumo)}</div><div class="k-foot">${filtroTxt}</div></div>`;
+  } else {
+    document.getElementById('ins-multi-unidad-warning').classList.remove('hidden');
+    document.getElementById('ins-multi-unidad-warning').textContent =
+      'Este insumo tiene movimientos registrados en más de una unidad de medida.';
+    renderResumenUnidadesInsumos(flujoRows, filtroTxt);
+  }
+}
 function renderInsumos(){
   const selV=document.getElementById('imes').value, sel=selV==='ALL'?'ALL':parseInt(selV);
   const selTxt=selV==='ALL'?'Toda la campaña':document.getElementById('imes').selectedOptions[0].text;
@@ -286,11 +368,6 @@ function renderInsumos(){
   // Balance = Stock Inicial + Ingreso del período − Consumo del período; el balance de un mes ES
   // el stock inicial del siguiente porque stockInicioDePeriodo() suma/resta TODO lo de los meses
   // anteriores, sin reiniciar nada.
-  // Se presenta como 4 KPI (Stock Inicial -> Ingreso -> Consumo -> Balance): con un Insumo puntual
-  // de una sola unidad (el caso común) el KPI es exacto; si el filtro deja mas de una fila (varios
-  // insumos de un tipo, o mas de una unidad), el KPI totaliza sumando esas filas entre si (mismo
-  // criterio que ya pedía la tarea anterior: sumar lo que ya calculaba flujoRows, sin nueva lógica
-  // de negocio). ----
   let flujo = D.insumos_stock_flujo;
   if(tipoV!=='ALL') flujo = flujo.filter(f=>f.tipo===tipoV);
   if(insumoV!=='ALL') flujo = flujo.filter(f=>f.nombre===insumoV);
@@ -303,71 +380,38 @@ function renderInsumos(){
     const balance = stockInicio+ingresoPeriodo-consumoPeriodo;
     return {tipo:f.tipo,nombre:f.nombre,unidad:f.unidad,stockInicio,ingresoPeriodo,consumoPeriodo,balance};
   });
-  // ---- Modo de presentación: nunca se suman cantidades de unidades incompatibles en un solo
-  // total. "Específico" solo cuando el usuario eligió un Insumo puntual en #iinsumo Y ese conjunto
-  // resuelve a una ÚNICA unidad real (unidadUnicaDe(), ver utils.js) — en cualquier otro caso
-  // ("Todos los Insumos", un Tipo de Insumo sin Insumo elegido, o un Insumo puntual que igual
-  // tenga varias unidades) se usa el modo de actividad + resumen por unidad, nunca los 4 KPI
-  // tradicionales con una suma heterogénea.
-  const unidadInsumo = insumoV!=='ALL' ? unidadUnicaDe(flujoRows) : null;
-  const modoEspecifico = insumoV!=='ALL' && !!unidadInsumo && unidadInsumo!=='MULTI';
-  const insumoMultiUnidad = insumoV!=='ALL' && unidadInsumo==='MULTI';
 
-  document.getElementById('ins-stock-kpis').classList.toggle('hidden', !modoEspecifico);
-  document.getElementById('ins-activity-kpis').classList.toggle('hidden', modoEspecifico);
-  document.getElementById('ins-resumen-unidades-panel').classList.toggle('hidden', modoEspecifico);
-  document.getElementById('ins-multi-unidad-warning').classList.toggle('hidden', !insumoMultiUnidad);
+  // ---- Modo visual: fuente ÚNICA de verdad para qué bloque de KPIs/resumen se muestra — nunca se
+  // suman cantidades de unidades incompatibles en un solo total. Exactamente uno de los dos modos
+  // está activo en cada renderizado; determinarModoInsumos() decide, ocultarTodosLosBloques-
+  // Insumos() limpia y oculta TODO antes de mostrar nada (así nunca queda contenido/altura/clases
+  // del modo anterior), y cada renderModoX() muestra y llena únicamente lo suyo.
+  const modo = determinarModoInsumos(insumoV);
+  const unidadInsumo = modo==='specific_item' ? unidadUnicaDe(flujoRows) : null;
+  const insumoMultiUnidad = modo==='specific_item' && unidadInsumo==='MULTI';
 
-  if(modoEspecifico){
-    // Mismos 4 KPI de siempre (Stock Inicial -> Ingreso -> Consumo -> Balance), ahora garantizado
-    // en UNA sola unidad — se le agrega el sufijo con fmtKpiUnidad() (ver utils.js).
-    const stockInicioTot = flujoRows.reduce((s,f)=>s+f.stockInicio,0);
-    const ingresoTot = flujoRows.reduce((s,f)=>s+f.ingresoPeriodo,0);
-    const consumoTot = flujoRows.reduce((s,f)=>s+f.consumoPeriodo,0);
-    const balanceTot = flujoRows.reduce((s,f)=>s+f.balance,0);
-    const balCol = balanceTot>=0?'g':'r';
-    document.getElementById('ins-stock-kpis').innerHTML=
-      `<div class="kpi"><div class="k-lab">Stock Inicial</div><div class="k-val c-g">${fmtKpiUnidad(stockInicioTot,unidadInsumo)}</div><div class="k-foot">${filtroTxt}</div></div>`+
-      `<div class="kpi"><div class="k-lab">Ingreso</div><div class="k-val c-g">${fmtKpiUnidad(ingresoTot,unidadInsumo)}</div><div class="k-foot">${filtroTxt}</div></div>`+
-      `<div class="kpi"><div class="k-lab">Consumo</div><div class="k-val c-o">${fmtKpiUnidad(consumoTot,unidadInsumo)}</div><div class="k-foot">${filtroTxt}</div></div>`+
-      `<div class="kpi"><div class="k-lab">Balance</div><div class="k-val c-${balCol}">${fmtKpiUnidad(balanceTot,unidadInsumo)}</div><div class="k-foot">${filtroTxt}</div></div>`;
-  } else {
-    // Modo global/multiunidad: KPIs de actividad (agregables sin mezclar unidades) + resumen de
-    // cantidades por unidad — nunca un total de Stock/Ingreso/Consumo/Balance que combine litros
-    // con kilos con unidades. "Insumos con Movimiento" solo cuenta filas con Ingreso o Consumo en
-    // el período (no habilita el Stock Inicial solo, mismo criterio que ya usa el selector). Las
-    // demás cifras (nMovIngreso/nMovConsumo) ya venían calculadas arriba para las tablas de detalle.
-    if(insumoMultiUnidad){
-      document.getElementById('ins-multi-unidad-warning').textContent =
-        'Este insumo tiene movimientos registrados en más de una unidad de medida.';
-    }
-    const insumosConMovimiento = new Set(flujoRows.filter(f=>f.ingresoPeriodo!==0||f.consumoPeriodo!==0).map(f=>f.tipo+'|'+f.nombre)).size;
-    const unidadesDistintas = new Set(flujoRows.map(f=>normHdr(f.unidad)||'(sin unidad)')).size;
-    document.getElementById('ins-activity-kpis').innerHTML =
-      kpiCard('Insumos con Movimiento', insumosConMovimiento, filtroTxt, 'g')+
-      kpiCard('Unidades de Medida', unidadesDistintas, filtroTxt, 'gris')+
-      kpiCard('Movimientos de Ingreso', nMovIngreso, filtroTxt, 'g')+
-      kpiCard('Movimientos de Consumo', nMovConsumo, filtroTxt, 'o');
+  ocultarTodosLosBloquesInsumos();
+  if(modo==='summary') renderModoInsumosResumen(flujoRows, filtroTxt, nMovIngreso, nMovConsumo);
+  else renderModoInsumosEspecifico(flujoRows, filtroTxt, unidadInsumo, insumoMultiUnidad);
 
-    const resumenUnidades = resumenInsumosPorUnidad(flujoRows);
-    document.getElementById('ins-resumen-unidades-sub').textContent = filtroTxt;
-    document.getElementById('ins-resumen-unidades').innerHTML = resumenUnidades.length ? resumenUnidades.map(u=>
-      `<tr><td>${u.unidad}</td><td class="tr mono">${u.cantidadInsumos}</td><td class="tr mono">${fmt2(u.stockInicial)}</td><td class="tr mono">${fmt2(u.ingreso)}</td><td class="tr mono">${fmt2(u.consumo)}</td><td class="tr mono">${fmt2(u.balance)}</td></tr>`
-    ).join('') : '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:16px">Sin datos para el filtro seleccionado</td></tr>';
-  }
-
+  // Cantidad + Unidad van juntas en una sola celda (fmtCantidadUnidad(), utils.js) para que
+  // "Movimientos" (cantidad de registros agrupados) nunca se confunda con la cantidad física del
+  // insumo — antes "Registros" y "Unidad de Medida" quedaban pegadas a "Cantidad" y una fila como
+  // "11 | Kilos | 366.480,00" podía leerse como "11 Kilos" en vez de 11 movimientos de 366.480,00
+  // Kilos. La columna Unidad de Medida independiente se elimina; Movimientos muestra solo el
+  // número (el encabezado, con tooltip, ya da el contexto).
   document.getElementById('ins-ingreso-sub').textContent=filtroTxt+' · '+nMovIngreso+' movimientos (Ingreso de Mercadería)';
   document.getElementById('ins-ingreso').innerHTML = ingresoOrd.length ? ingresoOrd.map(o=>
-    `<tr><td>${o.nombre}</td><td>${o.proveedor}</td><td class="tr mono">${o.n}</td><td>${o.unidad}</td><td class="tr mono">${fmt2(o.cantidad)}</td></tr>`
-  ).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px">Sin ingresos de insumos en el período</td></tr>';
+    `<tr><td>${o.nombre}</td><td>${o.proveedor}</td><td class="tr mono">${o.n}</td><td class="tr mono qty-unit">${fmtCantidadUnidad(o.cantidad,o.unidad)}</td></tr>`
+  ).join('') : '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:16px">Sin ingresos de insumos en el período</td></tr>';
 
   // Proveedor SIEMPRE vacío en Consumo (nunca "(sin dato)", guion, ni ningun otro texto): no es
   // un dato que exista para estos movimientos (0% de los casos reales lo trae), así que la celda
   // se deja en blanco en vez de rellenarla con un valor por defecto.
   document.getElementById('ins-consumo-sub').textContent=filtroTxt+' · '+nMovConsumo+' movimientos (Egreso de Stock)';
   document.getElementById('ins-consumo').innerHTML = consumoOrd.length ? consumoOrd.map(o=>
-    `<tr><td>${o.nombre}</td><td></td><td class="tr mono">${o.n}</td><td>${o.unidad}</td><td class="tr mono">${fmt2(o.cantidad)}</td></tr>`
-  ).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px">Sin consumo de insumos en el período</td></tr>';
+    `<tr><td>${o.nombre}</td><td></td><td class="tr mono">${o.n}</td><td class="tr mono qty-unit">${fmtCantidadUnidad(o.cantidad,o.unidad)}</td></tr>`
+  ).join('') : '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:16px">Sin consumo de insumos en el período</td></tr>';
 }
 
 function monthTotals(){ const t={}; D.meses.forEach(m=>t[m.k]={k:m.k,lbl:m.lbl,tot:0,ot:0,horas:0});
@@ -452,33 +496,36 @@ function renderG(){
   renderGasoil();
 }
 
-// ---- Detalle por Labor: filtros de Labor y Etapa, afectan SOLO esta tabla ----
+// ---- Detalle por Labor: filtros de Labor, Etapa y Contratista, afectan SOLO esta tabla ----
 // (los KPIs, ranking y resumen por mes de arriba siguen agregando por labor sin importar la
-// etapa, tal como antes; acá se desglosa además por Estadio para poder aislar en qué etapa
-// del ciclo se ejecutó una labor puntual, dado que una misma labor puede repetirse en más
-// de una etapa a lo largo de la campaña).
+// etapa/contratista, tal como antes; acá se desglosa además por Estadio y por Contratista real
+// (campo "contratista" de consultaOT) para poder aislar en qué etapa y con qué contratista se
+// ejecutó una labor puntual — antes la columna "Propia / Tercero" mezclaba, en la misma fila,
+// OT de más de un contratista real (~19% de los grupos labor+etapa); ahora cada fila de la tabla
+// pertenece a un único contratista, o a "No aplica"/"Sin contratista" cuando corresponde).
 function renderLaborDetalle(){
   const selV=document.getElementById('gmes').value, sel=selV==='ALL'?'ALL':parseInt(selV);
   const selTxt=selV==='ALL'?'Toda la campaña':document.getElementById('gmes').selectedOptions[0].text;
   const laborV=document.getElementById('glabor').value, estV=document.getElementById('gestadio').value;
+  const contV=document.getElementById('gcontratista').value;
   let recs=sel==='ALL'?D.gastos:D.gastos.filter(r=>r.mesnum===sel);
   if(laborV!=='ALL') recs=recs.filter(r=>r.labor===laborV);
   if(estV!=='ALL') recs=recs.filter(r=>r.estadio===estV);
+  if(contV!=='ALL') recs=recs.filter(r=>r.contratista===contV);
   const by={};
-  recs.forEach(r=>{ const key=r.labor+'|'+r.estadio;
-    if(!by[key]) by[key]={labor:r.labor,estadio:r.estadio,esH:r.esH,n:0,ha:0,horas:0,prop:0,propUd:0,terc:0,ins:0};
+  recs.forEach(r=>{ const key=r.labor+'|'+r.estadio+'|'+r.contratista;
+    if(!by[key]) by[key]={labor:r.labor,estadio:r.estadio,contratista:r.contratista,esH:r.esH,n:0,ha:0,horas:0,prop:0,propUd:0,terc:0,ins:0};
     const o=by[key]; o.n+=r.n; o.ha+=r.ha; o.horas+=r.horas; o.prop+=r.propia; o.propUd+=r.propia_ud; o.terc+=r.tercero; o.ins+=r.insumos; });
   const labs=Object.values(by).map(o=>({...o,tot:o.prop+o.terc+o.ins})).sort((a,b)=>b.tot-a.tot);
-  const filtro=[laborV!=='ALL'?'Labor: '+laborV:null, estV!=='ALL'?'Etapa: '+estV:null].filter(Boolean).join(' · ');
-  document.getElementById('gld-sub').textContent=selTxt+(filtro?' · '+filtro:'')+' · '+labs.length+' combinación(es) labor/etapa · ordenado por costo total';
+  const filtro=[laborV!=='ALL'?'Labor: '+laborV:null, estV!=='ALL'?'Etapa: '+estV:null, contV!=='ALL'?'Contratista: '+labelContratista(contV):null].filter(Boolean).join(' · ');
+  document.getElementById('gld-sub').textContent=selTxt+(filtro?' · '+filtro:'')+' · '+labs.length+' combinación(es) labor/etapa/contratista · ordenado por costo total';
   document.getElementById('gld').innerHTML= labs.length ? labs.map(l=>{
     const ha=l.esH?'<span style="color:var(--muted)">—</span>':fmt2(l.ha), hr=l.esH?fmt2(l.horas):'<span style="color:var(--muted)">—</span>';
     const chip=l.esH?'<span class="chip chip-hr">horas</span>':'<span class="chip chip-ha">ha</span>';
-    const lt=l.prop+l.terc,pp=lt?l.prop/lt*100:0,pt=lt?l.terc/lt*100:0;
-    const bar=`<div class="ptbar"><div class="pp" style="width:${pp}%"></div><div class="pt" style="width:${pt}%"></div></div>`;
+    const contratistaTxt=labelContratista(l.contratista);
     // Labor Propia no tiene costo asignado en el sistema (siempre US$ 0) — se muestra la
     // cantidad ejecutada (Unidades/Dosis) en su lugar, que sí varía y aporta información.
-    return `<tr><td><span class="lname">${l.labor}</span> ${chip}</td><td><span class="chip chip-etapa">${l.estadio}</span></td><td class="tr mono">${l.n}</td><td class="tr mono">${ha}</td><td class="tr mono">${hr}</td><td class="tr mono col-terc">US$ ${fmtUSD(l.terc)}</td><td class="tr">${lt?bar:'—'}</td><td class="tr mono col-ins">US$ ${fmtUSD(l.ins)}</td><td class="tr mono col-tot">US$ ${fmtUSD(l.tot)}</td></tr>`;
+    return `<tr><td><span class="lname">${l.labor}</span> ${chip}</td><td><span class="chip chip-etapa">${l.estadio}</span></td><td class="tr mono">${l.n}</td><td class="tr mono">${ha}</td><td class="tr mono">${hr}</td><td class="tr mono col-terc">US$ ${fmtUSD(l.terc)}</td><td class="col-contratista" title="${contratistaTxt}">${contratistaTxt}</td><td class="tr mono col-ins">US$ ${fmtUSD(l.ins)}</td><td class="tr mono col-tot">US$ ${fmtUSD(l.tot)}</td></tr>`;
   }).join('') : '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:16px">Sin registros para el filtro seleccionado</td></tr>';
 }
 
