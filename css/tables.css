@@ -10,4 +10,7 @@ tr.det td,tr.det-over td{font-size:11.5px;padding:6px 8px;border-bottom:1px soli
 tr.det-over td{background:#fdf0ef}
 td.dl{padding-left:22px;color:var(--teal)}
 .tag{display:inline-block;background:var(--r);color:#fff;font-size:9px;font-weight:700;padding:1px 7px;border-radius:var(--radius-pill);margin-left:6px;text-transform:uppercase;letter-spacing:.3px}
-.scroll{max-height:560px;overflow-y:auto}
+/* overflow-x:auto — en pantallas angostas una tabla con muchas columnas (ej. barra .sopbar) no
+   entra en el ancho disponible; sin esto desbordaba la página entera en vez de scrollear dentro
+   de su propio panel. */
+.scroll{max-height:560px;overflow-y:auto;overflow-x:auto;max-width:100%}

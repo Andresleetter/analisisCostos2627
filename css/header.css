@@ -1,4 +1,7 @@
-.top{display:flex;align-items:center;justify-content:space-between;background:var(--card);border-radius:18px;padding:24px 32px;box-shadow:0 2px 6px rgba(0,0,0,.06);border:1px solid var(--line);margin-bottom:20px;gap:24px}
+/* flex-wrap:wrap — en teléfonos angostos, brand + top-right (fecha + menú) no entran en una sola
+   fila; sin wrap el excedente desborda la página entera en vez de pasar a una segunda línea (igual
+   criterio que .gfilter). En desktop nunca llega a activarse porque el contenido entra en una fila. */
+.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;background:var(--card);border-radius:18px;padding:24px 32px;box-shadow:0 2px 6px rgba(0,0,0,.06);border:1px solid var(--line);margin-bottom:20px;gap:24px}
 .brand{display:flex;align-items:center;gap:22px}
 .brand .logo-box{background:#fff;border-radius:var(--radius-lg);padding:6px 10px;display:flex;align-items:center;justify-content:center}
 .brand img{height:88px;width:auto;display:block;image-rendering:-webkit-optimize-contrast}
@@ -6,4 +9,28 @@
 .brand h1{font-size:21px;color:var(--teal);font-weight:800;letter-spacing:.2px}
 .brand .t-sub{font-size:12.5px;color:var(--muted);margin-top:4px}
 .top .t-date{font-size:11.5px;background:var(--green-xl);color:#2e5010;padding:5px 14px;border-radius:var(--radius-pill);font-weight:700;white-space:nowrap}
+.top-right{display:flex;align-items:center;gap:14px}
+/* Botón de menú móvil: oculto en escritorio/tablet horizontal, .tabs sigue siendo la barra visible. */
+.menu-toggle{display:none;width:40px;height:40px;flex:0 0 auto;align-items:center;justify-content:center;border:1.5px solid var(--line);border-radius:var(--radius-sm);background:#fff;cursor:pointer;padding:0}
+.menu-toggle:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+.menu-toggle-bars{display:block;width:20px;height:14px;position:relative}
+.menu-toggle-bars span{position:absolute;left:0;width:100%;height:2px;border-radius:2px;background:var(--teal);transition:transform .2s ease,opacity .2s ease,top .2s ease}
+.menu-toggle-bars span:nth-child(1){top:0}
+.menu-toggle-bars span:nth-child(2){top:6px}
+.menu-toggle-bars span:nth-child(3){top:12px}
+.menu-toggle.open .menu-toggle-bars span:nth-child(1){top:6px;transform:rotate(45deg)}
+.menu-toggle.open .menu-toggle-bars span:nth-child(2){opacity:0}
+.menu-toggle.open .menu-toggle-bars span:nth-child(3){top:6px;transform:rotate(-45deg)}
 @media(max-width:900px){.brand img{height:60px}}
+/* Teléfonos angostos (360-480px): el brand (logo + título) no encoge por sí solo con flex-wrap en
+   .top — hay que achicar explícitamente logo, gaps y tipografía para que quepa en una fila propia
+   sin desbordar el ancho de pantalla. */
+@media(max-width:480px){
+  .top{padding:16px 18px;gap:12px}
+  .brand{gap:12px}
+  .brand .logo-box{padding:4px 6px}
+  .brand img{height:40px}
+  .brand .b-txt{padding-left:12px}
+  .brand h1{font-size:15.5px}
+  .brand .t-sub{font-size:11px}
+}

@@ -6,4 +6,15 @@
 .tab.active .badge{background:#fff;color:var(--r)}
 .page{display:none} .page.active{display:block;animation:fade .25s ease}
 @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
-@media(max-width:900px){.tab{font-size:11px;padding:11px 7px}}
+.menu-backdrop{display:none}
+@media(max-width:900px){
+  .tab{font-size:11px;padding:11px 7px}
+  .menu-toggle{display:flex}
+  /* .tabs pasa de barra horizontal a panel desplegable en flujo normal, justo debajo del
+     encabezado (position:relative + z-index para quedar por encima del backdrop). Oculta por
+     defecto; #tabs-nav.open la muestra (ver events.js). */
+  .tabs{display:none;flex-direction:column;gap:2px;position:relative;z-index:46;margin-bottom:0}
+  .tabs.open{display:flex;margin-bottom:20px}
+  .tabs .tab{flex:none;justify-content:flex-start;padding:14px 16px;font-size:14px;text-align:left}
+  .menu-backdrop:not([hidden]){display:block;position:fixed;inset:0;background:rgba(20,30,20,.45);z-index:45}
+}

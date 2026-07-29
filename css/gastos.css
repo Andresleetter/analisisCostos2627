@@ -14,7 +14,7 @@
 /* Insumos ya no tiene fnote de contexto — sus 3 selects crecen para ocupar el espacio libre de la
    fila (scoped por id, no por .gfilter select, para no afectar los filtros de otras pestañas). */
 #imes, #itipo, #iinsumo{flex:1 1 200px}
-.gkpis{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:20px}
+.gkpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;margin-bottom:20px}
 .gkpi{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-lg);padding:13px 14px;box-shadow:var(--shadow-sm)}
 .gkpi .k-lab{font-size:10.5px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.3px}
 .gkpi .k-val{font-size:21px;font-weight:800;margin-top:5px;color:var(--ink)}
@@ -44,4 +44,4 @@
 .sopbar{display:inline-block;width:100%;min-width:80px;height:9px;background:#eef2ec;border-radius:var(--radius-bar);overflow:hidden}
 .sopbar>div{height:100%;background:var(--teal);border-radius:var(--radius-bar)}
 .scroll-tall{max-height:640px}
-@media(max-width:900px){.gkpis{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:900px){.gkpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
