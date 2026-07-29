@@ -87,6 +87,24 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
   // por lo que suele quedar atrasada respecto a la carga real de OT.
   const HOY = rows.reduce((max,r)=> (r.ft && (!max || r.ft>max)) ? r.ft : max, null) || new Date();
 
+  // ---- Modalidad de trabajo (hectareas vs horas) por OT — usa SOLO la linea principal de labor
+  // (tipo "Labor Propia"/"Labor Tercero"), nunca todas las lineas: una OT de horas puede traer
+  // ademas insumos u otras unidades, y eso no debe cambiarle la modalidad. Exclusiva para el avance
+  // del Resumen Ejecutivo (ver mas abajo) y para corregir la agrupacion "esH" de Servicios, que
+  // antes exigia que TODAS las lineas fueran horas (o.lines.every) — una OT por horas con un insumo
+  // de otra unidad quedaba mal clasificada. No cambia costos ni horas totales, solo a que fila del
+  // detalle se agrupan.
+  // OJO — verificado contra el dato real: la linea de labor de un trabajo por HECTAREAS casi
+  // siempre trae "Unidad de medida" VACIA (no "Ha"/"Hectarea"), y unas pocas veces algo distinto
+  // (ej. "Litros" en fumigaciones, "Dosis" en fletes) — exigir un texto exacto tipo "ha"/"hectarea"
+  // dejaria afuera la enorme mayoria del trabajo real por hectareas. La unica señal confiable en
+  // los datos es "Horas" (explicito) para trabajo por horas; todo lo demas en la linea principal de
+  // labor se considera hectareas.
+  function modalidadLaborOT(lineas){
+    const laborLineas = lineas.filter(l=>l.tipo==='Labor Propia'||l.tipo==='Labor Tercero');
+    if(!laborLineas.length) return lineas.length && lineas.every(l=>l.esHoras) ? 'horas' : null; // sin linea de labor identificable
+    return laborLineas.some(l=>l.esHoras) ? 'horas' : 'hectareas';
+  }
   // group by OT
   const otMap={};
   rows.forEach(r=>{ (otMap[r.ot]=otMap[r.ot]||[]).push(r); });
@@ -97,6 +115,7 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
       ft:r0.ft, fr:r0.fr, tieneServ: r0.serv!=='' && r0.serv.toLowerCase()!=='nan',
       contr:r0.contr, personal:r0.personal,
       ha: has.length?Math.max.apply(null,has):null,
+      modalidad: modalidadLaborOT(g),
       horas: g.filter(x=>x.esHoras).reduce((s,x)=>s+x.ud,0),
       imp: g.reduce((s,x)=>s+x.imp,0),
       propia: g.filter(x=>x.tipo==='Labor Propia').reduce((s,x)=>s+x.imp,0),
@@ -114,7 +133,17 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
     ot_pend=OTS.filter(o=>o.estado==='Pendiente').length;
   const costo_total=CONF.reduce((s,o)=>s+o.imp,0);
 
-  // ---- CULTIVOS ----
+  // ---- CULTIVOS: avance de campo ----
+  // Estructura de avance EXCLUSIVA del Resumen Ejecutivo — no toca land/exceso/sinrtk (Control de
+  // Hectareas, mas abajo) ni gastos/dmap (Servicios). Antes se acreditaba la superficie RTK
+  // COMPLETA del lote apenas aparecia UNA OT confirmada en ese lote, sin importar si era una tarea
+  // de unas pocas horas (ej. una retroexcavadora) o una labor real de campo — eso inflaba el avance.
+  // Ahora se usa Has. Reales de OT confirmadas de trabajo por hectareas (modalidadLaborOT, ver
+  // arriba), agrupadas por lote+estadio+labor, cada labor capada al plan del lote y promediada por
+  // estadio (labores distintas = pasadas distintas sobre la misma superficie, nunca se suman como
+  // superficie fisica adicional). Las OT por horas aportan 0 ha; las OT por hectareas sin Has.
+  // Reales valido se excluyen y quedan registradas en avanceInconsistencias, sin romper el render.
+  const avanceInconsistencias=[];
   const cultivos=CULTIVOS.map(c=>{
     const sub=OTS.filter(o=>o.act.toUpperCase()===c);
     const ha_plan=RTK_TOT[c]||0;
@@ -128,10 +157,6 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
       ejec=sub.filter(o=>o.estado==='En Ejecución').length,
       pend=sub.filter(o=>o.estado==='Pendiente').length;
     const costo=sub.filter(o=>o.estado==='Confirmado').reduce((s,o)=>s+o.imp,0);
-    const lotConf=new Set(sub.filter(o=>o.estado==='Confirmado').map(o=>normLote(o.lote)));
-    let ha_ejec=0; if(RTK[c]) lotConf.forEach(k=>{ if(k in RTK[c]) ha_ejec+=RTK[c][k]; });
-    ha_ejec=Math.round(ha_ejec*100)/100;
-    let av; if(ha_plan>0) av=Math.round(ha_ejec/ha_plan*1000)/10; else { const t=conf+ejec+pend; av=t?Math.round(conf/t*1000)/10:0; }
 
     // ---- Avance por ETAPA (campo "Estadio" de la OT) ----
     // Solo se consideran las 4 etapas de campaña: Preparación de Suelo, Siembra, Cuidados, Cosecha.
@@ -145,9 +170,34 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
       if(!etMap[key]) etMap[key]={nombre:ETAPA_LABEL[key],lotes:new Set()};
       etMap[key].lotes.add(normLote(o.lote));
     });
+    // porLoteEstadioLabor[lote][estadio][laborKey] = {planificadas, ejecutadasReales} — labor
+    // normalizada (normHdr) para que mayusculas/tildes/espacios no dupliquen el grupo. Solo OT
+    // Confirmadas, de un estadio reconocido y de modalidad "hectareas" (ver modalidadLaborOT).
+    const porLoteEstadioLabor={};
+    confOT.forEach(o=>{
+      if(o.modalidad!=='hectareas') return; // por horas u otra unidad: no aporta ha al avance
+      if(o.ha==null){ avanceInconsistencias.push({ot:o.ot,cultivo:c,lote:o.lote,estadio:o.estadio,motivo:'OT por hectareas sin Has. Reales'}); return; }
+      const lote=normLote(o.lote), estadio=normEstadio(o.estadio);
+      const laborKey=normHdr(o.serv)||'(sin labor)';
+      const planificadas=(RTK[c]&&RTK[c][lote])||0;
+      if(!porLoteEstadioLabor[lote]) porLoteEstadioLabor[lote]={};
+      if(!porLoteEstadioLabor[lote][estadio]) porLoteEstadioLabor[lote][estadio]={};
+      const est=porLoteEstadioLabor[lote][estadio];
+      if(!est[laborKey]) est[laborKey]={planificadas,ejecutadasReales:0};
+      est[laborKey].ejecutadasReales+=o.ha;
+    });
+    // Ejecucion equivalente de un (lote,estadio): promedio de las labores presentes, cada una
+    // capada (min) a la superficie planificada de ESE lote — nunca sumadas entre si (ver ejemplo
+    // Disco 1 + Disco 2 en el pedido: dos pasadas sobre la misma superficie, no 2x la superficie).
+    function equivalenteLoteEstadio(lote, estadio){
+      const labores=(porLoteEstadioLabor[lote]&&porLoteEstadioLabor[lote][estadio])||null;
+      if(!labores) return 0;
+      const valores=Object.values(labores).map(l=>Math.min(l.ejecutadasReales,l.planificadas));
+      return valores.reduce((a,b)=>a+b,0)/valores.length;
+    }
     const etapas=ETAPA_ORDEN.filter(k=>etMap[k]).map(k=>{
       const e=etMap[k];
-      let ha_e=0; if(RTK[c]) e.lotes.forEach(l=>{ if(l in RTK[c]) ha_e+=RTK[c][l]; });
+      let ha_e=0; e.lotes.forEach(l=>{ ha_e+=equivalenteLoteEstadio(l,k); });
       ha_e=Math.round(ha_e*100)/100;
       const av_e = ha_plan>0 ? Math.round(ha_e/ha_plan*1000)/10 : null;
       // OT de ESTE estadio puntual (cualquier Estado, no solo Confirmado) — para que "OT
@@ -159,9 +209,15 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
         otConfirmadas: subEtapa.filter(o=>o.estado==='Confirmado').length, otTotales: subEtapa.length};
     });
     const etapa_actual = etapas.length? etapas[etapas.length-1].nombre : null;
+    // ha_ejec/avance a nivel cultivo = los del estadio actual (el mas avanzado de la secuencia
+    // agronomica con actividad confirmada) — es lo mismo que ya se muestra en la tarjeta del
+    // cultivo, y evita sumar superficie de mas de un estadio (que duplicaria el mismo lote).
+    const ha_ejec = etapas.length ? etapas[etapas.length-1].ha_ejec : 0;
+    let av; if(ha_plan>0) av=Math.round(ha_ejec/ha_plan*1000)/10; else { const t=conf+ejec+pend; av=t?Math.round(conf/t*1000)/10:0; }
 
     return {nombre:c,ha_plan:Math.round(ha_plan*100)/100,ha_ejec,avance:av,tiene_rtk:ha_plan>0,conf,ejec,pend,costo,col:color(av),etapas,etapa_actual};
   }).filter(Boolean).sort((a,b)=>(b.ha_plan-a.ha_plan)||(b.costo-a.costo));
+  if(avanceInconsistencias.length) console.warn('Avance de campo: '+avanceInconsistencias.length+' OT por hectareas sin Has. Reales valido (excluidas del avance, ver D.avance_inconsistencias).');
 
   // ---- OPERATIVAS ----
   const operativas=OPERATIVAS.map(c=>{
@@ -306,8 +362,14 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
   const dmap={};
   detOT.forEach(o=>{ const m=o.fr?o.fr.getMonth()+1:0; const est=o.estadio&&o.estadio.trim()?o.estadio.trim():'(Sin etapa)';
     const contratista = o.contr && o.contr.trim() ? o.contr.trim() : (o.tercero>0 ? '(Sin contratista)' : '(Labor Propia)');
-    const key=m+'|'+o.serv+'|'+est+'|'+(o.lines.every(l=>l.esHoras))+'|'+contratista;
-    if(!dmap[key]) dmap[key]={mesnum:m,labor:o.serv,estadio:est,esH:o.lines.every(l=>l.esHoras),contratista,n:0,ha:0,horas:0,propia:0,propia_ud:0,tercero:0,insumos:0};
+    // esH usa la modalidad de la LINEA PRINCIPAL de labor (o.modalidad, ver mas arriba), no
+    // o.lines.every(l=>l.esHoras): una OT por horas con un insumo de otra unidad quedaba mal
+    // clasificada como "por hectareas" con el criterio anterior. No cambia costos ni horas
+    // sumadas, solo corrige a que fila del detalle se agrupan (puede fusionar filas antes separadas
+    // por error).
+    const esH = o.modalidad==='horas';
+    const key=m+'|'+o.serv+'|'+est+'|'+esH+'|'+contratista;
+    if(!dmap[key]) dmap[key]={mesnum:m,labor:o.serv,estadio:est,esH,contratista,n:0,ha:0,horas:0,propia:0,propia_ud:0,tercero:0,insumos:0};
     const d=dmap[key]; d.n++; d.ha+=(o.ha||0); d.horas+=o.horas; d.propia+=o.propia; d.propia_ud+=o.propia_ud; d.tercero+=o.tercero; d.insumos+=o.insumos; });
   const gastos=Object.values(dmap).map(d=>({...d,ha:Math.round(d.ha*100)/100,horas:Math.round(d.horas*100)/100,
     propia:Math.round(d.propia*100)/100,propia_ud:Math.round(d.propia_ud*100)/100,tercero:Math.round(d.tercero*100)/100,insumos:Math.round(d.insumos*100)/100}));
@@ -718,6 +780,9 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
     // Filas excluidas del módulo Insumos (hoy solo "Afrecho de Arroz - CH", ver INSUMOS_EXCLUIDOS
     // en config.js) — se conservan crudas acá solo para trazabilidad, ningún render.js las lee.
     insumos_excluidos:insumosExcluidosRaw||[],
+    // OT de trabajo por hectareas (avance del Resumen Ejecutivo) sin Has. Reales válido — quedan
+    // fuera del cálculo de avance; se conservan acá solo para trazabilidad/depuración.
+    avance_inconsistencias:avanceInconsistencias,
     resumen,
     fecha_datos:HOY};
 }
