@@ -219,12 +219,13 @@ function renderAuditoria(){
 function renderAlertas(){
   const estV = document.getElementById('aestado').value;
   // `alertas` es la TABLA COMPLETA: TODAS las OT Pendiente/En Ejecución (D.alertas =
-  // alertas_todas, ver data.js), atrasadas o no — a pedido del usuario, el KPI "OT Atrasadas" ya
+  // otsOperativas, ver data.js), atrasadas o no — a pedido del usuario, el KPI "OT Atrasadas" ya
   // cubre ese recorte aparte, la tabla debe mostrar todos los datos. El filtro de Estado solo
   // acota qué filas se ven acá (y el contador de registros); los 3 KPIs de abajo NUNCA se calculan
-  // desde esta lista — usan siempre D.n_ot_atrasadas/D.ot_pend/D.ot_ejec (alcance general de toda
-  // la campaña, ya calculados en data.js desde OTS/atr). D.ot_pend/D.ot_ejec son totales de OT
-  // ÚNICAS por Estado (no "con atraso" — eso es D.n_ot_atrasadas, un concepto distinto).
+  // desde esta lista — usan siempre D.n_ot_atrasadas/D.ot_pend/D.ot_ejec (totalAtrasadas/
+  // totalPendientes/totalEnEjecucion, alcance general de toda la campaña, ya calculados en data.js
+  // desde OTS/otsAtrasadas). D.ot_pend/D.ot_ejec son totales de OT ÚNICAS por Estado (no "con
+  // atraso" — eso es D.n_ot_atrasadas, un concepto distinto).
   const alertas = estV==='ALL' ? D.alertas : D.alertas.filter(a=>a.estado===estV);
   const estTxt = estV==='ALL' ? 'Todas' : estV;
   document.getElementById('anote').textContent = estTxt;
@@ -245,7 +246,7 @@ function renderAlertas(){
     const ft=a.ft?(('0'+a.ft.getDate()).slice(-2)+'/'+('0'+(a.ft.getMonth()+1)).slice(-2)+'/'+a.ft.getFullYear()):'-';
     const rowCls = sev?` class="al-${sev}"`:'';
     const diasCell = !a.atrasada ? `<span class="mono">-</span>`
-      : sev ? `<span class="pill pill-${sev}">${a.dias}d</span>` : `<span class="mono">${a.dias}d</span>`;
+      : sev ? `<span class="pill pill-${sev}">${a.diasAtrasoMostrados}d</span>` : `<span class="mono">${a.diasAtrasoMostrados}d</span>`;
     return `<tr${rowCls}><td>${diasCell}</td><td class="mono">OT ${a.ot}</td><td>${a.act}</td><td>${a.serv}</td><td class="mono">${a.lote}</td><td>${a.cult}</td><td>${a.estado}</td><td class="mono">${ft}</td></tr>`;}).join('')
     : '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:16px">Sin OT para el filtro seleccionado</td></tr>';
 }
