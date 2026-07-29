@@ -754,12 +754,16 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
   RP.sort((a,b)=>(SEV_ORDEN[a.severidad]-SEV_ORDEN[b.severidad])||(b.impacto-a.impacto));
 
   const resumen = {
-    // Solo los 4 KPIs operativos/financieros generales — las hectáreas planificadas/ejecutadas y
+    // Solo los 3 KPIs operativos/financieros generales — las hectáreas planificadas/ejecutadas y
     // el avance general se retiraron de esta fila (ver "Detalle de Etapas por Cultivo" para esa
     // información, ahora desglosada por cultivo y por estadio en vez de un total de campaña).
+    // "Gasto No Agrícola" (antes un 4to KPI acá) se retiró a pedido del usuario: mezclaba un
+    // concepto parcial (solo Actividades operativas/no-agrícolas) con el resto del gasto sin dar
+    // trazabilidad de a qué corresponde el resto. D.oper_costo/D.oper_part NO se tocan: los sigue
+    // usando "Distribución del Gasto: Áreas No Agrícolas" (renderDistribucionGasto).
     kpis:{
       otAtrasadas:n_ot_atrasadas, otConfirmadas:ot_conf,
-      costoEjecutado:costo_total, gastoNoAgricola:oper_costo, gastoNoAgricolaPct:oper_part,
+      costoEjecutado:costo_total,
     },
     estadosOT:resumen_estadosOT,
     actividadMensual:resumen_actividadMensual,

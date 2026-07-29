@@ -13,10 +13,11 @@
 
 /* ---- KPIs ejecutivos: mismo componente .kpi de kpis.css, con acento de color a la izquierda en
    vez de pintar toda la tarjeta (kpi_visual_rules: "no pintar todo el componente con colores
-   fuertes"). .kpis-exec ajusta el tamaño de valor para acomodar los 4 KPIs cómodamente. La grilla
-   de 4/2 columnas la hereda de .kpis (kpis.css, compartida con las demás pestañas); acá solo se
-   agrega el paso final a 1 columna en pantallas muy angostas, con un selector propio
-   (.kpis-exec) para no tocar el comportamiento de .kpis en el resto del dashboard. ---- */
+   fuertes"). Son 3 KPIs (OT Confirmadas/Atrasadas, Costo Ejecutado — "Gasto No Agrícola" se retiró
+   a pedido del usuario), por eso .kpis-exec fija 3 columnas en vez de heredar las 4 de .kpis
+   (kpis.css) — evita una 4ta columna vacía. Un selector propio para no tocar el comportamiento de
+   .kpis en el resto del dashboard. ---- */
+.kpis-exec{grid-template-columns:repeat(3,minmax(0,1fr))}
 .kpis-exec .k-val{font-size:19px}
 .kpi-acc{border-left-width:4px;border-left-style:solid}
 .kpi-g{border-left-color:var(--g)} .kpi-y{border-left-color:var(--y)} .kpi-o{border-left-color:var(--o)}
