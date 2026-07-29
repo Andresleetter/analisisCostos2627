@@ -5,7 +5,7 @@
    transiciones son sutiles y se desactivan con prefers-reduced-motion más abajo. */
 
 /* ---- Grilla de 2 columnas para el panel emparejado Estado de OT + Actividad Mensual ---- */
-.resumen-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.resumen-grid-2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px}
 .resumen-grid-2 .panel{margin-bottom:0}
 @media(max-width:900px){.resumen-grid-2{grid-template-columns:1fr;gap:0}}
 
@@ -21,7 +21,7 @@
 .kpi-acc{border-left-width:4px;border-left-style:solid}
 .kpi-g{border-left-color:var(--g)} .kpi-y{border-left-color:var(--y)} .kpi-o{border-left-color:var(--o)}
 .kpi-r{border-left-color:var(--r)} .kpi-gris{border-left-color:var(--muted)}
-@media(max-width:480px){.kpis-exec{grid-template-columns:1fr}}
+@media(max-width:480px){.kpis-exec{grid-template-columns:minmax(0,1fr)}}
 
 /* ---- Estado de las OT: barra apilada + leyenda ---- */
 .estbar-track{display:flex;height:22px;border-radius:11px;overflow:hidden;background:#eef2ec;margin-bottom:16px}
@@ -42,14 +42,14 @@
 .colchart-note{font-size:10px;color:var(--muted);margin-top:10px;text-align:center}
 
 /* ---- Distribución del Gasto: Áreas No Agrícolas (barras horizontales) ---- */
-.gbar-row{display:grid;grid-template-columns:170px 1fr 150px;align-items:center;gap:10px;margin-bottom:9px}
+.gbar-row{display:grid;grid-template-columns:170px minmax(0,1fr) 150px;align-items:center;gap:10px;margin-bottom:9px}
 .gbar-row:last-child{margin-bottom:0}
 .gbar-lbl{font-size:12px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:default}
 .gbar-track{height:12px;background:#eef2ec;border-radius:6px;overflow:hidden}
 .gbar-fill{height:100%;background:var(--o);border-radius:6px;transition:width .3s ease}
 .gbar-val{font-size:12px;font-weight:700;text-align:right;white-space:nowrap}
 .gbar-val small{color:var(--muted);font-weight:600;margin-left:5px}
-@media(max-width:900px){.gbar-row{grid-template-columns:100px 1fr 110px;gap:6px}}
+@media(max-width:900px){.gbar-row{grid-template-columns:100px minmax(0,1fr) 110px;gap:6px}}
 
 @media (prefers-reduced-motion: reduce){
   .estbar-seg,.colchart-bar,.gbar-fill{transition:none}

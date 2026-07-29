@@ -6,7 +6,7 @@
 .cc-stage-muted{font-style:italic}
 .bar{height:7px;background:#eef2ec;border-radius:var(--radius-bar);overflow:hidden;margin-bottom:9px} .bar-fill{height:100%;border-radius:var(--radius-bar)}
 .cc-etapas{display:flex;flex-direction:column;gap:7px;margin-bottom:10px}
-.et-row{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:8px}
+.et-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:8px}
 .et-lbl{font-size:10.5px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:108px}
 .et-bar{margin-bottom:0;flex:1}
 .et-val{font-size:11px;font-weight:800;white-space:nowrap;min-width:36px;text-align:right}
@@ -14,4 +14,4 @@
 .cc-ha{display:flex;flex-direction:column;gap:4px}
 .cc-ha div{background:#f2f6ef;border-radius:7px;padding:5px 8px;display:flex;justify-content:space-between}
 .cc-ha span{font-size:9.5px;color:var(--muted);text-transform:uppercase} .cc-ha b{font-size:11px}
-@media(max-width:900px){.cults{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:900px){.cults{grid-template-columns:repeat(2,minmax(0,1fr))}}

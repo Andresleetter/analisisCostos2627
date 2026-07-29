@@ -1,7 +1,37 @@
 // ================== EVENTOS ==================
 document.addEventListener('DOMContentLoaded', function(){
+  // Menú hamburguesa (solo visible en móvil, ver tabs.css): reutiliza los mismos botones .tab de
+  // #tabs-nav, nunca duplica la navegación — la barra pasa de fila horizontal a panel desplegable.
+  const menuToggle = document.getElementById('menu-toggle');
+  const tabsNav = document.getElementById('tabs-nav');
+  const menuBackdrop = document.getElementById('menu-backdrop');
+  function abrirMenuModulos(){
+    tabsNav.classList.add('open');
+    menuBackdrop.hidden = false;
+    menuToggle.classList.add('open');
+    menuToggle.setAttribute('aria-expanded','true');
+    menuToggle.setAttribute('aria-label','Cerrar menú de módulos');
+  }
+  function cerrarMenuModulos(){
+    tabsNav.classList.remove('open');
+    menuBackdrop.hidden = true;
+    menuToggle.classList.remove('open');
+    menuToggle.setAttribute('aria-expanded','false');
+    menuToggle.setAttribute('aria-label','Abrir menú de módulos');
+  }
+  menuToggle.addEventListener('click', function(){
+    if(tabsNav.classList.contains('open')) cerrarMenuModulos(); else abrirMenuModulos();
+  });
+  menuBackdrop.addEventListener('click', cerrarMenuModulos);
+  document.addEventListener('keydown', function(e){
+    if(e.key==='Escape' && tabsNav.classList.contains('open')) cerrarMenuModulos();
+  });
+  window.addEventListener('resize', function(){
+    if(window.innerWidth>900) cerrarMenuModulos();
+  });
+
   document.querySelectorAll('.tab').forEach(function(btn, i){
-    btn.addEventListener('click', function(){ show(i, btn); });
+    btn.addEventListener('click', function(){ show(i, btn); cerrarMenuModulos(); });
   });
   document.getElementById('ov-retry').addEventListener('click', loadData);
   document.getElementById('gmes').addEventListener('change', renderG);
@@ -27,5 +57,6 @@ document.addEventListener('DOMContentLoaded', function(){
     if(isNaN(i)) return;
     const tabs = document.querySelectorAll('.tab');
     show(i, tabs[i]);
+    cerrarMenuModulos();
   });
 });
