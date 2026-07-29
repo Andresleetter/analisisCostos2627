@@ -126,11 +126,21 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
   });
   const CONF = OTS.filter(o=>o.estado==='Confirmado');
   const isPrep = s => String(s).trim().toLowerCase().startsWith('preparacion de suelo');
+  // Comparación de Estado normalizada (sin acentos/mayúsculas, reusa normEstadio de utils.js) —
+  // solo para Pendiente/En Ejecución, que es lo que este pedido pidió blindar contra variaciones de
+  // tipeo del Excel. No se toca la comparación de "Confirmado" (CONF, arriba) ni el texto original
+  // de o.estado que se sigue mostrando tal cual en las tablas.
+  const esPendiente = o => normEstadio(o.estado)===normEstadio('Pendiente');
+  const esEnEjecucion = o => normEstadio(o.estado)===normEstadio('En Ejecución');
 
   // ---- KPIs OT ----
+  // ot_pend/ot_ejec = OT ÚNICAS (OTS ya está agrupado por número de OT, ver otMap más arriba) con
+  // ese estado — total de campaña, SIN filtrar por vencimiento. Son los KPI "Pendientes"/"En
+  // Ejecución" de Alertas Operacionales (ver más abajo): no representan "con atraso", eso es
+  // n_ot_atrasadas, un concepto distinto que nunca debe mezclarse con este total.
   const total_ot=OTS.length, ot_conf=CONF.length,
-    ot_ejec=OTS.filter(o=>o.estado==='En Ejecución').length,
-    ot_pend=OTS.filter(o=>o.estado==='Pendiente').length;
+    ot_ejec=OTS.filter(esEnEjecucion).length,
+    ot_pend=OTS.filter(esPendiente).length;
   const costo_total=CONF.reduce((s,o)=>s+o.imp,0);
 
   // ---- CULTIVOS: avance de campo ----
@@ -253,11 +263,40 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
     mayor:Math.round(Math.max(0,...exceso.map(e=>e.diff))*100)/100, n_sinrtk:sinrtk.length};
 
   // ---- ALERTAS ----
-  const nc=OTS.filter(o=>o.estado==='Pendiente'||o.estado==='En Ejecución');
-  const atr=nc.filter(o=>o.ft && o.ft<HOY).map(o=>({ot:o.ot,cult:o.act,act:o.estadio||'-',serv:o.serv||'-',lote:o.lote,estado:o.estado,
-      ft:o.ft, dias:Math.round((HOY-o.ft)/86400000)})).sort((a,b)=>b.dias-a.dias);
-  const n_ot_atrasadas=atr.length, n_ejec_atraso=atr.filter(a=>a.estado==='En Ejecución').length,
-    n_pend_atraso=atr.filter(a=>a.estado==='Pendiente').length;
+  // Tolerancia de 3 días completos posteriores a la Fecha Teórica antes de marcar una OT como
+  // atrasada (a pedido del usuario — evita alertar por demoras administrativas normales de pocos
+  // días). Fecha de referencia = fecha REAL del sistema (new Date()), normalizada al inicio del
+  // día para no arrastrar errores de hora/huso horario — NUNCA "HOY" (definida más arriba como la
+  // mayor Fecha Teórica encontrada en el Excel: eso solo indica qué tan actualizado está el
+  // archivo para el rótulo "Datos al…"/D.fecha_datos, no qué día es hoy realmente).
+  // esOTAtrasada() es la ÚNICA función que decide el atraso — la reutilizan el KPI (n_ot_atrasadas),
+  // la tabla (atr) y el badge de la pestaña (ver render.js), para que nunca puedan desincronizarse.
+  const TOLERANCIA_ATRASO_DIAS=3;
+  const HOY_REAL=new Date();
+  HOY_REAL.setHours(0,0,0,0);
+  function diasTranscurridosDesde(fecha){
+    if(!fecha) return null; // sin Fecha Teórica válida: nunca atrasada, nunca NaN (ver más abajo)
+    const f=new Date(fecha);
+    f.setHours(0,0,0,0);
+    return Math.floor((HOY_REAL-f)/86400000);
+  }
+  function esOTAtrasada(o){
+    const dias=diasTranscurridosDesde(o.ft);
+    return dias!=null && dias>TOLERANCIA_ATRASO_DIAS;
+  }
+  // nc = OT únicas (OTS ya agrupado por número de OT) con estado Pendiente o En Ejecución — base
+  // común para el KPI de atrasadas y para la tabla, nunca se recorre OTS de nuevo desde cero.
+  const nc=OTS.filter(o=>esPendiente(o)||esEnEjecucion(o));
+  const atr=nc.filter(esOTAtrasada).map(o=>{
+    const diasTranscurridos=diasTranscurridosDesde(o.ft);
+    // "dias" = días de atraso YA MOSTRADOS en la tabla, descontada la tolerancia de 3 días (ej.
+    // 4 días transcurridos se muestran como "1d") — siempre >0 acá porque esOTAtrasada ya exigió
+    // diasTranscurridos>3. diasTranscurridos (crudo) se conserva aparte para la severidad de color
+    // de fila (ver render.js), que sigue los mismos umbrales documentados de siempre (7/15/30).
+    return {ot:o.ot,cult:o.act,act:o.estadio||'-',serv:o.serv||'-',lote:o.lote,estado:o.estado,
+      ft:o.ft, diasTranscurridos, dias:diasTranscurridos-TOLERANCIA_ATRASO_DIAS};
+  }).sort((a,b)=>b.diasTranscurridos-a.diasTranscurridos);
+  const n_ot_atrasadas=atr.length;
 
   // ---- AUDITORIA: Presupuesto de Infraestructura vs ejecución real ----
   // Cruce definido en INFRA_MAP (config.js) entre "Especificacion" del presupuesto y "Servicio"
@@ -651,12 +690,14 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
   // por días). "OT Pendientes" no es lo mismo que "OT Atrasadas": acá solo entran las que además
   // tienen Fecha Teórica vencida, igual que en Alertas Operacionales.
   if(atr.length){
-    const maxDias=atr[0].dias;
+    // maxDias = días CRUDOS transcurridos (sin descontar la tolerancia de 3 días) — misma base
+    // que la severidad de color de fila de Alertas Operacionales (umbrales 7/15/30 documentados).
+    const maxDias=atr[0].diasTranscurridos;
     const sev = maxDias>30?'critica':(maxDias>15?'alta':(maxDias>7?'media':'informativa'));
     const porServicio={}; atr.forEach(a=>{ const k=a.serv&&a.serv!=='-'?a.serv:'(Sin servicio)'; porServicio[k]=(porServicio[k]||0)+1; });
     const top=Object.entries(porServicio).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([k,v])=>k+' ('+v+')').join(', ');
     RP.push({id:'delayed_work_orders', severidad:sev, titulo:'Órdenes de trabajo atrasadas',
-      descripcion:atr.length+' OT (Pendiente o En Ejecución) con Fecha Teórica ya vencida. Atraso máximo: '+maxDias+' día(s).',
+      descripcion:atr.length+' OT (Pendiente o En Ejecución) con más de '+TOLERANCIA_ATRASO_DIAS+' día(s) posteriores a su Fecha Teórica. Atraso máximo: '+maxDias+' día(s).',
       metrica:atr.length+' OT', contexto:'Servicios más afectados: '+top,
       accion:'Ver Alertas Operacionales', destinoTab:5, impacto:atr.length});
   }
@@ -772,7 +813,7 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
   };
 
   return {total_ot,ot_conf,ot_ejec,ot_pend,costo_total,cultivos,operativas,oper_costo,oper_part,
-    exceso,sinrtk,exc_kpi,alertas:atr,n_ot_atrasadas,n_ejec_atraso,n_pend_atraso,
+    exceso,sinrtk,exc_kpi,alertas:atr,n_ot_atrasadas,
     auditoria_items,auditoria_metros,auditoria_puentes,auditoria_gastos,
     gastos,gasoil_sec,meses,gasto_total,gasoil_total,gasoil_litros_total,gmes,glit,
     labores,estadios_labor,contratistas_labor,
