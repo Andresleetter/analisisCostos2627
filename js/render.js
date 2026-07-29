@@ -220,9 +220,10 @@ function renderAlertas(){
   const estV = document.getElementById('aestado').value;
   // `alertas` es solo para la TABLA (filas visibles + contador de registros): acotada por el
   // filtro de Estado. Los 3 KPIs de acá abajo NUNCA se calculan desde esta lista filtrada — usan
-  // siempre D.n_ot_atrasadas/D.n_pend_atraso/D.n_ejec_atraso (alcance general de toda la campaña,
-  // ya calculados en data.js desde la misma colección D.alertas/atr), para que el filtro de Estado
-  // solo cambie qué se ve en la tabla y nunca los KPIs generales.
+  // siempre D.n_ot_atrasadas/D.ot_pend/D.ot_ejec (alcance general de toda la campaña, ya
+  // calculados en data.js desde OTS/atr), para que el filtro de Estado solo cambie qué se ve en la
+  // tabla y nunca los KPIs generales. D.ot_pend/D.ot_ejec son totales de OT ÚNICAS por Estado (no
+  // "con atraso" — eso es D.n_ot_atrasadas, un concepto distinto que no se mezcla acá).
   const alertas = estV==='ALL' ? D.alertas : D.alertas.filter(a=>a.estado===estV);
   const estTxt = estV==='ALL' ? 'Todas' : estV;
   document.getElementById('anote').textContent = estTxt;
@@ -230,14 +231,15 @@ function renderAlertas(){
   // y OT sin Correspondencia RTK NO se repiten acá: ya se muestran en Control de Hectáreas.
   document.getElementById('al-kpis').innerHTML=
     `<div class="kpi"><div class="k-lab">OT Atrasadas</div><div class="k-val c-r">${D.n_ot_atrasadas}</div></div>`+
-    `<div class="kpi"><div class="k-lab">OT Pendientes con Atraso</div><div class="k-val">${D.n_pend_atraso}</div></div>`+
-    `<div class="kpi"><div class="k-lab">OT en Ejecución con Atraso</div><div class="k-val c-o">${D.n_ejec_atraso}</div></div>`;
+    `<div class="kpi"><div class="k-lab">Pendientes</div><div class="k-val">${D.ot_pend}</div></div>`+
+    `<div class="kpi"><div class="k-lab">En Ejecución</div><div class="k-val c-o">${D.ot_ejec}</div></div>`;
   document.getElementById('al-sub').textContent=alertas.length+' registros · ordenado por días de atraso';
   document.getElementById('al').innerHTML = alertas.length ? alertas.map(a=>{
-    // Color por días de atraso, por FILA — puramente visual, no depende del filtro de Estado
-    // (que ya viene aplicado en `alertas` más arriba): <=7 sin color, 8-15 amarillo suave,
-    // 16-30 naranja fuerte, >30 rojo intenso.
-    const sev = a.dias>30?'r':(a.dias>15?'o':(a.dias>7?'y':null));
+    // Color por días CRUDOS transcurridos (a.diasTranscurridos, sin descontar la tolerancia), por
+    // FILA — puramente visual, no depende del filtro de Estado (que ya viene aplicado en
+    // `alertas` más arriba): <=7 sin color, 8-15 amarillo suave, 16-30 naranja fuerte, >30 rojo
+    // intenso. El número mostrado en la celda (a.dias) sí descuenta los 3 días de tolerancia.
+    const sev = a.diasTranscurridos>30?'r':(a.diasTranscurridos>15?'o':(a.diasTranscurridos>7?'y':null));
     const ft=a.ft?(('0'+a.ft.getDate()).slice(-2)+'/'+('0'+(a.ft.getMonth()+1)).slice(-2)+'/'+a.ft.getFullYear()):'-';
     const rowCls = sev?` class="al-${sev}"`:'';
     const diasCell = sev?`<span class="pill pill-${sev}">${a.dias}d</span>`:`<span class="mono">${a.dias}d</span>`;
