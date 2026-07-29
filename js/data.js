@@ -270,7 +270,9 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
   // mayor Fecha Teórica encontrada en el Excel: eso solo indica qué tan actualizado está el
   // archivo para el rótulo "Datos al…"/D.fecha_datos, no qué día es hoy realmente).
   // esOTAtrasada() es la ÚNICA función que decide el atraso — la reutilizan el KPI (n_ot_atrasadas),
-  // la tabla (atr) y el badge de la pestaña (ver render.js), para que nunca puedan desincronizarse.
+  // la marca "atrasada" de cada fila de la tabla y el badge de la pestaña (ver render.js), para que
+  // nunca puedan desincronizarse. La tabla en sí muestra TODA la base (alertas_todas, más abajo),
+  // no solo las atrasadas — a pedido del usuario, ya que para eso está el KPI aparte.
   const TOLERANCIA_ATRASO_DIAS=3;
   const HOY_REAL=new Date();
   HOY_REAL.setHours(0,0,0,0);
@@ -285,17 +287,30 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
     return dias!=null && dias>TOLERANCIA_ATRASO_DIAS;
   }
   // nc = OT únicas (OTS ya agrupado por número de OT) con estado Pendiente o En Ejecución — base
-  // común para el KPI de atrasadas y para la tabla, nunca se recorre OTS de nuevo desde cero.
+  // común para la tabla de Alertas Operacionales y para el KPI de atrasadas, nunca se recorre OTS
+  // de nuevo desde cero.
   const nc=OTS.filter(o=>esPendiente(o)||esEnEjecucion(o));
-  const atr=nc.filter(esOTAtrasada).map(o=>{
+  // alertas_todas = TODA la base nc, atrasada o no (a pedido del usuario: la tabla debe mostrar
+  // todos los datos, no solo las vencidas — para eso ya está el KPI "OT Atrasadas" aparte). Cada
+  // fila trae "atrasada" (bool, vía esOTAtrasada) y "dias" (días YA MOSTRADOS, descontada la
+  // tolerancia de 3 — solo tiene sentido cuando atrasada=true; null en caso contrario, nunca
+  // negativo ni inventado). diasTranscurridos (crudo, puede ser null sin Fecha Teórica válida) se
+  // conserva aparte para la severidad de color de fila en render.js (umbrales 7/15/30 de siempre).
+  const alertas_todas=nc.map(o=>{
     const diasTranscurridos=diasTranscurridosDesde(o.ft);
-    // "dias" = días de atraso YA MOSTRADOS en la tabla, descontada la tolerancia de 3 días (ej.
-    // 4 días transcurridos se muestran como "1d") — siempre >0 acá porque esOTAtrasada ya exigió
-    // diasTranscurridos>3. diasTranscurridos (crudo) se conserva aparte para la severidad de color
-    // de fila (ver render.js), que sigue los mismos umbrales documentados de siempre (7/15/30).
+    const atrasada=esOTAtrasada(o);
     return {ot:o.ot,cult:o.act,act:o.estadio||'-',serv:o.serv||'-',lote:o.lote,estado:o.estado,
-      ft:o.ft, diasTranscurridos, dias:diasTranscurridos-TOLERANCIA_ATRASO_DIAS};
-  }).sort((a,b)=>b.diasTranscurridos-a.diasTranscurridos);
+      ft:o.ft, diasTranscurridos, atrasada, dias:atrasada?diasTranscurridos-TOLERANCIA_ATRASO_DIAS:null};
+  }).sort((a,b)=>{
+    // Atrasadas primero (más días primero); dentro de las no atrasadas, sin Fecha Teórica al final.
+    if(a.diasTranscurridos==null && b.diasTranscurridos==null) return 0;
+    if(a.diasTranscurridos==null) return 1;
+    if(b.diasTranscurridos==null) return -1;
+    return b.diasTranscurridos-a.diasTranscurridos;
+  });
+  // atr = subconjunto atrasado de alertas_todas — única fuente del KPI "OT Atrasadas"/badge y de
+  // "Posibles Problemas" en Resumen Ejecutivo (ver más abajo), nunca se recalcula por separado.
+  const atr=alertas_todas.filter(a=>a.atrasada);
   const n_ot_atrasadas=atr.length;
 
   // ---- AUDITORIA: Presupuesto de Infraestructura vs ejecución real ----
@@ -813,7 +828,7 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
   };
 
   return {total_ot,ot_conf,ot_ejec,ot_pend,costo_total,cultivos,operativas,oper_costo,oper_part,
-    exceso,sinrtk,exc_kpi,alertas:atr,n_ot_atrasadas,
+    exceso,sinrtk,exc_kpi,alertas:alertas_todas,n_ot_atrasadas,
     auditoria_items,auditoria_metros,auditoria_puentes,auditoria_gastos,
     gastos,gasoil_sec,meses,gasto_total,gasoil_total,gasoil_litros_total,gmes,glit,
     labores,estadios_labor,contratistas_labor,
