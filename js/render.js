@@ -79,16 +79,14 @@ function kpiCard(lab,val,foot,col){
 function renderResumenKPIs(){
   const k=D.resumen.kpis;
   const atrasCol = k.otAtrasadas>0 ? (k.otAtrasadas>10?'r':'o') : 'g';
-  const noAgriCol = k.gastoNoAgricolaPct>=40 ? 'o' : 'gris';
   document.getElementById('exec-kpis').innerHTML=[
     kpiCard('OT Confirmadas', k.otConfirmadas, 'de '+D.total_ot+' totales', 'g'),
     kpiCard('OT Atrasadas', k.otAtrasadas, 'Pendiente/En Ejecución vencidas', atrasCol),
     kpiCard('Costo Ejecutado', 'US$ '+fmtUSD(k.costoEjecutado), 'Solo OT confirmadas', 'gris'),
-    kpiCard('Gasto No Agrícola', 'US$ '+fmtUSD(k.gastoNoAgricola), Math.round(k.gastoNoAgricolaPct)+'% del total', noAgriCol),
   ].join('');
 }
 
-// ---- 3a. Ejecución operacional: estado de las OT (barra apilada + leyenda), categorías reales
+// ---- 2. Ejecución operacional: estado de las OT (barra apilada + leyenda), categorías reales
 // (ver D.resumen.estadosOT en data.js — "Otros" solo aparece si hay algún estado real distinto de
 // los 3 conocidos, con el detalle de cuáles). ----
 function renderEstadosOT(){
