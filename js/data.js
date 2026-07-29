@@ -256,7 +256,8 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
   const nc=OTS.filter(o=>o.estado==='Pendiente'||o.estado==='En Ejecución');
   const atr=nc.filter(o=>o.ft && o.ft<HOY).map(o=>({ot:o.ot,cult:o.act,act:o.estadio||'-',serv:o.serv||'-',lote:o.lote,estado:o.estado,
       ft:o.ft, dias:Math.round((HOY-o.ft)/86400000)})).sort((a,b)=>b.dias-a.dias);
-  const n_ot_atrasadas=atr.length, n_ejec_atraso=atr.filter(a=>a.estado==='En Ejecución').length;
+  const n_ot_atrasadas=atr.length, n_ejec_atraso=atr.filter(a=>a.estado==='En Ejecución').length,
+    n_pend_atraso=atr.filter(a=>a.estado==='Pendiente').length;
 
   // ---- AUDITORIA: Presupuesto de Infraestructura vs ejecución real ----
   // Cruce definido en INFRA_MAP (config.js) entre "Especificacion" del presupuesto y "Servicio"
@@ -771,7 +772,7 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
   };
 
   return {total_ot,ot_conf,ot_ejec,ot_pend,costo_total,cultivos,operativas,oper_costo,oper_part,
-    exceso,sinrtk,exc_kpi,alertas:atr,n_ot_atrasadas,n_ejec_atraso,
+    exceso,sinrtk,exc_kpi,alertas:atr,n_ot_atrasadas,n_ejec_atraso,n_pend_atraso,
     auditoria_items,auditoria_metros,auditoria_puentes,auditoria_gastos,
     gastos,gasoil_sec,meses,gasto_total,gasoil_total,gasoil_litros_total,gmes,glit,
     labores,estadios_labor,contratistas_labor,
