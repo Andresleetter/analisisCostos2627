@@ -1,22 +1,22 @@
-/* flex-wrap:wrap — en teléfonos angostos, brand + fecha no entran en una sola fila; sin wrap el
-   excedente desborda la página entera en vez de pasar a una segunda línea (igual criterio que
-   .gfilter). En desktop nunca llega a activarse porque el contenido entra en una fila. El botón de
-   menú se posiciona aparte (position:absolute, ver .menu-toggle) para no competir por ese espacio:
-   brand + fecha mantienen exactamente el mismo layout de 2 filas que ya tenían antes de agregarlo. */
-.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;background:var(--card);border-radius:18px;padding:24px 32px;box-shadow:0 2px 6px rgba(0,0,0,.06);border:1px solid var(--line);margin-bottom:20px;gap:24px;position:relative}
+/* flex-wrap:wrap — en teléfonos angostos, brand + header-right no entran en una sola fila; sin
+   wrap el excedente desborda la página entera en vez de pasar a una segunda línea (igual criterio
+   que .gfilter). En desktop nunca llega a activarse porque el contenido entra en una fila. */
+.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;background:var(--card);border-radius:18px;padding:24px 32px;box-shadow:0 2px 6px rgba(0,0,0,.06);border:1px solid var(--line);margin-bottom:20px;gap:24px}
 .brand{display:flex;align-items:center;gap:22px}
 .brand .logo-box{background:#fff;border-radius:var(--radius-lg);padding:6px 10px;display:flex;align-items:center;justify-content:center}
 .brand img{height:88px;width:auto;display:block;image-rendering:-webkit-optimize-contrast}
 .brand .b-txt{border-left:3px solid var(--green-xl);padding-left:22px}
 .brand h1{font-size:21px;color:var(--teal);font-weight:800;letter-spacing:.2px}
 .brand .t-sub{font-size:12.5px;color:var(--muted);margin-top:4px}
+/* Grupo derecho del encabezado: botón hamburguesa (solo móvil, ver tabs.css) + fecha, alineados en
+   una misma fila con una separación pequeña y consistente entre ambos. En escritorio el botón
+   queda oculto (display:none) y este contenedor solo envuelve la fecha, sin cambiar su posición. */
+.header-right{display:flex;align-items:center;gap:10px;flex-shrink:0}
 .top .t-date{font-size:11.5px;background:var(--green-xl);color:#2e5010;padding:5px 14px;border-radius:var(--radius-pill);font-weight:700;white-space:nowrap}
 /* Botón de menú móvil: oculto en escritorio/tablet horizontal, .tabs sigue siendo la barra visible.
-   position:absolute (activado junto con display:flex en el media query de abajo) para quedar
-   pegado a la izquierda del encabezado sin competir por espacio en la fila de brand/fecha — así
-   brand y fecha conservan el mismo layout que ya tenían. .brand se corre a la derecha (margin-left)
-   lo justo para no quedar tapado por el botón. */
-.menu-toggle{display:none;position:absolute;left:20px;top:50%;transform:translateY(-50%);width:40px;height:40px;align-items:center;justify-content:center;border:1.5px solid var(--line);border-radius:var(--radius-sm);background:#fff;cursor:pointer;padding:0;z-index:1}
+   display:flex se activa en el media query de tabs.css (junto con el resto del comportamiento del
+   menú), no se repite acá. */
+.menu-toggle{display:none;align-items:center;justify-content:center;width:40px;height:40px;border:1.5px solid var(--line);border-radius:var(--radius-sm);background:#fff;cursor:pointer;padding:0;flex-shrink:0}
 .menu-toggle:focus-visible{outline:2px solid var(--green);outline-offset:2px}
 .menu-toggle-bars{display:block;width:20px;height:14px;position:relative}
 .menu-toggle-bars span{position:absolute;left:0;width:100%;height:2px;border-radius:2px;background:var(--teal);transition:transform .2s ease,opacity .2s ease,top .2s ease}
@@ -26,24 +26,19 @@
 .menu-toggle.open .menu-toggle-bars span:nth-child(1){top:6px;transform:rotate(45deg)}
 .menu-toggle.open .menu-toggle-bars span:nth-child(2){opacity:0}
 .menu-toggle.open .menu-toggle-bars span:nth-child(3){top:6px;transform:rotate(-45deg)}
-/* margin-left en .brand: dejar libre el rectángulo donde cae el botón absoluto (20px de left +
-   40px de ancho + margen), para que el logo nunca quede tapado por el botón. display:flex de
-   .menu-toggle se activa en este mismo breakpoint pero está definido en tabs.css (junto con el
-   resto del comportamiento del menú), no se repite acá. */
 @media(max-width:900px){
   .brand img{height:60px}
-  .brand{margin-left:64px}
 }
 /* Teléfonos angostos (360-480px): el brand (logo + título) no encoge por sí solo con flex-wrap en
    .top — hay que achicar explícitamente logo, gaps y tipografía para que quepa en una fila propia
    sin desbordar el ancho de pantalla. */
 @media(max-width:480px){
   .top{padding:16px 18px;gap:12px}
-  .brand{gap:12px;margin-left:56px}
+  .brand{gap:12px}
   .brand .logo-box{padding:4px 6px}
   .brand img{height:40px}
   .brand .b-txt{padding-left:12px}
   .brand h1{font-size:15.5px}
   .brand .t-sub{font-size:11px}
-  .menu-toggle{left:14px}
+  .header-right{gap:8px}
 }

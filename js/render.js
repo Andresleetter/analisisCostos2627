@@ -218,18 +218,21 @@ function renderAuditoria(){
 // ---- Alertas Operacionales: filtro por Estado (Pendiente / En Ejecución / Todas) ----
 function renderAlertas(){
   const estV = document.getElementById('aestado').value;
+  // `alertas` es solo para la TABLA (filas visibles + contador de registros): acotada por el
+  // filtro de Estado. Los 3 KPIs de acá abajo NUNCA se calculan desde esta lista filtrada — usan
+  // siempre D.n_ot_atrasadas/D.n_pend_atraso/D.n_ejec_atraso (alcance general de toda la campaña,
+  // ya calculados en data.js desde la misma colección D.alertas/atr), para que el filtro de Estado
+  // solo cambie qué se ve en la tabla y nunca los KPIs generales.
   const alertas = estV==='ALL' ? D.alertas : D.alertas.filter(a=>a.estado===estV);
-  const n_atrasadas = alertas.length;
-  const n_ejec_atraso = alertas.filter(a=>a.estado==='En Ejecución').length;
   const estTxt = estV==='ALL' ? 'Todas' : estV;
   document.getElementById('anote').textContent = estTxt;
   // KPIs con el mismo estilo que el resto del dashboard (.kpi, fondo blanco) — Lotes con Exceso
   // y OT sin Correspondencia RTK NO se repiten acá: ya se muestran en Control de Hectáreas.
   document.getElementById('al-kpis').innerHTML=
-    `<div class="kpi"><div class="k-lab">OT Atrasadas</div><div class="k-val c-r">${n_atrasadas}</div></div>`+
-    `<div class="kpi"><div class="k-lab">OT en Ejecución con Atraso</div><div class="k-val c-o">${n_ejec_atraso}</div></div>`+
-    `<div class="kpi"><div class="k-lab">OT Pendientes</div><div class="k-val">${D.ot_pend}</div><div class="k-foot">Estado = Pendiente · toda la campaña</div></div>`;
-  document.getElementById('al-sub').textContent=n_atrasadas+' registros · ordenado por días de atraso';
+    `<div class="kpi"><div class="k-lab">OT Atrasadas</div><div class="k-val c-r">${D.n_ot_atrasadas}</div></div>`+
+    `<div class="kpi"><div class="k-lab">OT Pendientes con Atraso</div><div class="k-val">${D.n_pend_atraso}</div></div>`+
+    `<div class="kpi"><div class="k-lab">OT en Ejecución con Atraso</div><div class="k-val c-o">${D.n_ejec_atraso}</div></div>`;
+  document.getElementById('al-sub').textContent=alertas.length+' registros · ordenado por días de atraso';
   document.getElementById('al').innerHTML = alertas.length ? alertas.map(a=>{
     // Color por días de atraso, por FILA — puramente visual, no depende del filtro de Estado
     // (que ya viene aplicado en `alertas` más arriba): <=7 sin color, 8-15 amarillo suave,
