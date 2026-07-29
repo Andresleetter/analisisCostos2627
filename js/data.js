@@ -134,13 +134,13 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
   const esEnEjecucion = o => normEstadio(o.estado)===normEstadio('En Ejecución');
 
   // ---- KPIs OT ----
-  // ot_pend/ot_ejec = OT ÚNICAS (OTS ya está agrupado por número de OT, ver otMap más arriba) con
-  // ese estado — total de campaña, SIN filtrar por vencimiento. Son los KPI "Pendientes"/"En
-  // Ejecución" de Alertas Operacionales (ver más abajo): no representan "con atraso", eso es
-  // n_ot_atrasadas, un concepto distinto que nunca debe mezclarse con este total.
+  // totalPendientes/totalEnEjecucion = OT ÚNICAS (OTS ya está agrupado por número de OT, ver
+  // otMap más arriba) con ese estado — total de campaña, SIN filtrar por vencimiento. Son los KPI
+  // "Pendientes"/"En Ejecución" de Alertas Operacionales (ver más abajo): no representan "con
+  // atraso", eso es totalAtrasadas, un concepto distinto que nunca debe mezclarse con este total.
   const total_ot=OTS.length, ot_conf=CONF.length,
-    ot_ejec=OTS.filter(esEnEjecucion).length,
-    ot_pend=OTS.filter(esPendiente).length;
+    totalEnEjecucion=OTS.filter(esEnEjecucion).length,
+    totalPendientes=OTS.filter(esPendiente).length;
   const costo_total=CONF.reduce((s,o)=>s+o.imp,0);
 
   // ---- CULTIVOS: avance de campo ----
@@ -269,9 +269,9 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
   // día para no arrastrar errores de hora/huso horario — NUNCA "HOY" (definida más arriba como la
   // mayor Fecha Teórica encontrada en el Excel: eso solo indica qué tan actualizado está el
   // archivo para el rótulo "Datos al…"/D.fecha_datos, no qué día es hoy realmente).
-  // esOTAtrasada() es la ÚNICA función que decide el atraso — la reutilizan el KPI (n_ot_atrasadas),
+  // esOTAtrasada() es la ÚNICA función que decide el atraso — la reutilizan el KPI (totalAtrasadas),
   // la marca "atrasada" de cada fila de la tabla y el badge de la pestaña (ver render.js), para que
-  // nunca puedan desincronizarse. La tabla en sí muestra TODA la base (alertas_todas, más abajo),
+  // nunca puedan desincronizarse. La tabla en sí muestra TODA la base (otsOperativas, más abajo),
   // no solo las atrasadas — a pedido del usuario, ya que para eso está el KPI aparte.
   const TOLERANCIA_ATRASO_DIAS=3;
   const HOY_REAL=new Date();
@@ -286,32 +286,36 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
     const dias=diasTranscurridosDesde(o.ft);
     return dias!=null && dias>TOLERANCIA_ATRASO_DIAS;
   }
-  // nc = OT únicas (OTS ya agrupado por número de OT) con estado Pendiente o En Ejecución — base
-  // común para la tabla de Alertas Operacionales y para el KPI de atrasadas, nunca se recorre OTS
-  // de nuevo desde cero.
-  const nc=OTS.filter(o=>esPendiente(o)||esEnEjecucion(o));
-  // alertas_todas = TODA la base nc, atrasada o no (a pedido del usuario: la tabla debe mostrar
-  // todos los datos, no solo las vencidas — para eso ya está el KPI "OT Atrasadas" aparte). Cada
-  // fila trae "atrasada" (bool, vía esOTAtrasada) y "dias" (días YA MOSTRADOS, descontada la
-  // tolerancia de 3 — solo tiene sentido cuando atrasada=true; null en caso contrario, nunca
-  // negativo ni inventado). diasTranscurridos (crudo, puede ser null sin Fecha Teórica válida) se
-  // conserva aparte para la severidad de color de fila en render.js (umbrales 7/15/30 de siempre).
-  const alertas_todas=nc.map(o=>{
+  // otsOperativas = OT únicas (OTS ya agrupado por número de OT) con estado Pendiente o En
+  // Ejecución, atrasadas o no (a pedido del usuario: la tabla debe mostrar todos los datos, no
+  // solo las vencidas — para eso ya está el KPI "OT Atrasadas" aparte). Única colección que
+  // alimenta la tabla y sus filtros — nunca se recorre OTS de nuevo desde cero para esto. Cada
+  // fila trae "atrasada" (bool, vía esOTAtrasada) y "diasAtrasoMostrados" (días YA MOSTRADOS,
+  // descontada la tolerancia de 3 — solo tiene sentido cuando atrasada=true; null en caso
+  // contrario, nunca negativo ni inventado). diasTranscurridos (crudo, puede ser null sin Fecha
+  // Teórica válida) se conserva aparte para la severidad de color de fila en render.js (umbrales
+  // 7/15/30 de siempre) y para el orden de la tabla (ver sort más abajo).
+  const otsOperativas=OTS.filter(o=>esPendiente(o)||esEnEjecucion(o)).map(o=>{
     const diasTranscurridos=diasTranscurridosDesde(o.ft);
     const atrasada=esOTAtrasada(o);
     return {ot:o.ot,cult:o.act,act:o.estadio||'-',serv:o.serv||'-',lote:o.lote,estado:o.estado,
-      ft:o.ft, diasTranscurridos, atrasada, dias:atrasada?diasTranscurridos-TOLERANCIA_ATRASO_DIAS:null};
+      ft:o.ft, diasTranscurridos, atrasada,
+      diasAtrasoMostrados:atrasada?diasTranscurridos-TOLERANCIA_ATRASO_DIAS:null};
   }).sort((a,b)=>{
-    // Atrasadas primero (más días primero); dentro de las no atrasadas, sin Fecha Teórica al final.
+    // Atrasadas primero, de mayor a menor diasTranscurridos (equivale a mayor a menor atraso); las
+    // no atrasadas con Fecha Teórica válida quedan después, ordenadas por esa misma fecha (mayor
+    // diasTranscurridos = Fecha Teórica más antigua = más cerca de vencer, ya que diasTranscurridos
+    // y Fecha Teórica se mueven en sentidos opuestos); sin Fecha Teórica válida, al final.
     if(a.diasTranscurridos==null && b.diasTranscurridos==null) return 0;
     if(a.diasTranscurridos==null) return 1;
     if(b.diasTranscurridos==null) return -1;
     return b.diasTranscurridos-a.diasTranscurridos;
   });
-  // atr = subconjunto atrasado de alertas_todas — única fuente del KPI "OT Atrasadas"/badge y de
-  // "Posibles Problemas" en Resumen Ejecutivo (ver más abajo), nunca se recalcula por separado.
-  const atr=alertas_todas.filter(a=>a.atrasada);
-  const n_ot_atrasadas=atr.length;
+  // otsAtrasadas = subconjunto atrasado de otsOperativas — única fuente del KPI "OT Atrasadas"/
+  // badge y de "Posibles Problemas" en Resumen Ejecutivo (ver más abajo), nunca se recalcula por
+  // separado ni se usa como fuente de la tabla.
+  const otsAtrasadas=otsOperativas.filter(a=>a.atrasada);
+  const totalAtrasadas=otsAtrasadas.length;
 
   // ---- AUDITORIA: Presupuesto de Infraestructura vs ejecución real ----
   // Cruce definido en INFRA_MAP (config.js) entre "Especificacion" del presupuesto y "Servicio"
@@ -654,8 +658,9 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
 
   // ================= RESUMEN EJECUTIVO =================
   // Todo lo que sigue alimenta exclusivamente la pestaña Resumen Ejecutivo. Se calcula UNA sola
-  // vez acá (no en render.js) y se reutilizan colecciones ya construidas arriba (cultivos, atr,
-  // exceso, sinrtk, gastos, operativas) — nunca se vuelve a filtrar OTS/rows desde cero para esto.
+  // vez acá (no en render.js) y se reutilizan colecciones ya construidas arriba (cultivos,
+  // otsAtrasadas, exceso, sinrtk, gastos, operativas) — nunca se vuelve a filtrar OTS/rows desde
+  // cero para esto.
 
   // ---- Avance general de campaña (Ha Ejecutadas / Ha Planificadas, todos los cultivos) ----
   // Ya NO se muestra como KPI ni como gráfico (ambos se retiraron a pedido del usuario): la
@@ -700,21 +705,21 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
   // sobre el campo — todas se redactan como desviación/posible problema para revisión.
   const RP=[];
 
-  // 1) OT atrasadas — MISMA lógica exacta que Alertas Operacionales (atr/n_ot_atrasadas ya
-  // calculados arriba). Severidad = la del atraso MÁXIMO encontrado (atr ya viene ordenado desc
-  // por días). "OT Pendientes" no es lo mismo que "OT Atrasadas": acá solo entran las que además
-  // tienen Fecha Teórica vencida, igual que en Alertas Operacionales.
-  if(atr.length){
+  // 1) OT atrasadas — MISMA lógica exacta que Alertas Operacionales (otsAtrasadas/totalAtrasadas
+  // ya calculados arriba). Severidad = la del atraso MÁXIMO encontrado (otsAtrasadas ya viene
+  // ordenado desc por días). "OT Pendientes" no es lo mismo que "OT Atrasadas": acá solo entran
+  // las que además tienen Fecha Teórica vencida, igual que en Alertas Operacionales.
+  if(otsAtrasadas.length){
     // maxDias = días CRUDOS transcurridos (sin descontar la tolerancia de 3 días) — misma base
     // que la severidad de color de fila de Alertas Operacionales (umbrales 7/15/30 documentados).
-    const maxDias=atr[0].diasTranscurridos;
+    const maxDias=otsAtrasadas[0].diasTranscurridos;
     const sev = maxDias>30?'critica':(maxDias>15?'alta':(maxDias>7?'media':'informativa'));
-    const porServicio={}; atr.forEach(a=>{ const k=a.serv&&a.serv!=='-'?a.serv:'(Sin servicio)'; porServicio[k]=(porServicio[k]||0)+1; });
+    const porServicio={}; otsAtrasadas.forEach(a=>{ const k=a.serv&&a.serv!=='-'?a.serv:'(Sin servicio)'; porServicio[k]=(porServicio[k]||0)+1; });
     const top=Object.entries(porServicio).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([k,v])=>k+' ('+v+')').join(', ');
     RP.push({id:'delayed_work_orders', severidad:sev, titulo:'Órdenes de trabajo atrasadas',
-      descripcion:atr.length+' OT (Pendiente o En Ejecución) con más de '+TOLERANCIA_ATRASO_DIAS+' día(s) posteriores a su Fecha Teórica. Atraso máximo: '+maxDias+' día(s).',
-      metrica:atr.length+' OT', contexto:'Servicios más afectados: '+top,
-      accion:'Ver Alertas Operacionales', destinoTab:5, impacto:atr.length});
+      descripcion:otsAtrasadas.length+' OT (Pendiente o En Ejecución) con más de '+TOLERANCIA_ATRASO_DIAS+' día(s) posteriores a su Fecha Teórica. Atraso máximo: '+maxDias+' día(s).',
+      metrica:otsAtrasadas.length+' OT', contexto:'Servicios más afectados: '+top,
+      accion:'Ver Alertas Operacionales', destinoTab:5, impacto:otsAtrasadas.length});
   }
 
   // 2) Cultivos con avance por debajo del promedio de campaña — desviación RELATIVA (avance del
@@ -819,7 +824,7 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
     // trazabilidad de a qué corresponde el resto. D.oper_costo/D.oper_part NO se tocan: los sigue
     // usando "Distribución del Gasto: Áreas No Agrícolas" (renderDistribucionGasto).
     kpis:{
-      otAtrasadas:n_ot_atrasadas, otConfirmadas:ot_conf,
+      otAtrasadas:totalAtrasadas, otConfirmadas:ot_conf,
       costoEjecutado:costo_total,
     },
     estadosOT:resumen_estadosOT,
@@ -827,8 +832,8 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
     problemas:RP,
   };
 
-  return {total_ot,ot_conf,ot_ejec,ot_pend,costo_total,cultivos,operativas,oper_costo,oper_part,
-    exceso,sinrtk,exc_kpi,alertas:alertas_todas,n_ot_atrasadas,
+  return {total_ot,ot_conf,ot_ejec:totalEnEjecucion,ot_pend:totalPendientes,costo_total,cultivos,operativas,oper_costo,oper_part,
+    exceso,sinrtk,exc_kpi,alertas:otsOperativas,n_ot_atrasadas:totalAtrasadas,
     auditoria_items,auditoria_metros,auditoria_puentes,auditoria_gastos,
     gastos,gasoil_sec,meses,gasto_total,gasoil_total,gasoil_litros_total,gmes,glit,
     labores,estadios_labor,contratistas_labor,
