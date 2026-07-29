@@ -218,12 +218,13 @@ function renderAuditoria(){
 // ---- Alertas Operacionales: filtro por Estado (Pendiente / En Ejecución / Todas) ----
 function renderAlertas(){
   const estV = document.getElementById('aestado').value;
-  // `alertas` es solo para la TABLA (filas visibles + contador de registros): acotada por el
-  // filtro de Estado. Los 3 KPIs de acá abajo NUNCA se calculan desde esta lista filtrada — usan
-  // siempre D.n_ot_atrasadas/D.ot_pend/D.ot_ejec (alcance general de toda la campaña, ya
-  // calculados en data.js desde OTS/atr), para que el filtro de Estado solo cambie qué se ve en la
-  // tabla y nunca los KPIs generales. D.ot_pend/D.ot_ejec son totales de OT ÚNICAS por Estado (no
-  // "con atraso" — eso es D.n_ot_atrasadas, un concepto distinto que no se mezcla acá).
+  // `alertas` es la TABLA COMPLETA: TODAS las OT Pendiente/En Ejecución (D.alertas =
+  // alertas_todas, ver data.js), atrasadas o no — a pedido del usuario, el KPI "OT Atrasadas" ya
+  // cubre ese recorte aparte, la tabla debe mostrar todos los datos. El filtro de Estado solo
+  // acota qué filas se ven acá (y el contador de registros); los 3 KPIs de abajo NUNCA se calculan
+  // desde esta lista — usan siempre D.n_ot_atrasadas/D.ot_pend/D.ot_ejec (alcance general de toda
+  // la campaña, ya calculados en data.js desde OTS/atr). D.ot_pend/D.ot_ejec son totales de OT
+  // ÚNICAS por Estado (no "con atraso" — eso es D.n_ot_atrasadas, un concepto distinto).
   const alertas = estV==='ALL' ? D.alertas : D.alertas.filter(a=>a.estado===estV);
   const estTxt = estV==='ALL' ? 'Todas' : estV;
   document.getElementById('anote').textContent = estTxt;
@@ -236,15 +237,17 @@ function renderAlertas(){
   document.getElementById('al-sub').textContent=alertas.length+' registros · ordenado por días de atraso';
   document.getElementById('al').innerHTML = alertas.length ? alertas.map(a=>{
     // Color por días CRUDOS transcurridos (a.diasTranscurridos, sin descontar la tolerancia), por
-    // FILA — puramente visual, no depende del filtro de Estado (que ya viene aplicado en
-    // `alertas` más arriba): <=7 sin color, 8-15 amarillo suave, 16-30 naranja fuerte, >30 rojo
-    // intenso. El número mostrado en la celda (a.dias) sí descuenta los 3 días de tolerancia.
-    const sev = a.diasTranscurridos>30?'r':(a.diasTranscurridos>15?'o':(a.diasTranscurridos>7?'y':null));
+    // FILA — puramente visual, y solo aplica si la OT está efectivamente atrasada (a.atrasada):
+    // <=7 sin color, 8-15 amarillo suave, 16-30 naranja fuerte, >30 rojo intenso. Filas no
+    // atrasadas (dentro de la tolerancia, con fecha futura o sin Fecha Teórica) nunca llevan color
+    // ni un número de días inventado — muestran "-" en la celda de Atraso.
+    const sev = a.atrasada ? (a.diasTranscurridos>30?'r':(a.diasTranscurridos>15?'o':(a.diasTranscurridos>7?'y':null))) : null;
     const ft=a.ft?(('0'+a.ft.getDate()).slice(-2)+'/'+('0'+(a.ft.getMonth()+1)).slice(-2)+'/'+a.ft.getFullYear()):'-';
     const rowCls = sev?` class="al-${sev}"`:'';
-    const diasCell = sev?`<span class="pill pill-${sev}">${a.dias}d</span>`:`<span class="mono">${a.dias}d</span>`;
+    const diasCell = !a.atrasada ? `<span class="mono">-</span>`
+      : sev ? `<span class="pill pill-${sev}">${a.dias}d</span>` : `<span class="mono">${a.dias}d</span>`;
     return `<tr${rowCls}><td>${diasCell}</td><td class="mono">OT ${a.ot}</td><td>${a.act}</td><td>${a.serv}</td><td class="mono">${a.lote}</td><td>${a.cult}</td><td>${a.estado}</td><td class="mono">${ft}</td></tr>`;}).join('')
-    : '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:16px">Sin OT atrasadas para el filtro seleccionado</td></tr>';
+    : '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:16px">Sin OT para el filtro seleccionado</td></tr>';
 }
 
 // ---- Insumos (no combustible): filtros dependientes Tipo de Insumo -> Insumo, + Mes ----
