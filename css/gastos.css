@@ -24,7 +24,7 @@
    solo esta celda, no afecta las tablas de Combustible que reutilizan el mismo .scroll/table. */
 .qty-unit{white-space:nowrap}
 .ldt th{font-size:10px} .ldt td{padding:9px 8px} .ldt .lname{font-weight:700;color:var(--ink);font-size:12.5px}
-.col-prop{color:var(--green);font-weight:800} .col-terc{color:var(--teal);font-weight:800} .col-ins{color:var(--muted)} .col-tot{font-weight:800}
+.col-terc{color:var(--teal);font-weight:800} .col-ins{color:var(--muted)} .col-tot{font-weight:800}
 .ldt th.grp-pt{color:var(--teal);border-bottom-color:var(--teal)}
 /* Columna Contratista: nombres reales pueden ser largos (razón social) — se truncan con elipsis y
    tooltip nativo (title) en vez de romper el ancho de la tabla o forzar scroll horizontal. */

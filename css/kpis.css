@@ -1,4 +1,3 @@
-.sec-h{font-size:14px;color:var(--teal);font-weight:700;text-transform:uppercase;letter-spacing:.3px;margin:0 0 14px 2px}
 /* minmax(0,1fr), no 1fr solo — un track 1fr sin piso 0 toma como mínimo el ancho del contenido
    (min-content) de la tarjeta más ancha, y en pantallas angostas eso desborda la página aunque
    .k-val/.k-foot ya tengan ellipsis (el ellipsis nunca llega a activarse porque la columna crece
