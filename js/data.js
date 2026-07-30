@@ -521,7 +521,24 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
   // a diferencia de consultaOT/consultaCultivos. Solo se aplica el tipoMovimiento exacto.
   const MOV_INGRESO = 'Ingreso de Mercaderia';
   const MOV_CONSUMO = 'Comprobante Automático de Egreso de Stock';
-  const insumosRowsAll = (otrosInsumos||[]).map(rowRaw=>{
+  // ---- Filtro Ganadería (exclusivo de este módulo) ----
+  // consultaInsumos puede traer registros agrícolas Y ganaderos mezclados. El módulo Insumos debe
+  // trabajar SOLO con los agrícolas: categoriaInsumo = "Agricola" (normalizado) Y observaciones que
+  // NO mencionen "GANADER" (cubre Ganadería/Ganadero/Ganadera/etc., sin depender de mayúsculas,
+  // tildes ni espacios — normEstadio ya hace ese trabajo y es null-safe: categoriaInsumo/
+  // observaciones ausentes o null no rompen la comparación, simplemente no matchean "agricola" y
+  // la fila queda excluida). Se filtra sobre una COPIA derivada (otrosInsumosAgricolas) — nunca se
+  // modifica ni se recorta "otrosInsumos" (la colección original, que sigue exponiéndose intacta
+  // más abajo en D.insumos_pendiente_modulo para trazabilidad) ni nada de Combustible: ese módulo
+  // usa combustibleRaw/existenciaInicial, arrays completamente aparte ya separados en
+  // separarInsumos() (loader.js), que nunca pasan por este filtro.
+  function esMovimientoAgricolaNoGanadero(r){
+    const categoria = normEstadio(r.categoriaInsumo);
+    const observacion = normEstadio(r.observaciones);
+    return categoria==='agricola' && !observacion.includes('ganader');
+  }
+  const otrosInsumosAgricolas = (otrosInsumos||[]).filter(esMovimientoAgricolaNoGanadero);
+  const insumosRowsAll = otrosInsumosAgricolas.map(rowRaw=>{
     const row={}; for(const k in rowRaw){ row[normHdr(k)]=rowRaw[k]; }
     return {
       fecha: pdate(row['fecha']),
