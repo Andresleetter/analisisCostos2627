@@ -2,7 +2,14 @@
 function renderAll(){
   const fd=D.fecha_datos;
   const fdTxt=('0'+fd.getDate()).slice(-2)+'/'+('0'+(fd.getMonth()+1)).slice(-2)+'/'+fd.getFullYear();
-  document.getElementById('t-date').textContent='Datos al '+fdTxt;
+  // Header: fecha Y hora de la última actualización real del archivo .xlsx (D.excel_actualizado,
+  // calculada UNA sola vez en loader.js — nunca se recalcula acá ni cambia al navegar entre
+  // módulos/filtros/menú móvil). Distinta de fd/fdTxt (arriba, sigue usándose tal cual en el pie
+  // de página): fd es la Fecha Teórica más reciente de las OT (frescura del CONTENIDO); esto es
+  // cuándo se modificó el ARCHIVO en sí. Formato 24 horas, sin segundos: DD/MM/YYYY · HH:mm.
+  const fa=D.excel_actualizado;
+  const faTxt=('0'+fa.getDate()).slice(-2)+'/'+('0'+(fa.getMonth()+1)).slice(-2)+'/'+fa.getFullYear()+' · '+('0'+fa.getHours()).slice(-2)+':'+('0'+fa.getMinutes()).slice(-2);
+  document.getElementById('t-date').textContent=faTxt;
   document.getElementById('b-exc').textContent=D.exc_kpi.n;
   document.getElementById('b-al').textContent=D.n_ot_atrasadas;
   // TAB1: Resumen Ejecutivo (una función chica por bloque, ver detalle de cada una más abajo).

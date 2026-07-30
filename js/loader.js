@@ -22,6 +22,16 @@ function cargarXLSX(nombre, url){
       throw new Error('Error al descargar '+nombre+' desde '+url+': '+(e.message||e));
     });
 }
+// Fecha/hora de última modificación real del .xlsx (metadata de Office, docProps/core.xml —
+// Excel la actualiza sola cada vez que se guarda el archivo, sin intervención del usuario). Se
+// usa para el rótulo de "actualizado" del header (ver render.js) porque representa cuándo cambió
+// el ARCHIVO en sí, no cuándo el usuario abrió la página ni la fecha de los datos que contiene.
+// raw.githubusercontent.com no expone un header HTTP Last-Modified (verificado contra la
+// respuesta real), así que esta metadata interna es la única fuente confiable disponible.
+function fechaModificacionXLSX(wb){
+  var md = wb && wb.Props && wb.Props.ModifiedDate;
+  return (md instanceof Date && !isNaN(md)) ? md : null;
+}
 function hojaARows(wb, nombreHoja){
   var sheet = wb.Sheets[nombreHoja];
   if(!sheet) throw new Error('El archivo no contiene la hoja «'+nombreHoja+'». Hojas disponibles: '+wb.SheetNames.join(', '));
@@ -113,6 +123,16 @@ function loadData(){
       console.log('Presupuesto de Infraestructura — items:', presupuestoInfra.length);
       try{ D = buildData(consultaOT, consultaCultivos, insumos, presupuestoInfra); }
       catch(e){ console.error('Error al construir indicadores:', e); throw new Error('Error procesando los datos: '+e.message); }
+      // D.excel_actualizado se fija UNA sola vez acá, por carga exitosa — nunca se recalcula en
+      // render.js ni cambia al navegar entre módulos, usar filtros o abrir/cerrar el menú móvil.
+      // Con metadata real del archivo (caso normal) refleja cuándo se guardó por última vez el
+      // .xlsx; sin ella (caso excepcional, ver advertencia) cae a "el momento en que terminó esta
+      // descarga" — D.excel_actualizado_esFallback deja esa diferencia trazable internamente, sin
+      // hacer pasar una carga de página por una modificación real del archivo.
+      var modXlsx = fechaModificacionXLSX(wb);
+      D.excel_actualizado = modXlsx || new Date();
+      D.excel_actualizado_esFallback = !modXlsx;
+      if(!modXlsx) console.warn('El .xlsx no trae metadata de última modificación (Props.ModifiedDate); se usa el momento de esta descarga como aproximación.');
       var conPlan=D.cultivos.filter(function(c){return c.tiene_rtk;}).length;
       console.log('Cultivos con plan (RTK) cruzados desde consultaCultivos:', conPlan);
       if(conPlan===0) console.warn('Advertencia: consultaCultivos no aportó hectáreas planificadas.');
