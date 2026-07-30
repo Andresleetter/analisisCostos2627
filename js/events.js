@@ -59,4 +59,17 @@ document.addEventListener('DOMContentLoaded', function(){
     show(i, tabs[i]);
     cerrarMenuModulos();
   });
+  // Gastos Operativos (Resumen Ejecutivo): "Ver detalle" expande/colapsa el detalle de esa misma
+  // categoría (.opex-detail, dentro de su .opex-row — ver renderGastosOperativos, render.js).
+  // Delegado sobre #opex-rows (fijo en el HTML) porque las filas se regeneran en cada carga — un
+  // único listener sigue funcionando sin volver a atarse por fila.
+  document.getElementById('opex-rows').addEventListener('click', function(e){
+    const btn = e.target.closest('.opex-toggle');
+    if(!btn) return;
+    const detail = btn.closest('.opex-row').querySelector('.opex-detail');
+    const abierto = !detail.classList.contains('hidden');
+    detail.classList.toggle('hidden');
+    btn.setAttribute('aria-expanded', String(!abierto));
+    btn.textContent = abierto ? 'Ver detalle' : 'Ocultar detalle';
+  });
 });

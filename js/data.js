@@ -228,14 +228,36 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
   if(avanceInconsistencias.length) console.warn('Avance de campo: '+avanceInconsistencias.length+' OT por hectareas sin Has. Reales valido (excluidas del avance, ver D.avance_inconsistencias).');
 
   // ---- OPERATIVAS ----
+  // "Gastos operativos" = costo de OT Confirmadas cuya Actividad es una de las categorías no
+  // agrícolas de OPERATIVAS (config.js) — MISMA clasificación y fórmula (o.imp) que ya usaba esta
+  // sección desde siempre, nunca se inventa una nueva. `detalle` agrupa esas mismas OT por
+  // (Servicio, Contratista) dentro de cada categoría — mismo criterio de agrupación/marcadores
+  // '(Labor Propia)'/'(Sin contratista)' que ya usa `dmap` en Servicios más abajo — para el
+  // desglose expandible de la sección "Gastos Operativos" del Resumen Ejecutivo. `otConfirmadas`
+  // es la cantidad de OT que efectivamente componen `costo` (las Confirmadas); no confundir con
+  // el total de OT de la categoría en cualquier estado, que no aporta al importe.
   const operativas=OPERATIVAS.map(c=>{
     const sub=OTS.filter(o=>o.act.toUpperCase()===c);
     if(!sub.length) return null;
-    const costo=sub.filter(o=>o.estado==='Confirmado').reduce((s,o)=>s+o.imp,0);
-    return {nombre:c,ot:sub.length,costo,part:costo_total?Math.round(costo/costo_total*1000)/10:0};
+    const conf=sub.filter(o=>o.estado==='Confirmado');
+    const costo=conf.reduce((s,o)=>s+o.imp,0);
+    const detMap={};
+    conf.forEach(o=>{
+      const contratista = o.contr && o.contr.trim() ? o.contr.trim() : (o.tercero>0 ? '(Sin contratista)' : '(Labor Propia)');
+      const key=(o.serv||'(Sin servicio)')+'|'+contratista;
+      if(!detMap[key]) detMap[key]={servicio:o.serv||'(Sin servicio)',contratista,ot:0,costo:0};
+      const d=detMap[key]; d.ot++; d.costo+=o.imp;
+    });
+    const detalle=Object.values(detMap).sort((a,b)=>b.costo-a.costo);
+    return {nombre:c,otConfirmadas:conf.length,costo,part:costo_total?Math.round(costo/costo_total*1000)/10:0,detalle};
   }).filter(Boolean).sort((a,b)=>b.costo-a.costo);
   const oper_costo=operativas.reduce((s,o)=>s+o.costo,0);
   const oper_part=Math.round(operativas.reduce((s,o)=>s+o.part,0)*10)/10;
+  // % de cada categoría sobre el TOTAL OPERATIVO (oper_costo) — base distinta de `part` (arriba),
+  // que es el % sobre el costo total DE TODA LA CAMPAÑA. Se calcula en un segundo paso porque
+  // necesita oper_costo ya sumado. Con oper_costo=0 (sin gastos operativos) queda en 0, nunca
+  // NaN/Infinity.
+  operativas.forEach(o=>{ o.partOperativo = oper_costo ? Math.round(o.costo/oper_costo*1000)/10 : 0; });
 
   // ---- CONTROL DE HECTÁREAS ----
   const RTK_CROPS=['ARROZ','SOJA','SORGO','MAIZ'];
@@ -835,7 +857,8 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
     // "Gasto No Agrícola" (antes un 4to KPI acá) se retiró a pedido del usuario: mezclaba un
     // concepto parcial (solo Actividades operativas/no-agrícolas) con el resto del gasto sin dar
     // trazabilidad de a qué corresponde el resto. D.oper_costo/D.oper_part NO se tocan: los sigue
-    // usando "Distribución del Gasto: Áreas No Agrícolas" (renderDistribucionGasto).
+    // usando la sección "Gastos Operativos" (renderGastosOperativos, antes "Distribución del
+    // Gasto: Áreas No Agrícolas").
     kpis:{
       otAtrasadas:totalAtrasadas, otConfirmadas:ot_conf,
       costoEjecutado:costo_total,

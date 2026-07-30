@@ -72,9 +72,17 @@
         <div id="resumen-actividad-mensual"></div></div>
     </div>
 
-    <!-- 4. Distribución de recursos -->
-    <div class="panel"><h3>Distribución del Gasto: Áreas No Agrícolas <span id="oper-sub"></span></h3>
-      <div id="resumen-gasto"></div></div>
+    <!-- 4. Gastos Operativos: MISMA posición/estilo de tarjeta que el viejo panel "Distribución
+         del Gasto: Áreas No Agrícolas" que reemplaza (mismo wrapper .panel, mismo lugar del
+         módulo) — desglose de gastos operativos (Actividades no agrícolas de OPERATIVAS,
+         config.js) por categoría, con detalle expandible por Servicio/Contratista.
+         "opex-panel" es una clase adicional (no reemplaza a .panel) solo para separarla del
+         bloque de arriba (Estado de OT + Actividad Mensual) sin afectar el margen del resto de
+         los .panel del dashboard — ver resumen.css. -->
+    <div class="panel opex-panel"><h3>Gastos Operativos <span id="opex-sub"></span></h3>
+      <div class="opex-total" id="opex-total"></div>
+      <div id="opex-rows"></div>
+    </div>
 
     <!-- 5. Posibles problemas en la campaña -->
     <div class="prob-head">

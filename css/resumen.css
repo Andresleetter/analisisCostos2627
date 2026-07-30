@@ -1,7 +1,7 @@
 /* ================== RESUMEN EJECUTIVO ================== */
 /* Variables/espaciado/tipografía/bordes/sombras reutilizan las de base.css/panel.css; este
-   archivo solo agrega los componentes visuales de la pestaña (KPIs con acento de estado, estado
-   de OT, actividad mensual y distribución de gasto). Sin animaciones costosas; las únicas
+   archivo solo agrega los componentes visuales de la pestaña (KPIs con acento de estado, Gastos
+   Operativos, estado de OT y actividad mensual). Sin animaciones costosas; las únicas
    transiciones son sutiles y se desactivan con prefers-reduced-motion más abajo. */
 
 /* ---- Grilla de 2 columnas para el panel emparejado Estado de OT + Actividad Mensual ---- */
@@ -42,16 +42,47 @@
 .colchart-lbl{font-size:10px;color:var(--muted);margin-top:2px}
 .colchart-note{font-size:10px;color:var(--muted);margin-top:10px;text-align:center}
 
-/* ---- Distribución del Gasto: Áreas No Agrícolas (barras horizontales) ---- */
-.gbar-row{display:grid;grid-template-columns:170px minmax(0,1fr) 150px;align-items:center;gap:10px;margin-bottom:9px}
-.gbar-row:last-child{margin-bottom:0}
-.gbar-lbl{font-size:12px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:default}
-.gbar-track{height:12px;background:#eef2ec;border-radius:6px;overflow:hidden}
-.gbar-fill{height:100%;background:var(--o);border-radius:6px;transition:width .3s ease}
-.gbar-val{font-size:12px;font-weight:700;text-align:right;white-space:nowrap}
-.gbar-val small{color:var(--muted);font-weight:600;margin-left:5px}
-@media(max-width:900px){.gbar-row{grid-template-columns:100px minmax(0,1fr) 110px;gap:6px}}
+/* ---- Gastos Operativos: separación propia respecto al bloque de arriba (Estado de OT +
+   Actividad Mensual) — .resumen-grid-2 no tiene margin-bottom propio (sus .panel internos lo
+   anulan, ver arriba) y .panel no define margin-top, así que sin esto quedaban pegados. Clase
+   adicional (no reemplaza a .panel) para no tocar el margen del resto de tarjetas del dashboard. */
+.opex-panel{margin-top:20px}
+@media(max-width:480px){.opex-panel{margin-top:16px}}
+
+/* ---- Gastos Operativos: tarjeta principal con el total ---- */
+.opex-total{display:flex;align-items:baseline;flex-wrap:wrap;gap:6px 14px;background:#f7faf5;border:1px solid var(--line);border-radius:var(--radius-md);padding:14px 18px;margin-bottom:16px}
+.opex-total .ot-lab{font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.4px;flex:1 1 100%}
+.opex-total .ot-val{font-size:26px;font-weight:800;color:var(--teal)}
+.opex-total .ot-foot{font-size:11.5px;color:var(--muted);margin-left:auto}
+
+/* ---- Gastos Operativos: una sola fila por categoría (nombre + barra + importe + % + OT +
+   botón "Ver detalle"), sin tabla aparte — el detalle expandible (.opex-detail) cuelga debajo de
+   la fila de esa misma categoría, nunca en un panel separado. Escritorio: todo en una fila (grid
+   de 6 columnas, la barra toma el espacio libre). Móvil (≤900px): se reordena en 3 líneas
+   (categoría+importe / barra / %+OT+botón), sin scroll horizontal. */
+.opex-row+.opex-row{border-top:1px solid var(--line)}
+.opex-row-main{display:grid;grid-template-columns:170px minmax(0,1fr) 110px 56px 56px auto;align-items:center;gap:10px;padding:9px 0}
+.opex-cat{font-size:12px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:default}
+.opex-bar-track{height:12px;background:#eef2ec;border-radius:6px;overflow:hidden}
+.opex-bar-fill{height:100%;background:var(--o);border-radius:6px;transition:width .3s ease}
+.opex-amt{font-size:12px;font-weight:700;color:var(--ink);text-align:right;white-space:nowrap}
+.opex-pct{font-size:11.5px;font-weight:600;color:var(--muted);text-align:right;white-space:nowrap}
+.opex-ot{font-size:11.5px;color:var(--muted);text-align:right;white-space:nowrap}
+.opex-toggle{background:none;border:1.5px solid var(--teal);color:var(--teal);font-size:11px;font-weight:700;padding:6px 14px;border-radius:var(--radius-pill);cursor:pointer;font-family:inherit;white-space:nowrap;justify-self:end}
+.opex-toggle:hover{background:var(--teal);color:#fff}
+@media(max-width:900px){
+  .opex-row-main{grid-template-columns:1fr 1fr auto;grid-template-areas:"cat cat amt" "bar bar bar" "pct ot btn";row-gap:6px;column-gap:8px}
+  .opex-cat{grid-area:cat} .opex-amt{grid-area:amt} .opex-bar-track{grid-area:bar}
+  .opex-pct{grid-area:pct;text-align:left} .opex-ot{grid-area:ot;text-align:left} .opex-toggle{grid-area:btn}
+}
+
+/* ---- Gastos Operativos: detalle expandible por categoría (Servicio + Contratista + OT +
+   Importe) — oculto por defecto (.hidden), sin tabla propia arriba que lo duplique. ---- */
+.opex-detail{padding:4px 0 12px;border-top:1px dashed var(--line);margin-top:2px}
+.opex-detail-table{width:100%;background:#fbfcfa}
+.opex-detail-table th{font-size:9.5px;padding:6px 8px}
+.opex-detail-table td{font-size:11.5px;padding:6px 8px;border-bottom:1px solid #eef2ec}
 
 @media (prefers-reduced-motion: reduce){
-  .estbar-seg,.colchart-bar,.gbar-fill{transition:none}
+  .estbar-seg,.colchart-bar,.opex-bar-fill{transition:none}
 }
