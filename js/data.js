@@ -119,13 +119,11 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
       horas: g.filter(x=>x.esHoras).reduce((s,x)=>s+x.ud,0),
       imp: g.reduce((s,x)=>s+x.imp,0),
       propia: g.filter(x=>x.tipo==='Labor Propia').reduce((s,x)=>s+x.imp,0),
-      propia_ud: g.filter(x=>x.tipo==='Labor Propia').reduce((s,x)=>s+x.ud,0),
       tercero: g.filter(x=>x.tipo==='Labor Tercero').reduce((s,x)=>s+x.imp,0),
       insumos: g.filter(x=>x.tipo==='Insumo').reduce((s,x)=>s+x.imp,0),
       lines: g };
   });
   const CONF = OTS.filter(o=>o.estado==='Confirmado');
-  const isPrep = s => String(s).trim().toLowerCase().startsWith('preparacion de suelo');
   // Comparación de Estado normalizada (sin acentos/mayúsculas, reusa normEstadio de utils.js) —
   // solo para Pendiente/En Ejecución, que es lo que este pedido pidió blindar contra variaciones de
   // tipeo del Excel. No se toca la comparación de "Confirmado" (CONF, arriba) ni el texto original
@@ -426,10 +424,10 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
     // por error).
     const esH = o.modalidad==='horas';
     const key=m+'|'+o.serv+'|'+est+'|'+esH+'|'+contratista;
-    if(!dmap[key]) dmap[key]={mesnum:m,labor:o.serv,estadio:est,esH,contratista,n:0,ha:0,horas:0,propia:0,propia_ud:0,tercero:0,insumos:0};
-    const d=dmap[key]; d.n++; d.ha+=(o.ha||0); d.horas+=o.horas; d.propia+=o.propia; d.propia_ud+=o.propia_ud; d.tercero+=o.tercero; d.insumos+=o.insumos; });
+    if(!dmap[key]) dmap[key]={mesnum:m,labor:o.serv,estadio:est,esH,contratista,n:0,ha:0,horas:0,propia:0,tercero:0,insumos:0};
+    const d=dmap[key]; d.n++; d.ha+=(o.ha||0); d.horas+=o.horas; d.propia+=o.propia; d.tercero+=o.tercero; d.insumos+=o.insumos; });
   const gastos=Object.values(dmap).map(d=>({...d,ha:Math.round(d.ha*100)/100,horas:Math.round(d.horas*100)/100,
-    propia:Math.round(d.propia*100)/100,propia_ud:Math.round(d.propia_ud*100)/100,tercero:Math.round(d.tercero*100)/100,insumos:Math.round(d.insumos*100)/100}));
+    propia:Math.round(d.propia*100)/100,tercero:Math.round(d.tercero*100)/100,insumos:Math.round(d.insumos*100)/100}));
   // gasoil por (mes,area,personal) — se usa "Personal" (operario que retiró el combustible) y no
   // "Contratista" porque en las OT de gasoil el campo Contratista viene vacío; quien queda
   // registrado es el Personal interno que hizo la carga.

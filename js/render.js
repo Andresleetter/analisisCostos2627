@@ -471,16 +471,16 @@ function renderLaborDetalle(){
   if(contV!=='ALL') recs=recs.filter(r=>r.contratista===contV);
   const by={};
   recs.forEach(r=>{ const key=r.labor+'|'+r.estadio+'|'+r.contratista;
-    if(!by[key]) by[key]={labor:r.labor,estadio:r.estadio,contratista:r.contratista,esH:r.esH,n:0,ha:0,horas:0,prop:0,propUd:0,terc:0,ins:0};
-    const o=by[key]; o.n+=r.n; o.ha+=r.ha; o.horas+=r.horas; o.prop+=r.propia; o.propUd+=r.propia_ud; o.terc+=r.tercero; o.ins+=r.insumos; });
+    if(!by[key]) by[key]={labor:r.labor,estadio:r.estadio,contratista:r.contratista,esH:r.esH,n:0,ha:0,horas:0,prop:0,terc:0,ins:0};
+    const o=by[key]; o.n+=r.n; o.ha+=r.ha; o.horas+=r.horas; o.prop+=r.propia; o.terc+=r.tercero; o.ins+=r.insumos; });
   const labs=Object.values(by).map(o=>({...o,tot:o.prop+o.terc+o.ins})).sort((a,b)=>b.tot-a.tot);
   document.getElementById('gld-sub').textContent=labs.length+' combinación(es) labor/etapa/contratista · ordenado por costo total';
   document.getElementById('gld').innerHTML= labs.length ? labs.map(l=>{
     const ha=l.esH?'<span style="color:var(--muted)">—</span>':fmt2(l.ha), hr=l.esH?fmt2(l.horas):'<span style="color:var(--muted)">—</span>';
     const chip=l.esH?'<span class="chip chip-hr">horas</span>':'<span class="chip chip-ha">ha</span>';
     const contratistaTxt=labelContratista(l.contratista);
-    // Labor Propia no tiene costo asignado en el sistema (siempre US$ 0) — se muestra la
-    // cantidad ejecutada (Unidades/Dosis) en su lugar, que sí varía y aporta información.
+    // Labor Propia no tiene costo de tercero asignado en el sistema (siempre US$ 0 en la columna
+    // "Labor Tercero") — no hay columna de costo separada para Labor Propia en esta tabla.
     return `<tr><td><span class="lname">${l.labor}</span> ${chip}</td><td><span class="chip chip-etapa">${l.estadio}</span></td><td class="tr mono">${l.n}</td><td class="tr mono">${ha}</td><td class="tr mono">${hr}</td><td class="tr mono col-terc">US$ ${fmtUSD(l.terc)}</td><td class="col-contratista" title="${contratistaTxt}">${contratistaTxt}</td><td class="tr mono col-ins">US$ ${fmtUSD(l.ins)}</td><td class="tr mono col-tot">US$ ${fmtUSD(l.tot)}</td></tr>`;
   }).join('') : '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:16px">Sin registros para el filtro seleccionado</td></tr>';
 }

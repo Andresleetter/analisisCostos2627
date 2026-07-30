@@ -1,7 +1,6 @@
 table{width:100%;border-collapse:collapse;font-size:12px}
 th{text-align:left;font-size:10.5px;text-transform:uppercase;color:var(--muted);letter-spacing:.4px;padding:7px 8px;border-bottom:2px solid var(--line)}
 td{padding:8px;border-bottom:1px solid var(--line)} .mono{font-variant-numeric:tabular-nums;font-weight:600} .tr{text-align:right}
-.minibar{background:#eef2ec;height:9px;border-radius:var(--radius-bar);overflow:hidden;min-width:70px;display:inline-block;width:100%} .mb-fill{height:100%;border-radius:var(--radius-bar)}
 .exd{color:var(--r);font-weight:800}
 tr.grp td{background:#fbf3f2;font-weight:700;border-top:2px solid var(--r);border-bottom:none;padding-top:11px}
 tr.grp td:first-child{font-size:12.5px}
