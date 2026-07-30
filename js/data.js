@@ -271,8 +271,12 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
   // archivo para el rótulo "Datos al…"/D.fecha_datos, no qué día es hoy realmente).
   // esOTAtrasada() es la ÚNICA función que decide el atraso — la reutilizan el KPI (totalAtrasadas),
   // la marca "atrasada" de cada fila de la tabla y el badge de la pestaña (ver render.js), para que
-  // nunca puedan desincronizarse. La tabla en sí muestra TODA la base (otsOperativas, más abajo),
-  // no solo las atrasadas — a pedido del usuario, ya que para eso está el KPI aparte.
+  // nunca puedan desincronizarse. La tabla en sí muestra TODA la base (otsVisibles, más abajo), no
+  // solo las atrasadas — a pedido del usuario, ya que para eso está el KPI aparte. diasTranscurridos
+  // se calcula UNA sola vez acá (diasTranscurridosDesde) y se reutiliza tal cual (SIN descontar la
+  // tolerancia) tanto en la tabla como en la decisión de atraso — a pedido del usuario, la tabla
+  // muestra el día real transcurrido (0d/1d/2d/3d/4d…), la tolerancia de 3 días solo decide si esa
+  // OT cuenta o no como atrasada, nunca qué número se imprime en la celda.
   const TOLERANCIA_ATRASO_DIAS=3;
   const HOY_REAL=new Date();
   HOY_REAL.setHours(0,0,0,0);
@@ -286,35 +290,29 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
     const dias=diasTranscurridosDesde(o.ft);
     return dias!=null && dias>TOLERANCIA_ATRASO_DIAS;
   }
-  // otsOperativas = OT únicas (OTS ya agrupado por número de OT) con estado Pendiente o En
-  // Ejecución, atrasadas o no (a pedido del usuario: la tabla debe mostrar todos los datos, no
-  // solo las vencidas — para eso ya está el KPI "OT Atrasadas" aparte). Única colección que
-  // alimenta la tabla y sus filtros — nunca se recorre OTS de nuevo desde cero para esto. Cada
-  // fila trae "atrasada" (bool, vía esOTAtrasada) y "diasAtrasoMostrados" (días YA MOSTRADOS,
-  // descontada la tolerancia de 3 — solo tiene sentido cuando atrasada=true; null en caso
-  // contrario, nunca negativo ni inventado). diasTranscurridos (crudo, puede ser null sin Fecha
-  // Teórica válida) se conserva aparte para la severidad de color de fila en render.js (umbrales
-  // 7/15/30 de siempre) y para el orden de la tabla (ver sort más abajo).
-  const otsOperativas=OTS.filter(o=>esPendiente(o)||esEnEjecucion(o)).map(o=>{
+  // otsVisibles = OT únicas (OTS ya agrupado por número de OT) con estado Pendiente o En Ejecución,
+  // atrasadas o no. Única colección que alimenta la tabla y sus filtros — nunca se recorre OTS de
+  // nuevo desde cero para esto. Cada fila trae diasTranscurridos crudo (puede ser negativo con
+  // Fecha Teórica futura, o null sin Fecha Teórica válida — render.js decide ahí si muestra el
+  // número o un guion) y "atrasada" (bool, vía esOTAtrasada), usada para el color de severidad de
+  // fila y para separar otsAtrasadas más abajo.
+  const otsVisibles=OTS.filter(o=>esPendiente(o)||esEnEjecucion(o)).map(o=>{
     const diasTranscurridos=diasTranscurridosDesde(o.ft);
-    const atrasada=esOTAtrasada(o);
     return {ot:o.ot,cult:o.act,act:o.estadio||'-',serv:o.serv||'-',lote:o.lote,estado:o.estado,
-      ft:o.ft, diasTranscurridos, atrasada,
-      diasAtrasoMostrados:atrasada?diasTranscurridos-TOLERANCIA_ATRASO_DIAS:null};
+      ft:o.ft, diasTranscurridos, atrasada:esOTAtrasada(o)};
   }).sort((a,b)=>{
-    // Atrasadas primero, de mayor a menor diasTranscurridos (equivale a mayor a menor atraso); las
-    // no atrasadas con Fecha Teórica válida quedan después, ordenadas por esa misma fecha (mayor
-    // diasTranscurridos = Fecha Teórica más antigua = más cerca de vencer, ya que diasTranscurridos
-    // y Fecha Teórica se mueven en sentidos opuestos); sin Fecha Teórica válida, al final.
+    // Mayor a menor diasTranscurridos: más atrasadas primero, luego las de menos días, luego
+    // fecha futura (diasTranscurridos negativo, las más próximas antes que las lejanas) y sin
+    // Fecha Teórica válida al final.
     if(a.diasTranscurridos==null && b.diasTranscurridos==null) return 0;
     if(a.diasTranscurridos==null) return 1;
     if(b.diasTranscurridos==null) return -1;
     return b.diasTranscurridos-a.diasTranscurridos;
   });
-  // otsAtrasadas = subconjunto atrasado de otsOperativas — única fuente del KPI "OT Atrasadas"/
-  // badge y de "Posibles Problemas" en Resumen Ejecutivo (ver más abajo), nunca se recalcula por
-  // separado ni se usa como fuente de la tabla.
-  const otsAtrasadas=otsOperativas.filter(a=>a.atrasada);
+  // otsAtrasadas = subconjunto atrasado de otsVisibles — única fuente del KPI "OT Atrasadas"/badge
+  // y de "Posibles Problemas" en Resumen Ejecutivo (ver más abajo), nunca se recalcula por separado
+  // ni se usa como fuente de la tabla.
+  const otsAtrasadas=otsVisibles.filter(a=>a.atrasada);
   const totalAtrasadas=otsAtrasadas.length;
 
   // ---- AUDITORIA: Presupuesto de Infraestructura vs ejecución real ----
@@ -833,7 +831,7 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
   };
 
   return {total_ot,ot_conf,ot_ejec:totalEnEjecucion,ot_pend:totalPendientes,costo_total,cultivos,operativas,oper_costo,oper_part,
-    exceso,sinrtk,exc_kpi,alertas:otsOperativas,n_ot_atrasadas:totalAtrasadas,
+    exceso,sinrtk,exc_kpi,alertas:otsVisibles,n_ot_atrasadas:totalAtrasadas,
     auditoria_items,auditoria_metros,auditoria_puentes,auditoria_gastos,
     gastos,gasoil_sec,meses,gasto_total,gasoil_total,gasoil_litros_total,gmes,glit,
     labores,estadios_labor,contratistas_labor,
