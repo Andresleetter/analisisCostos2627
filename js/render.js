@@ -8,12 +8,14 @@ function renderAll(){
   // TAB1: Resumen Ejecutivo (una función chica por bloque, ver detalle de cada una más abajo).
   // "Detalle de Etapas por Cultivo" es el primer bloque analítico tras los KPIs — los gráficos de
   // Avance General / Avance por Cultivo que iban antes se retiraron a pedido del usuario (ver
-  // README.md).
+  // README.md). "Gastos Operativos" ocupa la MISMA posición que tenía el viejo panel
+  // "Distribución del Gasto: Áreas No Agrícolas" (después de Actividad Mensual, antes de Posibles
+  // Problemas) — a pedido del usuario, no se movió al reforzar su contenido.
   renderResumenKPIs();
   renderCultivoDetalle();
   renderEstadosOT();
   renderActividadMensual();
-  renderDistribucionGasto();
+  renderGastosOperativos();
   renderProblemasResumen();
   // TAB3 control ha
   document.getElementById('ha-kpis').innerHTML=
@@ -113,19 +115,45 @@ function renderActividadMensual(){
   }).join('')}</div><div class="colchart-note">OT confirmadas por mes (Fecha Real) — no representa hectáreas</div>`;
 }
 
-// ---- 4. Distribución de recursos: gasto en áreas no agrícolas (reutiliza D.operativas tal cual,
-// ya calculado y ordenado por costo desc — ver data.js). Antes era una tabla; ahora barras
-// horizontales para lectura más rápida, mismos datos, sin duplicar el cálculo. ----
-function renderDistribucionGasto(){
-  const list=D.operativas;
-  document.getElementById('oper-sub').textContent=Math.round(D.oper_part)+'% del costo ejecutado · US$ '+fmtUSD(D.oper_costo);
-  const cont=document.getElementById('resumen-gasto');
-  if(!list.length){ cont.innerHTML='<div class="resumen-empty">Sin gasto en áreas no agrícolas.</div>'; return; }
+// ---- 4. Gastos Operativos: tarjeta con el total + una fila por categoría (nombre, barra,
+// importe, %, OT y botón "Ver detalle" — sin tabla aparte, para no repetir la misma información
+// dos veces). Reutiliza D.operativas/D.oper_costo/D.oper_part tal cual vienen calculados en
+// data.js (única fuente de verdad) — acá solo se renderiza, nunca se recalcula un importe.
+// `o.partOperativo` (% sobre el TOTAL OPERATIVO) es la base pedida para esta sección, distinta de
+// `o.part` (% sobre el costo total de toda la campaña, que no se usa acá). El detalle expandible
+// de cada categoría cuelga debajo de su propia fila (.opex-detail), nunca en un panel separado. ----
+function renderGastosOperativos(){
+  const list=D.operativas, total=D.oper_costo;
+  const totalCont=document.getElementById('opex-total');
+  const rowsCont=document.getElementById('opex-rows');
+  const subCont=document.getElementById('opex-sub');
+  // Sin gastos operativos para el alcance actual: total en cero, sin porcentajes inválidos
+  // (NaN/Infinity), estado vacío explícito — nunca se oculta la sección entera.
+  if(!list.length || total<=0){
+    subCont.textContent='';
+    totalCont.innerHTML=`<div class="ot-lab">Total Gastos Operativos</div><div class="ot-val">US$ 0,00</div>`;
+    rowsCont.innerHTML='<div class="resumen-empty">Sin gastos operativos registrados</div>';
+    return;
+  }
+  subCont.textContent=list.length+' categoría(s) · '+fmt1(D.oper_part)+'% del costo ejecutado de la campaña · ordenado por importe';
+  totalCont.innerHTML=`<div class="ot-lab">Total Gastos Operativos</div><div class="ot-val">US$ ${fmtUSD(total)}</div><div class="ot-foot">US$ ${fmtUSD(D.costo_total)} de costo total ejecutado en la campaña</div>`;
   const max=Math.max(1,...list.map(o=>o.costo));
-  cont.innerHTML=list.map(o=>
-    `<div class="gbar-row"><div class="gbar-lbl" title="${o.nombre}">${o.nombre}</div>
-      <div class="gbar-track"><div class="gbar-fill" style="width:${(o.costo/max*100).toFixed(1)}%"></div></div>
-      <div class="gbar-val">US$ ${fmtUSD(o.costo)} <small>${fmt1(o.part)}%</small></div></div>`).join('');
+  rowsCont.innerHTML=list.map(o=>{
+    const detalleHtml = o.detalle.length ? o.detalle.map(d=>
+      `<tr><td>${d.servicio}</td><td>${labelContratista(d.contratista)}</td><td class="tr mono">${d.ot}</td><td class="tr mono">US$ ${fmtUSD(d.costo)}</td></tr>`).join('')
+      : '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:10px">Sin detalle disponible</td></tr>';
+    return `<div class="opex-row">
+      <div class="opex-row-main">
+        <div class="opex-cat" title="${o.nombre}">${o.nombre}</div>
+        <div class="opex-bar-track"><div class="opex-bar-fill" style="width:${(o.costo/max*100).toFixed(1)}%"></div></div>
+        <div class="opex-amt">US$ ${fmtUSD(o.costo)}</div>
+        <div class="opex-pct">${fmt1(o.partOperativo)}%</div>
+        <div class="opex-ot">${o.otConfirmadas} OT</div>
+        <button type="button" class="opex-toggle" aria-expanded="false" aria-label="Ver detalle de ${o.nombre}">Ver detalle</button>
+      </div>
+      <div class="opex-detail hidden"><table class="opex-detail-table"><thead><tr><th>Servicio</th><th>Contratista</th><th class="tr">OT</th><th class="tr">Importe</th></tr></thead><tbody>${detalleHtml}</tbody></table></div>
+    </div>`;
+  }).join('');
 }
 
 // ---- 5. Posibles problemas en la campaña: tarjetas de alerta por severidad (ver reglas y orden
