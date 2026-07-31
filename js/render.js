@@ -186,8 +186,18 @@ function renderProblemasResumen(){
 }
 
 // ---- Detalle de Etapas por Cultivo: primer bloque analítico tras los KPIs (Preparación de
-// Suelo, Siembra, Cuidados, Cosecha por cada cultivo). ----
+// Suelo, Siembra, Cuidados, Cosecha por cada cultivo). El Mapa de Siembra (imagen estática, sin
+// datos calculados) se agrega como UNA tarjeta más al final del mismo innerHTML — así queda en la
+// misma cuadrícula .cults (cultivos.css) y ocupa las columnas vacías de la última fila en
+// escritorio, sin agrandar el bloque; en móvil (grid de 2 columnas) pasa a ocupar el ancho
+// completo debajo de todas las tarjetas de cultivo (.mapa-card, ver media query en mapa.css). El
+// clic/Enter/Espacio que la abre ampliada está delegado sobre #cults en events.js, nunca atado
+// directo a la imagen, porque este innerHTML (y por lo tanto el <img>) se reescribe entero acá. ----
 function renderCultivoDetalle(){
+  const mapaCard = `<div class="cult-card mapa-card">
+    <div class="cc-name">Mapa de Siembra</div>
+    <img id="mapa-siembra-img" class="mapa-siembra-thumb" src="img/mapa_siembra_2627.jpeg"
+      alt="Mapa de siembra de la Campaña 26/27" tabindex="0" role="button" aria-label="Ampliar mapa de siembra"></div>`;
   document.getElementById('cults').innerHTML=D.cultivos.map(c=>{
     const plan=c.tiene_rtk?fmt2(c.ha_plan)+' ha':'s/ RTK';
     const etapasHtml = c.etapas.length ? c.etapas.map(e=>{
@@ -214,7 +224,7 @@ function renderCultivoDetalle(){
         <div><span>Ha planificadas</span><b>${plan}</b></div>
         <div><span>Ha ejecutadas</span><b>${haEjec}</b></div>
         <div><span>OT conf. / total</span><b>${otTexto}</b></div>
-      </div></div>`;}).join('');
+      </div></div>`;}).join('') + mapaCard;
 }
 
 // ---- Auditoría: Presupuesto de Infraestructura vs ejecución real ----

@@ -14,6 +14,7 @@
 <link rel="stylesheet" href="css/cultivos.css">
 <link rel="stylesheet" href="css/problemas.css">
 <link rel="stylesheet" href="css/resumen.css">
+<link rel="stylesheet" href="css/mapa.css">
 <link rel="stylesheet" href="css/tables.css">
 <link rel="stylesheet" href="css/gastos.css">
 <link rel="stylesheet" href="css/alertas.css">
@@ -60,7 +61,13 @@
     <!-- 1. Estado general de la campaña -->
     <div class="kpis kpis-exec" id="exec-kpis"></div>
 
-    <!-- 2. Detalle de Etapas por Cultivo: primer bloque analítico tras los KPIs -->
+    <!-- 2. Detalle de Etapas por Cultivo: primer bloque analítico tras los KPIs. El Mapa de
+         Siembra vive DENTRO de esta misma cuadrícula (.cults), como una tarjeta más al final —
+         renderCultivoDetalle() (render.js) la agrega al innerHTML junto con las tarjetas de
+         cultivo, así ocupa las columnas vacías de la última fila en vez de tener su propio panel
+         aparte (ver README.md). No hay markup fijo acá para la imagen: se pierde cada vez que
+         render.js reescribe #cults, por eso el listener de events.js está delegado sobre #cults
+         (elemento estable), no atado directo a la imagen. -->
     <div class="panel"><h3>Detalle de Etapas por Cultivo</h3>
       <div class="cults" id="cults"></div></div>
 
@@ -194,6 +201,13 @@
   </section>
 
   <footer class="foot" id="foot"></footer>
+</div>
+
+<!-- Vista ampliada del Mapa de Siembra (Resumen Ejecutivo) — oculta por defecto (.open la
+     muestra, ver events.js/mapa.css). Fuera de .wrap porque es position:fixed sobre toda la
+     pantalla, igual criterio que #overlay/#menu-backdrop. -->
+<div class="mapa-lightbox" id="mapa-lightbox" role="dialog" aria-modal="true" aria-label="Mapa de siembra ampliado">
+  <img src="img/mapa_siembra_2627.jpeg" alt="Mapa de siembra de la Campaña 26/27 (ampliado)">
 </div>
 
 <script src="vendor/xlsx.full.min.js" defer></script>
