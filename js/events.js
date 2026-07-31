@@ -23,8 +23,28 @@ document.addEventListener('DOMContentLoaded', function(){
     if(tabsNav.classList.contains('open')) cerrarMenuModulos(); else abrirMenuModulos();
   });
   menuBackdrop.addEventListener('click', cerrarMenuModulos);
+
+  // Mapa de Siembra (Resumen Ejecutivo): ahora es una tarjeta más dentro de #cults (ver
+  // renderCultivoDetalle, render.js), que reescribe su innerHTML completo en cada carga — por eso
+  // el listener va delegado sobre #cults (elemento estable) y no atado directo a #mapa-siembra-img
+  // (se destruye y recrea junto con las tarjetas de cultivo). Clic/Enter/Espacio sobre la imagen
+  // la abre ampliada en #mapa-lightbox; clic sobre el lightbox o Escape la cierra.
+  const cultsCont = document.getElementById('cults');
+  const mapaLightbox = document.getElementById('mapa-lightbox');
+  function abrirMapaLightbox(){ mapaLightbox.classList.add('open'); }
+  function cerrarMapaLightbox(){ mapaLightbox.classList.remove('open'); }
+  cultsCont.addEventListener('click', function(e){
+    if(e.target.closest('#mapa-siembra-img')) abrirMapaLightbox();
+  });
+  cultsCont.addEventListener('keydown', function(e){
+    if((e.key==='Enter' || e.key===' ') && e.target.closest('#mapa-siembra-img')){ e.preventDefault(); abrirMapaLightbox(); }
+  });
+  mapaLightbox.addEventListener('click', cerrarMapaLightbox);
+
   document.addEventListener('keydown', function(e){
-    if(e.key==='Escape' && tabsNav.classList.contains('open')) cerrarMenuModulos();
+    if(e.key!=='Escape') return;
+    if(tabsNav.classList.contains('open')) cerrarMenuModulos();
+    if(mapaLightbox.classList.contains('open')) cerrarMapaLightbox();
   });
   window.addEventListener('resize', function(){
     if(window.innerWidth>900) cerrarMenuModulos();
