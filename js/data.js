@@ -262,13 +262,18 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
   // ---- CONTROL DE HECTÁREAS ----
   const RTK_CROPS=['ARROZ','SOJA','SORGO','MAIZ'];
   const land=OTS.filter(o=>!(o.lines.every(l=>l.esHoras)) && RTK_CROPS.includes(o.act.toUpperCase()) && o.ha!=null);
-  const exceso=[], sinrtk=[];
+  const exceso=[], sinrtk=[], cancelados=[];
   RTK_CROPS.forEach(c=>{
     const byLote={};
     land.filter(o=>o.act.toUpperCase()===c).forEach(o=>{ const k=normLote(o.lote); (byLote[k]=byLote[k]||[]).push(o); });
     for(const k in byLote){
       const g=byLote[k], ha_rtk=RTK[c]?RTK[c][k]:undefined;
       if(ha_rtk==null){ g.forEach(o=>sinrtk.push({ot:o.ot,cult:c,lote:o.lote,act:o.estadio||'-',serv:o.serv||'-',ha:o.ha,estado:o.estado})); continue; }
+      if(Math.abs(ha_rtk-RTK_LOTE_CANCELADO)<0.001){
+        const dets=g.slice().sort((a,b)=>b.ha-a.ha).map(o=>({ot:o.ot,act:o.estadio||'-',serv:o.serv||'-',estado:o.estado}));
+        cancelados.push({cult:c,lote:g[0].lote,n_ot:dets.length,dets});
+        continue;
+      }
       const ha_ot=Math.max.apply(null,g.map(o=>o.ha));
       const diff=Math.round((ha_ot-ha_rtk)*100)/100;
       if(diff>0.5){
@@ -279,6 +284,7 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
   });
   exceso.sort((a,b)=>b.diff-a.diff);
   sinrtk.sort((a,b)=> a.cult<b.cult?-1:a.cult>b.cult?1:(a.lote<b.lote?-1:1));
+  cancelados.sort((a,b)=> a.cult<b.cult?-1:a.cult>b.cult?1:(a.lote<b.lote?-1:1));
   const exc_kpi={n:exceso.length, ha:Math.round(exceso.reduce((s,e)=>s+e.diff,0)*100)/100,
     mayor:Math.round(Math.max(0,...exceso.map(e=>e.diff))*100)/100, n_sinrtk:sinrtk.length};
 
@@ -869,7 +875,7 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
   };
 
   return {total_ot,ot_conf,ot_ejec:totalEnEjecucion,ot_pend:totalPendientes,costo_total,cultivos,operativas,oper_costo,oper_part,
-    exceso,sinrtk,exc_kpi,alertas:otsVisibles,n_ot_atrasadas:totalAtrasadas,
+    exceso,sinrtk,cancelados,exc_kpi,alertas:otsVisibles,n_ot_atrasadas:totalAtrasadas,
     auditoria_items,auditoria_metros,auditoria_puentes,auditoria_gastos,
     gastos,gasoil_sec,meses,gasto_total,gasoil_total,gasoil_litros_total,gmes,glit,
     labores,estadios_labor,contratistas_labor,

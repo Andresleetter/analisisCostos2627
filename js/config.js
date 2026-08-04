@@ -41,6 +41,12 @@ const INSUMOS_EXCLUIDOS = ["Afrecho de Arroz - CH"];
 // (proyeccionRTK) unicamente — ver data.js. consultaInsumos (combustible + modulo Insumos) NO
 // se filtra por campania: se procesa completo, tal como antes de introducir este filtro.
 const CAMPANIA_ACTUAL = '26/27';
+// Marcador de "lote cancelado" en consultaCultivos: en vez de borrar la fila, el plan RTK carga
+// 0.01 ha para lotes que se dieron de baja (a pedido del usuario). Sin este marcador, esos lotes
+// aparecerían en "Lotes con Exceso de Superficie" con una diferencia enorme (toda ha ejecutada
+// contra un RTK casi nulo) — data.js los separa en su propia sección ("Lotes Cancelados"), sin
+// mostrar hectáreas (no aplican), solo el detalle de OT/labores.
+const RTK_LOTE_CANCELADO = 0.01;
 
 // ---- AUDITORIA: Presupuesto de Infraestructura vs ejecucion real ----
 // Archivo aparte (subido al mismo repo), 1 sola hoja. Estructura fija verificada contra el .xlsx

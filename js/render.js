@@ -39,6 +39,14 @@ function renderAll(){
       excHtml+=`<tr class="${x.over?'det-over':'det'}"><td class="dl mono">OT ${x.ot}</td><td>${x.act}</td><td colspan="2">${x.serv} ${tag}</td><td>${x.estado}</td><td class="tr ${x.over?'exd':''}">${fmt2(x.ha)} ha</td></tr>`; });
   });
   document.getElementById('exc').innerHTML=excHtml;
+  document.getElementById('cancel-sub').textContent=D.cancelados.length+' lote(s)';
+  let cancelHtml='';
+  D.cancelados.forEach(e=>{
+    cancelHtml+=`<tr class="grp"><td>${e.cult}</td><td class="mono">${e.lote}</td></tr>`;
+    cancelHtml+=`<tr class="dethead"><td colspan="2">OT que componen el lote · ${e.n_ot} OT (excl. labores por hora)</td></tr>`;
+    e.dets.forEach(x=>{ cancelHtml+=`<tr class="det"><td class="dl mono">OT ${x.ot}</td><td>${x.act} · ${x.serv} · ${x.estado}</td></tr>`; });
+  });
+  document.getElementById('cancel').innerHTML=cancelHtml;
   document.getElementById('sinrtk-sub').textContent=D.sinrtk.length+' OT · el lote no existe en el plan RTK';
   document.getElementById('sinrtk').innerHTML=D.sinrtk.map(r=>
     `<tr><td class="mono">OT ${r.ot}</td><td>${r.cult}</td><td class="mono">${r.lote}</td><td>${r.act}</td><td>${r.serv}</td><td class="tr mono">${fmt2(r.ha)}</td><td>${r.estado}</td></tr>`).join('');
