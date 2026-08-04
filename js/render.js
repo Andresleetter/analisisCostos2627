@@ -43,8 +43,12 @@ function renderAll(){
   let cancelHtml='';
   D.cancelados.forEach(e=>{
     cancelHtml+=`<tr class="grp"><td>${e.cult}</td><td class="mono">${e.lote}</td></tr>`;
-    cancelHtml+=`<tr class="dethead"><td colspan="2">OT que componen el lote · ${e.n_ot} OT (excl. labores por hora)</td></tr>`;
-    e.dets.forEach(x=>{ cancelHtml+=`<tr class="det"><td class="dl mono">OT ${x.ot}</td><td>${x.act} · ${x.serv} · ${x.estado}</td></tr>`; });
+    if(!e.n_ot){
+      cancelHtml+=`<tr class="dethead"><td colspan="2">Sin OT cargadas todavía</td></tr>`;
+    } else {
+      cancelHtml+=`<tr class="dethead"><td colspan="2">OT que componen el lote · ${e.n_ot} OT (excl. labores por hora)</td></tr>`;
+      e.dets.forEach(x=>{ cancelHtml+=`<tr class="det"><td class="dl mono">OT ${x.ot}</td><td>${x.act} · ${x.serv} · ${x.estado}</td></tr>`; });
+    }
   });
   document.getElementById('cancel').innerHTML=cancelHtml;
   document.getElementById('sinrtk-sub').textContent=D.sinrtk.length+' OT · el lote no existe en el plan RTK';
