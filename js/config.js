@@ -47,6 +47,12 @@ const CAMPANIA_ACTUAL = '26/27';
 // contra un RTK casi nulo) — data.js los separa en su propia sección ("Lotes Cancelados"), sin
 // mostrar hectáreas (no aplican), solo el detalle de OT/labores.
 const RTK_LOTE_CANCELADO = 0.01;
+// Valores que a veces aparecen en el campo "Lote" de consultaOT sin ser una parcela real de
+// cultivo (categorías de logística/infraestructura cargadas por error en esa columna, ej. el
+// secadero de granos o fletes) — a pedido del usuario, se excluyen de TODO Control de Hectáreas
+// (exceso, sin RTK y cancelados), aunque su Actividad sea un cultivo (ARROZ/SOJA/SORGO/MAIZ) y/o
+// su RTK sea 0.01. Comparación contra normLote(), que ya pasa a mayúsculas.
+const LOTES_NO_PARCELA = ['SECADERO', 'FLETES'];
 
 // ---- AUDITORIA: Presupuesto de Infraestructura vs ejecucion real ----
 // Archivo aparte (subido al mismo repo), 1 sola hoja. Estructura fija verificada contra el .xlsx

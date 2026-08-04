@@ -261,7 +261,7 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
 
   // ---- CONTROL DE HECTÁREAS ----
   const RTK_CROPS=['ARROZ','SOJA','SORGO','MAIZ'];
-  const land=OTS.filter(o=>!(o.lines.every(l=>l.esHoras)) && RTK_CROPS.includes(o.act.toUpperCase()) && o.ha!=null);
+  const land=OTS.filter(o=>!(o.lines.every(l=>l.esHoras)) && RTK_CROPS.includes(o.act.toUpperCase()) && o.ha!=null && !LOTES_NO_PARCELA.includes(normLote(o.lote)));
   const exceso=[], sinrtk=[], cancelados=[];
   RTK_CROPS.forEach(c=>{
     const byLote={};
