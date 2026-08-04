@@ -266,14 +266,21 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
   RTK_CROPS.forEach(c=>{
     const byLote={};
     land.filter(o=>o.act.toUpperCase()===c).forEach(o=>{ const k=normLote(o.lote); (byLote[k]=byLote[k]||[]).push(o); });
-    for(const k in byLote){
+    // Lotes a recorrer: los que tienen OT cargada (byLote) MÁS los del plan RTK (RTK[c]) — un lote
+    // cancelado (RTK≈0.01) puede no tener ninguna OT todavía, y aun así se quiere listar (a pedido
+    // del usuario, para poder visualizar TODOS los lotes deshabilitados, no solo los que ya tienen
+    // labor cargada). Fuera de la rama "cancelado", un lote solo del plan sin ninguna OT (byLote[k]
+    // ausente) se sigue ignorando: no hay nada que comparar contra el RTK todavía.
+    const lotes=new Set([...Object.keys(byLote), ...(RTK[c]?Object.keys(RTK[c]).filter(k=>!LOTES_NO_PARCELA.includes(k)):[])]);
+    for(const k of lotes){
       const g=byLote[k], ha_rtk=RTK[c]?RTK[c][k]:undefined;
       if(ha_rtk==null){ g.forEach(o=>sinrtk.push({ot:o.ot,cult:c,lote:o.lote,act:o.estadio||'-',serv:o.serv||'-',ha:o.ha,estado:o.estado})); continue; }
       if(Math.abs(ha_rtk-RTK_LOTE_CANCELADO)<0.001){
-        const dets=g.slice().sort((a,b)=>b.ha-a.ha).map(o=>({ot:o.ot,act:o.estadio||'-',serv:o.serv||'-',estado:o.estado}));
-        cancelados.push({cult:c,lote:g[0].lote,n_ot:dets.length,dets});
+        const dets=(g||[]).slice().sort((a,b)=>b.ha-a.ha).map(o=>({ot:o.ot,act:o.estadio||'-',serv:o.serv||'-',estado:o.estado}));
+        cancelados.push({cult:c,lote:g?g[0].lote:k,n_ot:dets.length,dets});
         continue;
       }
+      if(!g) continue;
       const ha_ot=Math.max.apply(null,g.map(o=>o.ha));
       const diff=Math.round((ha_ot-ha_rtk)*100)/100;
       if(diff>0.5){
