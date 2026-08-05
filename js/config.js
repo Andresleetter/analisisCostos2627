@@ -13,7 +13,12 @@ const HOJA_INSUMOS = "consultaInsumos";
 // consultaOT (se carga con la fecha del día en que se crea la OT) — así se actualiza sola a
 // medida que se cargan nuevas OT, y sirve para verificar si la web está al día.
 const MES = {1:'Ene',2:'Feb',3:'Mar',4:'Abr',5:'May',6:'Jun',7:'Jul',8:'Ago',9:'Sep',10:'Oct',11:'Nov',12:'Dic'};
-const CULTIVOS = ['ARROZ','SOJA','SORGO','MAIZ','AVENA','COBERTURA'];
+// AVENA y COBERTURA se retiraron del Resumen Ejecutivo a pedido del usuario (sin tarjeta de KPIs
+// de cultivo ni impacto en el promedio de avance general/alertas de "Posibles Problemas", que solo
+// usan esta lista). No afecta a ningún otro módulo: CULTIVOS alimenta EXCLUSIVAMENTE el Resumen
+// Ejecutivo (ver nota en data.js, sección "CULTIVOS: avance de campo"); Control de Hectáreas usa
+// su propia lista aparte (RTK_CROPS, data.js).
+const CULTIVOS = ['ARROZ','SOJA','SORGO','MAIZ'];
 // Etapas de campaña consideradas para los indicadores de "avance" (todo lo demás que traiga el
 // campo Estadio — Secadero, Operativo, Mantenimientos, Infraestructura, Generador combustible, etc.
 // — queda fuera por no ser una etapa del ciclo del cultivo). Orden fijo = secuencia agronómica.
