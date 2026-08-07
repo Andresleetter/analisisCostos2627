@@ -242,13 +242,21 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
     const conf=sub.filter(o=>o.estado==='Confirmado');
     const costo=conf.reduce((s,o)=>s+o.imp,0);
     const detMap={};
+    // OT operativas sin Servicio cargado: verificado contra el dato real, son 100% consumo de
+    // GASOIL (líneas de Insumo sin ninguna labor) — se rotulan como tal en vez del genérico
+    // "(Sin servicio)", a pedido del usuario.
     conf.forEach(o=>{
       const contratista = o.contr && o.contr.trim() ? o.contr.trim() : (o.tercero>0 ? '(Sin contratista)' : '(Labor Propia)');
-      const key=(o.serv||'(Sin servicio)')+'|'+contratista;
-      if(!detMap[key]) detMap[key]={servicio:o.serv||'(Sin servicio)',contratista,ot:0,costo:0};
+      const servicioLabel = o.serv || 'Gasto de combustible operativo';
+      const key=servicioLabel+'|'+contratista;
+      if(!detMap[key]) detMap[key]={servicio:servicioLabel,contratista,ot:0,costo:0};
       const d=detMap[key]; d.ot++; d.costo+=o.imp;
     });
-    const detalle=Object.values(detMap).sort((a,b)=>b.costo-a.costo);
+    // Filas con costo ~0 (ej. "CONSTRUCCION PUENTES LABOR PROPIA": horas de labor propia sin
+    // costo cargado) se excluyen del desglose — mostrarían US$ 0,00 sin aportar nada al total, a
+    // pedido del usuario. Umbral <0.005 porque fmtUSD redondea a 2 decimales: cualquier resto por
+    // debajo de eso ya se ve como 0,00 en pantalla.
+    const detalle=Object.values(detMap).filter(d=>Math.abs(d.costo)>=0.005).sort((a,b)=>b.costo-a.costo);
     return {nombre:c,otConfirmadas:conf.length,costo,part:costo_total?Math.round(costo/costo_total*1000)/10:0,detalle};
   }).filter(Boolean).sort((a,b)=>b.costo-a.costo);
   const oper_costo=operativas.reduce((s,o)=>s+o.costo,0);
