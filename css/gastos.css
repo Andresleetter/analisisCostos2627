@@ -14,6 +14,9 @@
 /* Insumos ya no tiene fnote de contexto — sus 3 selects crecen para ocupar el espacio libre de la
    fila (scoped por id, no por .gfilter select, para no afectar los filtros de otras pestañas). */
 #imes, #itipo, #iinsumo{flex:1 1 200px}
+/* Campaña (Servicios) muestra valores cortos tipo "26/27": no necesita el min-width de 200px del
+   resto de los selects, así no empuja al filtro de Mes a otra línea. */
+#gcampania{min-width:110px}
 .gkpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-bottom:20px}
 .gkpi{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-lg);padding:13px 14px;box-shadow:var(--shadow-sm)}
 .gkpi .k-lab{font-size:10.5px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.3px}

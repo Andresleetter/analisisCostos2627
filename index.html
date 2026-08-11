@@ -102,7 +102,12 @@
 
   <!-- TAB 2 -->
   <section class="page">
-    <div class="gfilter"><label for="gmes">Mes</label>
+    <!-- Filtros de Servicios. "Campaña" es EXCLUSIVO de este módulo: cambia sobre qué campaña de
+         consultasOT se calcula toda la pestaña (opciones dinámicas, ver renderAll en render.js) y
+         no afecta a ningún otro módulo. Se combina con Mes y con los filtros de Detalle por Labor. -->
+    <div class="gfilter"><label for="gcampania">Campaña</label>
+      <select id="gcampania"></select>
+      <label for="gmes">Mes</label>
       <select id="gmes"><option value="ALL">Toda la Campaña</option></select>
       <span class="fnote" id="gnote"></span></div>
     <div class="gkpis" id="gkpis"></div>

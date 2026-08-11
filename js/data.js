@@ -46,33 +46,49 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
   const RTK_TOT={}; for(const c in RTK){ RTK_TOT[c]=Object.values(RTK[c]).reduce((a,b)=>a+b,0); }
   // normalizar nombres de columnas (quita BOM y espacios)
   raw = raw.map(row=>{ const o={}; for(const k in row){ o[String(k).replace(/\uFEFF/g,'').trim()]=row[k]; } return o; });
+  const campaniaDeFila = row => String(row['campania']||'').trim();
+  // Copia de TODAS las filas de consultaOT, sin recortar por campania. Existe unicamente para el
+  // filtro de Campa\u00F1a del modulo Servicios (ver servicios_campanias mas abajo): el resto del
+  // dashboard sigue trabajando exclusivamente sobre `raw` recortado a CAMPANIA_ACTUAL, sin cambios.
+  const rawTodasCampanias = raw;
+  // Campanias disponibles, tomadas dinamicamente del propio dato (nunca hardcodeadas). Orden
+  // descendente por texto: deja la mas reciente primero ('26/27' antes de '26', '25/26', '25').
+  const campanias_ot = [...new Set(rawTodasCampanias.map(campaniaDeFila).filter(c=>c))]
+    .sort((a,b)=>b.localeCompare(a,'es'));
   // Filtro de campania: consultaOT trae TODAS las campanias (25/26, 26/27, 26, 25 mezcladas,
   // crecio de ~1200 a ~7300 filas al incluir la campania anterior completa). Solo entra la
   // campania vigente (CAMPANIA_ACTUAL). Sin este filtro, todos los KPIs/cultivos/hectareas/
   // alertas quedarian inflados con datos de la campania 25/26.
   const n_ot_total_sin_filtrar = raw.length;
-  raw = raw.filter(row => String(row['campania']||'').trim() === CAMPANIA_ACTUAL);
+  raw = raw.filter(row => campaniaDeFila(row) === CAMPANIA_ACTUAL);
   console.log('consultaOT: '+raw.length+' de '+n_ot_total_sin_filtrar+' filas son de la campaña '+CAMPANIA_ACTUAL+' (resto descartado).');
-  const rows = raw.map(r=>({
-    ot:String(keyOf(r,['ordenTrabajo','OT','numeroOrdenTrabajo'])||'').trim(),
-    act:String(keyOf(r,['actividad','Actividad'])||'').trim(),
-    lote:String(keyOf(r,['lote','Lote'])||'').trim(),
-    estadio:String(keyOf(r,['estadio','Estadio'])||'').trim(),
-    serv:String(keyOf(r,['servicio','Servicio'])||'').trim(),
-    estado:String(keyOf(r,['estado','Estado'])||'').trim(),
-    fr:pdate(keyOf(r,['fechaReal','Fecha real'])),
-    ft:pdate(keyOf(r,['fechaTeorica','Fecha  Teórica','Fecha Teórica','Fecha Teorica'])),
-    cl:num(keyOf(r,['costoLabor','Costo Labor'])), ci:num(keyOf(r,['costoInsumo','Costo Insumo'])),
-    ud:num(keyOf(r,['unidadesDosis','Unidades/Dosis'])), pu:num(keyOf(r,['precioUnitario','Precio Unitario'])),
-    hr:numN(keyOf(r,['hectareasReales','Has. Reales'])),
-    tipo:String(keyOf(r,['tipoItem','Tipo de Item'])||'').trim(),
-    contr:String(keyOf(r,['contratista','Contratista'])||'').trim(),
-    personal:String(keyOf(r,['personal','Personal'])||'').trim(),
-    insumo:String(keyOf(r,['insumo','Insumo'])||'').trim(),
-    unidad:String(keyOf(r,['unidadMedida','Unidad de medida'])||'').trim(),
-    obs:String(keyOf(r,['observaciones','Observación','Observacion'])||'').trim(),
-  })).filter(r=>r.ot && r.ot!=='undefined' && r.ot!=='nan');
-  rows.forEach(r=>{ r.imp=r.ud*r.pu; r.esHoras=r.unidad.toLowerCase()==='horas'; });
+  // Normalizacion de filas de consultaOT. Se extrajo a funcion (antes iba en linea recta acá) para
+  // poder reusarla TAL CUAL con las filas de otra campania en el filtro de Campaña de Servicios,
+  // sin duplicar ni reescribir la logica.
+  function normalizarFilasOT(rawRows){
+    const out = rawRows.map(r=>({
+      ot:String(keyOf(r,['ordenTrabajo','OT','numeroOrdenTrabajo'])||'').trim(),
+      act:String(keyOf(r,['actividad','Actividad'])||'').trim(),
+      lote:String(keyOf(r,['lote','Lote'])||'').trim(),
+      estadio:String(keyOf(r,['estadio','Estadio'])||'').trim(),
+      serv:String(keyOf(r,['servicio','Servicio'])||'').trim(),
+      estado:String(keyOf(r,['estado','Estado'])||'').trim(),
+      fr:pdate(keyOf(r,['fechaReal','Fecha real'])),
+      ft:pdate(keyOf(r,['fechaTeorica','Fecha  Teórica','Fecha Teórica','Fecha Teorica'])),
+      cl:num(keyOf(r,['costoLabor','Costo Labor'])), ci:num(keyOf(r,['costoInsumo','Costo Insumo'])),
+      ud:num(keyOf(r,['unidadesDosis','Unidades/Dosis'])), pu:num(keyOf(r,['precioUnitario','Precio Unitario'])),
+      hr:numN(keyOf(r,['hectareasReales','Has. Reales'])),
+      tipo:String(keyOf(r,['tipoItem','Tipo de Item'])||'').trim(),
+      contr:String(keyOf(r,['contratista','Contratista'])||'').trim(),
+      personal:String(keyOf(r,['personal','Personal'])||'').trim(),
+      insumo:String(keyOf(r,['insumo','Insumo'])||'').trim(),
+      unidad:String(keyOf(r,['unidadMedida','Unidad de medida'])||'').trim(),
+      obs:String(keyOf(r,['observaciones','Observación','Observacion'])||'').trim(),
+    })).filter(r=>r.ot && r.ot!=='undefined' && r.ot!=='nan');
+    out.forEach(r=>{ r.imp=r.ud*r.pu; r.esHoras=r.unidad.toLowerCase()==='horas'; });
+    return out;
+  }
+  const rows = normalizarFilasOT(raw);
   if(!rows.length){
     const cols=raw.length?Object.keys(raw[0]).join(', '):'(ninguna)';
     throw new Error('El archivo remoto no tiene el formato esperado: no se encontró la columna «OT» del export de Órdenes de Trabajo. Columnas recibidas: '+cols.slice(0,160));
@@ -105,24 +121,28 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
     if(!laborLineas.length) return lineas.length && lineas.every(l=>l.esHoras) ? 'horas' : null; // sin linea de labor identificable
     return laborLineas.some(l=>l.esHoras) ? 'horas' : 'hectareas';
   }
-  // group by OT
-  const otMap={};
-  rows.forEach(r=>{ (otMap[r.ot]=otMap[r.ot]||[]).push(r); });
-  const OTS = Object.keys(otMap).map(id=>{
-    const g=otMap[id], r0=g[0];
-    const has=g.map(x=>x.hr).filter(x=>x!=null);
-    return { ot:id, act:r0.act, lote:r0.lote, estadio:r0.estadio, serv:r0.serv, estado:r0.estado,
-      ft:r0.ft, fr:r0.fr, tieneServ: r0.serv!=='' && r0.serv.toLowerCase()!=='nan',
-      contr:r0.contr, personal:r0.personal,
-      ha: has.length?Math.max.apply(null,has):null,
-      modalidad: modalidadLaborOT(g),
-      horas: g.filter(x=>x.esHoras).reduce((s,x)=>s+x.ud,0),
-      imp: g.reduce((s,x)=>s+x.imp,0),
-      propia: g.filter(x=>x.tipo==='Labor Propia').reduce((s,x)=>s+x.imp,0),
-      tercero: g.filter(x=>x.tipo==='Labor Tercero').reduce((s,x)=>s+x.imp,0),
-      insumos: g.filter(x=>x.tipo==='Insumo').reduce((s,x)=>s+x.imp,0),
-      lines: g };
-  });
+  // group by OT — extraida a funcion, por el mismo motivo que normalizarFilasOT (reuso identico
+  // para el filtro de Campaña de Servicios). Logica sin cambios.
+  function agruparOTS(rowsIn){
+    const otMap={};
+    rowsIn.forEach(r=>{ (otMap[r.ot]=otMap[r.ot]||[]).push(r); });
+    return Object.keys(otMap).map(id=>{
+      const g=otMap[id], r0=g[0];
+      const has=g.map(x=>x.hr).filter(x=>x!=null);
+      return { ot:id, act:r0.act, lote:r0.lote, estadio:r0.estadio, serv:r0.serv, estado:r0.estado,
+        ft:r0.ft, fr:r0.fr, tieneServ: r0.serv!=='' && r0.serv.toLowerCase()!=='nan',
+        contr:r0.contr, personal:r0.personal,
+        ha: has.length?Math.max.apply(null,has):null,
+        modalidad: modalidadLaborOT(g),
+        horas: g.filter(x=>x.esHoras).reduce((s,x)=>s+x.ud,0),
+        imp: g.reduce((s,x)=>s+x.imp,0),
+        propia: g.filter(x=>x.tipo==='Labor Propia').reduce((s,x)=>s+x.imp,0),
+        tercero: g.filter(x=>x.tipo==='Labor Tercero').reduce((s,x)=>s+x.imp,0),
+        insumos: g.filter(x=>x.tipo==='Insumo').reduce((s,x)=>s+x.imp,0),
+        lines: g };
+    });
+  }
+  const OTS = agruparOTS(rows);
   const CONF = OTS.filter(o=>o.estado==='Confirmado');
   // Comparación de Estado normalizada (sin acentos/mayúsculas, reusa normEstadio de utils.js) —
   // solo para Pendiente/En Ejecución, que es lo que este pedido pidió blindar contra variaciones de
@@ -444,10 +464,17 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
     {trabajo:AUDITORIA_GASTO_DESALIJO, ...gastoDeOTs(desalijoKarandayOT)},
   ];
 
-  // ---- GASTOS: detalle labores reales + gasoil por área ----
-  const servOT=new Set(CONF.filter(o=>o.tieneServ).map(o=>o.ot));
-  const detOT=CONF.filter(o=>servOT.has(o.ot));
-  const gasOT=CONF.filter(o=>!servOT.has(o.ot));
+  // ---- GASTOS: detalle labores reales + gasoil por área (modulo SERVICIOS) ----
+  // Todo el calculo del modulo Servicios quedo encapsulado en construirServicios(): recibe las OT
+  // CONFIRMADAS de UNA campania y devuelve el paquete completo que consume la pestaña (gastos,
+  // gasoil_sec, meses y las opciones de los filtros Labor/Etapa/Contratista). Es exactamente la
+  // logica que antes iba en linea recta acá y en el bloque de totales de mas abajo — se movio sin
+  // tocar ninguna formula, para poder recalcular el modulo sobre otra campania con LAS MISMAS
+  // cuentas (filtro de Campaña de Servicios) en vez de escribir una version alternativa.
+  function construirServicios(CONFin){
+  const servOT=new Set(CONFin.filter(o=>o.tieneServ).map(o=>o.ot));
+  const detOT=CONFin.filter(o=>servOT.has(o.ot));
+  const gasOT=CONFin.filter(o=>!servOT.has(o.ot));
   // detalle (mes,labor,etapa,contratista) — se incluye la etapa (Estadio) porque una misma labor
   // puede ejecutarse en más de una etapa del ciclo del cultivo a lo largo de la campaña, y el
   // Contratista (campo real "contratista" de consultaOT — verificado 100% completo en OT de
@@ -481,6 +508,40 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
     if(!gmap[key]) gmap[key]={mesnum:m,area,personal:pers,n:0,litros:0,total:0};
     const gg=gmap[key]; gg.n++; gg.litros+=litros; gg.total+=o.imp; });
   const gasoil_sec=Object.values(gmap).map(g=>({...g,litros:Math.round(g.litros*10)/10,total:Math.round(g.total*100)/100}));
+  const gasto_total=gastos.reduce((s,d)=>s+d.propia+d.tercero+d.insumos,0);
+  const gasoil_total=gasOT.reduce((s,o)=>s+o.imp,0), gasoil_litros_total=gasOT.reduce((s,o)=>s+o.lines.reduce((a,l)=>a+l.ud,0),0);
+  const gmes={}, glit={};
+  gasOT.forEach(o=>{ const m=o.fr?o.fr.getMonth()+1:0; gmes[m]=(gmes[m]||0)+o.imp; glit[m]=(glit[m]||0)+o.lines.reduce((a,l)=>a+l.ud,0); });
+  const meses=[...new Set([...gastos.map(d=>d.mesnum),...gasoil_sec.map(g=>g.mesnum)])].filter(m=>m>0).sort((a,b)=>a-b).map(m=>({k:m,lbl:MES[m]}));
+  const labores=[...new Set(gastos.map(d=>d.labor))].sort((a,b)=>a.localeCompare(b,'es'));
+  const estadios_labor=[...new Set(gastos.map(d=>d.estadio))].sort((a,b)=>a.localeCompare(b,'es'));
+  // Contratistas reales de "Detalle por Labor" (para el filtro dependiente), con los marcadores
+  // '(Labor Propia)'/'(Sin contratista)' siempre al final — labelContratista() (utils.js) los
+  // traduce al texto que se muestra tanto en el filtro como en la columna de la tabla.
+  const contratistas_labor=[...new Set(gastos.map(d=>d.contratista))].sort((a,b)=>{
+    const esp=k=>k==='(Labor Propia)'||k==='(Sin contratista)';
+    if(esp(a)&&!esp(b)) return 1; if(!esp(a)&&esp(b)) return -1;
+    return labelContratista(a).localeCompare(labelContratista(b),'es');
+  });
+  return {gastos,gasoil_sec,meses,gasto_total,gasoil_total,gasoil_litros_total,gmes,glit,
+    labores,estadios_labor,contratistas_labor};
+  }
+  const SERVICIOS = construirServicios(CONF);
+  const {gastos,gasoil_sec,meses,gasto_total,gasoil_total,gasoil_litros_total,gmes,glit,
+    labores,estadios_labor,contratistas_labor} = SERVICIOS;
+  // Un paquete de Servicios por cada campania presente en consultaOT. La campania vigente reusa el
+  // paquete ya calculado (SERVICIOS): no se recalcula ni se duplica. Las demas se derivan con las
+  // MISMAS funciones (normalizarFilasOT -> agruparOTS -> construirServicios) sobre sus propias
+  // filas. Estas colecciones viven SOLO acá: ningun otro modulo del dashboard las lee, y `raw`/
+  // `rows`/`OTS`/`CONF` (base de Resumen Ejecutivo, Insumos, Combustible, Auditoria, Control de
+  // Hectareas y Alertas) siguen recortados a CAMPANIA_ACTUAL, sin ninguna modificacion.
+  const servicios_campanias = {};
+  servicios_campanias[CAMPANIA_ACTUAL] = SERVICIOS;
+  campanias_ot.forEach(c=>{
+    if(c===CAMPANIA_ACTUAL) return;
+    const rowsC = normalizarFilasOT(rawTodasCampanias.filter(row=>campaniaDeFila(row)===c));
+    servicios_campanias[c] = construirServicios(agruparOTS(rowsC).filter(o=>o.estado==='Confirmado'));
+  });
   // ---- COMBUSTIBLE (litros y contratistas) ----
   // Fuente: consultaInsumos, filtrada a tipoInsumo="COMBUSTIBLES" y ya sin las filas de
   // "Existencia inicial" (separadas antes de llegar acá — ver combustible_existencia_inicial).
@@ -696,22 +757,6 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
     return {tipo,nombre,unidad,stockInicial:Math.round((stockInicialMap[key]?stockInicialMap[key].cantidad:0)*100)/100};
   }).sort((a,b)=>a.tipo.localeCompare(b.tipo,'es')||a.nombre.localeCompare(b.nombre,'es')||a.unidad.localeCompare(b.unidad,'es'));
 
-  const gasto_total=gastos.reduce((s,d)=>s+d.propia+d.tercero+d.insumos,0);
-  const gasoil_total=gasOT.reduce((s,o)=>s+o.imp,0), gasoil_litros_total=gasOT.reduce((s,o)=>s+o.lines.reduce((a,l)=>a+l.ud,0),0);
-  const gmes={}, glit={};
-  gasOT.forEach(o=>{ const m=o.fr?o.fr.getMonth()+1:0; gmes[m]=(gmes[m]||0)+o.imp; glit[m]=(glit[m]||0)+o.lines.reduce((a,l)=>a+l.ud,0); });
-  const meses=[...new Set([...gastos.map(d=>d.mesnum),...gasoil_sec.map(g=>g.mesnum)])].filter(m=>m>0).sort((a,b)=>a-b).map(m=>({k:m,lbl:MES[m]}));
-  const labores=[...new Set(gastos.map(d=>d.labor))].sort((a,b)=>a.localeCompare(b,'es'));
-  const estadios_labor=[...new Set(gastos.map(d=>d.estadio))].sort((a,b)=>a.localeCompare(b,'es'));
-  // Contratistas reales de "Detalle por Labor" (para el filtro dependiente), con los marcadores
-  // '(Labor Propia)'/'(Sin contratista)' siempre al final — labelContratista() (utils.js) los
-  // traduce al texto que se muestra tanto en el filtro como en la columna de la tabla.
-  const contratistas_labor=[...new Set(gastos.map(d=>d.contratista))].sort((a,b)=>{
-    const esp=k=>k==='(Labor Propia)'||k==='(Sin contratista)';
-    if(esp(a)&&!esp(b)) return 1; if(!esp(a)&&esp(b)) return -1;
-    return labelContratista(a).localeCompare(labelContratista(b),'es');
-  });
-
   // ================= RESUMEN EJECUTIVO =================
   // Todo lo que sigue alimenta exclusivamente la pestaña Resumen Ejecutivo. Se calcula UNA sola
   // vez acá (no en render.js) y se reutilizan colecciones ya construidas arriba (cultivos,
@@ -894,6 +939,8 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
     auditoria_items,auditoria_metros,auditoria_puentes,auditoria_gastos,
     gastos,gasoil_sec,meses,gasto_total,gasoil_total,gasoil_litros_total,gmes,glit,
     labores,estadios_labor,contratistas_labor,
+    // Solo para el filtro de Campaña del modulo Servicios (ver render.js: serviciosActivos()).
+    campanias_ot,servicios_campanias,campania_actual:CAMPANIA_ACTUAL,
     combustible,combustible_litros_total,combustible_n_total,combustible_meses,combustible_terceros,
     combustible_ingresos,combustible_ingresos_litros_total,combustible_ingresos_n_total,
     combustible_existencia_inicial,stock_inicial_combustible,

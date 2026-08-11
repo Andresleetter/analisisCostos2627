@@ -54,6 +54,10 @@ document.addEventListener('DOMContentLoaded', function(){
     btn.addEventListener('click', function(){ show(i, btn); cerrarMenuModulos(); });
   });
   document.getElementById('ov-retry').addEventListener('click', loadData);
+  // Campaña es el filtro "padre" de Servicios: al cambiar, primero se repueblan Mes/Labor/Etapa/
+  // Contratista con los valores de la campaña nueva y recién después se re-renderiza el módulo
+  // completo (ver cambiarCampaniaServicios en render.js). Solo afecta a la pestaña Servicios.
+  document.getElementById('gcampania').addEventListener('change', cambiarCampaniaServicios);
   document.getElementById('gmes').addEventListener('change', renderG);
   document.getElementById('glabor').addEventListener('change', renderLaborDetalle);
   document.getElementById('gestadio').addEventListener('change', renderLaborDetalle);
