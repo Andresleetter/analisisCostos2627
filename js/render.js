@@ -216,30 +216,30 @@ function renderCultivoDetalle(){
       alt="Mapa de siembra de la Campaña 26/27" tabindex="0" role="button" aria-label="Ampliar mapa de siembra"></div>`;
   document.getElementById('cults').innerHTML=D.cultivos.map(c=>{
     const plan=c.tiene_rtk?fmt2(c.ha_plan)+' ha':'s/ RTK';
+    // Cada etapa muestra su avance y, al lado, las hectáreas ejecutadas de ESA etapa. Las ha salen
+    // de e.ha_ejec — la ejecución equivalente que ya calcula data.js (equivalenteLoteEstadio: cada
+    // labor capada al plan del lote y promediada por estadio) y que es la misma base del porcentaje.
+    // NUNCA se derivan del porcentaje mostrado (que además va redondeado a entero para la pantalla).
+    // Con la etiqueta y el valor arriba y la barra a lo ancho debajo, entran las dos cifras sin
+    // dejar la barra en un hilo: la tarjeta mide ~274px y antes la barra ya usaba solo ~96px.
     const etapasHtml = c.etapas.length ? c.etapas.map(e=>{
       const col = e.avance==null ? 'o' : color(e.avance);
-      const val = e.avance!=null ? Math.round(e.avance)+'%' : e.n_lotes+' lotes';
+      const av = e.avance!=null ? Math.round(e.avance)+'%' : e.n_lotes+' lotes';
       const w = e.avance!=null ? Math.min(e.avance,100) : 0;
       return `<div class="et-row"><div class="et-lbl">${e.nombre}</div>
-        <div class="bar et-bar"><div class="bar-fill f-${col}" style="width:${w}%"></div></div>
-        <div class="et-val c-${col}">${val}</div></div>`;
+        <div class="et-val c-${col}">${av} <span class="et-ha">· ${fmt2(e.ha_ejec)} ha</span></div>
+        <div class="bar et-bar"><div class="bar-fill f-${col}" style="width:${w}%"></div></div></div>`;
     }).join('') : '<div class="et-empty">Sin etapa registrada en OT confirmadas</div>';
-    // Ha Ejecutadas y OT Confirmadas/Totales corresponden SIEMPRE al mismo estadio que "Etapa
-    // actual" (el más reciente con actividad confirmada, último elemento de c.etapas) — nunca se
-    // mezclan con otro estadio. Sin ninguna etapa reconocida todavía (etapa_actual=null) no hay un
-    // estadio al que referirlos: se muestran en 0 ha / 0 de las OT totales del cultivo, consistente
-    // con el mensaje "Sin actividad confirmada aún" de arriba.
-    const ultimaEtapa = c.etapas.length ? c.etapas[c.etapas.length-1] : null;
-    const haEjec = fmt2(ultimaEtapa ? ultimaEtapa.ha_ejec : 0)+' ha';
-    const otTexto = ultimaEtapa ? ultimaEtapa.otConfirmadas+' / '+ultimaEtapa.otTotales : '0 / '+(c.conf+c.ejec+c.pend);
+    // Abajo queda únicamente Ha planificadas (el plan RTK del cultivo). "Ha ejecutadas" se movió al
+    // detalle de cada etapa (arriba) y "OT conf. / total" se retiró a pedido del usuario — ambas
+    // referían siempre al último estadio con actividad, no al cultivo entero, y esa información ya
+    // vive donde corresponde: dentro de la fila de su etapa.
     return `<div class="cult-card">
       <div class="cc-name">${c.nombre}</div>
       ${c.etapa_actual?`<div class="cc-stage">Etapa actual: <b>${c.etapa_actual}</b></div>`:'<div class="cc-stage cc-stage-muted">Sin actividad confirmada aún</div>'}
       <div class="cc-etapas">${etapasHtml}</div>
       <div class="cc-ha">
         <div><span>Ha planificadas</span><b>${plan}</b></div>
-        <div><span>Ha ejecutadas</span><b>${haEjec}</b></div>
-        <div><span>OT conf. / total</span><b>${otTexto}</b></div>
       </div></div>`;}).join('') + mapaCard;
 }
 
