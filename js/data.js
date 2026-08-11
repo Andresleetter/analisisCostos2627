@@ -78,9 +78,9 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
       cl:num(keyOf(r,['costoLabor','Costo Labor'])), ci:num(keyOf(r,['costoInsumo','Costo Insumo'])),
       ud:num(keyOf(r,['unidadesDosis','Unidades/Dosis'])), pu:num(keyOf(r,['precioUnitario','Precio Unitario'])),
       hr:numN(keyOf(r,['hectareasReales','Has. Reales'])),
-      // totalAplicado: cantidad realmente aplicada de la linea. Solo se usa para los trabajos con
-      // Unidad de Medida "Dosis" (fletes), donde es el peso ejecutado en kilogramos — ver esDosis
-      // mas abajo. Para el resto de las lineas no se lee ni se usa.
+      // totalAplicado: cantidad realmente aplicada de la linea. Solo se usa para los trabajos
+      // medidos por peso (fletes), donde es el peso ejecutado en kilogramos — ver esPeso mas abajo.
+      // Para el resto de las lineas no se lee ni se usa.
       ta:num(keyOf(r,['totalAplicado','Total Aplicado'])),
       tipo:String(keyOf(r,['tipoItem','Tipo de Item'])||'').trim(),
       contr:String(keyOf(r,['contratista','Contratista'])||'').trim(),
@@ -89,13 +89,21 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
       unidad:String(keyOf(r,['unidadMedida','Unidad de medida'])||'').trim(),
       obs:String(keyOf(r,['observaciones','Observación','Observacion'])||'').trim(),
     })).filter(r=>r.ot && r.ot!=='undefined' && r.ot!=='nan');
-    // esDosis = linea con Unidad de Medida "Dosis" (los fletes). En estas lineas la cantidad
-    // ejecutada NO es Unidades/Dosis sino "totalAplicado", y se interpreta en kilogramos: el dato
-    // real trae Has. Reales = 0,01 en todas ellas (un marcador, no superficie), asi que mostrarlas
-    // como hectareas era incorrecto. El costo de estas lineas pasa a ser totalAplicado x Precio
-    // Unitario, tal como se pidio — en el dato real de OT confirmadas totalAplicado coincide
-    // exactamente con Unidades/Dosis, asi que el importe no cambia; la formula queda explicita.
-    out.forEach(r=>{ r.esDosis=r.unidad.toLowerCase()==='dosis'; r.imp=(r.esDosis?r.ta:r.ud)*r.pu; r.esHoras=r.unidad.toLowerCase()==='horas'; });
+    // esPeso = LINEA DE LABOR medida en peso. Hoy son las dos familias de fletes del dato real:
+    // Unidad de Medida "Dosis" (Servicio "Fletes") y "Kilos" (Servicio "Flete verde silo terceros
+    // Arroz"). En estas lineas la cantidad ejecutada NO es Unidades/Dosis sino "totalAplicado", y se
+    // interpreta en kilogramos: el dato trae Has. Reales = 0,01 en todas ellas (un marcador, no
+    // superficie), asi que mostrarlas como hectareas era incorrecto. El costo pasa a ser
+    // totalAplicado x Precio Unitario — en las OT confirmadas totalAplicado coincide exactamente con
+    // Unidades/Dosis, asi que el importe no cambia; la formula queda explicita.
+    // Se exige que sea linea de labor a proposito: hay 62 lineas de INSUMO en "Kilos" (fertilizantes
+    // y similares) que no son trabajos medidos por peso y no deben cambiar de formula de costo — hoy
+    // daria lo mismo, pero deja el alcance acotado si el dato cambia.
+    const UNIDADES_PESO=['dosis','kilos'];
+    out.forEach(r=>{
+      const esLaborLinea = r.tipo==='Labor Propia' || r.tipo==='Labor Tercero';
+      r.esPeso = esLaborLinea && UNIDADES_PESO.includes(r.unidad.toLowerCase());
+      r.imp=(r.esPeso?r.ta:r.ud)*r.pu; r.esHoras=r.unidad.toLowerCase()==='horas'; });
     return out;
   }
   const rows = normalizarFilasOT(raw);
@@ -126,16 +134,16 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
   // dejaria afuera la enorme mayoria del trabajo real por hectareas. La unica señal confiable en
   // los datos es "Horas" (explicito) para trabajo por horas; todo lo demas en la linea principal de
   // labor se considera hectareas.
-  // Se agrego una tercera modalidad, 'dosis': linea principal de labor con Unidad de Medida
-  // "Dosis" (fletes). Se evalua ANTES de 'hectareas' porque, con el criterio anterior, "Dosis"
-  // caia en el cajon de "todo lo demas es hectareas" y el flete se mostraba como 0,01 ha. No
-  // altera la clasificacion de ninguna otra linea: 'horas' sigue teniendo prioridad y el resto
+  // Se agrego una tercera modalidad, 'peso': linea principal de labor medida en peso (esPeso — los
+  // fletes en "Dosis" o en "Kilos"). Se evalua ANTES de 'hectareas' porque, con el criterio anterior,
+  // esas unidades caian en el cajon de "todo lo demas es hectareas" y el flete se mostraba como 0,01
+  // ha. No altera la clasificacion de ninguna otra linea: 'horas' sigue teniendo prioridad y el resto
   // sigue cayendo en 'hectareas' igual que antes.
   function modalidadLaborOT(lineas){
     const laborLineas = lineas.filter(l=>l.tipo==='Labor Propia'||l.tipo==='Labor Tercero');
     if(!laborLineas.length) return lineas.length && lineas.every(l=>l.esHoras) ? 'horas' : null; // sin linea de labor identificable
     if(laborLineas.some(l=>l.esHoras)) return 'horas';
-    return laborLineas.some(l=>l.esDosis) ? 'dosis' : 'hectareas';
+    return laborLineas.some(l=>l.esPeso) ? 'peso' : 'hectareas';
   }
   // group by OT — extraida a funcion, por el mismo motivo que normalizarFilasOT (reuso identico
   // para el filtro de Campaña de Servicios). Logica sin cambios.
@@ -151,9 +159,10 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
         ha: has.length?Math.max.apply(null,has):null,
         modalidad: modalidadLaborOT(g),
         horas: g.filter(x=>x.esHoras).reduce((s,x)=>s+x.ud,0),
-        // kg = peso ejecutado de los trabajos por "Dosis" (fletes): suma de totalAplicado de esas
-        // lineas, mismo criterio con que `horas` suma Unidades/Dosis de las lineas por Horas.
-        kg: g.filter(x=>x.esDosis).reduce((s,x)=>s+x.ta,0),
+        // kg = peso ejecutado de los trabajos medidos por peso (fletes en Dosis o Kilos): suma de
+        // totalAplicado de esas lineas, mismo criterio con que `horas` suma Unidades/Dosis de las
+        // lineas por Horas.
+        kg: g.filter(x=>x.esPeso).reduce((s,x)=>s+x.ta,0),
         imp: g.reduce((s,x)=>s+x.imp,0),
         propia: g.filter(x=>x.tipo==='Labor Propia').reduce((s,x)=>s+x.imp,0),
         tercero: g.filter(x=>x.tipo==='Labor Tercero').reduce((s,x)=>s+x.imp,0),
@@ -556,10 +565,10 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
     const esH = o.modalidad==='horas';
     // unidadTrabajo = en que unidad se mide el trabajo ejecutado de esta fila. Reemplaza al viejo
     // booleano esH en la clave de agrupacion para poder distinguir una tercera unidad (kg, fletes
-    // por Dosis) sin cambiar el agrupamiento de las otras dos: 'hrs' es exactamente el viejo
+    // medidos por peso) sin cambiar el agrupamiento de las otras dos: 'hrs' es exactamente el viejo
     // esH===true y 'ha' exactamente el viejo esH===false (incluidas las OT de modalidad nula), asi
-    // que ninguna fila que no sea flete-Dosis se separa ni se fusiona respecto de antes.
-    const unidadTrabajo = esH ? 'hrs' : (o.modalidad==='dosis' ? 'kg' : 'ha');
+    // que ninguna fila que no sea un flete por peso se separa ni se fusiona respecto de antes.
+    const unidadTrabajo = esH ? 'hrs' : (o.modalidad==='peso' ? 'kg' : 'ha');
     const key=m+'|'+o.serv+'|'+est+'|'+unidadTrabajo+'|'+contratista;
     if(!dmap[key]) dmap[key]={mesnum:m,labor:o.serv,estadio:est,esH,unidadTrabajo,contratista,n:0,ha:0,horas:0,kg:0,propia:0,tercero:0,insumos:0};
     const d=dmap[key]; d.n++; d.ha+=(o.ha||0); d.horas+=o.horas; d.kg+=(o.kg||0); d.propia+=o.propia; d.tercero+=o.tercero; d.insumos+=o.insumos; });
