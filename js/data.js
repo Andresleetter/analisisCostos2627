@@ -233,6 +233,43 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
       if(!est[laborKey]) est[laborKey]={planificadas,ejecutadasReales:0};
       est[laborKey].ejecutadasReales+=o.ha;
     });
+    // ---- Actividades "PARCELA <cultivo>" -> Preparacion de Suelo de ESE cultivo ----
+    // En consultaOT existen actividades propias tipo "PARCELA ARROZ" / "PARCELA SOJA" / "PARCELA
+    // SORGO" / "PARCELA MAIZ", que hasta ahora quedaban fuera del avance porque `sub` exige
+    // actividad === cultivo exacto. Son trabajos generales sobre parcelas del cultivo (limpieza o
+    // desinfeccion de valos con avion, desecacion, etc.) que pueden afectar varias parcelas a la vez,
+    // asi que NO tienen una superficie planificada propia: en el plan RTK figuran con 0,01 ha (el
+    // mismo marcador de lote sin plan) y encima ni entran a RTK, porque el parseo de consultaCultivos
+    // exige un lote de una sola palabra. Por eso, y a diferencia de las labores normales:
+    //   - sus Has. Reales se toman como ejecucion, SIN capar por el plan de su propio lote (capar
+    //     contra 0,01 ha las dejaria aportando 0,00 y no se veria nada);
+    //   - el tope se aplica al final contra las hectareas planificadas del CULTIVO, de modo que
+    //     Preparacion de Suelo nunca pueda pasar del 100% (ver el Math.min de `etapas` abajo).
+    // Las labores normales siguen controladas por lote exactamente como antes: esta excepcion vale
+    // solo para las actividades PARCELA.
+    // La relacion PARCELA+cultivo se detecta por los tokens de la actividad (no por una lista literal
+    // de nombres): primera palabra "PARCELA" y el nombre del cultivo entre las demas, sin acentos ni
+    // sensibilidad a mayusculas — asi tolera variantes de carga ("PARCELA DE SORGO", "Parcela Maiz").
+    const K_PREP = ETAPA_ORDEN[0]; // 'preparacion de suelo'
+    const actTokens = s => stripAccents(String(s||'')).toUpperCase().replace(/\s+/g,' ').trim().split(' ');
+    const esParcelaDelCultivo = o => { const t=actTokens(o.act); return t[0]==='PARCELA' && t.includes(c); };
+    // Mismos requisitos que las labores normales: OT Confirmada, modalidad hectareas y Has. Reales
+    // validas. Las OT por horas o de solo insumo no aportan superficie, igual que en el resto.
+    const parcelaPorLabor={};
+    OTS.filter(o=>o.estado==='Confirmado' && esParcelaDelCultivo(o)).forEach(o=>{
+      if(o.modalidad!=='hectareas') return;
+      if(o.ha==null){ avanceInconsistencias.push({ot:o.ot,cultivo:c,lote:o.lote,estadio:o.estadio,motivo:'OT de PARCELA por hectareas sin Has. Reales'}); return; }
+      const laborKey=normHdr(o.serv)||'(sin labor)';
+      parcelaPorLabor[laborKey]=(parcelaPorLabor[laborKey]||0)+o.ha;
+    });
+    // Promedio entre labores, nunca suma: dos labores distintas sobre la parcela son dos pasadas
+    // sobre la misma superficie, mismo criterio que equivalenteLoteEstadio usa para los lotes.
+    const parcelaValores=Object.values(parcelaPorLabor);
+    const ha_parcela = parcelaValores.length ? parcelaValores.reduce((a,b)=>a+b,0)/parcelaValores.length : 0;
+    // Si el cultivo tiene ejecucion de PARCELA pero ninguna OT normal en Preparacion de Suelo, la
+    // etapa igual debe existir para poder mostrarla (hoy no ocurre, pero deja el caso cubierto).
+    if(ha_parcela>0 && !etMap[K_PREP]) etMap[K_PREP]={nombre:ETAPA_LABEL[K_PREP],lotes:new Set()};
+
     // Ejecucion equivalente de un (lote,estadio): promedio de las labores presentes, cada una
     // capada (min) a la superficie planificada de ESE lote — nunca sumadas entre si (ver ejemplo
     // Disco 1 + Disco 2 en el pedido: dos pasadas sobre la misma superficie, no 2x la superficie).
@@ -245,6 +282,11 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
     const etapas=ETAPA_ORDEN.filter(k=>etMap[k]).map(k=>{
       const e=etMap[k];
       let ha_e=0; e.lotes.forEach(l=>{ ha_e+=equivalenteLoteEstadio(l,k); });
+      // Excepcion PARCELA (solo Preparacion de Suelo, ver ha_parcela mas arriba): se suma su
+      // ejecucion y el TOTAL de la etapa se capa a las hectareas planificadas del cultivo, para que
+      // no pueda pasar del 100%. Sin plan (ha_plan=0) no hay contra qué capar y el avance ya sale
+      // null, asi que se suma sin tope.
+      if(k===K_PREP && ha_parcela>0) ha_e = ha_plan>0 ? Math.min(ha_e+ha_parcela, ha_plan) : ha_e+ha_parcela;
       ha_e=Math.round(ha_e*100)/100;
       const av_e = ha_plan>0 ? Math.round(ha_e/ha_plan*1000)/10 : null;
       // OT de ESTE estadio puntual (cualquier Estado, no solo Confirmado) — para que "OT
