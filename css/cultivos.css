@@ -6,12 +6,24 @@
 .cc-stage-muted{font-style:italic}
 .bar{height:7px;background:#eef2ec;border-radius:var(--radius-bar);overflow:hidden;margin-bottom:9px} .bar-fill{height:100%;border-radius:var(--radius-bar)}
 .cc-etapas{display:flex;flex-direction:column;gap:7px;margin-bottom:10px}
-.et-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:8px}
-.et-lbl{font-size:10.5px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:108px}
-.et-bar{margin-bottom:0;flex:1}
-.et-val{font-size:11px;font-weight:800;white-space:nowrap;min-width:36px;text-align:right}
+/* Fila de etapa en dos renglones: etiqueta + (avance · ha ejecutadas) arriba, barra a todo el ancho
+   debajo. Antes iba todo en un renglón (etiqueta | barra | %), pero al sumarse las hectáreas al
+   valor la barra quedaba reducida a unos pocos píxeles en una tarjeta de ~274px. */
+.et-row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:3px 8px}
+.et-lbl{font-size:10.5px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.et-bar{margin-bottom:0;grid-column:1/-1}
+.et-val{font-size:11px;font-weight:800;white-space:nowrap;text-align:right}
+/* Las ha ejecutadas acompañan al % sin competir con él: mismo renglón, peso y color atenuados. */
+.et-ha{font-weight:700;color:var(--muted)}
 .et-empty{font-size:11px;color:var(--muted);font-style:italic;padding:4px 0}
 .cc-ha{display:flex;flex-direction:column;gap:4px}
 .cc-ha div{background:#f2f6ef;border-radius:7px;padding:5px 8px;display:flex;justify-content:space-between}
 .cc-ha span{font-size:9.5px;color:var(--muted);text-transform:uppercase} .cc-ha b{font-size:11px}
 @media(max-width:900px){.cults{grid-template-columns:repeat(2,minmax(0,1fr))}}
+/* En pantallas angostas la tarjeta baja a ~136px y "90% · 3.451,11 ha" no deja lugar a la etiqueta
+   en el mismo renglón (quedaba recortada a unos pocos píxeles): el nombre de la etapa y su valor
+   pasan a renglones separados, la barra sigue abajo a todo el ancho. */
+@media(max-width:520px){
+  .et-row{grid-template-columns:minmax(0,1fr)}
+  .et-val{text-align:left}
+}
