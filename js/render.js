@@ -55,17 +55,14 @@ function renderAll(){
   document.getElementById('sinrtk').innerHTML=D.sinrtk.map(r=>
     `<tr><td class="mono">OT ${r.ot}</td><td>${r.cult}</td><td class="mono">${r.lote}</td><td>${r.act}</td><td>${r.serv}</td><td class="tr mono">${fmt2(r.ha)}</td><td>${r.estado}</td></tr>`).join('');
   renderAlertas();
-  // filtro meses
-  const sel=document.getElementById('gmes'); sel.querySelectorAll('option:not([value=ALL])').forEach(o=>o.remove());
-  D.meses.forEach(m=>{const o=document.createElement('option');o.value=m.k;o.textContent=m.lbl;sel.appendChild(o);});
-  // filtros de Detalle por Labor (Labor / Etapa / Contratista) — opciones de toda la campaña, no
-  // dependen del mes
-  const selLab=document.getElementById('glabor'); selLab.querySelectorAll('option:not([value=ALL])').forEach(o=>o.remove());
-  D.labores.forEach(l=>{const o=document.createElement('option');o.value=l;o.textContent=l;selLab.appendChild(o);});
-  const selEst=document.getElementById('gestadio'); selEst.querySelectorAll('option:not([value=ALL])').forEach(o=>o.remove());
-  D.estadios_labor.forEach(e=>{const o=document.createElement('option');o.value=e;o.textContent=e;selEst.appendChild(o);});
-  const selCont=document.getElementById('gcontratista'); selCont.querySelectorAll('option:not([value=ALL])').forEach(o=>o.remove());
-  D.contratistas_labor.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=labelContratista(c);selCont.appendChild(o);});
+  // filtro de Campaña de Servicios: opciones dinámicas desde consultasOT (D.campanias_ot), con la
+  // campaña vigente (D.campania_actual) preseleccionada si existe en el dato. Se puebla una sola
+  // vez acá; los demás filtros de Servicios (Mes/Labor/Etapa/Contratista) dependen de la campaña
+  // elegida y se repueblan en poblarFiltrosServicios() cada vez que cambia.
+  const selCamp=document.getElementById('gcampania'); selCamp.innerHTML='';
+  (D.campanias_ot||[]).forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;selCamp.appendChild(o);});
+  if([...selCamp.options].some(o=>o.value===D.campania_actual)) selCamp.value=D.campania_actual;
+  poblarFiltrosServicios();
   // filtros de la pestaña Combustible (Mes / Tercero)
   const selCMes=document.getElementById('cmes'); selCMes.querySelectorAll('option:not([value=ALL])').forEach(o=>o.remove());
   D.combustible_meses.forEach(m=>{const o=document.createElement('option');o.value=m.k;o.textContent=m.lbl;selCMes.appendChild(o);});
@@ -430,8 +427,8 @@ function renderInsumos(){
   ).join('') : '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:16px">Sin consumo de insumos en el período</td></tr>';
 }
 
-function monthTotals(){ const t={}; D.meses.forEach(m=>t[m.k]={k:m.k,lbl:m.lbl,tot:0,ot:0,horas:0});
-  D.gastos.forEach(r=>{const o=t[r.mesnum]; if(o){o.tot+=r.propia+r.tercero+r.insumos;o.ot+=r.n;o.horas+=(r.esH?r.horas:0);}}); return D.meses.map(m=>t[m.k]); }
+function monthTotals(S){ const t={}; S.meses.forEach(m=>t[m.k]={k:m.k,lbl:m.lbl,tot:0,ot:0,horas:0});
+  S.gastos.forEach(r=>{const o=t[r.mesnum]; if(o){o.tot+=r.propia+r.tercero+r.insumos;o.ot+=r.n;o.horas+=(r.esH?r.horas:0);}}); return S.meses.map(m=>t[m.k]); }
 // ---- Combustible: balance Ingreso vs Consumo + detalle por tercero/proveedor ----
 function renderCombustible(){
   const mesV=document.getElementById('cmes').value, mes=mesV==='ALL'?'ALL':parseInt(mesV);
@@ -486,9 +483,42 @@ function renderCombustible(){
   ).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px">Sin registros de combustible para el filtro seleccionado</td></tr>';
 }
 
+// ================== SERVICIOS ==================
+// El módulo Servicios trabaja siempre sobre UN paquete de datos (D.servicios_campanias[campaña]),
+// no sobre las colecciones globales: el filtro de Campaña elige cuál. Cada paquete lo construyó
+// buildData() con las mismas funciones y fórmulas (ver construirServicios en data.js), así que
+// cambiar de campaña no cambia ningún cálculo — solo el conjunto de registros sobre el que se
+// calcula. Fallback a D si el paquete no existiera, para no romper el render.
+function serviciosActivos(){
+  const sel=document.getElementById('gcampania');
+  const c=sel?sel.value:null;
+  return (D.servicios_campanias && D.servicios_campanias[c]) ? D.servicios_campanias[c] : D;
+}
+// Opciones de Mes / Labor / Etapa / Contratista: dependen de la campaña activa, así que se
+// repueblan al cargar y en cada cambio de campaña. Si el valor que estaba elegido sigue existiendo
+// en la campaña nueva se conserva; si no existe, vuelve a "ALL" (nunca queda un filtro apuntando a
+// un valor inexistente, que dejaría la tabla vacía sin explicación).
+function poblarFiltrosServicios(){
+  const S=serviciosActivos();
+  const llenar=(id,items,texto)=>{
+    const sel=document.getElementById(id), previo=sel.value;
+    sel.querySelectorAll('option:not([value=ALL])').forEach(o=>o.remove());
+    items.forEach(v=>{const o=document.createElement('option');o.value=v.val;o.textContent=texto(v);sel.appendChild(o);});
+    sel.value=[...sel.options].some(o=>o.value===previo)?previo:'ALL';
+  };
+  llenar('gmes', S.meses.map(m=>({val:String(m.k),lbl:m.lbl})), v=>v.lbl);
+  // Labor / Etapa / Contratista: opciones de toda la campaña seleccionada, no dependen del mes
+  llenar('glabor', S.labores.map(l=>({val:l})), v=>v.val);
+  llenar('gestadio', S.estadios_labor.map(e=>({val:e})), v=>v.val);
+  llenar('gcontratista', S.contratistas_labor.map(c=>({val:c})), v=>labelContratista(v.val));
+}
+// Cambio de campaña: primero se repueblan los filtros dependientes (Mes/Labor/Etapa/Contratista),
+// recién después se re-renderiza — mismo patrón que el filtro dependiente de Insumos.
+function cambiarCampaniaServicios(){ poblarFiltrosServicios(); renderG(); }
 function renderG(){
+  const S=serviciosActivos();
   const selV=document.getElementById('gmes').value, sel=selV==='ALL'?'ALL':parseInt(selV);
-  const mt=monthTotals(); const recs=sel==='ALL'?D.gastos:D.gastos.filter(r=>r.mesnum===sel);
+  const mt=monthTotals(S); const recs=sel==='ALL'?S.gastos:S.gastos.filter(r=>r.mesnum===sel);
   const by={}; recs.forEach(r=>{ if(!by[r.labor])by[r.labor]={labor:r.labor,esH:r.esH,n:0,ha:0,horas:0,prop:0,terc:0,ins:0};
     const o=by[r.labor];o.n+=r.n;o.ha+=r.ha;o.horas+=r.horas;o.prop+=r.propia;o.terc+=r.tercero;o.ins+=r.insumos; });
   const labs=Object.values(by).map(o=>({...o,tot:o.prop+o.terc+o.ins})).sort((a,b)=>b.tot-a.tot);
@@ -517,10 +547,11 @@ function renderG(){
 // OT de más de un contratista real (~19% de los grupos labor+etapa); ahora cada fila de la tabla
 // pertenece a un único contratista, o a "No aplica"/"Sin contratista" cuando corresponde).
 function renderLaborDetalle(){
+  const S=serviciosActivos();
   const selV=document.getElementById('gmes').value, sel=selV==='ALL'?'ALL':parseInt(selV);
   const laborV=document.getElementById('glabor').value, estV=document.getElementById('gestadio').value;
   const contV=document.getElementById('gcontratista').value;
-  let recs=sel==='ALL'?D.gastos:D.gastos.filter(r=>r.mesnum===sel);
+  let recs=sel==='ALL'?S.gastos:S.gastos.filter(r=>r.mesnum===sel);
   if(laborV!=='ALL') recs=recs.filter(r=>r.labor===laborV);
   if(estV!=='ALL') recs=recs.filter(r=>r.estadio===estV);
   if(contV!=='ALL') recs=recs.filter(r=>r.contratista===contV);
@@ -542,8 +573,9 @@ function renderLaborDetalle(){
 
 // ---- Consumo de Gasoil por Área ----
 function renderGasoil(){
+  const S=serviciosActivos();
   const selV=document.getElementById('gmes').value, sel=selV==='ALL'?'ALL':parseInt(selV);
-  const recs=sel==='ALL'?D.gasoil_sec:D.gasoil_sec.filter(r=>r.mesnum===sel);
+  const recs=sel==='ALL'?S.gasoil_sec:S.gasoil_sec.filter(r=>r.mesnum===sel);
   const by={}; recs.forEach(r=>{ const key=r.area;
     if(!by[key]) by[key]={area:r.area,n:0,litros:0,total:0};
     const o=by[key]; o.n+=r.n; o.litros+=r.litros; o.total+=r.total; });
