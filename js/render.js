@@ -106,12 +106,8 @@ function renderResumenKPIs(){
   document.getElementById('exec-kpis').innerHTML=[
     kpiCard('OT Confirmadas', k.otConfirmadas, 'de '+D.total_ot+' totales', 'g'),
     kpiCard('OT Atrasadas', k.otAtrasadas, 'Pendiente/En Ejecución vencidas', atrasCol),
-    // Costo Ejecutado es el ÚNICO KPI de esta fila que consolida todas las campañas de consultaOT
-    // (ver costo_total_consolidado en data.js). El pie deja explícito el alcance y el desglose por
-    // campaña, para que el número no se lea como si fuera solo de la campaña vigente.
-    kpiCard('Costo Ejecutado', 'US$ '+fmtUSD(k.costoEjecutado),
-      'Solo OT confirmadas · '+(k.costoPorCampania||[]).length+' campaña(s): '+
-      (k.costoPorCampania||[]).map(c=>(CAMPANIA_LABEL[c.campania]||c.campania)+' US$ '+fmtUSD(c.costo)).join(' · '), 'gris'),
+    // Consolida todas las campañas de consultaOT (ver costo_total_consolidado en data.js).
+    kpiCard('Costo Ejecutado', 'US$ '+fmtUSD(k.costoEjecutado), 'Solo OT confirmadas', 'gris'),
   ].join('');
 }
 
