@@ -122,7 +122,10 @@
         <span class="sc-note">Filtra solo esta tabla · una misma labor puede repetirse en más de una etapa</span>
       </div>
       <div class="scroll scroll-tall"><table class="ldt"><thead><tr>
-        <th>Labor</th><th>Etapa</th><th class="tr">OT Conf.</th><th class="tr">Ha Ejec.</th><th class="tr">Horas Ejec.</th>
+        <!-- "Trabajo Ejecutado" unifica las viejas columnas "Ha Ejec." y "Horas Ejec.": cada fila
+             muestra la cantidad con SU unidad (ha / hrs / kg), nunca convertida a otra — ver
+             renderLaborDetalle (render.js). -->
+        <th>Labor</th><th>Etapa</th><th class="tr">OT Conf.</th><th class="tr">Trabajo Ejecutado</th>
         <th class="tr grp-pt">Labor Tercero</th><th>Contratista</th>
         <th class="tr">Insumos</th><th class="tr">Costo Total</th></tr></thead><tbody id="gld"></tbody></table></div></div>
     <div class="panel sub"><h3>Consumo de Gasoil por Área <span>"Labor Propia" = personal interno</span></h3>

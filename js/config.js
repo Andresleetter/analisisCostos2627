@@ -46,6 +46,15 @@ const INSUMOS_EXCLUIDOS = ["Afrecho de Arroz - CH"];
 // (proyeccionRTK) unicamente — ver data.js. consultaInsumos (combustible + modulo Insumos) NO
 // se filtra por campania: se procesa completo, tal como antes de introducir este filtro.
 const CAMPANIA_ACTUAL = '26/27';
+// Filtro de Campaña del modulo Servicios: rotulo y orden de las opciones. Es SOLO presentacion —
+// el valor que se usa para filtrar consultaOT sigue siendo la clave tal como viene en el dato
+// ('25', '26', '25/26', '26/27'), nunca la etiqueta. CAMPANIA_LABEL renombra las campanias de
+// zafriña, que en el export vienen como un año suelto y no se entienden por si solas; una campania
+// sin entrada acá se muestra con su clave original. CAMPANIA_ORDEN fija el orden de aparicion; las
+// campanias que no figuren en la lista (una nueva que aparezca en el export) se agregan al final,
+// asi el filtro nunca deja de mostrar una campania presente en consultaOT.
+const CAMPANIA_LABEL = {'25':'Zafriña25','26':'Zafriña26'};
+const CAMPANIA_ORDEN = ['25/26','26/27','25','26'];
 // Marcador de "lote cancelado" en consultaCultivos: en vez de borrar la fila, el plan RTK carga
 // 0.01 ha para lotes que se dieron de baja (a pedido del usuario). Sin este marcador, esos lotes
 // aparecerían en "Lotes con Exceso de Superficie" con una diferencia enorme (toda ha ejecutada
