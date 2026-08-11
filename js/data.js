@@ -78,6 +78,10 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
       cl:num(keyOf(r,['costoLabor','Costo Labor'])), ci:num(keyOf(r,['costoInsumo','Costo Insumo'])),
       ud:num(keyOf(r,['unidadesDosis','Unidades/Dosis'])), pu:num(keyOf(r,['precioUnitario','Precio Unitario'])),
       hr:numN(keyOf(r,['hectareasReales','Has. Reales'])),
+      // totalAplicado: cantidad realmente aplicada de la linea. Solo se usa para los trabajos con
+      // Unidad de Medida "Dosis" (fletes), donde es el peso ejecutado en kilogramos — ver esDosis
+      // mas abajo. Para el resto de las lineas no se lee ni se usa.
+      ta:num(keyOf(r,['totalAplicado','Total Aplicado'])),
       tipo:String(keyOf(r,['tipoItem','Tipo de Item'])||'').trim(),
       contr:String(keyOf(r,['contratista','Contratista'])||'').trim(),
       personal:String(keyOf(r,['personal','Personal'])||'').trim(),
@@ -85,7 +89,13 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
       unidad:String(keyOf(r,['unidadMedida','Unidad de medida'])||'').trim(),
       obs:String(keyOf(r,['observaciones','Observación','Observacion'])||'').trim(),
     })).filter(r=>r.ot && r.ot!=='undefined' && r.ot!=='nan');
-    out.forEach(r=>{ r.imp=r.ud*r.pu; r.esHoras=r.unidad.toLowerCase()==='horas'; });
+    // esDosis = linea con Unidad de Medida "Dosis" (los fletes). En estas lineas la cantidad
+    // ejecutada NO es Unidades/Dosis sino "totalAplicado", y se interpreta en kilogramos: el dato
+    // real trae Has. Reales = 0,01 en todas ellas (un marcador, no superficie), asi que mostrarlas
+    // como hectareas era incorrecto. El costo de estas lineas pasa a ser totalAplicado x Precio
+    // Unitario, tal como se pidio — en el dato real de OT confirmadas totalAplicado coincide
+    // exactamente con Unidades/Dosis, asi que el importe no cambia; la formula queda explicita.
+    out.forEach(r=>{ r.esDosis=r.unidad.toLowerCase()==='dosis'; r.imp=(r.esDosis?r.ta:r.ud)*r.pu; r.esHoras=r.unidad.toLowerCase()==='horas'; });
     return out;
   }
   const rows = normalizarFilasOT(raw);
@@ -116,10 +126,16 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
   // dejaria afuera la enorme mayoria del trabajo real por hectareas. La unica señal confiable en
   // los datos es "Horas" (explicito) para trabajo por horas; todo lo demas en la linea principal de
   // labor se considera hectareas.
+  // Se agrego una tercera modalidad, 'dosis': linea principal de labor con Unidad de Medida
+  // "Dosis" (fletes). Se evalua ANTES de 'hectareas' porque, con el criterio anterior, "Dosis"
+  // caia en el cajon de "todo lo demas es hectareas" y el flete se mostraba como 0,01 ha. No
+  // altera la clasificacion de ninguna otra linea: 'horas' sigue teniendo prioridad y el resto
+  // sigue cayendo en 'hectareas' igual que antes.
   function modalidadLaborOT(lineas){
     const laborLineas = lineas.filter(l=>l.tipo==='Labor Propia'||l.tipo==='Labor Tercero');
     if(!laborLineas.length) return lineas.length && lineas.every(l=>l.esHoras) ? 'horas' : null; // sin linea de labor identificable
-    return laborLineas.some(l=>l.esHoras) ? 'horas' : 'hectareas';
+    if(laborLineas.some(l=>l.esHoras)) return 'horas';
+    return laborLineas.some(l=>l.esDosis) ? 'dosis' : 'hectareas';
   }
   // group by OT — extraida a funcion, por el mismo motivo que normalizarFilasOT (reuso identico
   // para el filtro de Campaña de Servicios). Logica sin cambios.
@@ -135,6 +151,9 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
         ha: has.length?Math.max.apply(null,has):null,
         modalidad: modalidadLaborOT(g),
         horas: g.filter(x=>x.esHoras).reduce((s,x)=>s+x.ud,0),
+        // kg = peso ejecutado de los trabajos por "Dosis" (fletes): suma de totalAplicado de esas
+        // lineas, mismo criterio con que `horas` suma Unidades/Dosis de las lineas por Horas.
+        kg: g.filter(x=>x.esDosis).reduce((s,x)=>s+x.ta,0),
         imp: g.reduce((s,x)=>s+x.imp,0),
         propia: g.filter(x=>x.tipo==='Labor Propia').reduce((s,x)=>s+x.imp,0),
         tercero: g.filter(x=>x.tipo==='Labor Tercero').reduce((s,x)=>s+x.imp,0),
@@ -493,10 +512,17 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
     // sumadas, solo corrige a que fila del detalle se agrupan (puede fusionar filas antes separadas
     // por error).
     const esH = o.modalidad==='horas';
-    const key=m+'|'+o.serv+'|'+est+'|'+esH+'|'+contratista;
-    if(!dmap[key]) dmap[key]={mesnum:m,labor:o.serv,estadio:est,esH,contratista,n:0,ha:0,horas:0,propia:0,tercero:0,insumos:0};
-    const d=dmap[key]; d.n++; d.ha+=(o.ha||0); d.horas+=o.horas; d.propia+=o.propia; d.tercero+=o.tercero; d.insumos+=o.insumos; });
+    // unidadTrabajo = en que unidad se mide el trabajo ejecutado de esta fila. Reemplaza al viejo
+    // booleano esH en la clave de agrupacion para poder distinguir una tercera unidad (kg, fletes
+    // por Dosis) sin cambiar el agrupamiento de las otras dos: 'hrs' es exactamente el viejo
+    // esH===true y 'ha' exactamente el viejo esH===false (incluidas las OT de modalidad nula), asi
+    // que ninguna fila que no sea flete-Dosis se separa ni se fusiona respecto de antes.
+    const unidadTrabajo = esH ? 'hrs' : (o.modalidad==='dosis' ? 'kg' : 'ha');
+    const key=m+'|'+o.serv+'|'+est+'|'+unidadTrabajo+'|'+contratista;
+    if(!dmap[key]) dmap[key]={mesnum:m,labor:o.serv,estadio:est,esH,unidadTrabajo,contratista,n:0,ha:0,horas:0,kg:0,propia:0,tercero:0,insumos:0};
+    const d=dmap[key]; d.n++; d.ha+=(o.ha||0); d.horas+=o.horas; d.kg+=(o.kg||0); d.propia+=o.propia; d.tercero+=o.tercero; d.insumos+=o.insumos; });
   const gastos=Object.values(dmap).map(d=>({...d,ha:Math.round(d.ha*100)/100,horas:Math.round(d.horas*100)/100,
+    kg:Math.round(d.kg*100)/100,
     propia:Math.round(d.propia*100)/100,tercero:Math.round(d.tercero*100)/100,insumos:Math.round(d.insumos*100)/100}));
   // gasoil por (mes,area,personal) — se usa "Personal" (operario que retiró el combustible) y no
   // "Contratista" porque en las OT de gasoil el campo Contratista viene vacío; quien queda
@@ -523,8 +549,13 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
     if(esp(a)&&!esp(b)) return 1; if(!esp(a)&&esp(b)) return -1;
     return labelContratista(a).localeCompare(labelContratista(b),'es');
   });
+  // costo_conf = costo ejecutado de esta campania: importe de TODAS sus OT confirmadas, con la misma
+  // definicion que ya tenia el KPI "Costo Ejecutado" del Resumen Ejecutivo (labores con Servicio +
+  // OT de retiro de gasoil). Se suma directo sobre CONFin y no como gasto_total+gasoil_total porque
+  // `gastos` ya viene redondeado a 2 decimales por fila y esa suma arrastra centavos de diferencia.
+  const costo_conf=CONFin.reduce((s,o)=>s+o.imp,0);
   return {gastos,gasoil_sec,meses,gasto_total,gasoil_total,gasoil_litros_total,gmes,glit,
-    labores,estadios_labor,contratistas_labor};
+    labores,estadios_labor,contratistas_labor,costo_conf};
   }
   const SERVICIOS = construirServicios(CONF);
   const {gastos,gasoil_sec,meses,gasto_total,gasoil_total,gasoil_litros_total,gmes,glit,
@@ -542,6 +573,21 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
     const rowsC = normalizarFilasOT(rawTodasCampanias.filter(row=>campaniaDeFila(row)===c));
     servicios_campanias[c] = construirServicios(agruparOTS(rowsC).filter(o=>o.estado==='Confirmado'));
   });
+  // ---- Costo ejecutado CONSOLIDADO (todas las campanias de consultaOT) ----
+  // Es el unico numero economico que el Resumen Ejecutivo pasa a mirar mas alla de CAMPANIA_ACTUAL:
+  // alimenta el KPI "Costo Ejecutado" y nada mas. Sin riesgo de doble conteo: cada fila de
+  // consultaOT tiene exactamente un valor de 'campania', los paquetes de servicios_campanias se
+  // construyen sobre particiones disjuntas de esas filas (verificado contra el dato: la suma de
+  // filas por campania da el total exacto, no hay filas sin campania y ningun numero de OT aparece
+  // en mas de una campania), y la campania vigente entra una sola vez porque el forEach de arriba
+  // la saltea. `costo_total` (26/27) NO se toca: lo siguen usando los porcentajes de Gastos
+  // Operativos (operativas[].part / oper_part) y la alerta de concentracion de costo por labor, que
+  // deben seguir expresados sobre la campania vigente.
+  const costo_por_campania = Object.keys(servicios_campanias)
+    .map(c=>({campania:c, costo:Math.round(servicios_campanias[c].costo_conf*100)/100}))
+    .sort((a,b)=>b.costo-a.costo);
+  const costo_total_consolidado = Object.keys(servicios_campanias)
+    .reduce((s,c)=>s+servicios_campanias[c].costo_conf,0);
   // ---- COMBUSTIBLE (litros y contratistas) ----
   // Fuente: consultaInsumos, filtrada a tipoInsumo="COMBUSTIBLES" y ya sin las filas de
   // "Existencia inicial" (separadas antes de llegar acá — ver combustible_existencia_inicial).
@@ -927,7 +973,13 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
     // Gasto: Áreas No Agrícolas").
     kpis:{
       otAtrasadas:totalAtrasadas, otConfirmadas:ot_conf,
-      costoEjecutado:costo_total,
+      // Costo Ejecutado = consolidado de TODAS las campanias de consultaOT (ver
+      // costo_total_consolidado), no solo la vigente. Misma definicion de siempre (importe de las OT
+      // confirmadas), ampliada al resto de las campanias. Es el unico KPI de esta fila que sale de
+      // la consolidacion: otConfirmadas/otAtrasadas siguen siendo de CAMPANIA_ACTUAL, igual que
+      // antes, porque el pedido fue ampliar solo los costos de labores.
+      costoEjecutado:costo_total_consolidado,
+      costoPorCampania:costo_por_campania,
     },
     estadosOT:resumen_estadosOT,
     actividadMensual:resumen_actividadMensual,
@@ -941,6 +993,8 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
     labores,estadios_labor,contratistas_labor,
     // Solo para el filtro de Campaña del modulo Servicios (ver render.js: serviciosActivos()).
     campanias_ot,servicios_campanias,campania_actual:CAMPANIA_ACTUAL,
+    // Costo ejecutado consolidado de todas las campanias + su desglose (KPI del Resumen Ejecutivo).
+    costo_total_consolidado,costo_por_campania,
     combustible,combustible_litros_total,combustible_n_total,combustible_meses,combustible_terceros,
     combustible_ingresos,combustible_ingresos_litros_total,combustible_ingresos_n_total,
     combustible_existencia_inicial,stock_inicial_combustible,

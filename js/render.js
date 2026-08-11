@@ -60,7 +60,13 @@ function renderAll(){
   // vez acá; los demás filtros de Servicios (Mes/Labor/Etapa/Contratista) dependen de la campaña
   // elegida y se repueblan en poblarFiltrosServicios() cada vez que cambia.
   const selCamp=document.getElementById('gcampania'); selCamp.innerHTML='';
-  (D.campanias_ot||[]).forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;selCamp.appendChild(o);});
+  const campDisp=(D.campanias_ot||[]);
+  // Orden de presentacion: primero las de CAMPANIA_ORDEN que existan en el dato, después cualquier
+  // otra campania que traiga consultaOT (nunca se oculta ninguna). El value de cada option es
+  // SIEMPRE la clave real de consultaOT; CAMPANIA_LABEL solo cambia el texto visible.
+  const campOrdenadas=[...CAMPANIA_ORDEN.filter(c=>campDisp.includes(c)),
+    ...campDisp.filter(c=>!CAMPANIA_ORDEN.includes(c))];
+  campOrdenadas.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=CAMPANIA_LABEL[c]||c;selCamp.appendChild(o);});
   if([...selCamp.options].some(o=>o.value===D.campania_actual)) selCamp.value=D.campania_actual;
   poblarFiltrosServicios();
   // filtros de la pestaña Combustible (Mes / Tercero)
@@ -100,7 +106,12 @@ function renderResumenKPIs(){
   document.getElementById('exec-kpis').innerHTML=[
     kpiCard('OT Confirmadas', k.otConfirmadas, 'de '+D.total_ot+' totales', 'g'),
     kpiCard('OT Atrasadas', k.otAtrasadas, 'Pendiente/En Ejecución vencidas', atrasCol),
-    kpiCard('Costo Ejecutado', 'US$ '+fmtUSD(k.costoEjecutado), 'Solo OT confirmadas', 'gris'),
+    // Costo Ejecutado es el ÚNICO KPI de esta fila que consolida todas las campañas de consultaOT
+    // (ver costo_total_consolidado en data.js). El pie deja explícito el alcance y el desglose por
+    // campaña, para que el número no se lea como si fuera solo de la campaña vigente.
+    kpiCard('Costo Ejecutado', 'US$ '+fmtUSD(k.costoEjecutado),
+      'Solo OT confirmadas · '+(k.costoPorCampania||[]).length+' campaña(s): '+
+      (k.costoPorCampania||[]).map(c=>(CAMPANIA_LABEL[c.campania]||c.campania)+' US$ '+fmtUSD(c.costo)).join(' · '), 'gris'),
   ].join('');
 }
 
@@ -555,20 +566,33 @@ function renderLaborDetalle(){
   if(laborV!=='ALL') recs=recs.filter(r=>r.labor===laborV);
   if(estV!=='ALL') recs=recs.filter(r=>r.estadio===estV);
   if(contV!=='ALL') recs=recs.filter(r=>r.contratista===contV);
+  // La unidad del trabajo (r.unidadTrabajo: ha / hrs / kg) entra en la clave de agrupación: sin eso,
+  // una misma labor+etapa+contratista medida en dos unidades distintas caía en una sola fila y la
+  // columna "Trabajo Ejecutado" tenía que elegir una — mezclando unidades. Cada fila de la tabla
+  // queda ahora con una única unidad, y su cantidad se acumula solo en el campo que le corresponde.
   const by={};
-  recs.forEach(r=>{ const key=r.labor+'|'+r.estadio+'|'+r.contratista;
-    if(!by[key]) by[key]={labor:r.labor,estadio:r.estadio,contratista:r.contratista,esH:r.esH,n:0,ha:0,horas:0,prop:0,terc:0,ins:0};
-    const o=by[key]; o.n+=r.n; o.ha+=r.ha; o.horas+=r.horas; o.prop+=r.propia; o.terc+=r.tercero; o.ins+=r.insumos; });
+  recs.forEach(r=>{ const key=r.labor+'|'+r.estadio+'|'+r.contratista+'|'+r.unidadTrabajo;
+    if(!by[key]) by[key]={labor:r.labor,estadio:r.estadio,contratista:r.contratista,esH:r.esH,unidadTrabajo:r.unidadTrabajo,n:0,ha:0,horas:0,kg:0,prop:0,terc:0,ins:0};
+    const o=by[key]; o.n+=r.n; o.ha+=r.ha; o.horas+=r.horas; o.kg+=r.kg; o.prop+=r.propia; o.terc+=r.tercero; o.ins+=r.insumos; });
   const labs=Object.values(by).map(o=>({...o,tot:o.prop+o.terc+o.ins})).sort((a,b)=>b.tot-a.tot);
   document.getElementById('gld-sub').textContent=labs.length+' combinación(es) labor/etapa/contratista · ordenado por costo total';
   document.getElementById('gld').innerHTML= labs.length ? labs.map(l=>{
-    const ha=l.esH?'<span style="color:var(--muted)">—</span>':fmt2(l.ha), hr=l.esH?fmt2(l.horas):'<span style="color:var(--muted)">—</span>';
-    const chip=l.esH?'<span class="chip chip-hr">horas</span>':'<span class="chip chip-ha">ha</span>';
+    // "Trabajo Ejecutado": una sola columna con la cantidad ejecutada en la unidad propia de ese
+    // trabajo (l.unidadTrabajo, ver dmap en data.js). Nunca se convierte ni se suma entre unidades:
+    //   'ha'  -> Has. Reales      'hrs' -> horas de la labor      'kg' -> totalAplicado (fletes por Dosis)
+    // `chip` (columna Labor) y `unid` (columna Trabajo Ejecutado) usan el MISMO color por unidad —
+    // ver las variables --u-ha/--u-hrs/--u-kg en gastos.css, unica fuente de esos tres colores.
+    const U={ha:{val:l.ha,txt:'ha',chip:'chip-ha',unid:'tw-unid-ha'},
+      hrs:{val:l.horas,txt:'hrs',chip:'chip-hr',unid:'tw-unid-hrs'},
+      kg:{val:l.kg,txt:'kg',chip:'chip-kg',unid:'tw-unid-kg'}};
+    const u=U[l.unidadTrabajo]||U.ha;
+    const ejec=`${fmt2(u.val)} <span class="tw-unid ${u.unid}">${u.txt}</span>`;
+    const chip=`<span class="chip ${u.chip}">${u.txt}</span>`;
     const contratistaTxt=labelContratista(l.contratista);
     // Labor Propia no tiene costo de tercero asignado en el sistema (siempre US$ 0 en la columna
     // "Labor Tercero") — no hay columna de costo separada para Labor Propia en esta tabla.
-    return `<tr><td><span class="lname">${l.labor}</span> ${chip}</td><td><span class="chip chip-etapa">${l.estadio}</span></td><td class="tr mono">${l.n}</td><td class="tr mono">${ha}</td><td class="tr mono">${hr}</td><td class="tr mono col-terc">US$ ${fmtUSD(l.terc)}</td><td class="col-contratista" title="${contratistaTxt}">${contratistaTxt}</td><td class="tr mono col-ins">US$ ${fmtUSD(l.ins)}</td><td class="tr mono col-tot">US$ ${fmtUSD(l.tot)}</td></tr>`;
-  }).join('') : '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:16px">Sin registros para el filtro seleccionado</td></tr>';
+    return `<tr><td><span class="lname">${l.labor}</span> ${chip}</td><td><span class="chip chip-etapa">${l.estadio}</span></td><td class="tr mono">${l.n}</td><td class="tr mono">${ejec}</td><td class="tr mono col-terc">US$ ${fmtUSD(l.terc)}</td><td class="col-contratista" title="${contratistaTxt}">${contratistaTxt}</td><td class="tr mono col-ins">US$ ${fmtUSD(l.ins)}</td><td class="tr mono col-tot">US$ ${fmtUSD(l.tot)}</td></tr>`;
+  }).join('') : '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:16px">Sin registros para el filtro seleccionado</td></tr>';
 }
 
 // ---- Consumo de Gasoil por Área ----

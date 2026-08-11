@@ -28,12 +28,26 @@
 .qty-unit{white-space:nowrap}
 .ldt th{font-size:10px} .ldt td{padding:9px 8px} .ldt .lname{font-weight:700;color:var(--ink);font-size:12.5px}
 .col-terc{color:var(--teal);font-weight:800} .col-ins{color:var(--muted)} .col-tot{font-weight:800}
+/* Unidad de la columna "Trabajo Ejecutado" (ha / hrs / kg). Antes iba en un <small> gris claro que
+   quedaba casi ilegible al lado del numero; ahora va al mismo tamaño que el resto de la tabla y en
+   negrita, para que la unidad se lea de un vistazo sin competir con el valor. El color es el MISMO
+   que el del chip de esa unidad en la columna Labor (variables --u-* mas abajo), asi la unidad se
+   reconoce por color igual en las dos columnas. */
+.tw-unid{font-size:12.5px;font-weight:700;margin-left:2px}
+.tw-unid-ha{color:var(--u-ha)} .tw-unid-hrs{color:var(--u-hrs)} .tw-unid-kg{color:var(--u-kg)}
 .ldt th.grp-pt{color:var(--teal);border-bottom-color:var(--teal)}
 /* Columna Contratista: nombres reales pueden ser largos (razón social) — se truncan con elipsis y
    tooltip nativo (title) en vez de romper el ancho de la tabla o forzar scroll horizontal. */
 .col-contratista{max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;cursor:default}
 .chip{display:inline-block;font-size:9px;font-weight:700;padding:1px 6px;border-radius:var(--radius-sm);text-transform:uppercase;letter-spacing:.3px}
-.chip-ha{background:#e8f3dc;color:#3a5a10} .chip-hr{background:#dff0ec;color:#12564a}
+/* Color por unidad de medida: UNICA fuente de estos tres colores. La consumen el chip de la columna
+   Labor y la unidad de la columna "Trabajo Ejecutado" (.tw-unid-*), asi que cambiar el color acá lo
+   cambia en los dos lugares a la vez y nunca se desalinean. */
+:root{--u-ha:#3a5a10;--u-hrs:#12564a;--u-kg:#7a3030}
+.chip-ha{background:#e8f3dc;color:var(--u-ha)} .chip-hr{background:#dff0ec;color:var(--u-hrs)}
+/* kg: trabajos medidos por peso (fletes con Unidad de Medida "Dosis") — tercera unidad de la
+   columna "Trabajo Ejecutado", junto a ha y hrs. */
+.chip-kg{background:#f0e2e2;color:var(--u-kg)}
 .chip-etapa{background:#f0e6d2;color:#6b4f13}
 .scontr{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:14px}
 .scontr label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
