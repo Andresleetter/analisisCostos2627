@@ -16,5 +16,17 @@
     // Es explicito a proposito: como "directory" es la raiz del repo, sin esta regla un archivo o
     // carpeta llamado "api" taparia la ruta del proxy.
     "run_worker_first": ["/api/*"]
+  },
+  // Workers Logs: habilita los logs del Worker en el panel de Cloudflare, para poder leer los
+  // mensajes de diagnostico de worker/index.js (ej. que variable de entorno falta) sin necesidad de
+  // dejar un `wrangler tail` abierto. Esos mensajes nunca incluyen credenciales ni el token: solo
+  // texto fijo, nombres de variables y status HTTP.
+  // head_sampling_rate 1 = se registra el 100% de las invocaciones (sin muestreo).
+  "observability": {
+    "enabled": true,
+    "logs": {
+      "invocation_logs": true,
+      "head_sampling_rate": 1
+    }
   }
 }
