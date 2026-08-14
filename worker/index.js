@@ -52,7 +52,11 @@ const REPORTES = {
   '/api/albor/ordenes': {
     endpoint: '/Reportes/CuboOrdenesTrabajo',
     params: ['FechaDesde', 'FechaHasta', 'IdMoneda', 'TipoOrden', 'IdsCampanias'],
-    empresa: 'env',
+    // La empresa se elige por consulta (?empresa=1|5), igual que en los otros dos reportes: es la
+    // fuente que va a reemplazar a consultasOT y la comparacion contra el Excel tiene que poder
+    // fijar explicitamente con que X-Company se consulto (hoy, empresa 5). Antes salia de
+    // ALBOR_COMPANY; ningun consumidor dependia de eso — esta ruta todavia no la usa el dashboard.
+    empresa: 'parametro',
   },
   // OJO — el contrato real de CuboContable todavia NO esta confirmado contra la API. El endpoint se
   // dedujo por analogia con CuboOrdenesTrabajo, y la llamada sin parametros devuelve 400: se esta
