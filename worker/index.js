@@ -13,6 +13,7 @@
 // Rutas expuestas (ver la tabla REPORTES mas abajo):
 //   GET /api/albor/ordenes         -> /Reportes/CuboOrdenesTrabajo
 //   GET /api/albor/cubo-contable   -> /Reportes/CuboContable   (endpoint deducido, sin confirmar)
+//   GET /api/albor/cashflow        -> /Reportes/CuboCashFlow
 //
 // Flujo identico para todas ellas:
 //   1. login    POST {ALBOR_AUTH_URL}                        -> token temporal (response.data.token)
@@ -71,6 +72,21 @@ const REPORTES = {
     // contexto de la sesion, no el alcance del reporte. Si hace falta ver una sola empresa, hay que
     // filtrar por el campo idEmpresa de la respuesta o encontrar el parametro del reporte que lo
     // haga — todavia sin confirmar cual es.
+    empresa: 'parametro',
+  },
+  // CuboCashFlow. Parametros CONFIRMADOS del reporte, ninguno mas: NoPaginate, FechaHasta, IdMoneda
+  // e IdsEmpresas. IdsEmpresas SI es un parametro real del reporte (a diferencia de `empresa`, que
+  // es del proxy), asi que viaja tal cual hacia Albor.
+  // Reutiliza sin cambios el login automatico, el token temporal, el manejo de errores y el
+  // Cache-Control: no-store del resto del Worker — no hay logica de autenticacion propia de esta
+  // ruta. Igual que los demas, no hay valores por defecto acá: lo que no llega, no se manda.
+  '/api/albor/cashflow': {
+    endpoint: '/Reportes/CuboCashFlow',
+    params: ['NoPaginate', 'FechaHasta', 'IdMoneda', 'IdsEmpresas'],
+    // El header X-Company sigue saliendo de la lista blanca del proxy (?empresa=1|5), igual que en
+    // cubo-contable: el navegador elige entre las empresas habilitadas, nunca define el header.
+    // Que ademas exista IdsEmpresas no cambia eso — son dos cosas distintas: IdsEmpresas filtra el
+    // reporte, X-Company identifica el contexto de la sesion.
     empresa: 'parametro',
   },
 };

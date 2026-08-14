@@ -3,10 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Prueba · CuboContable (dinámico)</title>
+<title>Prueba · Albor (CuboContable y CashFlow)</title>
 <!-- Vista TEMPORAL de validacion. No forma parte del dashboard: index.html no la enlaza, no toca
      ninguna fuente estatica (los .xlsx) ni ningun calculo existente, y se puede borrar sin efecto.
-     Reutiliza las hojas de estilo del dashboard en modo lectura, sin modificarlas. -->
+     Reutiliza las hojas de estilo del dashboard en modo lectura, sin modificarlas.
+     Contiene DOS modulos independientes (CuboContable y Cash Flow) que se alternan con la
+     navegacion interna de mas abajo, sin recargar ni salir de la pagina. Comparten el mismo lenguaje
+     visual: los dos usan .panel/.kpi/.scroll del dashboard y las clases .tc-* de test-cubo.css, sin
+     una hoja de estilos propia por modulo. -->
 <link rel="stylesheet" href="css/base.css">
 <link rel="stylesheet" href="css/header.css">
 <link rel="stylesheet" href="css/panel.css">
@@ -20,11 +24,21 @@
   <header class="top">
     <div class="brand">
       <div class="b-txt">
-        <h1>Prueba de conexión · CuboContable</h1>
+        <h1>Prueba de conexión · Albor</h1>
         <div class="t-sub">Vista temporal de validación — datos en vivo desde el Worker, sin Excel</div>
       </div>
     </div>
   </header>
+
+  <!-- Navegación interna: alterna entre los dos módulos de esta misma página. No navega a ningún
+       lado — solo muestra/oculta la sección correspondiente (ver js/test-cubo-nav.js). -->
+  <nav class="tc-nav" id="tc-nav" aria-label="Módulos de prueba">
+    <button type="button" class="tc-nav-btn is-activo" data-mod="contable" aria-current="page">Cubo Contable</button>
+    <button type="button" class="tc-nav-btn" data-mod="cashflow">Cash Flow</button>
+  </nav>
+
+<!-- ============ MÓDULO 1: CUBO CONTABLE (sin cambios de lógica) ============ -->
+<section class="tc-mod" id="mod-contable">
 
   <div class="kpis" id="tc-kpis"></div>
 
@@ -85,9 +99,61 @@
       </tr></thead><tbody id="tc-filas"></tbody></table>
     </div>
   </div>
+</section>
+
+<!-- ============ MÓDULO 2: CASH FLOW (/Reportes/CuboCashFlow) ============ -->
+<!-- Módulo NUEVO e independiente del anterior: su propio estado, sus propios controles y su propio
+     archivo JS. No comparte ni modifica nada de la lógica de Cubo Contable. -->
+<section class="tc-mod" id="mod-cashflow" hidden>
+
+  <div class="kpis" id="cf-kpis"></div>
+
+  <div class="panel"><h3>Consulta de Cash Flow <span class="tc-sub-h">(NoPaginate = true · una sola petición)</span></h3>
+    <!-- Barra de filtros en una sola línea cuando hay espacio; en pantallas angostas los campos
+         bajan de renglón solos (flex-wrap), sin scroll horizontal. -->
+    <div class="tc-controles tc-controles-linea">
+      <label class="tc-campo">Empresa
+        <!-- Un solo selector define las DOS cosas: el parámetro `empresa` del proxy (que el Worker
+             valida contra su lista blanca para armar X-Company) y el parámetro IdsEmpresas del
+             reporte, que sí viaja a Albor. -->
+        <select id="cf-empresa">
+          <option value="5">Empresa 5</option>
+          <option value="1">Empresa 1</option>
+        </select>
+      </label>
+      <label class="tc-campo">Fecha Hasta
+        <input type="date" id="cf-hasta">
+      </label>
+      <label class="tc-campo">IdMoneda
+        <input type="text" id="cf-moneda" inputmode="numeric" autocomplete="off" value="2" placeholder="vacío = no enviar">
+      </label>
+      <button type="button" class="tc-btn tc-btn-linea" id="cf-consultar">Consultar de nuevo</button>
+    </div>
+    <div class="tc-url" id="cf-url"></div>
+  </div>
+
+  <div class="panel"><h3>Estructura real de la respuesta <span class="tc-sub-h">(tal como llega, sin interpretar)</span></h3>
+    <div class="scroll">
+      <table class="tc-estructura"><thead><tr>
+        <th>Clave del JSON</th><th>Tipo</th><th>Contenido</th>
+      </tr></thead><tbody id="cf-estructura"></tbody></table>
+    </div>
+    <div class="tc-origen" id="cf-campos"></div>
+  </div>
+
+  <div class="panel"><h3>Primeros registros <span id="cf-sub"></span></h3>
+    <div class="scroll">
+      <!-- Encabezado y celdas se arman con los campos REALES de la respuesta: no hay ninguna lista
+           de columnas prefijada, porque todavía no se sabe cuáles importan. -->
+      <table class="tc-tabla tc-tabla-cf"><thead><tr id="cf-head"></tr></thead><tbody id="cf-filas"></tbody></table>
+    </div>
+  </div>
+</section>
 </div>
 
 <script src="js/utils.js" defer></script>
+<script src="js/test-cubo-nav.js" defer></script>
 <script src="js/test-cubo-contable.js" defer></script>
+<script src="js/test-cubo-cashflow.js" defer></script>
 </body>
 </html>
