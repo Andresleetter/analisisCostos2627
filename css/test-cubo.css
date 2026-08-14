@@ -1,5 +1,16 @@
 /* Estilos EXCLUSIVOS de la vista temporal de prueba (test-cubo-contable.html).
-   Ningun archivo del dashboard carga esta hoja: se borra junto con la vista. */
+   Ningun archivo del dashboard carga esta hoja: se borra junto con la vista.
+   Los DOS modulos de la pagina (Cubo Contable y Cash Flow) comparten estas mismas clases y las del
+   dashboard (.panel/.kpi/.scroll/table): no hay una hoja ni un juego de estilos por modulo. */
+
+/* Navegacion interna entre modulos. Mismo lenguaje visual que las pestañas del dashboard, pero con
+   clases propias de esta vista para no depender de tabs.css (que index.html usa con otra logica). */
+.tc-nav{display:flex;gap:6px;margin-bottom:20px;background:var(--card);padding:6px;
+  border-radius:var(--radius-lg);border:1px solid var(--line);box-shadow:var(--shadow-sm)}
+.tc-nav-btn{flex:1;border:none;background:transparent;padding:11px 14px;font-family:inherit;
+  font-size:13px;font-weight:700;color:var(--muted);border-radius:var(--radius-sm);cursor:pointer}
+.tc-nav-btn:hover{background:#f2f6ef;color:var(--ink)}
+.tc-nav-btn.is-activo{background:var(--teal);color:#fff}
 .tc-btn{background:var(--card);color:var(--ink);border:1px solid var(--line);
   border-radius:var(--radius-input);padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer}
 .tc-btn:hover{border-color:var(--teal)}
@@ -19,6 +30,14 @@
 .tc-campo input,.tc-campo select{background:var(--card);color:var(--ink);border:1px solid var(--line);
   border-radius:var(--radius-input);padding:6px 9px;font-size:13px;font-family:inherit;min-width:150px}
 .tc-campo input:focus,.tc-campo select:focus{outline:none;border-color:var(--teal)}
+/* Barra de filtros de Cash Flow: los campos y el boton en UNA sola linea cuando entran, alineados
+   por abajo (los labels van arriba de cada control). En pantallas angostas el flex-wrap que ya trae
+   .tc-controles los baja de renglon solo — sin scroll horizontal ni media query propia. */
+.tc-controles-linea{align-items:flex-end;margin-bottom:0}
+.tc-controles-linea .tc-campo{flex:1 1 150px}
+.tc-controles-linea .tc-campo input,.tc-controles-linea .tc-campo select{min-width:0;width:100%}
+.tc-btn-linea{flex:0 0 auto;padding:8px 16px}
+@media(max-width:520px){.tc-btn-linea{width:100%}}
 /* URL exacta que se consulto: se muestra completa para poder reproducirla. Solo lleva los
    parametros del reporte — nunca token, credenciales ni headers, que viven dentro del Worker. */
 .tc-url{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;
@@ -28,6 +47,14 @@
    horizontal que ya aporta .scroll (tables.css). */
 .tc-tabla{min-width:1500px}
 .tc-tabla td{vertical-align:top}
+/* Cash Flow: la cantidad de columnas no se conoce de antemano (salen de los campos reales de la
+   respuesta), asi que no se fija un ancho minimo — la tabla crece con su contenido y el scroll
+   horizontal de .scroll se encarga del resto. */
+.tc-tabla-cf{min-width:0}
+.tc-tabla-cf th{white-space:nowrap}
+/* Estructura del JSON recibido: clave / tipo / contenido. */
+.tc-estructura{min-width:520px}
+.tc-estructura td{vertical-align:top}
 /* Celda sin dato real (null/undefined/vacio): guion tenue, en vez de dejarla vacia y en vez de
    inventar un 0 o un texto que no vino en la respuesta. */
 .tc-nulo{color:var(--muted);opacity:.55}
