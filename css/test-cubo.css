@@ -10,6 +10,8 @@
 /* Avance de la carga mensual: una fila por mes, con su estado y su tiempo. */
 .tc-meses{min-width:820px}
 .tc-meses td{white-space:nowrap}
+/* Marca de que ese mes no entro en una sola consulta y se pidio partido. */
+.tc-tramos{font-weight:400;font-size:11px;color:var(--muted)}
 /* Controles temporales de descubrimiento de parametros. */
 .tc-sub-h{font-weight:400;font-size:12px;color:var(--muted)}
 .tc-controles{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:12px}

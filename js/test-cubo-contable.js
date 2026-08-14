@@ -166,55 +166,99 @@ function tcRegistros(datos) {
   return null;
 }
 
-// URL de un mes. Solo lleva parametros del reporte: el token y las credenciales nunca pasan por acá.
-function tcUrlMes(m) {
-  const pars = [['FechaDesde', m.desde], ['FechaHasta', m.hasta]];
+// URL de un tramo. Solo lleva parametros del reporte: el token y las credenciales nunca pasan por acá.
+function tcUrl(desde, hasta) {
+  const pars = [['FechaDesde', desde], ['FechaHasta', hasta]];
   const moneda = $('tc-moneda').value.trim();
   if (moneda !== '') pars.push(['IdMoneda', moneda]);
   return TC_ENDPOINT + '?' + pars.map(([k, v]) => k + '=' + encodeURIComponent(v)).join('&');
 }
 
-// ---- Consulta de UN mes. Nunca lanza: deja el resultado en el propio mes para que un fallo no
-// corte la cadena ni descarte lo ya cargado.
-async function tcConsultarMes(m) {
-  m.estado = 'cargando';
-  // Se limpia TODO el resultado anterior (incluido el tiempo) para que un reintento no muestre los
-  // datos del intento fallido mientras la nueva consulta esta en curso.
-  m.registros = null; m.http = null; m.codigo = null; m.ms = null; m.datos = [];
-  TC.mesEnCurso = m;
-  tcPintar();
-
-  const t0 = performance.now();
+// ---- Consulta de UN tramo de fechas. Nunca lanza: devuelve siempre el mismo objeto de resultado
+// para que un fallo no corte la cadena ni descarte lo ya cargado.
+async function tcConsultarTramo(desde, hasta) {
   let resp, cuerpo;
   try {
     // cache:'no-store' del lado del navegador, en linea con el Cache-Control: no-store que ya
     // devuelve el Worker: cada consulta trae el dato actual de Albor.
-    resp = await fetch(tcUrlMes(m), { cache: 'no-store', headers: { 'Accept': 'application/json' } });
+    resp = await fetch(tcUrl(desde, hasta), { cache: 'no-store', headers: { 'Accept': 'application/json' } });
     cuerpo = await resp.json();
   } catch (e) {
     // Se informa el tipo de fallo, nunca headers ni credenciales (que ademas nunca llegan acá).
-    m.estado = 'error'; m.codigo = 'sin_conexion_' + ((e && e.name) || 'Error');
-    m.ms = performance.now() - t0;
-    return;
+    return { ok: false, http: null, codigo: 'sin_conexion_' + ((e && e.name) || 'Error'), datos: [] };
   }
-  m.ms = performance.now() - t0;
-  m.http = resp.status;
 
   if (!resp.ok || !cuerpo || cuerpo.ok !== true) {
-    // El Worker ya devuelve un error controlado y sin detalle sensible: se muestra su codigo tal cual.
-    m.estado = 'error';
-    m.codigo = (cuerpo && cuerpo.error && cuerpo.error.codigo) || 'desconocido';
-    return;
+    // El Worker ya devuelve un error controlado y sin detalle sensible: se pasa su codigo tal cual.
+    return { ok: false, http: resp.status, datos: [],
+      codigo: (cuerpo && cuerpo.error && cuerpo.error.codigo) || 'desconocido' };
   }
 
   const registros = tcRegistros(cuerpo.datos);
-  if (registros === null) {
-    m.estado = 'error'; m.codigo = 'formato_inesperado';
+  if (registros === null) return { ok: false, http: resp.status, codigo: 'formato_inesperado', datos: [] };
+  return { ok: true, http: resp.status, codigo: null, datos: registros };
+}
+
+// ---- Consulta de UN mes, con subdivision automatica.
+// Un mes grande puede pasarse del timeout del Worker (marzo 2026 pesa ~26 MB y termina en 502
+// upstream_inaccesible), asi que si el tramo se cae POR TIEMPO se parte al medio y se piden las dos
+// mitades por separado. Solo se subdivide en fallos de tiempo: un 400 o un 401 se repetirian igual
+// en cada mitad, no tiene sentido insistir. El corte sigue siendo unicamente por fecha — ningun
+// tramo cambia los parametros ni agrega filtros.
+const TC_SUBDIVISIBLE = ['upstream_inaccesible', 'sin_conexion_TimeoutError', 'sin_conexion_AbortError'];
+const TC_MIN_DIAS = 2; // por debajo de esto ya no se parte: si falla, es un problema real
+
+const tcDia = iso => Date.UTC(+iso.slice(0, 4), +iso.slice(5, 7) - 1, +iso.slice(8, 10));
+const tcDesdeDia = ms => new Date(ms).toISOString().slice(0, 10);
+const tcDias = (desde, hasta) => Math.round((tcDia(hasta) - tcDia(desde)) / 86400000) + 1;
+
+// Devuelve {datos, tramos, error} — `error` solo si algun tramo fallo sin poder subdividirse mas.
+async function tcCargarRango(m, desde, hasta) {
+  m.tramoEnCurso = desde + ' → ' + hasta;
+  tcPintar();
+  const r = await tcConsultarTramo(desde, hasta);
+  if (r.ok) return { datos: r.datos, tramos: 1, error: null };
+
+  const dias = tcDias(desde, hasta);
+  if (!TC_SUBDIVISIBLE.includes(r.codigo) || dias < TC_MIN_DIAS * 2) {
+    return { datos: [], tramos: 1, error: { http: r.http, codigo: r.codigo } };
+  }
+
+  // Se parte al medio y se piden las dos mitades, cada una con el mismo tratamiento (puede volver a
+  // partirse si sigue sin entrar en el tiempo).
+  const corte = tcDesdeDia(tcDia(desde) + Math.floor(dias / 2) * 86400000);
+  const anterior = tcDesdeDia(tcDia(corte) - 86400000);
+  const a = await tcCargarRango(m, desde, anterior);
+  const b = await tcCargarRango(m, corte, hasta);
+  return {
+    datos: a.datos.concat(b.datos),
+    tramos: a.tramos + b.tramos,
+    error: a.error || b.error,
+  };
+}
+
+async function tcConsultarMes(m) {
+  m.estado = 'cargando';
+  // Se limpia TODO el resultado anterior (incluido el tiempo) para que un reintento no muestre los
+  // datos del intento fallido mientras la nueva consulta esta en curso.
+  m.registros = null; m.http = null; m.codigo = null; m.ms = null; m.datos = []; m.tramos = null;
+  TC.mesEnCurso = m;
+  tcPintar();
+
+  const t0 = performance.now();
+  const r = await tcCargarRango(m, m.desde, m.hasta);
+  m.ms = performance.now() - t0;
+  m.tramoEnCurso = null;
+  m.tramos = r.tramos;
+
+  if (r.error) {
+    m.estado = 'error'; m.http = r.error.http; m.codigo = r.error.codigo;
     return;
   }
   m.estado = 'ok';
-  m.datos = registros;
-  m.registros = registros.length;
+  m.http = 200;
+  m.datos = r.datos;
+  m.registros = r.datos.length;
 }
 
 // ---- Carga completa: mes a mes, en orden y de a uno. Secuencial a proposito — cada consulta pesa
@@ -261,7 +305,9 @@ function tcPintarKpis() {
 
   $('tc-kpis').innerHTML =
     tcKpi('Año consultado', String(TC_ANIO), 'Recorte solo por fecha, sin filtro de campaña') +
-    tcKpi('Mes en curso', enCurso, TC.mesEnCurso ? TC.mesEnCurso.desde + ' → ' + TC.mesEnCurso.hasta : 'Consultas mensuales independientes') +
+    tcKpi('Mes en curso', enCurso, TC.mesEnCurso
+      ? (TC.mesEnCurso.tramoEnCurso || (TC.mesEnCurso.desde + ' → ' + TC.mesEnCurso.hasta))
+      : 'Consultas mensuales independientes') +
     tcKpi('Registros acumulados', tcNum(acumulados.length), 'Suma de los meses que cargaron bien') +
     tcKpi('Meses completados', ok.length + ' / ' + TC.meses.length, 'Con respuesta HTTP 200') +
     tcKpi('Meses con error', String(err.length), err.length ? 'Reintentables de a uno' : 'Ninguno', err.length ? 'tc-err' : '') +
@@ -281,7 +327,10 @@ function tcPintarMeses() {
     return '<tr>' +
       '<td>' + esc(m.nombre) + '</td>' +
       '<td class="tc-crudo">' + esc(m.desde) + ' → ' + esc(m.hasta) + '</td>' +
-      '<td class="' + clase + '">' + esc(TC_ETIQUETA[m.estado]) + '</td>' +
+      // Si el mes hubo que partirlo por tiempo, se dice en cuantos tramos se pidio: el dato sale de
+      // varias consultas y eso tiene que quedar a la vista.
+      '<td class="' + clase + '">' + esc(TC_ETIQUETA[m.estado]) +
+        (m.tramos > 1 ? ' <span class="tc-tramos">' + m.tramos + ' tramos</span>' : '') + '</td>' +
       '<td>' + (m.http === null ? '—' : esc(String(m.http))) + '</td>' +
       '<td>' + (m.codigo ? esc(m.codigo) : '—') + '</td>' +
       '<td class="tr">' + (m.registros === null ? '—' : tcNum(m.registros)) + '</td>' +
@@ -319,8 +368,9 @@ function tcPintarTabla() {
 
 function tcPintar() {
   $('tc-cargar').disabled = TC.cargando;
-  $('tc-url').textContent = TC.mesEnCurso
-    ? 'GET ' + tcUrlMes(TC.mesEnCurso)
+  const enCurso = TC.mesEnCurso && TC.mesEnCurso.tramoEnCurso ? TC.mesEnCurso.tramoEnCurso.split(' → ') : null;
+  $('tc-url').textContent = enCurso
+    ? 'GET ' + tcUrl(enCurso[0], enCurso[1])
     : 'GET ' + TC_ENDPOINT + '?FechaDesde=aaaa-mm-dd&FechaHasta=aaaa-mm-dd&IdMoneda=…  (una consulta por mes)';
   tcPintarKpis();
   tcPintarMeses();
