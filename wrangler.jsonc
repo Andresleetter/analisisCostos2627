@@ -22,6 +22,19 @@
     // carpeta llamado "api" taparia la ruta del proxy.
     "run_worker_first": ["/api/*"]
   },
+  // Autenticacion centralizada contra Albor (ver la clase AlborAuth en worker/index.js): una unica
+  // instancia logica guarda el token y su vencimiento, para que todos los endpoints /api/albor/*
+  // reutilicen el mismo mientras siga vigente en vez de hacer login en cada consulta.
+  "durable_objects": {
+    "bindings": [
+      { "name": "ALBOR_AUTH", "class_name": "AlborAuth" }
+    ]
+  },
+  // Almacenamiento SQLite para el Durable Object (new_sqlite_classes). El objeto solo guarda dos
+  // claves —el token y su expiracion—, nunca credenciales ni datos de reportes.
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["AlborAuth"] }
+  ],
   // Workers Logs: habilita los logs del Worker en el panel de Cloudflare, para poder leer los
   // mensajes de diagnostico de worker/index.js (ej. que variable de entorno falta) sin necesidad de
   // dejar un `wrangler tail` abierto. Esos mensajes nunca incluyen credenciales ni el token: solo
