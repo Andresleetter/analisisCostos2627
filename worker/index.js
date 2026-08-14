@@ -74,15 +74,20 @@ const REPORTES = {
     // haga — todavia sin confirmar cual es.
     empresa: 'parametro',
   },
-  // CuboCashFlow. Parametros CONFIRMADOS del reporte, ninguno mas: NoPaginate, FechaHasta, IdMoneda
-  // e IdsEmpresas. IdsEmpresas SI es un parametro real del reporte (a diferencia de `empresa`, que
-  // es del proxy), asi que viaja tal cual hacia Albor.
+  // CuboCashFlow. Parametros del reporte, ninguno mas. IdsEmpresas SI es un parametro real del
+  // reporte (a diferencia de `empresa`, que es del proxy), asi que viaja tal cual hacia Albor.
+  // FechaDesde NO estaba en la lista original de parametros confirmados: se agrego porque los cuatro
+  // confirmados (NoPaginate, FechaHasta, IdMoneda, IdsEmpresas) devuelven 400 parametros_invalidos
+  // en TODAS sus combinaciones y formatos probados (con/sin cada uno, NoPaginate true/True/1,
+  // FechaHasta aaaa-mm-dd / con hora / dd/mm/aaaa, empresas 1 y 5). El 400 —y no un 404— confirma
+  // que el endpoint existe y que lo que rechaza son los parametros. Se prueba con FechaDesde por
+  // analogia con los otros dos cubos, que exigen el rango completo. Si tampoco alcanza, se saca.
   // Reutiliza sin cambios el login automatico, el token temporal, el manejo de errores y el
   // Cache-Control: no-store del resto del Worker — no hay logica de autenticacion propia de esta
   // ruta. Igual que los demas, no hay valores por defecto acá: lo que no llega, no se manda.
   '/api/albor/cashflow': {
     endpoint: '/Reportes/CuboCashFlow',
-    params: ['NoPaginate', 'FechaHasta', 'IdMoneda', 'IdsEmpresas'],
+    params: ['NoPaginate', 'FechaDesde', 'FechaHasta', 'IdMoneda', 'IdsEmpresas'],
     // El header X-Company sigue saliendo de la lista blanca del proxy (?empresa=1|5), igual que en
     // cubo-contable: el navegador elige entre las empresas habilitadas, nunca define el header.
     // Que ademas exista IdsEmpresas no cambia eso — son dos cosas distintas: IdsEmpresas filtra el

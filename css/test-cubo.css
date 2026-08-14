@@ -37,6 +37,8 @@
 .tc-controles-linea .tc-campo{flex:1 1 150px}
 .tc-controles-linea .tc-campo input,.tc-controles-linea .tc-campo select{min-width:0;width:100%}
 .tc-btn-linea{flex:0 0 auto;padding:8px 16px}
+/* Aclaracion dentro del label de un filtro (ej. "vacío = no enviar"), sin competir con el nombre. */
+.tc-campo-nota{font-size:11px;opacity:.75}
 @media(max-width:520px){.tc-btn-linea{width:100%}}
 /* URL exacta que se consulto: se muestra completa para poder reproducirla. Solo lleva los
    parametros del reporte — nunca token, credenciales ni headers, que viven dentro del Worker. */

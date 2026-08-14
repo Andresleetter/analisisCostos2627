@@ -121,6 +121,12 @@
           <option value="1">Empresa 1</option>
         </select>
       </label>
+      <!-- Fecha Desde NO estaba entre los parámetros confirmados: se agregó para diagnosticar el
+           400 que devuelven los otros cuatro. Vacío = no se envía, así se puede reproducir la
+           consulta original sin tocar nada. -->
+      <label class="tc-campo">Fecha Desde <span class="tc-campo-nota">(vacío = no enviar)</span>
+        <input type="date" id="cf-desde">
+      </label>
       <label class="tc-campo">Fecha Hasta
         <input type="date" id="cf-hasta">
       </label>
