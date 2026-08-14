@@ -33,6 +33,14 @@
        Worker. El unico recorte es por fecha: no se filtra por campaña ni por dimension1. -->
   <div class="panel"><h3>Consulta de 2026 <span class="tc-sub-h">(una petición por mes, desde el 01/01/2026)</span></h3>
     <div class="tc-controles">
+      <label class="tc-campo">Empresa
+        <!-- El Worker valida este valor contra su propia lista y arma el header X-Company; la pagina
+             solo elige cual. Cambiar de empresa no requiere tocar variables ni volver a desplegar. -->
+        <select id="tc-empresa">
+          <option value="5">Empresa 5</option>
+          <option value="1">Empresa 1</option>
+        </select>
+      </label>
       <label class="tc-campo">Hasta el mes
         <select id="tc-hasta-mes"></select>
       </label>

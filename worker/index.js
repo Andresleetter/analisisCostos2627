@@ -26,7 +26,9 @@
 //   VARS no sensibles (pueden ir como vars normales):
 //     ALBOR_LOGIN_APP         campo "app" del cuerpo del login
 //     ALBOR_LOGIN_INSTALLATION campo "installation" del cuerpo del login
-//     ALBOR_COMPANY           se envia como header X-Company al reporte
+//     ALBOR_COMPANY           X-Company de los reportes con empresa:'env' (hoy solo /ordenes).
+//                             YA NO es obligatoria para todo el Worker: cubo-contable elige la
+//                             empresa por consulta, sin tocar Variables and Secrets ni redesplegar.
 //     ALBOR_AUTH_URL          opcional, por defecto AUTH_URL_DEFAULT
 //     ALBOR_BASE_URL          opcional, por defecto BASE_URL_DEFAULT
 // Ya NO existe ningun ALBOR_TOKEN fijo: el token se obtiene en cada peticion y vive solo en memoria
@@ -42,10 +44,14 @@ const BASE_URL_DEFAULT = 'https://backend.alboragro.com';
 // parametro de mas en la URL del navegador no puede llegar al upstream sin pasar por acá. Se usa
 // getAll/append para soportar los que vienen repetidos (ej. IdsCampanias con varias campanias).
 // Agregar un reporte o un parametro = tocar solo esta tabla.
+// `empresa` define de donde sale el header X-Company de ESE reporte:
+//   'env'        -> del valor fijo de ALBOR_COMPANY (comportamiento historico)
+//   'parametro'  -> se elige por consulta con ?empresa=, contra la lista blanca de mas abajo
 const REPORTES = {
   '/api/albor/ordenes': {
     endpoint: '/Reportes/CuboOrdenesTrabajo',
     params: ['FechaDesde', 'FechaHasta', 'IdMoneda', 'TipoOrden', 'IdsCampanias'],
+    empresa: 'env',
   },
   // OJO — el contrato real de CuboContable todavia NO esta confirmado contra la API. El endpoint se
   // dedujo por analogia con CuboOrdenesTrabajo, y la llamada sin parametros devuelve 400: se esta
@@ -56,17 +62,27 @@ const REPORTES = {
   '/api/albor/cubo-contable': {
     endpoint: '/Reportes/CuboContable',
     params: ['FechaDesde', 'FechaHasta', 'IdMoneda'],
+    // La empresa se elige en cada consulta (?empresa=1 o 5) en vez de quedar fija en una variable de
+    // Cloudflare: cambiar de empresa no necesita tocar Variables and Secrets ni volver a desplegar.
+    empresa: 'parametro',
   },
 };
 
+// Empresas habilitadas para el modo 'parametro'. Es una LISTA BLANCA a proposito: el valor que llega
+// del navegador nunca se usa tal cual para armar el header — solo sirve para elegir una de estas
+// entradas. Asi el frontend no puede definir un X-Company arbitrario aunque manipule la URL.
+const EMPRESAS_PERMITIDAS = { '1': '1', '5': '5' };
+const PARAM_EMPRESA = 'empresa';
+
 // Variables sin las cuales no tiene sentido ni intentar la llamada. Solo los NOMBRES viven en el
 // codigo; los valores siempre salen de env.
+// ALBOR_COMPANY ya NO esta acá: solo hace falta para los reportes con empresa:'env'. Se valida en ese
+// caso puntual, no para todo el Worker.
 const ENV_REQUERIDAS = [
   'ALBOR_LOGIN_KEY',
   'ALBOR_LOGIN_PASSWORD',
   'ALBOR_LOGIN_APP',
   'ALBOR_LOGIN_INSTALLATION',
-  'ALBOR_COMPANY',
 ];
 
 // Corte de cada llamada al upstream, para no dejar la peticion colgada si Albor no responde.
@@ -202,6 +218,29 @@ async function consultarReporte(request, env, reporte) {
     return errorControlado('config_incompleta', 'El proxy de Albor no está configurado.', 500);
   }
 
+  // ---- Empresa (X-Company). Se resuelve ANTES del login: si el pedido no identifica una empresa
+  // valida, se corta acá y no se contacta a Albor — ni para autenticarse ni para el reporte.
+  let xCompany;
+  if (reporte.empresa === 'parametro') {
+    const pedida = String(new URL(request.url).searchParams.get(PARAM_EMPRESA) || '').trim();
+    if (pedida === '') {
+      return errorControlado('empresa_requerida', 'Falta el parámetro empresa.', 400);
+    }
+    // El valor sale SIEMPRE de la lista blanca, nunca del texto recibido: el navegador elige entre
+    // las empresas habilitadas, no define el header.
+    if (!Object.prototype.hasOwnProperty.call(EMPRESAS_PERMITIDAS, pedida)) {
+      return errorControlado('empresa_invalida', 'El parámetro empresa no corresponde a una empresa habilitada.', 400);
+    }
+    xCompany = EMPRESAS_PERMITIDAS[pedida];
+  } else {
+    // Reportes que siguen usando la empresa fija de Cloudflare.
+    xCompany = String((env && env.ALBOR_COMPANY) || '').trim();
+    if (xCompany === '') {
+      logInterno('faltan variables de entorno: ALBOR_COMPANY');
+      return errorControlado('config_incompleta', 'El proxy de Albor no está configurado.', 500);
+    }
+  }
+
   let token;
   try {
     token = await obtenerToken(env);
@@ -242,7 +281,8 @@ async function consultarReporte(request, env, reporte) {
     resp = await fetch(destino.toString(), {
       method: 'GET',
       headers: {
-        'X-Company': String(env.ALBOR_COMPANY).trim(),
+        // Valor ya resuelto y validado mas arriba; nunca el texto crudo que mando el navegador.
+        'X-Company': xCompany,
         'Authorization': 'Bearer ' + token,
         'Accept': 'application/json',
       },

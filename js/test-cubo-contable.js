@@ -17,6 +17,11 @@
 // ningun dato simulado — si el endpoint no responde, la vista lo dice, no rellena con nada.
 const TC_ENDPOINT = '/api/albor/cubo-contable';
 
+// Empresa de la consulta. Va como parametro del proxy (NO del reporte): el Worker lo valida contra
+// su propia lista blanca y recien ahi arma el header X-Company. Cambiar de empresa desde el selector
+// no toca ninguna variable de Cloudflare ni necesita un deploy nuevo.
+const PARAM_EMPRESA = 'empresa';
+
 // El reporte real trae decenas de miles de registros: se listan solo los primeros para que la pagina
 // siga siendo usable. El total acumulado se informa aparte, siempre completo y sin recortar.
 const TC_MAX_FILAS = 50;
@@ -143,7 +148,7 @@ const tcNum = n => n.toLocaleString('es-PY');
 // ---- Estado de la carga. Vive solo en memoria de la pagina; nada se persiste ni se manda a ningun
 // lado. `meses` es la unica fuente de verdad: los acumulados se derivan de ahi, asi que reintentar
 // un mes no puede duplicar ni perder registros de los demas.
-const TC = { meses: [], cargando: false, inicio: null, ms: null, mesEnCurso: null };
+const TC = { meses: [], cargando: false, inicio: null, ms: null, mesEnCurso: null, empresa: null };
 
 const tcOk = () => TC.meses.filter(m => m.estado === 'ok');
 const tcErrores = () => TC.meses.filter(m => m.estado === 'error');
@@ -168,7 +173,12 @@ function tcRegistros(datos) {
 
 // URL de un tramo. Solo lleva parametros del reporte: el token y las credenciales nunca pasan por acá.
 function tcUrl(desde, hasta) {
-  const pars = [['FechaDesde', desde], ['FechaHasta', hasta]];
+  // `empresa` no es un parametro del reporte: el Worker lo valida contra su lista y lo usa solo para
+  // armar el header X-Company. No se reenvia a Albor.
+  // Se usa la empresa con la que ARRANCO la carga, no la del selector: si se cambia el selector con
+  // meses ya cargados, un reintento no puede traer datos de otra empresa y mezclarlos.
+  const pars = [[PARAM_EMPRESA, TC.empresa || $('tc-empresa').value],
+    ['FechaDesde', desde], ['FechaHasta', hasta]];
   const moneda = $('tc-moneda').value.trim();
   if (moneda !== '') pars.push(['IdMoneda', moneda]);
   return TC_ENDPOINT + '?' + pars.map(([k, v]) => k + '=' + encodeURIComponent(v)).join('&');
@@ -270,6 +280,7 @@ async function tcConsultarMes(m) {
 async function tcCargar() {
   if (TC.cargando) return;
   TC.cargando = true;
+  TC.empresa = $('tc-empresa').value;
   TC.meses = tcRangos(Number($('tc-hasta-mes').value));
   TC.inicio = performance.now(); TC.ms = null;
   tcPintar();
@@ -308,7 +319,8 @@ function tcPintarKpis() {
     : (TC.cargando && TC.inicio !== null ? 'en curso…' : '—');
 
   $('tc-kpis').innerHTML =
-    tcKpi('Año consultado', String(TC_ANIO), 'Recorte solo por fecha, sin filtro de campaña') +
+    tcKpi('Año consultado', String(TC_ANIO),
+      (TC.empresa ? 'Empresa ' + TC.empresa + ' · ' : '') + 'recorte solo por fecha, sin filtro de campaña') +
     tcKpi('Mes en curso', enCurso, TC.mesEnCurso
       ? (TC.mesEnCurso.tramoEnCurso || (TC.mesEnCurso.desde + ' → ' + TC.mesEnCurso.hasta))
       : 'Consultas mensuales independientes') +
