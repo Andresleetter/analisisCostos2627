@@ -2,6 +2,11 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "campaniadelsur",
   "compatibility_date": "2026-07-28",
+  // Las variables de Albor se configuran a mano en Cloudflare (panel del Worker), NUNCA en este
+  // archivo ni en el codigo. Por defecto, un deploy borra las vars que existen en el panel pero no
+  // estan declaradas en la config; keep_vars lo evita, asi cada deploy conserva las que ya estan
+  // cargadas. (Los Secrets no se ven afectados por esto: un deploy nunca los borra.)
+  "keep_vars": true,
   // Worker/proxy hacia la API de Albor (ver worker/index.js).
   "main": "worker/index.js",
   "assets": {
