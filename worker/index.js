@@ -159,10 +159,36 @@ const DIAGNOSTICO_REPORTE = {
 // `parametros` son solo los NOMBRES de los parametros que se reenviaron al upstream (nunca sus
 // valores): es lo que permite ver, desde la vista de prueba, con que combinacion se probo y cual
 // quedo afuera por no estar en la lista blanca. No es informacion sensible.
-function errorReporte(statusUpstream, codigo, mensaje, parametros) {
+function errorReporte(statusUpstream, codigo, mensaje, parametros, campos) {
   const s = Number.isInteger(statusUpstream) && statusUpstream >= 400 && statusUpstream <= 599
     ? statusUpstream : 502;
-  return json({ ok: false, error: { codigo, mensaje, status: s }, parametros: parametros || [] }, s);
+  const cuerpo = { ok: false, error: { codigo, mensaje, status: s }, parametros: parametros || [] };
+  if (campos && campos.length) cuerpo.error.campos = campos;
+  return json(cuerpo, s);
+}
+
+// ---- Campos que el upstream marco como invalidos, ante un 400. UNICA excepcion a la regla de no
+// mirar el cuerpo del error, y esta acotada a proposito: se devuelven exclusivamente las CLAVES del
+// objeto de validacion (nombres de campos como "FechaDesde" o "IdsSucursales"), nunca sus valores ni
+// ningun texto libre de la respuesta. Sin esto no hay forma de saber que parametro falta en un
+// reporte cuyo contrato todavia no esta confirmado.
+// Dos candados para que no pueda escaparse nada mas:
+//   1. Solo se leen claves de un objeto plano; los VALORES (que son los mensajes) no se tocan nunca.
+//   2. Cada clave tiene que ser un identificador corto (letras, digitos, _ . [ ]). Cualquier cosa con
+//      espacios, guiones o mas de 60 caracteres —o sea, cualquier mensaje, URL o token— queda afuera.
+const CAMPO_VALIDO = /^[A-Za-z0-9_.[\]]{1,60}$/;
+const CAMPOS_MAX = 12;
+
+function camposInvalidos(texto) {
+  let cuerpo;
+  try {
+    cuerpo = JSON.parse(texto);
+  } catch (e) {
+    return [];
+  }
+  const errores = cuerpo && cuerpo.errors;
+  if (!errores || typeof errores !== 'object' || Array.isArray(errores)) return [];
+  return Object.keys(errores).filter(k => CAMPO_VALIDO.test(k)).slice(0, CAMPOS_MAX);
 }
 
 // Diagnostico del lado del Worker. Solo texto fijo y, como mucho, NOMBRES de variables o un status
@@ -334,11 +360,21 @@ async function consultarReporte(request, env, reporte) {
     // de permisos o del servicio. El cuerpo del error del upstream NO se reenvia al navegador ni se
     // loguea: puede traer detalle interno o el propio token en el eco del request.
     const diag = DIAGNOSTICO_REPORTE[resp.status];
+    // Solo ante un 400 se mira el cuerpo, y solo para sacar NOMBRES de campos (ver camposInvalidos:
+    // los mensajes y cualquier otro contenido quedan afuera por construccion). Para el resto de los
+    // status el cuerpo se sigue descartando sin leer.
+    let campos = [];
+    if (resp.status === 400) {
+      try {
+        campos = camposInvalidos(await resp.text());
+      } catch (e) { campos = []; }
+    }
     logInterno('el reporte respondio ' + resp.status + (diag ? ' (' + diag[0] + ')' : '') +
-      ' — parametros enviados: ' + (enviados.length ? enviados.join(', ') : '(ninguno)'));
+      ' — parametros enviados: ' + (enviados.length ? enviados.join(', ') : '(ninguno)') +
+      (campos.length ? ' — campos rechazados: ' + campos.join(', ') : ''));
     return diag
-      ? errorReporte(resp.status, diag[0], diag[1], enviados)
-      : errorReporte(resp.status, 'upstream_error', 'Albor no devolvió el reporte solicitado (HTTP ' + resp.status + ').', enviados);
+      ? errorReporte(resp.status, diag[0], diag[1], enviados, campos)
+      : errorReporte(resp.status, 'upstream_error', 'Albor no devolvió el reporte solicitado (HTTP ' + resp.status + ').', enviados, campos);
   }
 
   let datos;
