@@ -173,6 +173,9 @@ async function cfConsultar() {
     CF.estado = 'error';
     CF.codigo = (cuerpo && cuerpo.error && cuerpo.error.codigo) || 'desconocido';
     CF.parametros = (cuerpo && cuerpo.parametros) || [];
+    // Nombres de los campos que el reporte marco como invalidos, cuando Albor los informa (ver
+    // camposInvalidos en el Worker: solo nombres, nunca mensajes ni valores).
+    CF.campos = (cuerpo && cuerpo.error && cuerpo.error.campos) || [];
     cfPintar();
     return;
   }
@@ -223,8 +226,12 @@ function cfPintarKpis() {
       'NoPaginate = ' + CF_NO_PAGINATE + (CF.desde ? ' · desde ' + CF.desde : ' · sin FechaDesde')) +
     cfKpi('Registros recibidos', CF.estado === 'ok' ? cfNum(CF.registros.length) : '—',
       CF.estado === 'ok' ? 'En la clave "' + CF.claveLista + '"' : 'Total sin recortar') +
-    cfKpi('Campos por registro', CF.estado === 'ok' ? String(CF.campos.length) : '—',
-      'Detectados en la respuesta real');
+    // Con la consulta OK este KPI cuenta los campos de cada registro; con un 400 muestra los campos
+    // que Albor rechazo, que es justo lo que hace falta para corregir la consulta.
+    (CF.estado === 'error' && CF.campos.length
+      ? cfKpi('Campos rechazados', String(CF.campos.length), CF.campos.join(', '), 'tc-err')
+      : cfKpi('Campos por registro', CF.estado === 'ok' ? String(CF.campos.length) : '—',
+        'Detectados en la respuesta real'));
 }
 
 function cfPintarEstructura() {
@@ -241,7 +248,9 @@ function cfPintarEstructura() {
     '<tr><td class="tc-crudo">' + esc(k) + '</td>' +
     '<td>' + esc(cfTipo(v)) + '</td>' +
     '<td class="tc-obs">' + esc(cfResumen(v)) + '</td></tr>').join('');
-  $('cf-campos').textContent = CF.campos.length
+  // Solo con la consulta OK: si hubo error, CF.campos son los campos RECHAZADOS y ya se informan en
+  // su propio KPI — no son campos de un registro.
+  $('cf-campos').textContent = CF.estado === 'ok' && CF.campos.length
     ? CF.campos.length + ' campos por registro: ' + CF.campos.join(', ')
     : 'Sin registros para inspeccionar campos.';
 }
