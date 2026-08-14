@@ -95,6 +95,10 @@ const REPORTES = {
     // cubo-contable: el navegador elige entre las empresas habilitadas, nunca define el header.
     // Que ademas exista IdsEmpresas no cambia eso — son dos cosas distintas: IdsEmpresas filtra el
     // reporte, X-Company identifica el contexto de la sesion.
+    // COMPROBADO contra Albor, y al reves que en CuboContable: acá el que filtra de verdad es
+    // IdsEmpresas, no X-Company. Con X-Company=5, agosto 2026 devuelve 482 registros (idEmpresa 5,
+    // 1 y 3 mezclados) sin IdsEmpresas, y exactamente los 201 de idEmpresa 1 al agregar
+    // IdsEmpresas=1. O sea: para ver una sola empresa hay que mandar IdsEmpresas.
     empresa: 'parametro',
   },
 };
