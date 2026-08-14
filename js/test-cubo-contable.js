@@ -205,7 +205,11 @@ async function tcConsultarTramo(desde, hasta) {
 // mitades por separado. Solo se subdivide en fallos de tiempo: un 400 o un 401 se repetirian igual
 // en cada mitad, no tiene sentido insistir. El corte sigue siendo unicamente por fecha — ningun
 // tramo cambia los parametros ni agrega filtros.
-const TC_SUBDIVISIBLE = ['upstream_inaccesible', 'sin_conexion_TimeoutError', 'sin_conexion_AbortError'];
+// `respuesta_invalida` entra en la lista porque en la practica es el mismo problema con otra cara:
+// la respuesta se corta al vencer el tiempo y el JSON que llega ya no se puede parsear (se vio en
+// mayo 2026, que entero da 502 y por quincenas carga sin problema).
+const TC_SUBDIVISIBLE = ['upstream_inaccesible', 'respuesta_invalida',
+  'sin_conexion_TimeoutError', 'sin_conexion_AbortError'];
 const TC_MIN_DIAS = 2; // por debajo de esto ya no se parte: si falla, es un problema real
 
 const tcDia = iso => Date.UTC(+iso.slice(0, 4), +iso.slice(5, 7) - 1, +iso.slice(8, 10));
