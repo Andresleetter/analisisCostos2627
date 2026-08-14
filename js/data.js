@@ -1044,17 +1044,6 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
     labores,estadios_labor,contratistas_labor,
     // Solo para el filtro de Campaña del modulo Servicios (ver render.js: serviciosActivos()).
     campanias_ot,servicios_campanias,campania_actual:CAMPANIA_ACTUAL,
-    // ---- Reuso de la pipeline de Servicios sobre OTRAS filas de consultaOT ----
-    // Exponen, sin duplicar ni alterar nada, la MISMA cadena que ya usa el dashboard:
-    //   normalizarFilasOT -> agruparOTS -> (Confirmado) -> construirServicios
-    // Existen para que la vista de prueba pueda alimentar esa cadena con las filas que devuelve la
-    // API de Albor y comparar el resultado contra el que sale del Excel, sin escribir una segunda
-    // version de los calculos. NINGUN modulo del dashboard las llama: son solo un punto de entrada.
-    // `otsDesdeFilasOT` devuelve las OT agrupadas (antes de filtrar por estado), que es lo que
-    // necesita la comparacion OT por OT.
-    otsDesdeFilasOT: filas => agruparOTS(normalizarFilasOT(filas)),
-    serviciosDesdeFilasOT: filas =>
-      construirServicios(agruparOTS(normalizarFilasOT(filas)).filter(o => o.estado === 'Confirmado')),
     // Costo ejecutado consolidado de todas las campanias + su desglose (KPI del Resumen Ejecutivo).
     costo_total_consolidado,costo_por_campania,
     combustible,combustible_litros_total,combustible_n_total,combustible_meses,combustible_terceros,

@@ -146,9 +146,4 @@ function loadData(){
     });
 }
 
-// Arranque automatico SOLO en el dashboard. La condicion existe porque la vista de prueba
-// (test-cubo-contable.html) reutiliza cargarXLSX/hojaARows/separarInsumos/leerPresupuestoInfra de
-// este archivo pero orquesta su propia carga: alli no existe el markup del overlay ni renderAll(),
-// asi que loadData() reventaria. En index.html #overlay siempre existe, por lo que el
-// comportamiento del dashboard no cambia en absoluto.
-document.addEventListener('DOMContentLoaded',function(){ if(document.getElementById('overlay')) loadData(); });
+document.addEventListener('DOMContentLoaded',loadData);
