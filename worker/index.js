@@ -47,12 +47,15 @@ const REPORTES = {
     endpoint: '/Reportes/CuboOrdenesTrabajo',
     params: ['FechaDesde', 'FechaHasta', 'IdMoneda', 'TipoOrden', 'IdsCampanias'],
   },
-  // OJO — endpoint y parametros de CuboContable NO estan confirmados contra la API real: se
-  // dedujeron por analogia con CuboOrdenesTrabajo (mismo prefijo /Reportes/ y los mismos filtros de
-  // periodo/moneda/campania). Se corrigen acá, en un solo lugar, en cuanto se pruebe contra Albor.
+  // OJO — el contrato real de CuboContable todavia NO esta confirmado contra la API. El endpoint se
+  // dedujo por analogia con CuboOrdenesTrabajo, y la llamada sin parametros devuelve 400: se esta
+  // descubriendo cuales son obligatorios probandolos de a poco desde test-cubo-contable.html.
+  // Por eso la lista arranca deliberadamente CORTA — solo estos tres, como primera prueba. No hay
+  // valores por defecto: si el que llama no manda uno, no se manda. Cualquier otro parametro que
+  // llegue en la URL se ignora (no se reenvia) hasta que se confirme que hace falta y se agregue acá.
   '/api/albor/cubo-contable': {
     endpoint: '/Reportes/CuboContable',
-    params: ['FechaDesde', 'FechaHasta', 'IdMoneda', 'IdsCampanias'],
+    params: ['FechaDesde', 'FechaHasta', 'IdMoneda'],
   },
 };
 
@@ -109,10 +112,13 @@ const DIAGNOSTICO_REPORTE = {
 // Error del reporte: se propaga el status HTTP que devolvio Albor (pedido explicito), con un
 // mensaje controlado y SIN el cuerpo del upstream. Un status fuera de rango se normaliza a 502 para
 // no devolver algo invalido (ej. un 2xx/3xx en una rama de error).
-function errorReporte(statusUpstream, codigo, mensaje) {
+// `parametros` son solo los NOMBRES de los parametros que se reenviaron al upstream (nunca sus
+// valores): es lo que permite ver, desde la vista de prueba, con que combinacion se probo y cual
+// quedo afuera por no estar en la lista blanca. No es informacion sensible.
+function errorReporte(statusUpstream, codigo, mensaje, parametros) {
   const s = Number.isInteger(statusUpstream) && statusUpstream >= 400 && statusUpstream <= 599
     ? statusUpstream : 502;
-  return json({ ok: false, error: { codigo, mensaje, status: s } }, s);
+  return json({ ok: false, error: { codigo, mensaje, status: s }, parametros: parametros || [] }, s);
 }
 
 // Diagnostico del lado del Worker. Solo texto fijo y, como mucho, NOMBRES de variables o un status
@@ -218,9 +224,16 @@ async function consultarReporte(request, env, reporte) {
   // reinterpretarlos ni completarlos con valores por defecto. Los vacios no se mandan, para no
   // forzar un filtro que el que llamo no pidio.
   const entrada = new URL(request.url).searchParams;
+  // Nombres de los parametros efectivamente reenviados. Se registran y se devuelven al cliente para
+  // poder reconstruir con que combinacion se probo; los VALORES no se loguean ni hace falta que se
+  // logueen (el que llama ya los conoce) y asi el log no puede arrastrar nada de la peticion.
+  const enviados = [];
   for (const p of reporte.params) {
     for (const v of entrada.getAll(p)) {
-      if (String(v).trim() !== '') destino.searchParams.append(p, v);
+      if (String(v).trim() !== '') {
+        destino.searchParams.append(p, v);
+        if (!enviados.includes(p)) enviados.push(p);
+      }
     }
   }
 
@@ -253,10 +266,11 @@ async function consultarReporte(request, env, reporte) {
     // de permisos o del servicio. El cuerpo del error del upstream NO se reenvia al navegador ni se
     // loguea: puede traer detalle interno o el propio token en el eco del request.
     const diag = DIAGNOSTICO_REPORTE[resp.status];
-    logInterno('el reporte respondio ' + resp.status + (diag ? ' (' + diag[0] + ')' : ''));
+    logInterno('el reporte respondio ' + resp.status + (diag ? ' (' + diag[0] + ')' : '') +
+      ' — parametros enviados: ' + (enviados.length ? enviados.join(', ') : '(ninguno)'));
     return diag
-      ? errorReporte(resp.status, diag[0], diag[1])
-      : errorReporte(resp.status, 'upstream_error', 'Albor no devolvió el reporte solicitado (HTTP ' + resp.status + ').');
+      ? errorReporte(resp.status, diag[0], diag[1], enviados)
+      : errorReporte(resp.status, 'upstream_error', 'Albor no devolvió el reporte solicitado (HTTP ' + resp.status + ').', enviados);
   }
 
   let datos;
@@ -267,8 +281,9 @@ async function consultarReporte(request, env, reporte) {
     return errorControlado('respuesta_invalida', 'La respuesta de Albor no tiene el formato esperado.', 502);
   }
 
-  // Solo el reporte. Nunca el token, ni las credenciales, ni los headers usados contra Albor.
-  return json({ ok: true, datos }, 200);
+  // Solo el reporte y los NOMBRES de los parametros usados. Nunca el token, ni las credenciales, ni
+  // los headers usados contra Albor.
+  return json({ ok: true, datos, parametros: enviados }, 200);
 }
 
 export default {

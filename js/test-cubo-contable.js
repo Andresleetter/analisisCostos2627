@@ -16,6 +16,56 @@ const TC_ENDPOINT = '/api/albor/cubo-contable';
 // siga siendo usable. El total recibido se informa aparte, siempre completo y sin recortar.
 const TC_MAX_FILAS = 50;
 
+// Precarga de la prueba (solo valores iniciales de los controles, editables en pantalla). No son
+// valores por defecto del Worker: si el campo se deja vacio, el parametro NO se envia.
+const TC_DESDE_INICIAL = '2026-01-01'; // 01/01/2026
+// FechaHasta arranca en la fecha actual, no en una fecha fija.
+function tcHoyISO() {
+  const d = new Date();
+  const p = n => String(n).padStart(2, '0');
+  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+}
+
+// Los <input type="date"> siempre entregan aaaa-mm-dd. Que formato espera CuboContable todavia no
+// esta confirmado, asi que el selector permite mandar el mismo dia en cualquiera de las dos formas
+// y comparar la respuesta. El Worker no reinterpreta nada: reenvia el string tal cual.
+function tcFormatearFecha(iso, formato) {
+  if (!iso) return '';
+  if (formato !== 'dmy') return iso;
+  const p = iso.split('-');
+  return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : iso;
+}
+
+// Parametros de la consulta, en el orden en que se agregaron a la lista blanca del Worker. Los
+// vacios se omiten por completo — asi se puede ir sumando de a uno hasta que Albor deje de
+// responder 400 y quede claro cual era el obligatorio que faltaba.
+function tcParametros() {
+  const formato = $('tc-formato').value;
+  const crudos = [
+    ['FechaDesde', tcFormatearFecha($('tc-desde').value, formato)],
+    ['FechaHasta', tcFormatearFecha($('tc-hasta').value, formato)],
+    ['IdMoneda', $('tc-moneda').value.trim()],
+  ];
+  return crudos.filter(([, v]) => v !== '');
+}
+
+// URL exacta que se va a consultar, visible en pantalla para poder reproducirla o pegarla en el
+// navegador. Solo contiene parametros del reporte: el token y las credenciales nunca pasan por acá.
+function tcUrl(pars) {
+  if (!pars.length) return TC_ENDPOINT;
+  return TC_ENDPOINT + '?' + pars.map(([k, v]) => k + '=' + encodeURIComponent(v)).join('&');
+}
+
+// Misma consulta, pero con los valores SIN codificar, solo para mostrarla en pantalla: con formato
+// dd/mm/aaaa la barra viaja como %2F y la URL real se vuelve ilegible. Lo que se envia es siempre
+// tcUrl(); esto es unicamente presentacion.
+function tcUrlLegible(pars) {
+  if (!pars.length) return TC_ENDPOINT;
+  return TC_ENDPOINT + '?' + pars.map(([k, v]) => k + '=' + v).join('&');
+}
+
+const tcNombres = pars => pars.map(([k]) => k);
+
 // Campos que se muestran, exactamente con el nombre que trae la respuesta de CuboContable. No se
 // inventa ninguno: si un campo no viene en un registro, la celda queda marcada como sin dato.
 const TC_COLUMNAS = [
@@ -115,11 +165,27 @@ function tcPintarEstado(estado, clase, kpis, origen) {
   $('tc-origen').textContent = origen;
 }
 
+// Que parametros se enviaron. `confirmados` son los NOMBRES que el Worker dice haber reenviado de
+// verdad al upstream: si difieren de los pedidos, es que alguno quedo afuera de la lista blanca y
+// conviene verlo acá antes de seguir probando.
+function tcKpiParams(pedidos, confirmados) {
+  const txt = pedidos.length ? pedidos.join(', ') : 'ninguno';
+  if (!Array.isArray(confirmados)) return tcKpi('Parámetros enviados', txt, 'Según lo pedido desde esta página');
+  const ignorados = pedidos.filter(p => !confirmados.includes(p));
+  return tcKpi('Parámetros enviados', confirmados.length ? confirmados.join(', ') : 'ninguno',
+    ignorados.length ? 'El Worker ignoró: ' + ignorados.join(', ') : 'Reenviados al reporte por el Worker');
+}
+
 async function tcConsultar() {
   const btn = $('tc-recargar');
   btn.disabled = true;
   const consultadoA = tcAhora();
-  tcPintarEstado('Consultando…', '', tcKpi('Estado', 'Consultando…', TC_ENDPOINT), 'GET ' + TC_ENDPOINT);
+  const pars = tcParametros();
+  const nombres = tcNombres(pars);
+  const url = tcUrl(pars);
+  const urlVisible = tcUrlLegible(pars);
+  $('tc-url').textContent = 'GET ' + urlVisible;
+  tcPintarEstado('Consultando…', '', tcKpi('Estado', 'Consultando…', TC_ENDPOINT) + tcKpiParams(nombres), 'GET ' + urlVisible);
   $('tc-filas').innerHTML = '';
   $('tc-sub').textContent = '';
 
@@ -127,15 +193,16 @@ async function tcConsultar() {
   try {
     // cache:'no-store' del lado del navegador, en linea con el Cache-Control: no-store que ya
     // devuelve el Worker: cada consulta trae el dato actual de Albor.
-    resp = await fetch(TC_ENDPOINT, { cache: 'no-store', headers: { 'Accept': 'application/json' } });
+    resp = await fetch(url, { cache: 'no-store', headers: { 'Accept': 'application/json' } });
     cuerpo = await resp.json();
   } catch (e) {
     // Se informa el tipo de fallo, nunca headers ni credenciales (que ademas nunca llegan acá).
     tcPintarEstado('Sin conexión', 'tc-err',
       tcKpi('Estado', 'Error de red', 'No se pudo contactar el endpoint') +
+      tcKpiParams(nombres) +
       tcKpi('Registros recibidos', '—', 'Sin respuesta') +
       tcKpi('Consulta', consultadoA, 'Fecha/hora del intento'),
-      'GET ' + TC_ENDPOINT + ' — la petición no llegó a completarse (' + (e && e.name ? e.name : 'Error') + ')');
+      'GET ' + urlVisible + ' — la petición no llegó a completarse (' + (e && e.name ? e.name : 'Error') + ')');
     $('tc-filas').innerHTML = '<tr><td colspan="11" class="tc-vacio">No se pudo contactar ' + esc(TC_ENDPOINT) + '.</td></tr>';
     btn.disabled = false;
     return;
@@ -147,9 +214,10 @@ async function tcConsultar() {
     const msg = cuerpo && cuerpo.error && cuerpo.error.mensaje ? cuerpo.error.mensaje : 'Respuesta inesperada del proxy.';
     tcPintarEstado('Error ' + resp.status, 'tc-err',
       tcKpi('Estado', 'HTTP ' + resp.status, cod) +
+      tcKpiParams(nombres, cuerpo && cuerpo.parametros) +
       tcKpi('Registros recibidos', '0', 'La consulta no devolvió datos') +
       tcKpi('Consulta', consultadoA, 'Fecha/hora del intento'),
-      'GET ' + TC_ENDPOINT + ' — ' + msg);
+      'GET ' + urlVisible + ' — ' + msg);
     $('tc-filas').innerHTML = '<tr><td colspan="11" class="tc-vacio">' + esc(msg) + ' (código: ' + esc(cod) + ')</td></tr>';
     btn.disabled = false;
     return;
@@ -159,9 +227,10 @@ async function tcConsultar() {
   if (registros === null) {
     tcPintarEstado('Conectado', 'tc-ok',
       tcKpi('Estado', 'Conectado', 'Respuesta OK, formato inesperado') +
+      tcKpiParams(nombres, cuerpo.parametros) +
       tcKpi('Registros recibidos', '—', 'No se encontró una lista de registros') +
       tcKpi('Consulta', consultadoA, 'Fecha/hora de la consulta'),
-      'GET ' + TC_ENDPOINT + ' — HTTP ' + resp.status + '. La respuesta llegó pero no contiene una lista reconocible; claves recibidas: ' +
+      'GET ' + urlVisible + ' — HTTP ' + resp.status + '. La respuesta llegó pero no contiene una lista reconocible; claves recibidas: ' +
       (cuerpo.datos && typeof cuerpo.datos === 'object' ? Object.keys(cuerpo.datos).join(', ') : typeof cuerpo.datos));
     $('tc-filas').innerHTML = '<tr><td colspan="11" class="tc-vacio">La respuesta no trae una lista de registros reconocible.</td></tr>';
     btn.disabled = false;
@@ -175,10 +244,11 @@ async function tcConsultar() {
 
   tcPintarEstado('Conectado', 'tc-ok',
     tcKpi('Estado', 'Conectado', 'HTTP ' + resp.status + ' · ' + TC_ENDPOINT) +
+    tcKpiParams(nombres, cuerpo.parametros) +
     tcKpi('Registros recibidos', String(registros.length), 'Total devuelto por Albor') +
     tcKpi('Consulta', consultadoA, 'Fecha/hora de la consulta') +
     tcKpi('Campos en la respuesta', String(camposPresentes.size), 'Distintos, sobre todos los registros'),
-    'GET ' + TC_ENDPOINT + ' — HTTP ' + resp.status + '. Campos recibidos: ' + [...camposPresentes].sort().join(', '));
+    'GET ' + urlVisible + ' — HTTP ' + resp.status + '. Campos recibidos: ' + [...camposPresentes].sort().join(', '));
 
   if (!registros.length) {
     $('tc-sub').textContent = '0 registros';
@@ -199,6 +269,10 @@ async function tcConsultar() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Precarga del periodo de prueba: 01/01/2026 -> hoy. Son solo valores iniciales del formulario;
+  // se pueden borrar para probar que pasa si el parametro no se manda.
+  $('tc-desde').value = TC_DESDE_INICIAL;
+  $('tc-hasta').value = tcHoyISO();
   $('tc-recargar').addEventListener('click', tcConsultar);
   tcConsultar();
 });
