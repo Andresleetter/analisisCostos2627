@@ -59,7 +59,15 @@ function renderAll(){
   // campaña vigente (D.campania_actual) preseleccionada si existe en el dato. Se puebla una sola
   // vez acá; los demás filtros de Servicios (Mes/Labor/Etapa/Contratista) dependen de la campaña
   // elegida y se repueblan en poblarFiltrosServicios() cada vez que cambia.
-  poblarFiltroCampanias();
+  const selCamp=document.getElementById('gcampania'); selCamp.innerHTML='';
+  const campDisp=(D.campanias_ot||[]);
+  // Orden de presentacion: primero las de CAMPANIA_ORDEN que existan en el dato, después cualquier
+  // otra campania que traiga consultaOT (nunca se oculta ninguna). El value de cada option es
+  // SIEMPRE la clave real de consultaOT; CAMPANIA_LABEL solo cambia el texto visible.
+  const campOrdenadas=[...CAMPANIA_ORDEN.filter(c=>campDisp.includes(c)),
+    ...campDisp.filter(c=>!CAMPANIA_ORDEN.includes(c))];
+  campOrdenadas.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=CAMPANIA_LABEL[c]||c;selCamp.appendChild(o);});
+  if([...selCamp.options].some(o=>o.value===D.campania_actual)) selCamp.value=D.campania_actual;
   poblarFiltrosServicios();
   // filtros de la pestaña Combustible (Mes / Tercero)
   const selCMes=document.getElementById('cmes'); selCMes.querySelectorAll('option:not([value=ALL])').forEach(o=>o.remove());
@@ -492,21 +500,6 @@ function serviciosActivos(){
   const sel=document.getElementById('gcampania');
   const c=sel?sel.value:null;
   return (D.servicios_campanias && D.servicios_campanias[c]) ? D.servicios_campanias[c] : D;
-}
-// Filtro de Campaña de Servicios: opciones dinámicas desde consultasOT (D.campanias_ot), con la
-// campaña vigente (D.campania_actual) preseleccionada si existe en el dato. Se llama una vez desde
-// renderAll(); se extrajo a función (mismo código, sin cambios) para que la vista de prueba pueda
-// repoblarlo al cambiar de origen de datos sin duplicar el orden ni las etiquetas.
-function poblarFiltroCampanias(){
-  const selCamp=document.getElementById('gcampania'); selCamp.innerHTML='';
-  const campDisp=(D.campanias_ot||[]);
-  // Orden de presentacion: primero las de CAMPANIA_ORDEN que existan en el dato, después cualquier
-  // otra campania que traiga consultaOT (nunca se oculta ninguna). El value de cada option es
-  // SIEMPRE la clave real de consultaOT; CAMPANIA_LABEL solo cambia el texto visible.
-  const campOrdenadas=[...CAMPANIA_ORDEN.filter(c=>campDisp.includes(c)),
-    ...campDisp.filter(c=>!CAMPANIA_ORDEN.includes(c))];
-  campOrdenadas.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=CAMPANIA_LABEL[c]||c;selCamp.appendChild(o);});
-  if([...selCamp.options].some(o=>o.value===D.campania_actual)) selCamp.value=D.campania_actual;
 }
 // Opciones de Mes / Labor / Etapa / Contratista: dependen de la campaña activa, así que se
 // repueblan al cargar y en cada cambio de campaña. Si el valor que estaba elegido sigue existiendo

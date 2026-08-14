@@ -3,9 +3,15 @@
 // el login se hace de este lado, el token temporal se usa y se descarta en la misma peticion, y
 // al frontend solo le llega el reporte ya resuelto.
 //
-// ALCANCE ACTUAL — es la base del proxy, el dashboard todavia no la consume:
-//   - el dashboard sigue funcionando igual que siempre (descarga los .xlsx desde GitHub, ver
-//     loader.js). No se toco frontend, data.js, ni ningun calculo existente.
+// ESTADO ACTUAL — el proxy NO tiene ningun consumidor: nada del sitio lo llama.
+//   - Decision del usuario: el dashboard se sigue alimentando del Excel (los .xlsx desde GitHub, ver
+//     loader.js), porque cada consulta a la API gasta tokens de Albor y son limitados. La vista de
+//     prueba que consumia estas rutas se elimino.
+//   - El codigo queda como base por si mas adelante se retoma la migracion. Mientras nadie lo llame,
+//     no genera ni una consulta a Albor: no hay tareas programadas ni llamadas automaticas acá.
+//   - Se llego a validar contra el dato real que /api/albor/ordenes devuelve exactamente los mismos
+//     numeros que consultaOT del Excel (mismos campos, mismos KPIs y costos), aplicando el recorte
+//     de la campaña 25/26 desde 2026-07-01. La unica diferencia eran OT nuevas todavia no exportadas.
 //   - los archivos estaticos los sirve el binding de assets ANTES de llegar a este Worker: solo
 //     se ejecuta acá lo que no existe como archivo, que es el caso de /api/*. Nada de lo que pase
 //     en este archivo puede romper la carga del dashboard.
@@ -72,7 +78,8 @@ const REPORTES = {
   },
   // OJO — el contrato real de CuboContable todavia NO esta confirmado contra la API. El endpoint se
   // dedujo por analogia con CuboOrdenesTrabajo, y la llamada sin parametros devuelve 400: se esta
-  // descubriendo cuales son obligatorios probandolos de a poco desde test-cubo-contable.html.
+  // descubriendo cuales son obligatorios probandolos de a poco (la vista de prueba que se usaba para
+  // eso ya no existe, ver ESTADO ACTUAL al principio del archivo).
   // Por eso la lista arranca deliberadamente CORTA — solo estos tres, como primera prueba. No hay
   // valores por defecto: si el que llama no manda uno, no se manda. Cualquier otro parametro que
   // llegue en la URL se ignora (no se reenvia) hasta que se confirme que hace falta y se agregue acá.
