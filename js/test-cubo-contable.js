@@ -178,7 +178,9 @@ function tcUrlMes(m) {
 // corte la cadena ni descarte lo ya cargado.
 async function tcConsultarMes(m) {
   m.estado = 'cargando';
-  m.registros = null; m.http = null; m.codigo = null; m.datos = [];
+  // Se limpia TODO el resultado anterior (incluido el tiempo) para que un reintento no muestre los
+  // datos del intento fallido mientras la nueva consulta esta en curso.
+  m.registros = null; m.http = null; m.codigo = null; m.ms = null; m.datos = [];
   TC.mesEnCurso = m;
   tcPintar();
 
