@@ -5,6 +5,18 @@
 .tc-btn:hover{border-color:var(--teal)}
 .tc-btn:disabled{opacity:.5;cursor:default}
 .tc-origen{font-size:12px;color:var(--muted);margin-bottom:12px;word-break:break-all}
+/* Controles temporales de descubrimiento de parametros. */
+.tc-sub-h{font-weight:400;font-size:12px;color:var(--muted)}
+.tc-controles{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:12px}
+.tc-campo{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)}
+.tc-campo input,.tc-campo select{background:var(--card);color:var(--ink);border:1px solid var(--line);
+  border-radius:var(--radius-input);padding:6px 9px;font-size:13px;font-family:inherit;min-width:150px}
+.tc-campo input:focus,.tc-campo select:focus{outline:none;border-color:var(--teal)}
+/* URL exacta que se consulto: se muestra completa para poder reproducirla. Solo lleva los
+   parametros del reporte — nunca token, credenciales ni headers, que viven dentro del Worker. */
+.tc-url{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;
+  color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:var(--radius-input);
+  padding:8px 10px;margin-bottom:8px;word-break:break-all}
 /* La tabla tiene 11 columnas: ancho minimo propio para que no se aplasten, con el scroll
    horizontal que ya aporta .scroll (tables.css). */
 .tc-tabla{min-width:1500px}
