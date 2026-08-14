@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Prueba · CuboContable (dinámico)</title>
+<!-- Vista TEMPORAL de validacion. No forma parte del dashboard: index.html no la enlaza, no toca
+     ninguna fuente estatica (los .xlsx) ni ningun calculo existente, y se puede borrar sin efecto.
+     Reutiliza las hojas de estilo del dashboard en modo lectura, sin modificarlas. -->
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/header.css">
+<link rel="stylesheet" href="css/panel.css">
+<link rel="stylesheet" href="css/kpis.css">
+<link rel="stylesheet" href="css/tables.css">
+<link rel="stylesheet" href="css/test-cubo.css">
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <div class="b-txt">
+        <h1>Prueba de conexión · CuboContable</h1>
+        <div class="t-sub">Vista temporal de validación — datos en vivo desde el Worker, sin Excel</div>
+      </div>
+    </div>
+  </header>
+
+  <div class="kpis" id="tc-kpis"></div>
+
+  <div class="panel"><h3>Origen de los datos <span id="tc-estado"></span></h3>
+    <div class="tc-origen" id="tc-origen"></div>
+    <button type="button" class="tc-btn" id="tc-recargar">Consultar de nuevo</button>
+  </div>
+
+  <div class="panel"><h3>Registros recibidos <span id="tc-sub"></span></h3>
+    <div class="scroll">
+      <table class="tc-tabla"><thead><tr>
+        <th>Referencia</th>
+        <th>Fecha</th>
+        <th>Cuenta Contable</th>
+        <th>Nombre Cuenta</th>
+        <th class="tr">Saldo</th>
+        <th class="tr">Saldo Cotizado</th>
+        <th>Dimensión 1</th>
+        <th>Dimensión 2</th>
+        <th>Dimensión 3</th>
+        <th>Observaciones</th>
+        <th>Empresa</th>
+      </tr></thead><tbody id="tc-filas"></tbody></table>
+    </div>
+  </div>
+</div>
+
+<script src="js/utils.js" defer></script>
+<script src="js/test-cubo-contable.js" defer></script>
+</body>
+</html>
