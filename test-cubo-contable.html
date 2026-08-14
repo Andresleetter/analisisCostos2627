@@ -16,6 +16,10 @@
 <link rel="stylesheet" href="css/panel.css">
 <link rel="stylesheet" href="css/kpis.css">
 <link rel="stylesheet" href="css/tables.css">
+<!-- gastos.css: hojas REALES del módulo Servicios (filtros .gfilter/.scontr, KPIs .gkpis, tabla
+     .ldt, chips de unidad, gasoil). Se cargan tal cual, sin copiar ni redefinir una sola regla, para
+     que la réplica sea idéntica a producción y siga cualquier cambio que se le haga. -->
+<link rel="stylesheet" href="css/gastos.css">
 <link rel="stylesheet" href="css/test-cubo.css">
 </head>
 <body>
@@ -35,6 +39,7 @@
   <nav class="tc-nav" id="tc-nav" aria-label="Módulos de prueba">
     <button type="button" class="tc-nav-btn is-activo" data-mod="contable" aria-current="page">Cubo Contable</button>
     <button type="button" class="tc-nav-btn" data-mod="cashflow">Cash Flow</button>
+    <button type="button" class="tc-nav-btn" data-mod="ot">Órdenes de Trabajo</button>
   </nav>
 
 <!-- ============ MÓDULO 1: CUBO CONTABLE (sin cambios de lógica) ============ -->
@@ -160,11 +165,119 @@
     </div>
   </div>
 </section>
+
+<!-- ============ MÓDULO 3: ÓRDENES DE TRABAJO (réplica de Servicios) ============ -->
+<!-- Réplica del módulo Servicios de producción, con la ÚNICA diferencia de la fuente de datos:
+     Excel (consultaOT) vs API dinámica (/api/albor/ordenes). El markup de abajo es el mismo del
+     TAB 2 de index.html, con los MISMOS ids y las MISMAS clases, para que lo pinten las funciones
+     reales de render.js (renderG / renderLaborDetalle / renderGasoil) sin una sola línea de
+     presentación duplicada. Lo único agregado es el filtro Cultivo, que en producción no existe.
+     Nada de esto toca el dashboard: index.html no carga este archivo. -->
+<section class="tc-mod" id="mod-ot" hidden>
+
+  <!-- Selector de origen: lo único que cambia entre los dos lados de la comparación. -->
+  <div class="tc-origen-sel">
+    <span class="tc-origen-lab">Fuente de datos</span>
+    <div class="tc-origen-btns" id="ot-origen">
+      <button type="button" class="tc-nav-btn is-activo" data-origen="excel">Producción · Excel</button>
+      <button type="button" class="tc-nav-btn" data-origen="api">API dinámica</button>
+    </div>
+    <span class="tc-origen-estado" id="ot-estado"></span>
+  </div>
+
+  <!-- ---- Réplica exacta de Servicios (mismos ids que index.html) ---- -->
+  <div class="gfilter">
+    <label for="gcampania">Campaña</label>
+    <select id="gcampania"></select>
+    <label for="gmes">Mes</label>
+    <select id="gmes"><option value="ALL">Toda la Campaña</option></select>
+    <!-- Cultivo NO existe en el Servicios de producción: se agrega solo acá, y recorta las filas de
+         ENTRADA (campo actividad) de los DOS orígenes por igual, antes de la transformación — así
+         la comparación sigue siendo válida y no se introduce ningún cálculo nuevo. -->
+    <label for="gcultivo">Cultivo</label>
+    <select id="gcultivo"><option value="ALL">Todos</option></select>
+    <span class="fnote" id="gnote"></span>
+  </div>
+  <div class="gkpis" id="gkpis"></div>
+  <div class="panel hero-panel"><h3>Detalle por Labor <span id="gld-sub"></span></h3>
+    <div class="scontr">
+      <label for="glabor">Labor</label>
+      <select id="glabor"><option value="ALL">Todas las labores</option></select>
+      <label for="gestadio">Etapa</label>
+      <select id="gestadio"><option value="ALL">Todas las etapas</option></select>
+      <label for="gcontratista">Contratista</label>
+      <select id="gcontratista"><option value="ALL">Todos</option></select>
+      <span class="sc-note">Filtra solo esta tabla · una misma labor puede repetirse en más de una etapa</span>
+    </div>
+    <div class="scroll scroll-tall"><table class="ldt"><thead><tr>
+      <th>Labor</th><th>Etapa</th><th class="tr">OT Conf.</th><th class="tr">Trabajo Ejecutado</th>
+      <th class="tr grp-pt">Labor Tercero</th><th>Contratista</th>
+      <th class="tr">Insumos</th><th class="tr">Costo Total</th></tr></thead><tbody id="gld"></tbody></table></div></div>
+  <div class="panel sub"><h3>Consumo de Gasoil por Área <span>"Labor Propia" = personal interno</span></h3>
+    <div class="sop-top" id="gastop"></div>
+    <div class="scroll"><table><thead><tr><th>Área</th><th class="tr">OT</th><th class="tr">Litros</th><th class="tr">Total Pagado</th><th class="tr">Participación</th><th class="tr">%</th></tr></thead><tbody id="gasbody"></tbody></table></div></div>
+  <div class="panel sub"><h3>Gasto Acumulado de Campaña</h3><div id="gacc"></div></div>
+
+  <!-- ---- Zona de validación: Excel vs API con los mismos filtros ---- -->
+  <div class="panel sub tc-val"><h3>Validación · Producción vs API <span id="ot-val-sub"></span></h3>
+    <div class="scroll"><table class="tc-val-tabla"><thead><tr>
+      <th>Métrica</th><th class="tr">Producción · Excel</th><th class="tr">API dinámica</th><th class="tr">Diferencia</th>
+    </tr></thead><tbody id="ot-val"></tbody></table></div>
+  </div>
+
+  <div class="panel sub tc-val"><h3>Diferencias por OT <span id="ot-dif-sub"></span></h3>
+    <div class="scroll"><table class="tc-val-tabla"><thead><tr>
+      <th>Situación</th><th>OT</th><th>Servicio</th><th>Estado</th>
+      <th class="tr">Costo Excel</th><th class="tr">Costo API</th><th class="tr">Diferencia</th>
+    </tr></thead><tbody id="ot-dif"></tbody></table></div>
+  </div>
+
+  <!-- ---- Diagnóstico técnico, colapsado para no competir con la réplica ---- -->
+  <details class="tc-diag"><summary>Diagnóstico técnico y parámetros de la consulta</summary>
+    <div class="tc-controles tc-controles-linea">
+      <label class="tc-campo">Empresa
+        <select id="ot-empresa">
+          <option value="5">Empresa 5</option>
+          <option value="1">Empresa 1</option>
+        </select>
+      </label>
+      <label class="tc-campo">Fecha Desde
+        <input type="date" id="ot-desde">
+      </label>
+      <label class="tc-campo">Fecha Hasta
+        <input type="date" id="ot-hasta">
+      </label>
+      <label class="tc-campo">IdMoneda
+        <input type="text" id="ot-moneda" inputmode="numeric" autocomplete="off" value="2">
+      </label>
+      <label class="tc-campo">TipoOrden
+        <input type="text" id="ot-tipo" autocomplete="off" value="A">
+      </label>
+      <label class="tc-campo">IdsCampanias
+        <input type="text" id="ot-campanias" autocomplete="off" value="988,996,976,1000">
+      </label>
+      <button type="button" class="tc-btn tc-btn-linea" id="ot-consultar">Consultar API</button>
+    </div>
+    <div class="tc-url" id="ot-url"></div>
+    <div class="kpis" id="ot-diag"></div>
+  </details>
+</section>
 </div>
 
+<!-- Módulo de Órdenes de Trabajo: se cargan los MISMOS archivos del dashboard (config, data, render)
+     para reutilizar sus cálculos y su pintado tal cual, sin copiarlos. loader.js aporta la lectura
+     del .xlsx (cargarXLSX/hojaARows/separarInsumos/leerPresupuestoInfra) y no arranca solo acá
+     (arranca únicamente si existe #overlay, que es del dashboard). events.js NO se carga: sus
+     listeners son del markup completo de index.html. -->
+<script src="vendor/xlsx.full.min.js" defer></script>
+<script src="js/config.js" defer></script>
 <script src="js/utils.js" defer></script>
+<script src="js/data.js" defer></script>
+<script src="js/render.js" defer></script>
+<script src="js/loader.js" defer></script>
 <script src="js/test-cubo-nav.js" defer></script>
 <script src="js/test-cubo-contable.js" defer></script>
 <script src="js/test-cubo-cashflow.js" defer></script>
+<script src="js/test-ot.js" defer></script>
 </body>
 </html>
