@@ -104,6 +104,19 @@ const INFRA_PUENTES_PROPIA_ESP = 'Contrucion puentes Labor Propia';
 const INFRA_PUENTES_TERCERO_SERV = 'CONSTRUCCION PUENTE AGROVIAL';
 const INFRA_PUENTES_PROPIA_SERV = 'CONSTRUCCION PUENTES LABOR PROPIA';
 const INFRA_PUENTES_HORAS_SERV = 'Construccion de Puentes retro excavadora x Hs';
+// Servicios en los que la OT NO representa trabajo ejecutado medible: lo único real de esas OT es
+// el insumo aplicado/consumido, y la cantidad que traen en Has. Reales / horas no corresponde a una
+// superficie ni a un tiempo de labor. La columna "Trabajo Ejecutado" del Detalle por Labor
+// (Servicios) muestra "—" para estas filas en vez de un número que no significa nada; los costos
+// (Labor Tercero / Insumos / Total) y la cantidad de OT no se tocan.
+// Se comparan normalizados con normHdr (sin acentos, minúsculas) porque el mismo servicio aparece
+// escrito de dos formas distintas en consultaOT ("Aplicacion de herbicida con mochila" y
+// "Aplicación Herbicida con mochila"), verificado contra el .xlsx.
+const SERVICIOS_SIN_TRABAJO_EJECUTADO = [
+  'aplicacion de herbicida con mochila',
+  'aplicacion herbicida con mochila',
+  'construccion puentes labor propia',
+];
 // Sección "Gastos" de Auditoría: ÚNICO concepto que debe mostrarse (a pedido del usuario, en
 // reemplazo de la vieja búsqueda amplia por la palabra suelta "desalijo", que mezclaba también
 // "Desalijo Silo Bolsa" y "Construccion de Puentes...x Hs"). Fuente única de verdad para la

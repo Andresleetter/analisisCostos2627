@@ -582,8 +582,14 @@ function renderLaborDetalle(){
       hrs:{val:l.horas,txt:'hrs',chip:'chip-hr',unid:'tw-unid-hrs'},
       kg:{val:l.kg,txt:'kg',chip:'chip-kg',unid:'tw-unid-kg'}};
     const u=U[l.unidadTrabajo]||U.ha;
-    const ejec=`${fmt2(u.val)} <span class="tw-unid ${u.unid}">${u.txt}</span>`;
-    const chip=`<span class="chip ${u.chip}">${u.txt}</span>`;
+    // Servicios sin trabajo ejecutado medible (solo se usan insumos, ver
+    // SERVICIOS_SIN_TRABAJO_EJECUTADO en config.js): la celda queda en "—". Solo afecta a esta
+    // columna y al chip de unidad de la columna Labor (sin trabajo ejecutado no hay unidad de
+    // trabajo que rotular); OT Confirmadas y los tres importes siguen igual.
+    const sinEjec=SERVICIOS_SIN_TRABAJO_EJECUTADO.includes(normHdr(l.labor));
+    const ejec=sinEjec?'<span class="tw-sin" title="Solo se usan insumos: la OT no registra trabajo ejecutado">—</span>'
+      :`${fmt2(u.val)} <span class="tw-unid ${u.unid}">${u.txt}</span>`;
+    const chip=sinEjec?'':`<span class="chip ${u.chip}">${u.txt}</span>`;
     const contratistaTxt=labelContratista(l.contratista);
     // Labor Propia no tiene costo de tercero asignado en el sistema (siempre US$ 0 en la columna
     // "Labor Tercero") — no hay columna de costo separada para Labor Propia en esta tabla.

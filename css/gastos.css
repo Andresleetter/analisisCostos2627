@@ -35,6 +35,9 @@
    reconoce por color igual en las dos columnas. */
 .tw-unid{font-size:12.5px;font-weight:700;margin-left:2px}
 .tw-unid-ha{color:var(--u-ha)} .tw-unid-hrs{color:var(--u-hrs)} .tw-unid-kg{color:var(--u-kg)}
+/* Servicios donde la OT solo aporta insumos (SERVICIOS_SIN_TRABAJO_EJECUTADO): la celda muestra un
+   guion gris, no un cero — un 0,00 se leeria como "se ejecuto y dio cero". */
+.tw-sin{color:var(--muted);cursor:default}
 .ldt th.grp-pt{color:var(--teal);border-bottom-color:var(--teal)}
 /* Columna Contratista: nombres reales pueden ser largos (razón social) — se truncan con elipsis y
    tooltip nativo (title) en vez de romper el ancho de la tabla o forzar scroll horizontal. */
