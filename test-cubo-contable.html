@@ -133,6 +133,11 @@
       <label class="tc-campo">IdMoneda
         <input type="text" id="cf-moneda" inputmode="numeric" autocomplete="off" value="2" placeholder="vacío = no enviar">
       </label>
+      <!-- Rubro: parámetro real del reporte (viene en la URL de Albor). Sin él la consulta se
+           rechaza con 400. -->
+      <label class="tc-campo">Rubro
+        <input type="text" id="cf-rubro" inputmode="numeric" autocomplete="off" value="5" placeholder="vacío = no enviar">
+      </label>
       <button type="button" class="tc-btn tc-btn-linea" id="cf-consultar">Consultar de nuevo</button>
     </div>
     <div class="tc-url" id="cf-url"></div>

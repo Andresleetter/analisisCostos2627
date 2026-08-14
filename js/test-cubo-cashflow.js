@@ -70,6 +70,8 @@ function cfUrl() {
   pars.push(['FechaHasta', $('cf-hasta').value], ['IdsEmpresas', empresa]);
   const moneda = $('cf-moneda').value.trim();
   if (moneda !== '') pars.push(['IdMoneda', moneda]);
+  const rubro = $('cf-rubro').value.trim();
+  if (rubro !== '') pars.push(['Rubro', rubro]);
   return CF_ENDPOINT + '?' + pars.map(([k, v]) => k + '=' + encodeURIComponent(v)).join('&');
 }
 
@@ -291,7 +293,7 @@ document.addEventListener('DOMContentLoaded', () => {
   $('cf-desde').value = cfHoyISO().slice(0, 4) + '-01-01';
   $('cf-consultar').addEventListener('click', cfConsultar);
   // La URL de la consulta se mantiene a la vista mientras se tocan los filtros.
-  ['cf-empresa', 'cf-desde', 'cf-hasta', 'cf-moneda'].forEach(id =>
+  ['cf-empresa', 'cf-desde', 'cf-hasta', 'cf-moneda', 'cf-rubro'].forEach(id =>
     $(id).addEventListener('change', () => { $('cf-url').textContent = 'GET ' + cfUrl(); }));
   // Primera consulta al abrir el modulo, no al cargar la pagina: asi entrar a la vista no dispara
   // una llamada a Albor si solo se venia a usar Cubo Contable.
