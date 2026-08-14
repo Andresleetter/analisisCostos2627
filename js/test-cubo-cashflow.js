@@ -38,6 +38,7 @@ const CF = {
   http: null,
   codigo: null,
   empresa: null,
+  desde: null,
   hasta: null,
   parametros: [],      // NOMBRES de los parametros que el Worker reenvio (nunca valores sensibles)
   cuerpo: null,        // respuesta cruda de Albor, tal como la devolvio el proxy
@@ -61,9 +62,12 @@ function cfUrl() {
   const pars = [
     [CF_PARAM_EMPRESA, empresa],
     ['NoPaginate', CF_NO_PAGINATE],
-    ['FechaHasta', $('cf-hasta').value],
-    ['IdsEmpresas', empresa],
   ];
+  // Vacio = no se manda. Vale para los dos opcionales: asi se puede reproducir exactamente la
+  // consulta original (solo los cuatro parametros confirmados) sin cambiar codigo.
+  const desde = $('cf-desde').value;
+  if (desde !== '') pars.push(['FechaDesde', desde]);
+  pars.push(['FechaHasta', $('cf-hasta').value], ['IdsEmpresas', empresa]);
   const moneda = $('cf-moneda').value.trim();
   if (moneda !== '') pars.push(['IdMoneda', moneda]);
   return CF_ENDPOINT + '?' + pars.map(([k, v]) => k + '=' + encodeURIComponent(v)).join('&');
@@ -142,6 +146,7 @@ async function cfConsultar() {
   CF.http = null; CF.codigo = null; CF.parametros = [];
   CF.cuerpo = null; CF.registros = []; CF.campos = []; CF.ms = null;
   CF.empresa = $('cf-empresa').value;
+  CF.desde = $('cf-desde').value;
   CF.hasta = $('cf-hasta').value;
   cfPintar();
 
@@ -214,7 +219,8 @@ function cfPintarKpis() {
       CF.parametros.length ? 'Parámetros enviados: ' + CF.parametros.join(', ') : 'Sin respuesta todavía') +
     cfKpi('Empresa consultada', CF.empresa ? 'Empresa ' + CF.empresa : '—',
       CF.empresa ? 'IdsEmpresas = ' + CF.empresa + ' · X-Company lo arma el Worker' : '') +
-    cfKpi('Fecha Hasta', CF.hasta || '—', 'NoPaginate = ' + CF_NO_PAGINATE) +
+    cfKpi('Fecha Hasta', CF.hasta || '—',
+      'NoPaginate = ' + CF_NO_PAGINATE + (CF.desde ? ' · desde ' + CF.desde : ' · sin FechaDesde')) +
     cfKpi('Registros recibidos', CF.estado === 'ok' ? cfNum(CF.registros.length) : '—',
       CF.estado === 'ok' ? 'En la clave "' + CF.claveLista + '"' : 'Total sin recortar') +
     cfKpi('Campos por registro', CF.estado === 'ok' ? String(CF.campos.length) : '—',
@@ -271,9 +277,12 @@ function cfPintar() {
 
 document.addEventListener('DOMContentLoaded', () => {
   $('cf-hasta').value = cfHoyISO();
+  // Arranca el 01/01 del año en prueba: el reporte rechaza la consulta sin rango (ver el comentario
+  // de FechaDesde en el Worker). Se puede vaciar para reproducir la consulta sin FechaDesde.
+  $('cf-desde').value = cfHoyISO().slice(0, 4) + '-01-01';
   $('cf-consultar').addEventListener('click', cfConsultar);
   // La URL de la consulta se mantiene a la vista mientras se tocan los filtros.
-  ['cf-empresa', 'cf-hasta', 'cf-moneda'].forEach(id =>
+  ['cf-empresa', 'cf-desde', 'cf-hasta', 'cf-moneda'].forEach(id =>
     $(id).addEventListener('change', () => { $('cf-url').textContent = 'GET ' + cfUrl(); }));
   // Primera consulta al abrir el modulo, no al cargar la pagina: asi entrar a la vista no dispara
   // una llamada a Albor si solo se venia a usar Cubo Contable.
