@@ -64,6 +64,13 @@ const REPORTES = {
     params: ['FechaDesde', 'FechaHasta', 'IdMoneda'],
     // La empresa se elige en cada consulta (?empresa=1 o 5) en vez de quedar fija en una variable de
     // Cloudflare: cambiar de empresa no necesita tocar Variables and Secrets ni volver a desplegar.
+    //
+    // OJO — comprobado contra Albor: X-Company NO filtra los datos de este reporte. Enero 2026 con
+    // X-Company 1 y con 5 devuelve los MISMOS 17.077 registros, con idEmpresa 5, 1 y 3 mezclados
+    // (son dos consultas reales distintas: cambia el generationTime). Al parecer el header define el
+    // contexto de la sesion, no el alcance del reporte. Si hace falta ver una sola empresa, hay que
+    // filtrar por el campo idEmpresa de la respuesta o encontrar el parametro del reporte que lo
+    // haga — todavia sin confirmar cual es.
     empresa: 'parametro',
   },
 };
