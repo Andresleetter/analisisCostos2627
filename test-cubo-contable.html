@@ -28,38 +28,39 @@
 
   <div class="kpis" id="tc-kpis"></div>
 
-  <!-- Controles TEMPORALES de descubrimiento: el contrato real de CuboContable no esta confirmado y
-       la llamada sin parametros devuelve 400. Sirven para ir probando combinaciones hasta dar con
-       los obligatorios. Dejar un campo vacio = ese parametro NO se envia. -->
-  <div class="panel"><h3>Parámetros de la consulta <span class="tc-sub-h">(prueba — se envían solo los que tengan valor)</span></h3>
+  <!-- Carga TEMPORAL por meses. El periodo arranca el 01/01/2026 y llega como maximo hasta hoy; se
+       parte en una consulta por mes porque el año entero de una sola vez agota el timeout del
+       Worker. El unico recorte es por fecha: no se filtra por campaña ni por dimension1. -->
+  <div class="panel"><h3>Consulta de 2026 <span class="tc-sub-h">(una petición por mes, desde el 01/01/2026)</span></h3>
     <div class="tc-controles">
-      <label class="tc-campo">Fecha Desde
-        <input type="date" id="tc-desde">
-      </label>
-      <label class="tc-campo">Fecha Hasta
-        <input type="date" id="tc-hasta">
-      </label>
-      <label class="tc-campo">Formato de fecha
-        <!-- El formato que espera Albor tampoco esta confirmado: se puede alternar sin tocar el
-             Worker, que reenvia el valor tal cual llega. -->
-        <select id="tc-formato">
-          <option value="iso">aaaa-mm-dd</option>
-          <option value="dmy">dd/mm/aaaa</option>
-        </select>
+      <label class="tc-campo">Hasta el mes
+        <select id="tc-hasta-mes"></select>
       </label>
       <label class="tc-campo">IdMoneda
-        <input type="text" id="tc-moneda" inputmode="numeric" autocomplete="off" placeholder="vacío = no enviar">
+        <input type="text" id="tc-moneda" inputmode="numeric" autocomplete="off" value="2" placeholder="vacío = no enviar">
       </label>
     </div>
-    <button type="button" class="tc-btn" id="tc-recargar">Consultar</button>
+    <button type="button" class="tc-btn" id="tc-cargar">Cargar 2026</button>
+    <div class="tc-url" id="tc-url"></div>
   </div>
 
-  <div class="panel"><h3>Origen de los datos <span id="tc-estado"></span></h3>
-    <div class="tc-url" id="tc-url"></div>
-    <div class="tc-origen" id="tc-origen"></div>
+  <div class="panel"><h3>Meses consultados</h3>
+    <div class="scroll">
+      <table class="tc-meses"><thead><tr>
+        <th>Mes</th>
+        <th>Período</th>
+        <th>Estado</th>
+        <th>HTTP</th>
+        <th>Código</th>
+        <th class="tr">Registros</th>
+        <th class="tr">Tiempo</th>
+        <th></th>
+      </tr></thead><tbody id="tc-meses"></tbody></table>
+    </div>
   </div>
 
   <div class="panel"><h3>Registros recibidos <span id="tc-sub"></span></h3>
+    <div class="tc-origen" id="tc-origen"></div>
     <div class="scroll">
       <table class="tc-tabla"><thead><tr>
         <th>Referencia</th>
