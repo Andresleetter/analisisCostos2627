@@ -2,7 +2,19 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "campaniadelsur",
   "compatibility_date": "2026-07-28",
+  // Worker/proxy hacia la API de Albor (ver worker/index.js).
+  "main": "worker/index.js",
   "assets": {
-    "directory": "."
+    // Sin cambios: el sitio estatico completo se sigue sirviendo desde la raiz del repo.
+    "directory": ".",
+    // Expone los assets al Worker como env.ASSETS. Hoy el Worker no los necesita (no hace fallback
+    // programatico), pero deja el binding disponible sin alterar como se sirve el dashboard.
+    "binding": "ASSETS",
+    // Solo /api/* entra al Worker ANTES de buscar un archivo estatico. Todo el resto del sitio
+    // (index.html, css/, js/, img/, los .xlsx) se sigue resolviendo como asset primero, exactamente
+    // igual que antes de existir el Worker — la carga del dashboard no puede romperse por esto.
+    // Es explicito a proposito: como "directory" es la raiz del repo, sin esta regla un archivo o
+    // carpeta llamado "api" taparia la ruta del proxy.
+    "run_worker_first": ["/api/*"]
   }
 }
