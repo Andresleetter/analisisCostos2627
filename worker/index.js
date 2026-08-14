@@ -16,9 +16,19 @@
 //   GET /api/albor/cashflow        -> /Reportes/CuboCashFlow
 //
 // Flujo identico para todas ellas:
-//   1. login    POST {ALBOR_AUTH_URL}                        -> token temporal (response.data.token)
+//   1. token    AlborAuth (Durable Object global)            -> token vigente, o login si hace falta
 //   2. reporte  GET  {ALBOR_BASE_URL}{endpoint del reporte} con ese token
 //   3. se devuelve el JSON del reporte. El token NUNCA sale de este Worker.
+//
+// AUTENTICACION CENTRALIZADA — leer antes de agregar un endpoint nuevo:
+//   * TODA la autenticacion contra Albor pasa por el Durable Object AlborAuth (ver la clase al final
+//     de este archivo). Hay UNA sola instancia logica para todo el Worker (AUTH_NOMBRE), asi que los
+//     tres reportes —y cualquier /api/albor/* que se agregue— comparten el MISMO token mientras siga
+//     vigente, en vez de hacer un login por consulta.
+//   * El token de Albor dura aproximadamente 30 minutos. Internamente se reutiliza 25 (TOKEN_VIDA_MS),
+//     dejando 5 de margen para que nunca se use uno a punto de vencer.
+//   * NO volver a implementar un login propio dentro de un reporte. Un endpoint nuevo solo tiene que
+//     agregarse a REPORTES: el token ya se lo da consultarReporte() a traves del gestor.
 //
 // Variables de entorno (NUNCA escritas en el codigo ni versionadas):
 //   SECRETS — `wrangler secret put <NOMBRE>`:
@@ -32,8 +42,10 @@
 //                             empresa por consulta, sin tocar Variables and Secrets ni redesplegar.
 //     ALBOR_AUTH_URL          opcional, por defecto AUTH_URL_DEFAULT
 //     ALBOR_BASE_URL          opcional, por defecto BASE_URL_DEFAULT
-// Ya NO existe ningun ALBOR_TOKEN fijo: el token se obtiene en cada peticion y vive solo en memoria
-// durante esa peticion.
+// Ya NO existe ningun ALBOR_TOKEN fijo: el token se obtiene por login y vive dentro del Durable
+// Object (memoria + su storage privado), nunca en el codigo ni en un archivo del repo.
+
+import { DurableObject } from 'cloudflare:workers';
 
 // URLs por defecto (no son credenciales). Se pueden sobrescribir por env sin tocar el codigo, por
 // si Albor cambia de host o hace falta apuntar a un ambiente de prueba.
@@ -127,6 +139,21 @@ const ENV_REQUERIDAS = [
 // Corte de cada llamada al upstream, para no dejar la peticion colgada si Albor no responde.
 const TIMEOUT_MS = 25000;
 
+// ---- Autenticacion centralizada ----------------------------------------------------------------
+// UNA sola instancia logica del Durable Object para todo el Worker: el nombre es fijo a proposito,
+// asi cualquier ruta /api/albor/* cae siempre en la misma y comparte el token.
+const AUTH_NOMBRE = 'albor-auth-global';
+// El token de Albor dura ~30 minutos. Se reutiliza 25 para dejar 5 de margen: asi nunca se manda
+// una consulta con un token que podria vencer a mitad de camino.
+const TOKEN_VIDA_MS = 25 * 60 * 1000;
+
+// Stub del gestor global. `getByName` es la forma directa; el fallback por idFromName existe para
+// runtimes donde todavia no esta disponible — las dos resuelven a la MISMA instancia.
+function authGlobal(env) {
+  const ns = env.ALBOR_AUTH;
+  return ns.getByName ? ns.getByName(AUTH_NOMBRE) : ns.get(ns.idFromName(AUTH_NOMBRE));
+}
+
 // UNICO constructor de respuestas del Worker: todo lo que sale de /api/* pasa por acá (exito,
 // errores controlados, 404 y 405), asi que los dos headers valen para TODAS las respuestas sin
 // excepcion y no hay forma de agregar un camino de salida que se los saltee.
@@ -213,9 +240,10 @@ function envFaltantes(env) {
   return ENV_REQUERIDAS.filter(k => !env || !env[k] || !String(env[k]).trim());
 }
 
-// ---- Paso 1: login. Devuelve el token temporal, o lanza un Error con `codigo` para que el
-// llamador arme la respuesta controlada. El token se devuelve como valor de retorno y no se guarda
-// en ningun lado: ni en variables de modulo, ni en cache, ni en logs.
+// ---- Login contra Albor. Devuelve el token, o lanza un Error con `codigo` para que el llamador
+// arme la respuesta controlada.
+// UNICO lugar del Worker que hace login, y lo llama UNICAMENTE AlborAuth.createToken(): ninguna
+// ruta la invoca por su cuenta (ver la nota de autenticacion centralizada al principio del archivo).
 async function obtenerToken(env) {
   const url = String(env.ALBOR_AUTH_URL || AUTH_URL_DEFAULT).trim();
 
@@ -271,6 +299,90 @@ async function obtenerToken(env) {
   return token;
 }
 
+// ================== AlborAuth — AUTENTICACION GLOBAL (Durable Object) ==================
+// Administra el token de Albor para TODO el Worker. Existe una sola instancia logica
+// (AUTH_NOMBRE), asi que CuboContable, Cash Flow, Ordenes de Trabajo y cualquier /api/albor/* que
+// se agregue reutilizan el mismo token mientras siga vigente, en vez de hacer un login por consulta.
+//
+//   * El token de Albor dura aproximadamente 30 minutos.
+//   * Internamente se reutiliza durante 25 (TOKEN_VIDA_MS): quedan 5 de margen.
+//   * TODOS los endpoints de Albor tienen que pedir el token por acá.
+//   * NO volver a implementar logins independientes por reporte.
+//
+// El token se guarda en el storage del Durable Object (privado del objeto, nunca en el repo ni en
+// una variable de entorno) y ademas se cachea en memoria para no leer el storage en cada consulta.
+// NUNCA se loguea, ni se devuelve al frontend, ni aparece en un mensaje de error.
+export class AlborAuth extends DurableObject {
+  constructor(ctx, env) {
+    super(ctx, env);
+    this.token = null;
+    this.expiresAt = 0;
+    // Renovacion en curso. Es el candado de concurrencia: si llegan varias consultas juntas y no hay
+    // token vigente, la primera arranca el login y las demas esperan ESA misma promesa en vez de
+    // disparar un login cada una. Se limpia siempre al terminar (exito o error), asi un fallo no
+    // deja el gestor pegado a una promesa rechazada.
+    this.enCurso = null;
+  }
+
+  // Carga perezosa desde el storage: la instancia puede haberse reiniciado con un token todavia
+  // vigente guardado de antes.
+  async cargar() {
+    if (this.token !== null) return;
+    const g = await this.ctx.storage.get(['albor_token', 'albor_expires_at']);
+    this.token = g.get('albor_token') || null;
+    this.expiresAt = g.get('albor_expires_at') || 0;
+  }
+
+  vigente() {
+    return typeof this.token === 'string' && this.token !== '' && this.expiresAt > Date.now();
+  }
+
+  // ---- API publica del gestor -------------------------------------------------------------------
+  // Devuelve {ok:true, token} o {ok:false, codigo}. Se devuelve un objeto en vez de lanzar para que
+  // el `codigo` sobreviva al cruce RPC entre el Worker y el Durable Object.
+  async getToken() {
+    await this.cargar();
+    if (this.vigente()) {
+      console.log('[albor-auth] token reutilizado');
+      return { ok: true, token: this.token };
+    }
+    return this.refreshToken();
+  }
+
+  // Renueva el token. Si ya hay una renovacion en curso, se espera esa: nunca dos logins en paralelo.
+  async refreshToken() {
+    if (this.enCurso) return this.enCurso;
+    this.enCurso = this.createToken().finally(() => { this.enCurso = null; });
+    return this.enCurso;
+  }
+
+  // Login real + persistencia. Unico camino por el que entra un token nuevo.
+  async createToken() {
+    let token;
+    try {
+      token = await obtenerToken(this.env);
+    } catch (e) {
+      // `detalle` es texto fijo del propio Worker (nombre de error o status), nunca credenciales.
+      logInterno(e.detalle || 'fallo el login');
+      return { ok: false, codigo: e.codigo || 'login_fallido' };
+    }
+    this.token = token;
+    this.expiresAt = Date.now() + TOKEN_VIDA_MS;
+    await this.ctx.storage.put({ albor_token: token, albor_expires_at: this.expiresAt });
+    console.log('[albor-auth] token creado mediante login');
+    return { ok: true, token };
+  }
+
+  // Descarta el token guardado. La llama el proxy ante un 401 del reporte: el token dejo de servir
+  // antes de lo previsto (revocado, cambio de credenciales, reinicio del lado de Albor).
+  async invalidateToken() {
+    this.token = null;
+    this.expiresAt = 0;
+    await this.ctx.storage.delete(['albor_token', 'albor_expires_at']);
+    console.log('[albor-auth] token invalidado por 401');
+  }
+}
+
 // ---- Paso 2: reporte, ya con el token temporal en mano. `reporte` es la entrada de REPORTES que
 // corresponde a la ruta pedida (endpoint + parametros aceptados): el login, el manejo de errores y
 // la politica de cache son EXACTAMENTE los mismos para todos los reportes, no hay una variante por
@@ -306,14 +418,14 @@ async function consultarReporte(request, env, reporte) {
     }
   }
 
-  let token;
-  try {
-    token = await obtenerToken(env);
-  } catch (e) {
-    logInterno(e.detalle || 'fallo el login');
-    const codigo = e.codigo || 'login_fallido';
-    return errorControlado(codigo, 'No se pudo autenticar contra Albor.', 500);
+  // Token: SIEMPRE del gestor global (AlborAuth). Acá no hay login propio — si el token guardado
+  // sigue vigente, esta consulta no genera ninguna llamada al servicio de autenticacion.
+  const auth = authGlobal(env);
+  const cred = await auth.getToken();
+  if (!cred.ok) {
+    return errorControlado(cred.codigo, 'No se pudo autenticar contra Albor.', 500);
   }
+  let token = cred.token;
 
   let destino;
   try {
@@ -341,25 +453,39 @@ async function consultarReporte(request, env, reporte) {
     }
   }
 
+  const pedirReporte = t => fetch(destino.toString(), {
+    method: 'GET',
+    headers: {
+      // Valor ya resuelto y validado mas arriba; nunca el texto crudo que mando el navegador.
+      'X-Company': xCompany,
+      'Authorization': 'Bearer ' + t,
+      'Accept': 'application/json',
+    },
+    // Los subrequests GET de un Worker pasan por la cache de Cloudflare y se guardan segun los
+    // headers que mande el origen. Si Albor devolviera el reporte como cacheable, dos consultas
+    // seguidas con los mismos parametros podrian resolverse con la copia guardada en vez de con
+    // el dato actual. 'no-store' lo desactiva: cada consulta al endpoint golpea Albor de verdad.
+    // (El login es POST y los POST nunca se cachean, por eso no hace falta tocarlo — y asi se
+    // deja la autenticacion sin modificar.)
+    cache: 'no-store',
+    signal: AbortSignal.timeout(TIMEOUT_MS),
+  });
+
   let resp;
   try {
-    resp = await fetch(destino.toString(), {
-      method: 'GET',
-      headers: {
-        // Valor ya resuelto y validado mas arriba; nunca el texto crudo que mando el navegador.
-        'X-Company': xCompany,
-        'Authorization': 'Bearer ' + token,
-        'Accept': 'application/json',
-      },
-      // Los subrequests GET de un Worker pasan por la cache de Cloudflare y se guardan segun los
-      // headers que mande el origen. Si Albor devolviera el reporte como cacheable, dos consultas
-      // seguidas con los mismos parametros podrian resolverse con la copia guardada en vez de con
-      // el dato actual. 'no-store' lo desactiva: cada consulta al endpoint golpea Albor de verdad.
-      // (El login es POST y los POST nunca se cachean, por eso no hace falta tocarlo — y asi se
-      // deja la autenticacion sin modificar.)
-      cache: 'no-store',
-      signal: AbortSignal.timeout(TIMEOUT_MS),
-    });
+    resp = await pedirReporte(token);
+    // ---- 401: el token dejo de valer antes de lo previsto (revocado o invalidado del lado de
+    // Albor). Se descarta el guardado, se pide uno nuevo y se repite la consulta UNA sola vez. Si el
+    // segundo intento vuelve a dar 401 se devuelve el error controlado: no hay reintentos en cadena.
+    if (resp.status === 401) {
+      await auth.invalidateToken();
+      const nueva = await auth.getToken();
+      if (!nueva.ok) {
+        return errorControlado(nueva.codigo, 'No se pudo autenticar contra Albor.', 500);
+      }
+      token = nueva.token;
+      resp = await pedirReporte(token);
+    }
   } catch (e) {
     logInterno('fallo la llamada al reporte: ' + ((e && e.name) || 'Error'));
     return errorControlado('upstream_inaccesible', 'No se pudo contactar el servicio de Albor.', 502);
