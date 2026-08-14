@@ -1,5 +1,8 @@
 {
-  "$schema": "node_modules/wrangler/config-schema.json",
+  // Sin "$schema": apuntaba a node_modules/wrangler/config-schema.json, que no existe en este repo
+  // (no hay package.json ni node_modules — el deploy lo hace Cloudflare directamente desde GitHub,
+  // sin instalar wrangler acá), asi que el editor marcaba error al no poder resolver el esquema.
+  // Es un campo solo para el editor: Cloudflare lo ignora, y quitarlo no cambia nada del despliegue.
   "name": "campaniadelsur",
   "compatibility_date": "2026-07-28",
   // Las variables de Albor se configuran a mano en Cloudflare (panel del Worker), NUNCA en este
