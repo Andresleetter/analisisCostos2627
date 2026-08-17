@@ -135,6 +135,16 @@ const AUDITORIA_INSUMOS_DESVIO_ALTA = 60;    // % sobre el promedio del grupo ->
 // Minimo de parcelas comparables que debe tener un grupo para que su promedio signifique algo. Con
 // una sola parcela no hay contra que comparar; el grupo se omite en vez de mostrar un 0% enganoso.
 const AUDITORIA_INSUMOS_MIN_PARCELAS = 2;
+// Cultivos que quedan FUERA de esta auditoria (a pedido del usuario). AVENA y COBERTURA son
+// cultivos de servicio —cobertura de suelo entre zafras—, no cultivos de renta: mezclarlos con
+// ARROZ/SOJA/SORGO/MAIZ ensucia la comparacion de consumo y de costo por hectarea. Es el mismo
+// criterio con el que ya se los retiro del Resumen Ejecutivo (ver CULTIVOS mas arriba).
+// Efecto lateral verificado contra el dato: son los UNICOS que hacian que un mismo lote apareciera
+// con dos cultivos en la misma campania (27 lotes: ARROZ+AVENA, MAIZ+COBERTURA, SORGO+COBERTURA).
+// Al excluirlos, cada lote queda con un solo cultivo por campania y "Lote" pasa a identificar la
+// parcela sin ambiguedad — por eso el modulo filtra y rotula por Lote, no por nombre de parcela.
+// Se comparan normalizados (normHdr) contra la Actividad de consultaOT.
+const AUDITORIA_INSUMOS_CULTIVOS_EXCLUIDOS = ['AVENA', 'COBERTURA'];
 // Tope de filas dibujadas en la tabla de movimientos (el detalle mas fino, hasta ~3.300 filas). No
 // recorta ningun calculo: los KPIs, el resumen por parcela y los desvios se computan SIEMPRE sobre
 // el total filtrado. Solo limita cuantas filas se pintan de una vez, y el render avisa en pantalla
