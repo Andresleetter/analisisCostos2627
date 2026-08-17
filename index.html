@@ -221,21 +221,16 @@
       <div class="scroll"><table><thead><tr><th>Ítem</th><th class="tr">Metros Presupuestados</th><th class="tr">Avance Ejecutado</th><th class="tr">% Avance</th></tr></thead><tbody id="audit-metros"></tbody></table></div></div>
     </div>
 
-    <!-- SUB-MODULO 2: Auditoría de Insumos por Parcela. Fuente = los mismos movimientos de consumo
-         del módulo Insumos (D.insumos_parcela, ver data.js), cruzados con la parcela y la OT que
-         los generó. Reutiliza .gfilter/.kpis/.panel/.scroll/tabla del resto del dashboard. -->
+    <!-- SUB-MODULO 2: Auditoría de Insumos por Parcela. Fuente ÚNICA = la hoja consultaOT, sus
+         líneas de insumo de OT confirmadas (D.insumos_parcela, ver data.js): cada línea ya trae su
+         parcela completa y sus hectáreas reales en columnas propias, sin cruzar hojas.
+         Reutiliza .gfilter/.kpis/.panel/.scroll/tabla del resto del dashboard. -->
     <div class="audit-view" id="audit-view-insumos">
       <div class="gfilter ip-filter">
         <label for="ipcampania">Campaña</label>
         <select id="ipcampania"></select>
-        <label for="ipmes">Período</label>
-        <select id="ipmes"><option value="ALL">Toda la campaña</option></select>
-        <label for="ipzona">Zona</label>
-        <select id="ipzona"><option value="ALL">Todas</option></select>
-        <label for="ipcampo">Campo</label>
-        <select id="ipcampo"><option value="ALL">Todos</option></select>
-        <label for="ipparcela">Parcela / Lote</label>
-        <select id="ipparcela"><option value="ALL">Todas</option></select>
+        <label for="iplote">Lote</label>
+        <select id="iplote"><option value="ALL">Todos</option></select>
         <label for="ipcultivo">Cultivo</label>
         <select id="ipcultivo"><option value="ALL">Todos</option></select>
         <label for="iptipo">Tipo de Insumo</label>
@@ -243,18 +238,19 @@
         <label for="ipinsumo">Insumo</label>
         <select id="ipinsumo"><option value="ALL">Todos</option></select>
       </div>
+      <div class="ip-fuente">Fuente: hoja <b>consultaOT</b> — líneas de insumo de órdenes de trabajo <b>confirmadas</b>, sin combustible (tiene su propio módulo). Cantidad = Unidades/Dosis · Costo = Unidades/Dosis × Precio Unitario · Hectáreas = Has. Reales de la orden.</div>
       <div class="kpis" id="ip-kpis"></div>
       <div class="ip-aviso hidden" id="ip-aviso"></div>
       <div class="panel sub"><h3>Cantidad Utilizada por Unidad de Medida <span>Cada unidad se totaliza por separado — litros, kilos y unidades nunca se suman entre sí</span></h3>
         <div class="scroll"><table><thead><tr><th>Unidad de Medida</th><th class="tr">Insumos Distintos</th><th class="tr">Cantidad Utilizada</th><th class="tr">Costo Total</th></tr></thead><tbody id="ip-unidades"></tbody></table></div></div>
-      <div class="panel hero-panel"><h3>Resumen por Parcela <span id="ip-parcelas-sub"></span></h3>
-        <div class="scroll scroll-tall"><table class="ldt"><thead><tr><th>Parcela / Lote</th><th>Cultivo</th><th class="tr">Hectáreas</th><th class="tr">Aplicaciones</th><th class="tr">Insumos Distintos</th><th class="tr">Costo Total</th><th class="tr">Costo / ha</th></tr></thead><tbody id="ip-parcelas"></tbody></table></div></div>
+      <div class="panel hero-panel"><h3>Resumen por Lote <span id="ip-parcelas-sub"></span></h3>
+        <div class="scroll scroll-tall"><table class="ldt"><thead><tr><th>Lote</th><th>Cultivo</th><th class="tr">Hectáreas</th><th class="tr">Aplicaciones</th><th class="tr">Insumos Distintos</th><th class="tr">Costo Total</th><th class="tr" title="Costo total de insumos del lote dividido su superficie">Costo / ha del Lote</th></tr></thead><tbody id="ip-parcelas"></tbody></table></div></div>
       <div class="panel sub"><h3>Consumo por Hectárea sobre el Promedio del Cultivo <span id="ip-desvio-cant-sub"></span></h3>
-        <div class="scroll"><table><thead><tr><th>Cultivo</th><th>Insumo</th><th>Parcela</th><th class="tr">Cant. / ha</th><th class="tr">Promedio del Cultivo</th><th class="tr">Desvío</th></tr></thead><tbody id="ip-desvio-cant"></tbody></table></div></div>
-      <div class="panel sub"><h3>Parcelas con Mayor Costo de Insumos por Hectárea <span id="ip-desvio-costo-sub"></span></h3>
-        <div class="scroll"><table><thead><tr><th>Cultivo</th><th>Parcela</th><th class="tr">Hectáreas</th><th class="tr">Costo / ha</th><th class="tr">Promedio del Cultivo</th><th class="tr">Desvío</th></tr></thead><tbody id="ip-desvio-costo"></tbody></table></div></div>
-      <div class="panel sub"><h3>Detalle de Movimientos <span id="ip-movs-sub"></span></h3>
-        <div class="scroll scroll-tall"><table class="ip-movs-tbl"><thead><tr><th>Fecha</th><th>Campaña</th><th>Zona</th><th>Campo</th><th>Parcela / Lote</th><th>Cultivo</th><th>Insumo</th><th>Tipo</th><th class="tr">Cantidad</th><th>Unidad</th><th class="tr">Ha Reales</th><th class="tr">Cant. / ha</th><th class="tr">Costo Unit.</th><th class="tr">Costo Total</th><th class="tr">Costo / ha</th><th>Orden</th></tr></thead><tbody id="ip-movs"></tbody></table></div></div>
+        <div class="scroll"><table><thead><tr><th>Cultivo</th><th>Insumo</th><th>Lote</th><th class="tr">Cant. / ha</th><th class="tr">Promedio del Cultivo</th><th class="tr">Desvío</th></tr></thead><tbody id="ip-desvio-cant"></tbody></table></div></div>
+      <div class="panel sub"><h3>Lotes con Mayor Costo de Insumos por Hectárea <span id="ip-desvio-costo-sub"></span></h3>
+        <div class="scroll"><table><thead><tr><th>Cultivo</th><th>Lote</th><th class="tr">Hectáreas</th><th class="tr">Costo / ha del Lote</th><th class="tr">Promedio del Cultivo</th><th class="tr">Desvío</th></tr></thead><tbody id="ip-desvio-costo"></tbody></table></div></div>
+      <div class="panel sub"><h3>Detalle de Aplicaciones <span id="ip-movs-sub"></span></h3>
+        <div class="scroll scroll-tall"><table class="ip-movs-tbl"><thead><tr><th>Fecha</th><th>Campaña</th><th>Lote</th><th>Cultivo</th><th>Insumo</th><th>Tipo</th><th class="tr">Cantidad</th><th>Unidad</th><th class="tr">Ha Reales</th><th class="tr">Cant. / ha</th><th class="tr">Costo Unit.</th><th class="tr">Costo Total</th><th class="tr">Costo / ha</th><th>Orden</th></tr></thead><tbody id="ip-movs"></tbody></table></div></div>
     </div>
   </section>
 
