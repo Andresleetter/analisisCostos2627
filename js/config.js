@@ -1,9 +1,23 @@
 // ================== CONFIG ==================
-// Fuente de datos: un único .xlsx en GitHub raw (antes eran 3 CSV separados; ahora 3 hojas de
-// un mismo archivo, exportadas por Power Query: consultaOT, consultaCultivos, consultaInsumos).
+// Fuente de datos: un único .xlsx con 3 hojas exportadas por Power Query (consultaOT,
+// consultaCultivos, consultaInsumos); antes eran 3 CSV separados.
+//
+// De dónde se descarga: del PROPIO sitio (ruta relativa), no de raw.githubusercontent. Cloudflare
+// despliega el repo completo como assets estáticos (ver wrangler.jsonc: assets.directory "."), así
+// que el mismo .xlsx que está en GitHub ya se sirve desde el dominio del dashboard, por el CDN de
+// Cloudflare. El flujo de trabajo no cambia en nada: sigue habiendo que commitear y pushear el
+// Excel a main para que el sitio en vivo lo tome (Cloudflare redespliega solo).
+// Motivo del cambio: raw.githubusercontent NO es un CDN para tráfico de usuarios y aplica límites
+// de conexiones — el 17/08/2026 devolvió 503 "Backend.max_conn reached" (y 429 Too Many Requests)
+// desde el nodo de Buenos Aires, dejando el dashboard sin cargar. Afectaba por igual al archivo de
+// presupuesto, que no se había tocado. La ruta relativa saca esa dependencia del medio.
 const REPO = "Andresleetter/analisisCostos2627";
 const BRANCH = "main";
-const SRC_XLSX = "https://raw.githubusercontent.com/"+REPO+"/"+BRANCH+"/datosCampania2627.xlsx";
+// Respaldo: si el archivo no se puede bajar del sitio (caso típico: abrir index.html directo desde
+// el disco, sin servidor, donde fetch de una ruta relativa no funciona), loader.js reintenta contra
+// GitHub. Nunca al revés: GitHub es el plan B, no el camino normal.
+const SRC_XLSX = "datosCampania2627.xlsx";
+const SRC_XLSX_RESPALDO = "https://raw.githubusercontent.com/"+REPO+"/"+BRANCH+"/datosCampania2627.xlsx";
 const HOJA_OT = "consultaOT";
 const HOJA_CULTIVOS = "consultaCultivos";
 const HOJA_INSUMOS = "consultaInsumos";
@@ -74,7 +88,9 @@ const LOTES_NO_PARCELA = ['SECADERO', 'FLETES', 'PARCELA'];
 // real: fila 1 = titulo, fila 2 = vacia, fila 3 = encabezados, filas 4-13 = los 10 items de
 // presupuesto, fila 14 = fila de TOTAL. Filas 47-51 son calculos sueltos sin relacion a la tabla
 // de items (sin Especificacion ni Cta. Contable) — se excluyen del parseo.
-const INFRA_SRC_XLSX = "https://raw.githubusercontent.com/"+REPO+"/"+BRANCH+"/PRESUPUESTO%20ALISON%20INFRAESTRUTURA%2026-27.xlsx";
+// Mismo criterio que SRC_XLSX: se descarga del propio sitio, con GitHub como respaldo.
+const INFRA_SRC_XLSX = "PRESUPUESTO%20ALISON%20INFRAESTRUTURA%2026-27.xlsx";
+const INFRA_SRC_XLSX_RESPALDO = "https://raw.githubusercontent.com/"+REPO+"/"+BRANCH+"/PRESUPUESTO%20ALISON%20INFRAESTRUTURA%2026-27.xlsx";
 const INFRA_HOJA = "INFRAESTRUTURA 26-27";
 // Indices de columna (0-based) dentro de cada fila de item, leida con header:1 (array crudo).
 // OJO: la cantidad presupuestada real NO esta en la columna "Cant. De trabajo" (viene vacia en
