@@ -854,6 +854,157 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
     return {tipo,nombre,unidad,stockInicial:Math.round((stockInicialMap[key]?stockInicialMap[key].cantidad:0)*100)/100};
   }).sort((a,b)=>a.tipo.localeCompare(b.tipo,'es')||a.nombre.localeCompare(b.nombre,'es')||a.unidad.localeCompare(b.unidad,'es'));
 
+  // ================= AUDITORIA DE INSUMOS POR PARCELA =================
+  // Vista de auditoria (pestaña Auditoría, sub-modulo "Insumos por Parcela"): que insumo se
+  // consumio, en que parcela, cuanto, a que costo y que orden lo genero.
+  //
+  // FUENTE — exactamente las mismas filas que ya usa el modulo Insumos, sin relajar ninguna regla:
+  // otrosInsumosAgricolas (consultaInsumos ya sin COMBUSTIBLES y sin INSUMOS_EXCLUIDOS, separados
+  // en loader.js, y sin movimientos ganaderos por esMovimientoAgricolaNoGanadero mas arriba),
+  // recortadas al mismo tipoMovimiento de consumo (MOV_CONSUMO) que alimenta "Consumo de Insumos".
+  // No se agrega ninguna fuente nueva ni se toca nada del modulo Insumos.
+  //
+  // Verificado contra el .xlsx real: las 3.328 filas de consumo traen SIEMPRE cargados 'cultivo'
+  // (la parcela) y 'referenciaOrigen' (la OT que genero el consumo) — 0 filas sin uno u otro —, y
+  // |unidades| x precioUnitarioMonedaExtranjera coincide exactamente con |importeMonedaExtranjera|
+  // en las 3.328 (diferencia maxima 0,0000), asi que el costo se calcula con la formula pedida
+  // (cantidad x costo unitario) sin discrepar del importe que trae el propio dato.
+
+  // Diccionarios derivados de consultaOT (TODAS las campanias, rawTodasCampanias) — nunca listas
+  // fijas escritas a mano: campos, actividades, zona de cada lote, y el indice de parcelas por su
+  // nombre completo. consultaOT es la unica hoja que trae Campo/Lote/Zona como columnas propias.
+  const ipCampos=[], ipActividades=[], ipZonaPorLote=new Map(), ipParcelaIdx=new Map(), ipOTPorRef=new Map();
+  {
+    const camposSet=new Set(), actsSet=new Set();
+    rawTodasCampanias.forEach(r=>{
+      const campo=String(keyOf(r,['campo','Campo'])||'').trim();
+      const lote=String(keyOf(r,['lote','Lote'])||'').trim();
+      const zona=String(keyOf(r,['zona','Zona'])||'').trim();
+      const act=String(keyOf(r,['actividad','Actividad'])||'').trim();
+      const cult=String(keyOf(r,['cultivo','Cultivo'])||'').trim();
+      const ref=String(keyOf(r,['referencia','Referencia'])||'').trim();
+      if(campo) camposSet.add(campo);
+      if(act) actsSet.add(act);
+      if(lote && zona && !ipZonaPorLote.has(normHdr(lote))) ipZonaPorLote.set(normHdr(lote), zona);
+      if(cult && !ipParcelaIdx.has(normHdr(cult))) ipParcelaIdx.set(normHdr(cult),{campo,lote,zona,cultivo:act});
+      if(ref){
+        const serv=String(keyOf(r,['servicio','Servicio'])||'').trim();
+        const o = ipOTPorRef.get(ref) || {ot:'',serv:'',estado:'',ha:null,sinSuperficie:false};
+        if(!o.ot) o.ot=String(keyOf(r,['ordenTrabajo','OT'])||'').trim();
+        if(!o.serv) o.serv=serv;
+        if(!o.estado) o.estado=String(keyOf(r,['estado','Estado'])||'').trim();
+        // ha de la OT = maximo de Has. Reales de sus lineas, MISMO criterio que ya usa agruparOTS()
+        // para la superficie de una OT (ver `ha:` mas arriba) — no se suma linea por linea, que
+        // multiplicaria la superficie por la cantidad de items de la orden.
+        // EXCEPCION: las lineas de los servicios de SERVICIOS_SIN_TRABAJO_EJECUTADO (config.js) no
+        // aportan superficie. Es la MISMA regla que ya aplica la columna "Trabajo Ejecutado" de
+        // Servicios: en esos trabajos solo se usan insumos y las Has. Reales que traen no son una
+        // superficie sino un marcador. Verificado contra el dato: las UNICAS OT con hectareas
+        // <= 0,01 que originan consumos son exactamente las de "Aplicacion de herbicida con
+        // mochila". Sin esta exclusion, dividir por 0,01 daria costos por hectarea de decenas de
+        // miles de dolares que encabezarian la auditoria siendo un artefacto del marcador.
+        if(SERVICIOS_SIN_TRABAJO_EJECUTADO.includes(normHdr(serv))) o.sinSuperficie=true;
+        else { const h=numN(keyOf(r,['hectareasReales','Has. Reales'])); if(h!=null && (o.ha==null || h>o.ha)) o.ha=h; }
+        ipOTPorRef.set(ref,o);
+      }
+    });
+    ipCampos.push(...camposSet);
+    // De mayor a menor largo: al buscar la actividad como sufijo, "MAIZ ZAFRIÑA" tiene que ganarle
+    // a "MAIZ" (si no, el lote se quedaria con un "ZAFRIÑA" colgado).
+    ipActividades.push(...[...actsSet].sort((a,b)=>b.length-a.length));
+  }
+  // Descompone el nombre de parcela que trae consultaInsumos ('cultivo', ej. "LA TERESA .37B ARROZ
+  // 25/26") en Campo / Lote / Cultivo. Primero busca el nombre completo en el indice de consultaOT
+  // (fuente directa, sin interpretar texto); solo si esa parcela no aparece en consultaOT se
+  // descompone el texto, quitando el sufijo de campania (que la propia fila ya trae en su columna
+  // 'campania'), luego el Campo por prefijo y la Actividad por sufijo — ambos contra los valores
+  // reales de consultaOT, nunca contra una lista inventada. Lo que queda en el medio es el Lote.
+  // Es necesario: de las 292 parcelas que aparecen en los consumos, 161 (todas de la campania
+  // 25/26) no existen en consultaOT porque el export no llega tan atras — con este parseo, 288 de
+  // las 292 quedan con Campo + Lote + Cultivo resueltos. Las 4 restantes son parcelas operativas
+  // sin cultivo agricola ("SILO BOLSAS", "SECADERO", "PARCELA ARROZ", "Patio vivienda Arrozal"):
+  // ahi el Lote cae al texto que quedo y el Cultivo queda vacio, sin inventar ninguno.
+  // La comparacion es normalizada (normHdr) pero SIEMPRE se corta sobre el texto original: se
+  // compara normHdr(trozo)===normHdr(candidato) en vez de cortar por el largo del normalizado, asi
+  // una diferencia de acentos o mayusculas no desplaza el corte.
+  function ipDescomponerParcela(nombreParcela, campania){
+    const directo = ipParcelaIdx.get(normHdr(nombreParcela));
+    if(directo) return {campo:directo.campo, lote:directo.lote, zona:directo.zona, cultivo:directo.cultivo, origen:'consultaOT'};
+    let resto = String(nombreParcela||'').trim();
+    const camp = String(campania||'').trim();
+    if(camp && resto.length>camp.length && normHdr(resto.slice(resto.length-camp.length))===normHdr(camp))
+      resto = resto.slice(0, resto.length-camp.length).trim();
+    let campo='';
+    for(const c of ipCampos){
+      if(resto.length>=c.length && normHdr(resto.slice(0,c.length))===normHdr(c)){ campo=c; resto=resto.slice(c.length).trim(); break; }
+    }
+    let cultivo='';
+    for(const a of ipActividades){
+      if(resto.length>=a.length && normHdr(resto.slice(resto.length-a.length))===normHdr(a)){ cultivo=a; resto=resto.slice(0,resto.length-a.length).trim(); break; }
+    }
+    const lote = resto || cultivo || String(nombreParcela||'').trim();
+    return {campo, lote, zona: ipZonaPorLote.get(normHdr(lote))||'', cultivo, origen:'texto'};
+  }
+  // Un objeto por MOVIMIENTO de consumo (la unidad minima trazable: una linea de egreso de stock
+  // generada por una OT). Todo lo demas —KPIs, resumen por parcela, desvios— se agrega en render.js
+  // sobre estas filas ya filtradas, sin recalcular nada desde el .xlsx.
+  const insumos_parcela_movs = otrosInsumosAgricolas
+    .filter(r=>String(r.tipoMovimiento||'').trim()===MOV_CONSUMO)
+    .map(rowRaw=>{
+      const row={}; for(const k in rowRaw){ row[normHdr(k)]=rowRaw[k]; }
+      const campania = String(row['campania']||'').trim();
+      const parcela = String(row['cultivo']||'').trim();
+      const p = ipDescomponerParcela(parcela, campania);
+      const ref = String(row['referenciaorigen']||'').trim();
+      const ot = ipOTPorRef.get(ref) || null;
+      const fecha = pdate(row['fecha']);
+      // Las filas de egreso vienen en negativo (es un egreso de stock): se pasan a valor absoluto,
+      // mismo criterio que ya usa agruparConsumo() del modulo Insumos.
+      const cantidad = Math.abs(num(row['unidades']));
+      const costoUnitario = Math.abs(num(row['preciounitariomonedaextranjera']));
+      return {
+        fecha, mesnum: fecha?fecha.getMonth()+1:0, campania,
+        parcela: parcela || '(sin parcela)',
+        campo: p.campo || '(sin campo)', lote: p.lote || '(sin lote)',
+        zona: p.zona || '(sin zona)', cultivo: p.cultivo || '(sin cultivo)',
+        tipo: String(row['tipoinsumo']||'').trim() || '(sin tipo)',
+        insumo: String(row['nombre']||'').trim(),
+        unidad: String(row['unidadmedida']||'').trim() || '(sin unidad)',
+        cantidad, costoUnitario,
+        costoTotal: Math.round(cantidad*costoUnitario*100)/100,
+        // Trazabilidad: la OT que genero el consumo y el comprobante de stock de esa linea.
+        otRef: ref, ot: ot?ot.ot:'', servicio: ot?ot.serv:'', estadoOT: ot?ot.estado:'',
+        comprobante: String(row['referencia']||'').trim(),
+        // Hectareas REALES de la OT que genero el consumo (null cuando esa OT no esta en el export
+        // de consultaOT — ver insumos_parcela.sin_ha mas abajo). Nunca se reemplaza por las
+        // hectareas planificadas de consultaCultivos: son dos magnitudes distintas (el modulo
+        // Control de Hectareas existe justamente porque difieren), mezclarlas daria un costo por
+        // hectarea que no corresponde a ninguna de las dos.
+        ha: ot?ot.ha:null,
+        // Por que este movimiento no tiene hectareas — se muestra en pantalla en vez de dejar la
+        // celda vacia sin explicacion. Son dos motivos distintos y no deben confundirse.
+        motivoSinHa: (ot && ot.ha!=null) ? null : (ot ? (ot.sinSuperficie?'sin_superficie':'ot_sin_ha') : 'ot_fuera_export'),
+      };
+    })
+    .filter(m=>m.insumo);
+  // Campanias presentes en los consumos, en el orden de presentacion de CAMPANIA_ORDEN (config.js)
+  // y despues cualquier otra que aparezca — nunca se oculta ninguna. Los valores son los que trae
+  // consultaInsumos tal cual ('25/26', '26/27', 'Zafriña 26'), nunca una etiqueta.
+  const ipCampaniasPresentes = [...new Set(insumos_parcela_movs.map(m=>m.campania).filter(c=>c))];
+  const insumos_parcela_campanias = [
+    ...CAMPANIA_ORDEN.filter(c=>ipCampaniasPresentes.includes(c)),
+    ...ipCampaniasPresentes.filter(c=>!CAMPANIA_ORDEN.includes(c)).sort((a,b)=>a.localeCompare(b,'es')),
+  ];
+  const insumos_parcela = {
+    movs: insumos_parcela_movs,
+    campanias: insumos_parcela_campanias,
+    total: insumos_parcela_movs.length,
+    // Movimientos sin hectareas reales: se muestran igual (parcela, insumo, cantidad y costo son
+    // datos propios de consultaInsumos), pero no pueden expresarse por hectarea. Se exponen los
+    // conteos para avisarlo en pantalla en vez de dejar celdas vacias sin explicacion.
+    sin_ha: insumos_parcela_movs.filter(m=>m.ha==null).length,
+  };
+
   // ================= RESUMEN EJECUTIVO =================
   // Todo lo que sigue alimenta exclusivamente la pestaña Resumen Ejecutivo. Se calcula UNA sola
   // vez acá (no en render.js) y se reutilizan colecciones ya construidas arriba (cultivos,
@@ -1052,6 +1203,9 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
     insumos_ingreso,insumos_consumo,insumos_meses,insumos_tipos,insumos_por_tipo,
     insumos_stock_flujo,insumos_ingreso_mensual,insumos_consumo_mensual,
     insumos_pendiente_modulo:otrosInsumos||[],
+    // Auditoría de Insumos por Parcela (pestaña Auditoría) — mismas filas de consumo del módulo
+    // Insumos, cruzadas con la parcela y la OT que las generó. Ningún otro módulo la lee.
+    insumos_parcela,
     // Filas excluidas del módulo Insumos (hoy solo "Afrecho de Arroz - CH", ver INSUMOS_EXCLUIDOS
     // en config.js) — se conservan crudas acá solo para trazabilidad, ningún render.js las lee.
     insumos_excluidos:insumosExcluidosRaw||[],
