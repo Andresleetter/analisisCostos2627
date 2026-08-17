@@ -70,6 +70,28 @@ document.addEventListener('DOMContentLoaded', function(){
   document.getElementById('itipo').addEventListener('change', function(){ actualizarFiltroInsumo(); renderInsumos(); });
   document.getElementById('iinsumo').addEventListener('change', renderInsumos);
   document.getElementById('aestado').addEventListener('change', renderAlertas);
+  // ---- Auditoría: sub-navegación entre Infraestructura e Insumos por Parcela ----
+  // Delegada sobre la barra (elemento fijo del HTML). Usa .subtab, no .tab: el listener de módulos
+  // de más arriba indexa las .tab contra las .page, y un botón .tab de más rompería ese índice.
+  document.getElementById('audit-subnav').addEventListener('click', function(e){
+    const btn = e.target.closest('.subtab');
+    if(btn) mostrarAuditoria(btn.dataset.audit, btn);
+  });
+  // Los 8 filtros de Insumos por Parcela comparten el mismo manejador: cada cambio recalcula las
+  // opciones disponibles de los otros filtros y vuelve a renderizar (ver cambiarFiltroInsumosParcela
+  // en render.js). No hay filtros con lógica propia acá.
+  IP_FILTROS.forEach(function(f){
+    document.getElementById(f.sel).addEventListener('change', cambiarFiltroInsumosParcela);
+  });
+  // Clic en una fila de "Resumen por Parcela": despliega/pliega el detalle de esa parcela.
+  // Delegado sobre el tbody (fijo en el HTML) porque la tabla se redibuja entera en cada filtro.
+  document.getElementById('ip-parcelas').addEventListener('click', function(e){
+    const fila = e.target.closest('tr.ip-parcela');
+    if(!fila) return;
+    const parcela = decodeURIComponent(fila.dataset.parcela);
+    ipParcelaAbierta = (ipParcelaAbierta===parcela) ? null : parcela;
+    renderInsumosParcela();
+  });
   // "Ver detalle" de las tarjetas de Posibles Problemas (Resumen Ejecutivo): delegado sobre el
   // contenedor #probs (fijo en el HTML) porque las tarjetas se regeneran en cada carga — así un
   // único listener sigue funcionando sin volver a atarse por tarjeta. Reutiliza show(), la misma

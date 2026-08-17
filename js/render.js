@@ -85,6 +85,10 @@ function renderAll(){
   renderG();
   renderInsumos();
   renderAuditoria();
+  // Sub-módulo "Insumos por Parcela" de Auditoría: sus 8 filtros se pueblan desde los propios
+  // movimientos de consumo (D.insumos_parcela), con la campaña vigente preseleccionada.
+  inicializarFiltrosInsumosParcela();
+  renderInsumosParcela();
 }
 
 // ================== RESUMEN EJECUTIVO ==================
@@ -274,6 +278,349 @@ function renderAuditoria(){
   document.getElementById('audit-metros').innerHTML = D.auditoria_metros.length ? D.auditoria_metros.map(i=>
     `<tr><td>${i.especificacion}</td><td class="tr mono">${fmt2(i.metrosPresupuestados)}</td><td class="tr mono">${i.otConfirmadas} OT confirmadas <span style="color:var(--muted);font-size:10.5px">(aprox., no metros reales)</span></td><td class="tr" style="color:var(--muted)">N/D — sin metraje real en OT</td></tr>`
   ).join('') : '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:16px">Sin ítems presupuestados en Metros</td></tr>';
+}
+
+// ================== AUDITORÍA · INSUMOS POR PARCELA ==================
+// Sub-módulo de la pestaña Auditoría. Trabaja SIEMPRE sobre D.insumos_parcela.movs (data.js): un
+// objeto por movimiento de consumo, ya cruzado con su parcela y con la OT que lo generó. Acá no se
+// vuelve a leer el .xlsx ni se reinterpreta ninguna regla de origen — solo se filtra y se agrega.
+
+// Cambio de sub-módulo dentro de Auditoría. No toca la navegación de módulos (.tab/.page).
+function mostrarAuditoria(vista, btn){
+  document.querySelectorAll('#audit-subnav .subtab').forEach(b=>b.classList.toggle('active', b===btn));
+  document.querySelectorAll('.audit-view').forEach(v=>v.classList.toggle('active', v.id==='audit-view-'+vista));
+}
+
+// Parcela desplegada en "Resumen por Parcela" (una sola a la vez). Vive acá y no en el DOM porque
+// la tabla se redibuja entera en cada filtro; guardarla en una variable evita que el detalle quede
+// abierto sobre una parcela que ya no está en el resultado.
+let ipParcelaAbierta = null;
+
+// Los 8 filtros, en el mismo orden en que aparecen en la barra. 'campania' es el filtro padre
+// (acota qué valores existen en todos los demás); el resto son independientes entre sí y se
+// combinan con AND.
+const IP_FILTROS = [
+  {sel:'ipcampania', campo:'campania'}, {sel:'ipmes', campo:'mesnum'},
+  {sel:'ipzona', campo:'zona'}, {sel:'ipcampo', campo:'campo'},
+  {sel:'ipparcela', campo:'parcela'}, {sel:'ipcultivo', campo:'cultivo'},
+  {sel:'iptipo', campo:'tipo'}, {sel:'ipinsumo', campo:'insumo'},
+];
+function ipValor(sel){ const el=document.getElementById(sel); return el?el.value:'ALL'; }
+// Aplica todos los filtros activos menos el indicado en `excepto` (que se usa para calcular las
+// opciones disponibles de ese propio selector: un filtro nunca debe limitar su propia lista, si no
+// al elegir un valor desaparecerían todos los demás y no se podría cambiar la selección).
+function ipFiltrar(movs, excepto){
+  return IP_FILTROS.reduce((acc,f)=>{
+    if(f.sel===excepto) return acc;
+    const v = ipValor(f.sel);
+    if(v==='ALL') return acc;
+    if(f.campo==='mesnum') return acc.filter(m=>m.mesnum===parseInt(v,10));
+    return acc.filter(m=>m[f.campo]===v);
+  }, movs);
+}
+// Repuebla los 8 selectores con los valores REALES que quedan disponibles según los otros filtros,
+// conservando la selección actual cuando sigue existiendo. Así nunca se ofrece una combinación que
+// da cero resultados, y ningún valor presente en el dato queda oculto.
+// Se repite hasta que ninguna selección cambie (máximo 4 vueltas, tantas como haga falta y nunca
+// infinitas: una selección solo puede pasar a "Todas", nunca al revés, así que el proceso siempre
+// converge). Hace falta porque los filtros se recorren en orden: al cambiar de campaña, una
+// selección vieja que ya no existe —una parcela de otra campaña, por ejemplo— dejaría sin opciones
+// a los filtros que se procesan ANTES que ella, aunque después se reinicie sola.
+function poblarFiltrosInsumosParcela(){
+  for(let vuelta=0; vuelta<4; vuelta++){
+    const antes = IP_FILTROS.map(f=>ipValor(f.sel)).join('|');
+    poblarFiltrosInsumosParcelaUnaVuelta();
+    if(IP_FILTROS.map(f=>ipValor(f.sel)).join('|')===antes) return;
+  }
+}
+function poblarFiltrosInsumosParcelaUnaVuelta(){
+  const todos = D.insumos_parcela.movs;
+  IP_FILTROS.forEach(f=>{
+    const sel = document.getElementById(f.sel);
+    if(!sel) return;
+    const disp = ipFiltrar(todos, f.sel);
+    let opciones;
+    if(f.campo==='campania'){
+      // Campaña es el filtro PADRE: ofrece siempre todas las campañas presentes en los consumos,
+      // sin recortarse por los demás filtros. Si se recortara, al elegir una parcela que existe en
+      // una sola campaña el selector quedaría con una única opción y no se podría cambiar de
+      // campaña sin limpiar antes el resto. Al cambiarla, las selecciones que ya no existen en la
+      // campaña nueva se reinician solas (ver el bucle de convergencia más arriba).
+      opciones = D.insumos_parcela.campanias.map(c=>({v:c,t:c}));
+    } else if(f.campo==='mesnum'){
+      opciones = [...new Set(disp.map(m=>m.mesnum).filter(k=>k>0))].sort((a,b)=>a-b)
+        .map(k=>({v:String(k), t:MES[k]}));
+    } else {
+      opciones = [...new Set(disp.map(m=>m[f.campo]))].filter(v=>v)
+        .sort((a,b)=>a.localeCompare(b,'es')).map(v=>({v,t:v}));
+    }
+    const actual = sel.value;
+    // Campaña no tiene opción "Todas": el costo por hectárea y las comparaciones entre parcelas
+    // solo tienen sentido dentro de una misma campaña.
+    sel.querySelectorAll(f.campo==='campania' ? 'option' : 'option:not([value=ALL])').forEach(o=>o.remove());
+    opciones.forEach(o=>{ const el=document.createElement('option'); el.value=o.v; el.textContent=o.t; sel.appendChild(el); });
+    if([...sel.options].some(o=>o.value===actual)) sel.value=actual;
+    else sel.value = f.campo==='campania' ? (opciones[0]?opciones[0].v:'') : 'ALL';
+  });
+}
+// Primera carga: preselecciona la campaña vigente si aparece en los consumos, y recién después
+// puebla el resto de los filtros sobre esa campaña.
+function inicializarFiltrosInsumosParcela(){
+  const sel = document.getElementById('ipcampania');
+  sel.innerHTML='';
+  D.insumos_parcela.campanias.forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; sel.appendChild(o); });
+  if([...sel.options].some(o=>o.value===D.campania_actual)) sel.value=D.campania_actual;
+  poblarFiltrosInsumosParcela();
+}
+// Al cambiar cualquier filtro: se recalculan las opciones de los demás y se cierra el detalle de
+// parcela abierto (puede haber quedado fuera del nuevo resultado).
+function cambiarFiltroInsumosParcela(){
+  ipParcelaAbierta = null;
+  poblarFiltrosInsumosParcela();
+  renderInsumosParcela();
+}
+
+// Agrupa los movimientos filtrados por parcela. La superficie de la parcela es el MÁXIMO de las
+// hectáreas reales de sus OT, no la suma: varias aplicaciones se hacen sobre la misma superficie
+// física, sumarlas multiplicaría el terreno por la cantidad de pasadas y diluiría el costo por
+// hectárea justo en las parcelas más trabajadas — que es lo que la auditoría busca detectar.
+function ipAgruparParcelas(movs){
+  const map = new Map();
+  movs.forEach(m=>{
+    let o = map.get(m.parcela);
+    if(!o){ o={parcela:m.parcela, lote:m.lote, cultivo:m.cultivo, zona:m.zona, campo:m.campo,
+      ha:null, ots:new Set(), insumos:new Set(), costo:0, movs:[]}; map.set(m.parcela,o); }
+    o.costo += m.costoTotal;
+    if(m.otRef) o.ots.add(m.otRef);
+    o.insumos.add(m.tipo+'|'+m.insumo);
+    if(m.ha!=null && (o.ha==null || m.ha>o.ha)) o.ha = m.ha;
+    o.movs.push(m);
+  });
+  return [...map.values()].map(o=>({
+    ...o, nOT:o.ots.size, nInsumos:o.insumos.size,
+    costo: Math.round(o.costo*100)/100,
+    costoHa: o.ha ? Math.round((o.costo/o.ha)*100)/100 : null,
+  }));
+}
+// Consumo por hectárea de un mismo insumo comparado entre parcelas del mismo cultivo. El grupo es
+// (cultivo, insumo, unidad de medida): dos unidades distintas del mismo insumo nunca se comparan
+// entre sí. El promedio es el de las parcelas del grupo (no un valor de referencia agronómico: el
+// dashboard no tiene dosis recomendadas cargadas), y solo se comparan parcelas con hectáreas
+// reales disponibles.
+function ipDesviosCantidad(movs){
+  const grupos = new Map();
+  movs.forEach(m=>{
+    if(m.ha==null || !m.ha) return;
+    const gk = m.cultivo+'|'+m.insumo+'|'+m.unidad;
+    let g = grupos.get(gk);
+    if(!g){ g={cultivo:m.cultivo, insumo:m.insumo, unidad:m.unidad, porParcela:new Map()}; grupos.set(gk,g); }
+    let p = g.porParcela.get(m.parcela);
+    if(!p){ p={parcela:m.parcela, lote:m.lote, cantidad:0, ha:m.ha}; g.porParcela.set(m.parcela,p); }
+    p.cantidad += m.cantidad;
+    if(m.ha>p.ha) p.ha = m.ha;
+  });
+  const filas=[];
+  grupos.forEach(g=>{
+    const parcelas=[...g.porParcela.values()].map(p=>({...p, tasa:p.cantidad/p.ha}));
+    if(parcelas.length < AUDITORIA_INSUMOS_MIN_PARCELAS) return;
+    const prom = parcelas.reduce((s,p)=>s+p.tasa,0)/parcelas.length;
+    if(!prom) return;
+    parcelas.forEach(p=>{
+      const desvio = (p.tasa/prom - 1)*100;
+      if(desvio < AUDITORIA_INSUMOS_DESVIO_MEDIA) return;
+      filas.push({cultivo:g.cultivo, insumo:g.insumo, unidad:g.unidad, parcela:p.parcela,
+        lote:p.lote, tasa:p.tasa, prom, desvio, nParcelas:parcelas.length});
+    });
+  });
+  return filas.sort((a,b)=>b.desvio-a.desvio);
+}
+// Costo de insumos por hectárea de cada parcela comparado con el promedio de su cultivo.
+function ipDesviosCosto(parcelas){
+  const porCultivo = new Map();
+  parcelas.filter(p=>p.costoHa!=null).forEach(p=>{
+    if(!porCultivo.has(p.cultivo)) porCultivo.set(p.cultivo, []);
+    porCultivo.get(p.cultivo).push(p);
+  });
+  const filas=[];
+  porCultivo.forEach((lista,cultivo)=>{
+    if(lista.length < AUDITORIA_INSUMOS_MIN_PARCELAS) return;
+    const prom = lista.reduce((s,p)=>s+p.costoHa,0)/lista.length;
+    if(!prom) return;
+    lista.forEach(p=>{
+      const desvio = (p.costoHa/prom - 1)*100;
+      if(desvio < AUDITORIA_INSUMOS_DESVIO_MEDIA) return;
+      filas.push({cultivo, parcela:p.parcela, lote:p.lote, ha:p.ha, costoHa:p.costoHa, prom, desvio, nParcelas:lista.length});
+    });
+  });
+  return filas.sort((a,b)=>b.desvio-a.desvio);
+}
+// Clase de color del desvío (umbrales en config.js) — nunca se usa el verde: un desvío no es un
+// resultado "bueno", es algo para revisar.
+function ipClaseDesvio(d){ return d>=AUDITORIA_INSUMOS_DESVIO_ALTA?'ip-desv-alta':'ip-desv-media'; }
+function ipFecha(d){ return d ? ('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2)+'/'+d.getFullYear() : '—'; }
+// Celda "por hectárea": sin hectáreas reales de la OT muestra un guion gris con la explicación en
+// el tooltip, nunca un 0 ni un valor estimado.
+function ipCelda(valor, ha, formato){
+  if(ha==null || !ha) return '<span class="ip-sin" title="La OT que originó este consumo no está en el export de consultaOT: sin hectáreas reales no se puede calcular el valor por hectárea">—</span>';
+  return formato(valor);
+}
+
+function renderInsumosParcela(){
+  const movs = ipFiltrar(D.insumos_parcela.movs, null)
+    .slice().sort((a,b)=>(b.fecha?b.fecha.getTime():0)-(a.fecha?a.fecha.getTime():0));
+  const insumoV = ipValor('ipinsumo');
+
+  // ---- KPIs ----
+  const costoTotal = Math.round(movs.reduce((s,m)=>s+m.costoTotal,0)*100)/100;
+  // Hectáreas trabajadas = suma de las hectáreas reales de las OT DISTINTAS que originaron estos
+  // consumos, contando cada OT una sola vez (una misma OT aporta varias líneas de insumo, sumarlas
+  // por línea multiplicaría la superficie por la cantidad de insumos aplicados).
+  const haPorOT = new Map();
+  movs.forEach(m=>{ if(m.otRef && m.ha!=null && !haPorOT.has(m.otRef)) haPorOT.set(m.otRef, m.ha); });
+  const haTrabajadas = Math.round([...haPorOT.values()].reduce((s,h)=>s+h,0)*100)/100;
+  const costoHa = haTrabajadas ? costoTotal/haTrabajadas : null;
+  // Cantidad utilizada: solo se muestra como un número con su unidad cuando hay un Insumo puntual
+  // elegido y ese insumo resuelve a una única unidad real (mismo criterio que el módulo Insumos,
+  // ver unidadUnicaDe/fmtKpiUnidad en utils.js). Con "Todos", el KPI cuenta insumos distintos y el
+  // panel de abajo da la cantidad desglosada por unidad — nunca se suman litros con kilos.
+  const unidadSel = insumoV!=='ALL' ? unidadUnicaDe(movs) : null;
+  const cantTotal = movs.reduce((s,m)=>s+m.cantidad,0);
+  const nInsumos = new Set(movs.map(m=>m.tipo+'|'+m.insumo)).size;
+  const unidades = [...new Set(movs.map(m=>m.unidad))];
+  const kpiCant = (unidadSel && unidadSel!=='MULTI')
+    ? kpiCard('Insumos Utilizados', fmtKpiUnidad(cantTotal, unidadSel), insumoV, 'g')
+    : kpiCard('Insumos Utilizados', nInsumos, nInsumos===1?'1 insumo distinto':nInsumos+' insumos en '+unidades.length+' unidad(es) de medida', 'g');
+  document.getElementById('ip-kpis').innerHTML = kpiCant+
+    kpiCard('Costo Total de Insumos', 'US$ '+fmtUSD(costoTotal), movs.length+' movimiento(s) de consumo', 'gris')+
+    kpiCard('Hectáreas Trabajadas', haTrabajadas?fmt2(haTrabajadas):'—', haPorOT.size+' OT con hectáreas reales', 'gris')+
+    kpiCard('Costo de Insumos por ha', costoHa!=null?'US$ '+fmtUSD(costoHa):'—',
+      costoHa!=null?'Costo total / ha trabajadas':'Sin hectáreas reales disponibles', costoHa!=null?'o':'gris');
+
+  // ---- Aviso de cobertura de hectáreas ----
+  // Los movimientos cuya OT no está en el export de consultaOT se muestran igual (parcela, insumo,
+  // cantidad y costo son datos propios de consultaInsumos), pero no pueden expresarse por hectárea.
+  // Se avisa con el número exacto en vez de dejar guiones sin explicación.
+  const sinHaMovs = movs.filter(m=>m.ha==null);
+  const aviso = document.getElementById('ip-aviso');
+  aviso.classList.toggle('hidden', sinHaMovs.length===0);
+  if(sinHaMovs.length){
+    const costoSinHa = Math.round(sinHaMovs.reduce((s,m)=>s+m.costoTotal,0)*100)/100;
+    const fuera = sinHaMovs.filter(m=>m.motivoSinHa==='ot_fuera_export').length;
+    const sinSup = sinHaMovs.filter(m=>m.motivoSinHa==='sin_superficie').length;
+    const otros = sinHaMovs.length-fuera-sinSup;
+    const motivos=[];
+    if(fuera) motivos.push('<b>'+fmt(fuera)+'</b> porque la orden que los generó no está incluida en la hoja <b>consultaOT</b> del Excel, que no llega tan atrás en el tiempo');
+    if(sinSup) motivos.push('<b>'+fmt(sinSup)+'</b> porque son trabajos donde solo se usan insumos (aplicación con mochila y similares): la orden no registra una superficie trabajada');
+    if(otros) motivos.push('<b>'+fmt(otros)+'</b> porque su orden no trae hectáreas reales cargadas');
+    aviso.innerHTML = '<b>'+fmt(sinHaMovs.length)+' de '+fmt(movs.length)+' movimientos</b> (US$ '+fmtUSD(costoSinHa)+
+      ') no tienen hectáreas reales: '+motivos.join('; ')+'. Esos consumos se muestran con su parcela, cantidad y '+
+      'costo, pero las columnas y KPIs «por hectárea» los dejan fuera — no se los estima ni se los reemplaza por '+
+      'las hectáreas planificadas, que son otra magnitud.';
+  }
+
+  // ---- Cantidad utilizada por unidad de medida ----
+  const porUnidad = new Map();
+  movs.forEach(m=>{
+    const k = normHdr(m.unidad)||'(sin unidad)';
+    if(!porUnidad.has(k)) porUnidad.set(k, {unidad:m.unidad, cantidad:0, costo:0, insumos:new Set()});
+    const o = porUnidad.get(k);
+    o.cantidad += m.cantidad; o.costo += m.costoTotal; o.insumos.add(m.tipo+'|'+m.insumo);
+  });
+  const unidadesOrd = [...porUnidad.values()].sort((a,b)=>b.costo-a.costo);
+  document.getElementById('ip-unidades').innerHTML = unidadesOrd.length ? unidadesOrd.map(u=>
+    `<tr><td>${u.unidad}</td><td class="tr mono">${u.insumos.size}</td><td class="tr mono qty-unit">${fmtCantidadUnidad(u.cantidad,u.unidad)}</td><td class="tr mono">US$ ${fmtUSD(u.costo)}</td></tr>`
+  ).join('') : '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:16px">Sin consumos para los filtros seleccionados</td></tr>';
+
+  // ---- Resumen por parcela (ordenado por costo/ha: es la comparación que busca la auditoría) ----
+  const parcelas = ipAgruparParcelas(movs)
+    .sort((a,b)=>(b.costoHa==null?-1:b.costoHa)-(a.costoHa==null?-1:a.costoHa) || b.costo-a.costo);
+  document.getElementById('ip-parcelas-sub').textContent =
+    parcelas.length+' parcela(s) · hectáreas = superficie real máxima de sus OT · clic en una fila para ver su detalle';
+  document.getElementById('ip-parcelas').innerHTML = parcelas.length ? parcelas.map(p=>{
+    const abierta = ipParcelaAbierta===p.parcela;
+    let html = `<tr class="ip-parcela${abierta?' open':''}" data-parcela="${encodeURIComponent(p.parcela)}">`+
+      `<td class="lname"><span class="ip-caret">${abierta?'▾':'▸'}</span> ${p.lote} <span class="ip-nota">${p.parcela}</span></td>`+
+      `<td>${p.cultivo}</td>`+
+      `<td class="tr mono">${p.ha!=null?fmt2(p.ha):'<span class="ip-sin">—</span>'}</td>`+
+      `<td class="tr mono">${p.nOT}</td><td class="tr mono">${p.nInsumos}</td>`+
+      `<td class="tr mono col-tot">US$ ${fmtUSD(p.costo)}</td>`+
+      `<td class="tr mono">${ipCelda(p.costoHa, p.ha, v=>'US$ '+fmtUSD(v))}</td></tr>`;
+    if(abierta) html += ipDetalleParcela(p);
+    return html;
+  }).join('') : '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:16px">Sin consumos para los filtros seleccionados</td></tr>';
+
+  // ---- Desvíos de consumo por hectárea ----
+  const desvCant = ipDesviosCantidad(movs);
+  document.getElementById('ip-desvio-cant-sub').textContent = desvCant.length
+    ? desvCant.length+' caso(s) por encima del promedio de su cultivo (mismo insumo y misma unidad, mínimo '+AUDITORIA_INSUMOS_MIN_PARCELAS+' parcelas comparables)'
+    : 'Sin desvíos por encima del '+AUDITORIA_INSUMOS_DESVIO_MEDIA+'% del promedio';
+  document.getElementById('ip-desvio-cant').innerHTML = desvCant.length ? desvCant.map(d=>
+    `<tr><td>${d.cultivo}</td><td>${d.insumo}</td><td class="mono">${d.lote}</td>`+
+    `<td class="tr mono qty-unit">${fmtCantidadUnidad(d.tasa,d.unidad)}/ha</td>`+
+    `<td class="tr mono qty-unit">${fmtCantidadUnidad(d.prom,d.unidad)}/ha <span class="ip-nota">(${d.nParcelas} parcelas)</span></td>`+
+    `<td class="tr mono ${ipClaseDesvio(d.desvio)}">+${fmt1(d.desvio)}%</td></tr>`
+  ).join('') : '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:16px">Ningún insumo supera en más del '+AUDITORIA_INSUMOS_DESVIO_MEDIA+'% el consumo por hectárea promedio de su cultivo</td></tr>';
+
+  // ---- Desvíos de costo por hectárea ----
+  const desvCosto = ipDesviosCosto(parcelas);
+  document.getElementById('ip-desvio-costo-sub').textContent = desvCosto.length
+    ? desvCosto.length+' parcela(s) por encima del promedio de su cultivo'
+    : 'Sin desvíos por encima del '+AUDITORIA_INSUMOS_DESVIO_MEDIA+'% del promedio';
+  document.getElementById('ip-desvio-costo').innerHTML = desvCosto.length ? desvCosto.map(d=>
+    `<tr><td>${d.cultivo}</td><td class="mono">${d.lote}</td><td class="tr mono">${fmt2(d.ha)}</td>`+
+    `<td class="tr mono">US$ ${fmtUSD(d.costoHa)}</td>`+
+    `<td class="tr mono">US$ ${fmtUSD(d.prom)} <span class="ip-nota">(${d.nParcelas} parcelas)</span></td>`+
+    `<td class="tr mono ${ipClaseDesvio(d.desvio)}">+${fmt1(d.desvio)}%</td></tr>`
+  ).join('') : '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:16px">Ninguna parcela supera en más del '+AUDITORIA_INSUMOS_DESVIO_MEDIA+'% el costo por hectárea promedio de su cultivo</td></tr>';
+
+  // ---- Detalle de movimientos (la fila más fina, con la OT que originó cada consumo) ----
+  // El tope de filas dibujadas (AUDITORIA_INSUMOS_MAX_FILAS) NO afecta ningún cálculo de arriba: se
+  // avisa en el subtítulo cuando se aplica, para que nunca se lea como si fueran todos.
+  const movsVisibles = movs.slice(0, AUDITORIA_INSUMOS_MAX_FILAS);
+  document.getElementById('ip-movs-sub').textContent = movs.length>movsVisibles.length
+    ? 'Mostrando los '+fmt(movsVisibles.length)+' más recientes de '+fmt(movs.length)+' · los KPIs y las tablas de arriba usan los '+fmt(movs.length)+' · afiná los filtros para ver el resto'
+    : fmt(movs.length)+' movimiento(s) · ordenados por fecha, del más reciente al más antiguo';
+  document.getElementById('ip-movs').innerHTML = movsVisibles.length ? movsVisibles.map(m=>
+    `<tr><td class="mono">${ipFecha(m.fecha)}</td><td>${m.campania}</td><td>${m.zona}</td><td>${m.campo}</td>`+
+    `<td class="mono">${m.lote}</td><td>${m.cultivo}</td><td>${m.insumo}</td><td>${m.tipo}</td>`+
+    `<td class="tr mono">${fmt2(m.cantidad)}</td><td>${m.unidad}</td>`+
+    `<td class="tr mono">${m.ha!=null?fmt2(m.ha):'<span class="ip-sin">—</span>'}</td>`+
+    `<td class="tr mono">${ipCelda(m.cantidad/(m.ha||1), m.ha, v=>fmt2(v))}</td>`+
+    `<td class="tr mono">US$ ${fmtUSD(m.costoUnitario)}</td>`+
+    `<td class="tr mono col-tot">US$ ${fmtUSD(m.costoTotal)}</td>`+
+    `<td class="tr mono">${ipCelda(m.costoTotal/(m.ha||1), m.ha, v=>'US$ '+fmtUSD(v))}</td>`+
+    `<td class="mono" title="Comprobante de stock: ${m.comprobante||'sin dato'}">${m.otRef||'—'}</td></tr>`
+  ).join('') : '<tr><td colspan="16" style="text-align:center;color:var(--muted);padding:16px">Sin consumos para los filtros seleccionados</td></tr>';
+}
+
+// Detalle de una parcela: qué insumos se usaron, cuánto de cada uno, por hectárea, cuánto costaron,
+// en qué fechas y qué órdenes los originaron. Se agrupa por (insumo, unidad) — un mismo insumo
+// registrado en dos unidades distintas nunca se suma en una sola cantidad.
+function ipDetalleParcela(p){
+  const porInsumo = new Map();
+  p.movs.forEach(m=>{
+    const k = m.insumo+'|'+m.unidad;
+    if(!porInsumo.has(k)) porInsumo.set(k, {insumo:m.insumo, unidad:m.unidad, cantidad:0, costo:0, fechas:new Set(), ots:new Set()});
+    const o = porInsumo.get(k);
+    o.cantidad += m.cantidad; o.costo += m.costoTotal;
+    if(m.fecha) o.fechas.add(ipFecha(m.fecha));
+    if(m.otRef) o.ots.add(m.otRef);
+  });
+  const lista = [...porInsumo.values()].sort((a,b)=>b.costo-a.costo);
+  let html = `<tr class="dethead"><td colspan="7">Insumos utilizados en ${p.lote} · ${lista.length} insumo(s) · ${p.nOT} orden(es) de trabajo`+
+    (p.ha!=null?` · superficie ${fmt2(p.ha)} ha`:' · sin hectáreas reales disponibles')+`</td></tr>`;
+  html += lista.map(i=>
+    `<tr class="det"><td class="dl">${i.insumo}</td>`+
+    `<td class="qty-unit">${fmtCantidadUnidad(i.cantidad,i.unidad)}</td>`+
+    // La cantidad por hectárea lleva SIEMPRE su unidad real ("142,73 Kilos/ha"), igual que la
+    // cantidad total de la celda anterior y que la tabla de desvíos: un número suelto no se puede
+    // interpretar cuando la parcela mezcla insumos en kilos, litros y unidades.
+    `<td class="tr mono qty-unit">${ipCelda(i.cantidad/(p.ha||1), p.ha, v=>fmtCantidadUnidad(v,i.unidad)+'/ha')}</td>`+
+    `<td class="tr mono">US$ ${fmtUSD(i.costo)}</td>`+
+    `<td class="tr mono qty-unit">${ipCelda(i.costo/(p.ha||1), p.ha, v=>'US$ '+fmtUSD(v)+'/ha')}</td>`+
+    `<td colspan="2" class="ip-nota">${[...i.fechas].join(' · ')} — ${[...i.ots].join(' · ')}</td></tr>`
+  ).join('');
+  return html;
 }
 
 // ---- Alertas Operacionales: filtro por Estado (Pendiente / En Ejecución / Todas) ----
