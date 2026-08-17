@@ -4,7 +4,14 @@ function showError(msg){ const ov=document.getElementById('overlay'); ov.classLi
   document.getElementById('ov-msg').textContent=String(msg||'Error de red al descargar el archivo remoto.')+' Verifique la conexión o que la URL esté disponible.';
   document.getElementById('ov-retry').style.display='inline-block'; }
 
-function cargarXLSX(nombre, url){
+// Descarga y parsea un .xlsx. `url` es la fuente normal (ruta relativa: el propio sitio, servido
+// por Cloudflare — ver SRC_XLSX en config.js) y `urlRespaldo` es el plan B contra GitHub, que se
+// intenta UNA sola vez si la primera falla. Cubre dos casos reales: que el sitio no pueda servir el
+// archivo, y que alguien abra index.html directo desde el disco (ahí fetch de una ruta relativa no
+// funciona por seguridad del navegador, pero la URL absoluta sí).
+// El respaldo NO se usa al revés: GitHub limita conexiones (503/429 sostenidos el 17/08/2026) y no
+// está pensado para servir tráfico de usuarios.
+function descargarXLSX(nombre, url){
   console.log('Iniciando carga:', url);
   return fetch(url, {cache:'no-store'})
     .then(function(resp){
@@ -16,10 +23,24 @@ function cargarXLSX(nombre, url){
       var wb = XLSX.read(new Uint8Array(buf), {type:'array', cellDates:true});
       console.log('Hojas encontradas en '+nombre+':', wb.SheetNames.join(', '));
       return wb;
+    });
+}
+function cargarXLSX(nombre, url, urlRespaldo){
+  return descargarXLSX(nombre, url)
+    .catch(function(e){
+      if(!urlRespaldo) throw e;
+      console.warn('No se pudo cargar '+nombre+' desde el sitio ('+(e.message||e)+'). Reintentando desde GitHub…');
+      return descargarXLSX(nombre, urlRespaldo)
+        .catch(function(e2){
+          // Se informa el error del respaldo, que es el último que impidió cargar, pero se deja
+          // constancia de los dos en consola para no perder el motivo original.
+          console.error('Error al cargar '+nombre+' — sitio:', e.message||e, '| respaldo:', e2.message||e2);
+          throw new Error('Error al descargar '+nombre+' desde '+urlRespaldo+': '+(e2.message||e2));
+        });
     })
     .catch(function(e){
-      console.error('Error al cargar '+nombre+':', e.message||e, '| URL:', url);
-      throw new Error('Error al descargar '+nombre+' desde '+url+': '+(e.message||e));
+      console.error('Error al cargar '+nombre+':', e.message||e);
+      throw e instanceof Error ? e : new Error('Error al descargar '+nombre+': '+e);
     });
 }
 // Fecha/hora de última modificación real del .xlsx (metadata de Office, docProps/core.xml —
@@ -100,12 +121,12 @@ function loadData(){
   var ov=document.getElementById('overlay'); ov.classList.remove('err'); ov.style.display='flex';
   document.getElementById('ov-retry').style.display='none';
   document.getElementById('ov-title').textContent='Cargando datos de campaña…';
-  document.getElementById('ov-msg').textContent='Descargando datosCampania2627.xlsx y el presupuesto de infraestructura desde GitHub…';
+  document.getElementById('ov-msg').textContent='Descargando datosCampania2627.xlsx y el presupuesto de infraestructura…';
   document.getElementById('app').style.display='none';
 
   Promise.all([
-    cargarXLSX('datosCampania2627.xlsx', SRC_XLSX),
-    cargarXLSX('PRESUPUESTO ALISON INFRAESTRUTURA 26-27.xlsx', INFRA_SRC_XLSX)
+    cargarXLSX('datosCampania2627.xlsx', SRC_XLSX, SRC_XLSX_RESPALDO),
+    cargarXLSX('PRESUPUESTO ALISON INFRAESTRUTURA 26-27.xlsx', INFRA_SRC_XLSX, INFRA_SRC_XLSX_RESPALDO)
   ])
     .then(function(wbs){
       var wb = wbs[0], wbInfra = wbs[1];

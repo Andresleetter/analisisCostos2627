@@ -21,9 +21,13 @@ npx serve .
 
 Luego abrir `http://localhost:8080` (o el puerto que indique el comando).
 
-Como la app depende de internet (descarga ambos `.xlsx` desde `raw.githubusercontent.com` en tiempo real, con `cache:'no-store'` para no servir una copia vieja del navegador), hace falta conexión activa para ver datos; sin conexión se muestra la pantalla de error con reintento.
+La app descarga ambos `.xlsx` en tiempo real (con `cache:'no-store'`, para no servir una copia vieja del navegador), así que hace falta servirla desde un servidor; sin acceso al archivo se muestra la pantalla de error con reintento.
 
-**⚠️ Editar el Excel no alcanza:** el dashboard lee los `.xlsx` desde GitHub (`raw.githubusercontent.com/Andresleetter/analisisCostos2627/main/...`), no el archivo local. Después de editar `datosCampania2627.xlsx` (o el presupuesto de infraestructura) en Excel hay que **commitear y pushear** ese archivo al repo — si no, el sitio en vivo sigue mostrando los datos del último commit, aunque el Excel local ya esté actualizado. No hay ningún paso de build/bundle intermedio (sitio 100% estático); el único requisito es que el archivo llegue a `main` en GitHub.
+**De dónde salen los `.xlsx`:** del **propio sitio**, por ruta relativa (`datosCampania2627.xlsx`). Cloudflare despliega el repo completo como assets estáticos (`wrangler.jsonc`: `assets.directory: "."`), así que el Excel que está en el repo se sirve desde el dominio del dashboard, por el CDN de Cloudflare. Si esa descarga falla, `loader.js` reintenta **una vez** contra `raw.githubusercontent.com` como respaldo (ver `SRC_XLSX` / `SRC_XLSX_RESPALDO` en `config.js`) — eso cubre el caso de abrir `index.html` directo desde el disco, donde `fetch` de una ruta relativa no funciona.
+
+> Antes se leía siempre desde `raw.githubusercontent.com`. Se cambió el 17/08/2026: `raw` no es un CDN para tráfico de usuarios y limita conexiones — devolvió `503 Backend.max_conn reached` y `429 Too Many Requests` de forma sostenida desde el nodo de Buenos Aires, dejando el dashboard sin cargar (afectaba por igual al presupuesto de infraestructura, que no se había tocado).
+
+**⚠️ Editar el Excel no alcanza:** el dashboard lee el `.xlsx` **publicado**, no el archivo local. Después de editar `datosCampania2627.xlsx` (o el presupuesto de infraestructura) en Excel hay que **commitear y pushear** ese archivo a `main` — si no, el sitio en vivo sigue mostrando los datos del último commit, aunque el Excel local ya esté actualizado. No hay ningún paso de build/bundle intermedio (sitio 100% estático): Cloudflare redespliega solo al llegar el push.
 
 Si el archivo está abierto en Excel al momento de necesitar inspeccionarlo (ej. para depurar), Excel lo bloquea para lectura exclusiva — hay que copiarlo primero con `FileShare.ReadWrite` (o cerrarlo) antes de poder leerlo desde otro proceso.
 
