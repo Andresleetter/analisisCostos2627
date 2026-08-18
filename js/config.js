@@ -141,16 +141,6 @@ const SERVICIOS_SIN_TRABAJO_EJECUTADO = [
 // concepto puntual ("desalijo" + "karanda"/"caranda", tolerando variantes de ortografía) dentro
 // de Servicio/Observación de consultaOT.
 const AUDITORIA_GASTO_DESALIJO = "Desalijo Karanda'y / Carandai";
-// ---- AUDITORIA DE INSUMOS POR PARCELA: umbrales de desvio ----
-// Un desvio NO es un error: es una diferencia que merece revisarse. La comparacion siempre se hace
-// contra el promedio del MISMO cultivo (y, para el consumo, del mismo insumo y la misma unidad de
-// medida), nunca contra un valor de referencia agronomico inventado: el dashboard no tiene dosis
-// recomendadas cargadas. Los porcentajes son por encima del promedio del grupo.
-const AUDITORIA_INSUMOS_DESVIO_MEDIA = 30;   // % sobre el promedio del grupo -> revisar
-const AUDITORIA_INSUMOS_DESVIO_ALTA = 60;    // % sobre el promedio del grupo -> desvio marcado
-// Minimo de parcelas comparables que debe tener un grupo para que su promedio signifique algo. Con
-// una sola parcela no hay contra que comparar; el grupo se omite en vez de mostrar un 0% enganoso.
-const AUDITORIA_INSUMOS_MIN_PARCELAS = 2;
 // Cultivos que quedan FUERA de esta auditoria (a pedido del usuario). AVENA y COBERTURA son
 // cultivos de servicio —cobertura de suelo entre zafras—, no cultivos de renta: mezclarlos con
 // ARROZ/SOJA/SORGO/MAIZ ensucia la comparacion de consumo y de costo por hectarea. Es el mismo
@@ -161,11 +151,6 @@ const AUDITORIA_INSUMOS_MIN_PARCELAS = 2;
 // parcela sin ambiguedad — por eso el modulo filtra y rotula por Lote, no por nombre de parcela.
 // Se comparan normalizados (normHdr) contra la Actividad de consultaOT.
 const AUDITORIA_INSUMOS_CULTIVOS_EXCLUIDOS = ['AVENA', 'COBERTURA'];
-// Tope de filas dibujadas en la tabla de movimientos (el detalle mas fino, hasta ~3.300 filas). No
-// recorta ningun calculo: los KPIs, el resumen por parcela y los desvios se computan SIEMPRE sobre
-// el total filtrado. Solo limita cuantas filas se pintan de una vez, y el render avisa en pantalla
-// cuando el tope se aplica.
-const AUDITORIA_INSUMOS_MAX_FILAS = 500;
 const INFRA_MAP = {
   'Contrucion camino nuevo': [
     'Construccion de Camino retro excavadora x Hs',
