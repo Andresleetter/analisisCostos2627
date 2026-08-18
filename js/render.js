@@ -405,61 +405,6 @@ function ipAgruparParcelas(movs){
     costoHa: o.ha ? Math.round((o.costo/o.ha)*100)/100 : null,
   }));
 }
-// Consumo por hectárea de un mismo insumo comparado entre lotes del mismo cultivo. El grupo es
-// (cultivo, insumo, unidad de medida): dos unidades distintas del mismo insumo nunca se comparan
-// entre sí. El promedio es el de los lotes del grupo (no un valor de referencia agronómico: el
-// dashboard no tiene dosis recomendadas cargadas), y solo se comparan lotes con hectáreas
-// reales disponibles.
-function ipDesviosCantidad(movs){
-  const grupos = new Map();
-  movs.forEach(m=>{
-    if(m.ha==null || !m.ha) return;
-    const gk = m.cultivo+'|'+m.insumo+'|'+m.unidad;
-    let g = grupos.get(gk);
-    if(!g){ g={cultivo:m.cultivo, insumo:m.insumo, unidad:m.unidad, porParcela:new Map()}; grupos.set(gk,g); }
-    let p = g.porParcela.get(m.parcela);
-    if(!p){ p={parcela:m.parcela, lote:m.lote, cantidad:0, ha:m.ha}; g.porParcela.set(m.parcela,p); }
-    p.cantidad += m.cantidad;
-    if(m.ha>p.ha) p.ha = m.ha;
-  });
-  const filas=[];
-  grupos.forEach(g=>{
-    const parcelas=[...g.porParcela.values()].map(p=>({...p, tasa:p.cantidad/p.ha}));
-    if(parcelas.length < AUDITORIA_INSUMOS_MIN_PARCELAS) return;
-    const prom = parcelas.reduce((s,p)=>s+p.tasa,0)/parcelas.length;
-    if(!prom) return;
-    parcelas.forEach(p=>{
-      const desvio = (p.tasa/prom - 1)*100;
-      if(desvio < AUDITORIA_INSUMOS_DESVIO_MEDIA) return;
-      filas.push({cultivo:g.cultivo, insumo:g.insumo, unidad:g.unidad, parcela:p.parcela,
-        lote:p.lote, tasa:p.tasa, prom, desvio, nParcelas:parcelas.length});
-    });
-  });
-  return filas.sort((a,b)=>b.desvio-a.desvio);
-}
-// Costo de insumos por hectárea de cada lote comparado con el promedio de su cultivo.
-function ipDesviosCosto(parcelas){
-  const porCultivo = new Map();
-  parcelas.filter(p=>p.costoHa!=null).forEach(p=>{
-    if(!porCultivo.has(p.cultivo)) porCultivo.set(p.cultivo, []);
-    porCultivo.get(p.cultivo).push(p);
-  });
-  const filas=[];
-  porCultivo.forEach((lista,cultivo)=>{
-    if(lista.length < AUDITORIA_INSUMOS_MIN_PARCELAS) return;
-    const prom = lista.reduce((s,p)=>s+p.costoHa,0)/lista.length;
-    if(!prom) return;
-    lista.forEach(p=>{
-      const desvio = (p.costoHa/prom - 1)*100;
-      if(desvio < AUDITORIA_INSUMOS_DESVIO_MEDIA) return;
-      filas.push({cultivo, parcela:p.parcela, lote:p.lote, ha:p.ha, costoHa:p.costoHa, prom, desvio, nParcelas:lista.length});
-    });
-  });
-  return filas.sort((a,b)=>b.desvio-a.desvio);
-}
-// Clase de color del desvío (umbrales en config.js) — nunca se usa el verde: un desvío no es un
-// resultado "bueno", es algo para revisar.
-function ipClaseDesvio(d){ return d>=AUDITORIA_INSUMOS_DESVIO_ALTA?'ip-desv-alta':'ip-desv-media'; }
 function ipFecha(d){ return d ? ('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2)+'/'+d.getFullYear() : '—'; }
 // Celda "por hectárea": sin hectáreas reales de la OT muestra un guion gris con la explicación en
 // el tooltip, nunca un 0 ni un valor estimado.
@@ -550,50 +495,6 @@ function renderInsumosParcela(){
     return html;
   }).join('') : '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:16px">Sin aplicaciones para los filtros seleccionados</td></tr>';
 
-  // ---- Desvíos de consumo por hectárea ----
-  const desvCant = ipDesviosCantidad(movs);
-  document.getElementById('ip-desvio-cant-sub').textContent = desvCant.length
-    ? desvCant.length+' caso(s) por encima del promedio de su cultivo (mismo insumo y misma unidad, mínimo '+AUDITORIA_INSUMOS_MIN_PARCELAS+' lotes comparables)'
-    : 'Sin desvíos por encima del '+AUDITORIA_INSUMOS_DESVIO_MEDIA+'% del promedio';
-  document.getElementById('ip-desvio-cant').innerHTML = desvCant.length ? desvCant.map(d=>
-    `<tr><td>${d.cultivo}</td><td>${d.insumo}</td><td class="mono">${d.lote}</td>`+
-    `<td class="tr mono qty-unit">${fmtCantidadUnidad(d.tasa,d.unidad)}/ha</td>`+
-    `<td class="tr mono qty-unit">${fmtCantidadUnidad(d.prom,d.unidad)}/ha <span class="ip-nota">(${d.nParcelas} lotes)</span></td>`+
-    `<td class="tr mono ${ipClaseDesvio(d.desvio)}">+${fmt1(d.desvio)}%</td></tr>`
-  ).join('') : '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:16px">Ningún insumo supera en más del '+AUDITORIA_INSUMOS_DESVIO_MEDIA+'% el consumo por hectárea promedio de su cultivo</td></tr>';
-
-  // ---- Desvíos de costo por hectárea ----
-  const desvCosto = ipDesviosCosto(parcelas);
-  document.getElementById('ip-desvio-costo-sub').textContent = desvCosto.length
-    ? desvCosto.length+' lote(s) por encima del promedio de su cultivo'
-    : 'Sin desvíos por encima del '+AUDITORIA_INSUMOS_DESVIO_MEDIA+'% del promedio';
-  document.getElementById('ip-desvio-costo').innerHTML = desvCosto.length ? desvCosto.map(d=>
-    `<tr><td>${d.cultivo}</td><td class="mono">${d.lote}</td><td class="tr mono">${fmt2(d.ha)}</td>`+
-    `<td class="tr mono">US$ ${fmtUSD(d.costoHa)}</td>`+
-    `<td class="tr mono">US$ ${fmtUSD(d.prom)} <span class="ip-nota">(${d.nParcelas} lotes)</span></td>`+
-    `<td class="tr mono ${ipClaseDesvio(d.desvio)}">+${fmt1(d.desvio)}%</td></tr>`
-  ).join('') : '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:16px">Ningún lote supera en más del '+AUDITORIA_INSUMOS_DESVIO_MEDIA+'% el costo por hectárea promedio de su cultivo</td></tr>';
-
-  // ---- Detalle de aplicaciones (la fila más fina, con la OT que aplicó cada insumo) ----
-  // El tope de filas dibujadas (AUDITORIA_INSUMOS_MAX_FILAS) NO afecta ningún cálculo de arriba: se
-  // avisa en el subtítulo cuando se aplica, para que nunca se lea como si fueran todos.
-  const movsVisibles = movs.slice(0, AUDITORIA_INSUMOS_MAX_FILAS);
-  document.getElementById('ip-movs-sub').textContent = movs.length>movsVisibles.length
-    ? 'Mostrando los '+fmt(movsVisibles.length)+' más recientes de '+fmt(movs.length)+' · los KPIs y las tablas de arriba usan los '+fmt(movs.length)+' · afiná los filtros para ver el resto'
-    : fmt(movs.length)+' aplicación(es) · ordenadas por Fecha Real, de la más reciente a la más antigua';
-  document.getElementById('ip-movs').innerHTML = movsVisibles.length ? movsVisibles.map(m=>
-    // Sin columnas de Zona ni de Campo: el dato real tiene un solo valor de cada una (CENTRO /
-    // LA TERESA), repetirlo en cada fila no aporta nada y le roba ancho a lo que sí varía.
-    `<tr><td class="mono">${ipFecha(m.fecha)}</td><td>${CAMPANIA_LABEL[m.campania]||m.campania}</td>`+
-    `<td class="mono">${m.lote}</td><td>${m.cultivo}</td><td>${m.insumo}</td><td>${m.tipo}</td>`+
-    `<td class="tr mono">${fmt2(m.cantidad)}</td><td>${m.unidad}</td>`+
-    `<td class="tr mono">${m.ha!=null?fmt2(m.ha):'<span class="ip-sin">—</span>'}</td>`+
-    `<td class="tr mono">${ipCelda(m.cantidad/(m.ha||1), m.ha, v=>fmt2(v))}</td>`+
-    `<td class="tr mono">US$ ${fmtUSD(m.costoUnitario)}</td>`+
-    `<td class="tr mono col-tot">US$ ${fmtUSD(m.costoTotal)}</td>`+
-    `<td class="tr mono">${ipCelda(m.costoTotal/(m.ha||1), m.ha, v=>'US$ '+fmtUSD(v))}</td>`+
-    `<td class="mono" title="Comprobante de stock: ${m.comprobante||'sin dato'}">${m.otRef||'—'}</td></tr>`
-  ).join('') : '<tr><td colspan="14" style="text-align:center;color:var(--muted);padding:16px">Sin aplicaciones para los filtros seleccionados</td></tr>';
 }
 
 // Detalle de un lote: qué insumos se usaron, cuánto de cada uno, por hectárea, cuánto costaron,
@@ -616,7 +517,7 @@ function ipDetalleParcela(p){
     `<tr class="det"><td class="dl">${i.insumo}</td>`+
     `<td class="qty-unit">${fmtCantidadUnidad(i.cantidad,i.unidad)}</td>`+
     // La cantidad por hectárea lleva SIEMPRE su unidad real ("142,73 Kilos/ha"), igual que la
-    // cantidad total de la celda anterior y que la tabla de desvíos: un número suelto no se puede
+    // cantidad total de la celda anterior: un número suelto no se puede
     // interpretar cuando el lote mezcla insumos en kilos, litros y unidades.
     `<td class="tr mono qty-unit">${ipCelda(i.cantidad/(p.ha||1), p.ha, v=>fmtCantidadUnidad(v,i.unidad)+'/ha')}</td>`+
     `<td class="tr mono">US$ ${fmtUSD(i.costo)}</td>`+
