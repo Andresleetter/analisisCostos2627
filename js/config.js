@@ -38,6 +38,21 @@ const CULTIVOS = ['ARROZ','SOJA','SORGO','MAIZ'];
 // — queda fuera por no ser una etapa del ciclo del cultivo). Orden fijo = secuencia agronómica.
 const ETAPA_ORDEN = ['preparacion de suelo','siembra','cuidados','cosecha'];
 const ETAPA_LABEL = {'preparacion de suelo':'Preparación de Suelo','siembra':'Siembra','cuidados':'Cuidados','cosecha':'Cosecha'};
+// Servicios que se cargan DENTRO del Estadio "Siembra" pero que no son la siembra en si, y por lo
+// tanto no deben contar como avance de siembra (a pedido del usuario). Hoy es el tratamiento de
+// semillas: se hace antes de sembrar y sobre la semilla, no sobre el lote — que una parcela tenga
+// la semilla tratada no significa que este sembrada.
+// Verificado contra el dato real: en la campania 26/27 el Estadio "Siembra" contiene UNICAMENTE
+// "Tratamiento de semillas" (7 OT) y "Tratamiento de semilla arroz tractor x Hs" (1 OT), asi que
+// todo el avance de siembra que se mostraba venia de ahi. La siembra real se carga con el servicio
+// llamado exactamente "Siembra" (presente en la campania 26/Zafriña26).
+// Es una lista de PREFIJOS comparados con normHdr (sin acentos/mayusculas), no de nombres exactos:
+// asi cubre las variantes que ya existen ("Tratamiento de semillas", "Tratamiento de semilla arroz
+// tractor x Hs") y las que aparezcan para otros cultivos. Se eligio excluir estos servicios en vez
+// de exigir una lista blanca de servicios de siembra: si mañana se carga la siembra con otro
+// nombre, tiene que contar sola, no quedar en 0% en silencio.
+// Solo aplica al Estadio Siembra: el mismo servicio en otro estadio no se toca.
+const SIEMBRA_SERVICIOS_NO_SIEMBRA = ['tratamiento de semilla'];
 const OPERATIVAS = ['OPERATIVO','PARCELA ARROZ','PARCELA SOJA','PARCELA SORGO','CUIDADOS DE PATIOS VIVIENDA','CUIDADOS DE PATIOS SILO','A RECUPERAR RH','MANTENIMIENTO DE BOMBAS'];
 // Discriminadores dentro de consultaInsumos (que trae TODOS los insumos, no solo combustible):
 // tipoInsumo = "COMBUSTIBLES" separa las filas de combustible del resto (fertilizantes,

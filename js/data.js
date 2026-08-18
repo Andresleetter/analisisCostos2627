@@ -200,6 +200,18 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
   // superficie fisica adicional). Las OT por horas aportan 0 ha; las OT por hectareas sin Has.
   // Reales valido se excluyen y quedan registradas en avanceInconsistencias, sin romper el render.
   const avanceInconsistencias=[];
+  // Trabajos cargados en el Estadio "Siembra" que no son la siembra en si (hoy, tratamiento de
+  // semillas — ver SIEMBRA_SERVICIOS_NO_SIEMBRA en config.js). Quedan fuera del avance de Siembra
+  // pero NO se pierden: sus costos, su conteo de OT y su presencia en Servicios/Insumos siguen
+  // exactamente igual, solo dejan de acreditar superficie sembrada.
+  const siembraExcluidas=[];
+  function esAvanceDeSiembraValido(o){
+    if(normEstadio(o.estadio)!=='siembra') return true;   // otros estadios no se tocan
+    const serv=normHdr(o.serv);
+    if(!SIEMBRA_SERVICIOS_NO_SIEMBRA.some(p=>serv.startsWith(p))) return true;
+    siembraExcluidas.push({ot:o.ot,lote:o.lote,servicio:o.serv});
+    return false;
+  }
   const cultivos=CULTIVOS.map(c=>{
     const sub=OTS.filter(o=>o.act.toUpperCase()===c);
     const ha_plan=RTK_TOT[c]||0;
@@ -219,7 +231,12 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
     // Se excluyen otros valores de Estadio que puedan aparecer (Secadero, Mantenimientos de
     // infraestructura, Operativo, Generador combustible, etc.) por no ser etapas del ciclo del
     // cultivo. Orden fijo = secuencia agronómica (no cronológico de carga).
-    const confOT = sub.filter(o=>o.estado==='Confirmado' && ETAPA_ORDEN.includes(normEstadio(o.estadio)));
+    // esAvanceDeSiembraValido saca del avance los trabajos que estan en el Estadio "Siembra" pero
+    // no son sembrar (tratamiento de semillas). Se aplica aca, sobre confOT, para que valga a la vez
+    // para los lotes que cuentan como iniciados (etMap) y para las hectareas (porLoteEstadioLabor):
+    // si no, un lote con la semilla tratada figuraba con la etapa Siembra empezada.
+    const confOT = sub.filter(o=>o.estado==='Confirmado' && ETAPA_ORDEN.includes(normEstadio(o.estadio))
+      && esAvanceDeSiembraValido(o));
     const etMap={};
     confOT.forEach(o=>{
       const key=normEstadio(o.estadio);
@@ -316,6 +333,7 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
     return {nombre:c,ha_plan:Math.round(ha_plan*100)/100,ha_ejec,avance:av,tiene_rtk:ha_plan>0,conf,ejec,pend,costo,col:color(av),etapas,etapa_actual};
   }).filter(Boolean).sort((a,b)=>(b.ha_plan-a.ha_plan)||(b.costo-a.costo));
   if(avanceInconsistencias.length) console.warn('Avance de campo: '+avanceInconsistencias.length+' OT por hectareas sin Has. Reales valido (excluidas del avance, ver D.avance_inconsistencias).');
+  if(siembraExcluidas.length) console.log('Avance de campo: '+siembraExcluidas.length+' OT del estadio Siembra excluidas del avance por no ser siembra ('+[...new Set(siembraExcluidas.map(x=>x.servicio))].join(', ')+') — ver D.siembra_excluidas.');
 
   // ---- OPERATIVAS ----
   // "Gastos operativos" = costo de OT Confirmadas cuya Actividad es una de las categorías no
@@ -1172,6 +1190,9 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
     // OT de trabajo por hectareas (avance del Resumen Ejecutivo) sin Has. Reales válido — quedan
     // fuera del cálculo de avance; se conservan acá solo para trazabilidad/depuración.
     avance_inconsistencias:avanceInconsistencias,
+    // OT del estadio Siembra que no acreditan avance de siembra (tratamiento de semillas). Solo
+    // para trazabilidad: ningun render las lee, y sus costos siguen contando en el resto.
+    siembra_excluidas:siembraExcluidas,
     resumen,
     fecha_datos:HOY};
 }
