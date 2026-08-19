@@ -24,7 +24,17 @@
   // marcadores al texto que se muestra en la interfaz.
   const dmap={};
   detOT.forEach(o=>{ const m=o.fr?o.fr.getMonth()+1:0; const est=o.estadio&&o.estadio.trim()?o.estadio.trim():'(Sin etapa)';
-    const contratista = o.contr && o.contr.trim() ? o.contr.trim() : (o.tercero>0 ? '(Sin contratista)' : '(Labor Propia)');
+    // esTrabajoPorInsumos: labores de SERVICIOS_TRABAJO_MEDIDO_EN_INSUMOS (config.js), donde el
+    // trabajo ejecutado se expresa en cantidad de lineas de insumo y no en hectareas/horas/kilos.
+    const esTrabajoPorInsumos = SERVICIOS_TRABAJO_MEDIDO_EN_INSUMOS.includes(normHdr(o.serv));
+    // El contratista sale del dato, nunca del nombre de la labor: si hay contratista cargado se usa
+    // ese (Labor Tercero sigue exactamente igual que antes). El marcador '(Ejecución Labor Propia)'
+    // solo se usa cuando la OT trae realmente una linea de tipo "Labor Propia" — ahi el campo no es
+    // "No aplica" sino un dato: la labor la ejecuto personal propio. Se limita a estas labores para
+    // no cambiar el texto que ya muestran todas las demas filas del Detalle por Labor.
+    const ejecucionPropia = esTrabajoPorInsumos && o.lines.some(l=>l.tipo==='Labor Propia');
+    const contratista = o.contr && o.contr.trim() ? o.contr.trim()
+      : (o.tercero>0 ? '(Sin contratista)' : (ejecucionPropia ? '(Ejecución Labor Propia)' : '(Labor Propia)'));
     // esH usa la modalidad de la LINEA PRINCIPAL de labor (o.modalidad, ver mas arriba), no
     // o.lines.every(l=>l.esHoras): una OT por horas con un insumo de otra unidad quedaba mal
     // clasificada como "por hectareas" con el criterio anterior. No cambia costos ni horas
@@ -36,10 +46,14 @@
     // medidos por peso) sin cambiar el agrupamiento de las otras dos: 'hrs' es exactamente el viejo
     // esH===true y 'ha' exactamente el viejo esH===false (incluidas las OT de modalidad nula), asi
     // que ninguna fila que no sea un flete por peso se separa ni se fusiona respecto de antes.
-    const unidadTrabajo = esH ? 'hrs' : (o.modalidad==='peso' ? 'kg' : 'ha');
+    // 'ins' es una cuarta unidad de trabajo, con el mismo criterio con que se agrego 'kg': entra en
+    // la clave de agrupacion y acumula en su propio campo, sin tocar como se clasifican ni se suman
+    // 'ha', 'hrs' y 'kg'. Se evalua primero porque estas OT traen la superficie del lote en Has.
+    // Reales y con el criterio anterior caian en 'ha'.
+    const unidadTrabajo = esTrabajoPorInsumos ? 'ins' : (esH ? 'hrs' : (o.modalidad==='peso' ? 'kg' : 'ha'));
     const key=m+'|'+o.serv+'|'+est+'|'+unidadTrabajo+'|'+contratista;
-    if(!dmap[key]) dmap[key]={mesnum:m,labor:o.serv,estadio:est,esH,unidadTrabajo,contratista,n:0,ha:0,horas:0,kg:0,propia:0,tercero:0,insumos:0};
-    const d=dmap[key]; d.n++; d.ha+=(o.ha||0); d.horas+=o.horas; d.kg+=(o.kg||0); d.propia+=o.propia; d.tercero+=o.tercero; d.insumos+=o.insumos; });
+    if(!dmap[key]) dmap[key]={mesnum:m,labor:o.serv,estadio:est,esH,unidadTrabajo,contratista,n:0,ha:0,horas:0,kg:0,ins_lineas:0,propia:0,tercero:0,insumos:0};
+    const d=dmap[key]; d.n++; d.ha+=(o.ha||0); d.horas+=o.horas; d.kg+=(o.kg||0); d.ins_lineas+=o.n_insumos; d.propia+=o.propia; d.tercero+=o.tercero; d.insumos+=o.insumos; });
   const gastos=Object.values(dmap).map(d=>({...d,ha:Math.round(d.ha*100)/100,horas:Math.round(d.horas*100)/100,
     kg:Math.round(d.kg*100)/100,
     propia:Math.round(d.propia*100)/100,tercero:Math.round(d.tercero*100)/100,insumos:Math.round(d.insumos*100)/100}));
@@ -64,7 +78,7 @@
   // '(Labor Propia)'/'(Sin contratista)' siempre al final — labelContratista() (utils.js) los
   // traduce al texto que se muestra tanto en el filtro como en la columna de la tabla.
   const contratistas_labor=[...new Set(gastos.map(d=>d.contratista))].sort((a,b)=>{
-    const esp=k=>k==='(Labor Propia)'||k==='(Sin contratista)';
+    const esp=k=>k==='(Labor Propia)'||k==='(Sin contratista)'||k==='(Ejecución Labor Propia)';
     if(esp(a)&&!esp(b)) return 1; if(!esp(a)&&esp(b)) return -1;
     return labelContratista(a).localeCompare(labelContratista(b),'es');
   });

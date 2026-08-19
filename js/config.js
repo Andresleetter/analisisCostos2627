@@ -135,6 +135,16 @@ const INFRA_PUENTES_PROPIA_ESP = 'Contrucion puentes Labor Propia';
 const INFRA_PUENTES_TERCERO_SERV = 'CONSTRUCCION PUENTE AGROVIAL';
 const INFRA_PUENTES_PROPIA_SERV = 'CONSTRUCCION PUENTES LABOR PROPIA';
 const INFRA_PUENTES_HORAS_SERV = 'Construccion de Puentes retro excavadora x Hs';
+// Servicios cuyo trabajo ejecutado NO es una magnitud medida (hectareas/horas/kilos) sino la
+// cantidad de lineas de insumo aplicadas en la OT. Hoy es el tratamiento de semillas: la OT se
+// carga con la superficie del lote de referencia en Has. Reales, pero el trabajo no se ejecuta
+// sobre el lote sino sobre la semilla, asi que mostrar esas hectareas como "Trabajo Ejecutado"
+// describe mal la labor. Las hectareas NO se borran del modelo (siguen en o.ha, disponibles para
+// dosis y controles agronomicos): solo dejan de ser el valor visible de esa columna.
+// Se compara el NOMBRE COMPLETO normalizado con normHdr, no un prefijo, a diferencia de
+// SIEMBRA_SERVICIOS_NO_SIEMBRA: "Tratamiento de semilla arroz tractor x Hs" es otra labor, se mide
+// realmente en horas y debe seguir mostrandose en horas.
+const SERVICIOS_TRABAJO_MEDIDO_EN_INSUMOS = ['tratamiento de semillas'];
 // Servicios en los que la OT NO representa trabajo ejecutado medible: lo único real de esas OT es
 // el insumo aplicado/consumido, y la cantidad que traen en Has. Reales / horas no corresponde a una
 // superficie ni a un tiempo de labor. La columna "Trabajo Ejecutado" del Detalle por Labor
