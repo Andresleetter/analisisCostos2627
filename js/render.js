@@ -744,7 +744,7 @@ function renderCombustible(){
 // ================== SERVICIOS ==================
 // El módulo Servicios trabaja siempre sobre UN paquete de datos (D.servicios_campanias[campaña]),
 // no sobre las colecciones globales: el filtro de Campaña elige cuál. Cada paquete lo construyó
-// buildData() con las mismas funciones y fórmulas (ver construirServicios en data.js), así que
+// buildData() con las mismas funciones y fórmulas (ver construirServicios en js/data/servicios.js), así que
 // cambiar de campaña no cambia ningún cálculo — solo el conjunto de registros sobre el que se
 // calcula. Fallback a D si el paquete no existiera, para no romper el render.
 function serviciosActivos(){

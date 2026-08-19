@@ -261,6 +261,17 @@
 <script src="vendor/xlsx.full.min.js" defer></script>
 <script src="js/config.js" defer></script>
 <script src="js/utils.js" defer></script>
+<!-- Modelo de datos por dominio (js/data/): se cargan ANTES de js/data.js, que los orquesta.
+     Entre si no tienen orden obligatorio (solo definen funciones, no ejecutan nada al cargar),
+     pero data.js si tiene que ir ultimo porque buildData() las invoca. -->
+<script src="js/data/ordenes.js" defer></script>
+<script src="js/data/cultivos.js" defer></script>
+<script src="js/data/servicios.js" defer></script>
+<script src="js/data/combustible.js" defer></script>
+<script src="js/data/insumos.js" defer></script>
+<script src="js/data/auditoria.js" defer></script>
+<script src="js/data/alertas.js" defer></script>
+<script src="js/data/resumen.js" defer></script>
 <script src="js/data.js" defer></script>
 <script src="js/render.js" defer></script>
 <script src="js/events.js" defer></script>
