@@ -3,7 +3,7 @@
 // Insumos por Parcela) contra la dosis recomendada de la campania.
 //
 // FUENTE UNICA: data/recetas-insumos-26-27.json, una version reducida del presupuesto de insumos
-// (151 registros, campos campania/cultivo/grupo/insumo/descripcion/dosisHa/unidad). Los Excel de
+// (158 registros, campos campania/cultivo/grupo/insumo/descripcion/dosisHa/unidad). Los Excel de
 // presupuesto NO se leen: este modulo no usa SheetJS ni ningun parser, solo el JSON.
 //
 // La receta es SOLO una referencia para auditar. Nada de lo que hay aca modifica la dosis real, ni
@@ -15,9 +15,10 @@
 // y cualquier ambiguedad real del dato termina en "Sin receta" en vez de elegir una receta al azar.
 
 // Estados posibles de la comparacion. El unico juicio de valor es la tolerancia definida por el
-// negocio (RECETA_TOLERANCIA_PCT en config.js, hoy 5%): dentro de ese margen la aplicacion se
-// considera aceptable. Fuera de el, el dashboard sigue sin declarar "correcto" ni "incorrecto":
-// dice de que lado de la receta quedo y cuanto, y deja la lectura agronomica a quien audita.
+// negocio (RECETA_TOLERANCIA_PCT en config.js, hoy 5%), y solo HACIA ARRIBA: pasarse hasta ese
+// margen se considera aceptable, pero quedarse corto es una desviacion aunque sea por poco.
+// Fuera de eso el dashboard no declara "correcto" ni "incorrecto": dice de que lado de la receta
+// quedo la aplicacion y cuanto, y deja la lectura agronomica a quien audita.
 const RECETA_ESTADO = {
   SOBRE:      'Sobre receta',
   BAJO:       'Bajo receta',
@@ -64,7 +65,7 @@ function factorConversionDosis(desde, hacia){
 // Clave: campania | cultivo | insumo, todo normalizado con las utilidades que ya usa el proyecto
 // (normHdr para campania/cultivo, normInsumoNombre para el nombre del insumo — el mismo
 // normalizador con que se comparan los INSUMOS_EXCLUIDOS). Se arma UNA sola vez al cargar el
-// dashboard; despues cada celda resuelve su receta con un Map.get(), sin recorrer los 151 registros.
+// dashboard; despues cada celda resuelve su receta con un Map.get(), sin recorrer los 158 registros.
 // Cada clave guarda un ARRAY: el JSON real trae el mismo insumo en mas de un grupo dentro del mismo
 // cultivo (ej. ARROZ "Pyrazosulfuron" en dos grupos con 0,21 y 0,08 L/ha). Esa ambiguedad se
 // resuelve al buscar, no al indexar — ver resolverCandidatasReceta.
@@ -152,8 +153,12 @@ function buscarReceta(indice, campania, cultivo, insumo){
     if(f) return {fila:f, motivo:null, via:'descripcion'};
     return {fila:null, motivo:'ambigua', via:null};
   }
-  const alias = RECETAS_INSUMO_ALIAS.find(a=>normInsumoNombre(a.insumo)===normInsumoNombre(insumo)
+  const aliasPosibles = RECETAS_INSUMO_ALIAS.filter(a=>normInsumoNombre(a.insumo)===normInsumoNombre(insumo)
     && (!a.cultivo || normHdr(a.cultivo)===normHdr(cultivo)));
+  // Un alias declarado para ESTE cultivo gana sobre el generico del mismo producto: permite afinar
+  // un solo cultivo (por ejemplo fijandole el grupo) sin tocar el resto y, sobre todo, sin que el
+  // resultado dependa del orden en que esten escritos en config.js.
+  const alias = aliasPosibles.find(a=>a.cultivo) || aliasPosibles[0];
   if(alias){
     const porAlias = indice.porInsumo.get(base+normInsumoNombre(alias.receta));
     if(porAlias){
@@ -225,10 +230,17 @@ function evaluarDosisContraReceta(indice, datos){
     salida.estadoReceta = RECETA_ESTADO.SEGUN;
     return salida;
   }
-  // Dentro de la tolerancia de negocio (RECETA_TOLERANCIA_PCT, config.js). Se mide sobre el desvio
-  // PORCENTUAL, asi que requiere que exista: con una receta de dosis 0 no hay porcentaje posible y
-  // la fila cae en Sobre/Bajo, que sigue siendo la lectura correcta.
-  if(salida.desvioPct!=null && Math.abs(salida.desvioPct) <= RECETA_TOLERANCIA_PCT){
+  // Dentro de la tolerancia de negocio (RECETA_TOLERANCIA_PCT, config.js). Es ASIMETRICA a pedido
+  // del usuario: solo absorbe los desvios HACIA ARRIBA. Aplicar de menos es una desviacion real
+  // aunque sea chica —el producto no llego a la parcela—, mientras que pasarse hasta un 5% es
+  // variacion operativa normal. Por eso un +3% queda "Dentro de tolerancia" y un -3% queda
+  // "Bajo receta".
+  // Se mide sobre el desvio PORCENTUAL, asi que requiere que exista: con una receta de dosis 0 no
+  // hay porcentaje posible y la fila cae en Sobre/Bajo, que sigue siendo la lectura correcta.
+  // El limite se compara con el mismo margen de punto flotante que "Según receta": un +5% exacto
+  // da 5.000000000000004 al dividir (ej. 2,10 sobre 2,00) y sin esto caeria en "Sobre receta".
+  const limiteTolerancia = Math.abs(salida.dosisRecetaComparable)*(RECETA_TOLERANCIA_PCT/100);
+  if(salida.desvioAbsoluto>0 && salida.desvioAbsoluto <= limiteTolerancia*(1+RECETA_EPSILON_RELATIVO)){
     salida.estadoReceta = RECETA_ESTADO.TOLERANCIA;
     return salida;
   }

@@ -1127,6 +1127,24 @@
   {
     "campania": "26/27",
     "cultivo": "SORGO",
+    "grupo": "ACEITES Y ADJUVANTES",
+    "insumo": "Power oil",
+    "descripcion": "Aceite vegetaL",
+    "dosisHa": 1.6,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SORGO",
+    "grupo": "ACEITES Y ADJUVANTES",
+    "insumo": "Snow Zero",
+    "descripcion": "Aceite vegetaL",
+    "dosisHa": 1.6,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SORGO",
     "grupo": "DESECACIÓN",
     "insumo": "Cleanspray",
     "descripcion": "2,4-D DMA 72%",
@@ -1138,6 +1156,15 @@
     "cultivo": "SORGO",
     "grupo": "DESECACIÓN",
     "insumo": "Glifex gold 60,8",
+    "descripcion": "Glifosato DMA 60.8%",
+    "dosisHa": 3,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SORGO",
+    "grupo": "DESECACIÓN",
+    "insumo": "Kalium",
     "descripcion": "Glifosato DMA 60.8%",
     "dosisHa": 3,
     "unidad": "L"
@@ -1299,8 +1326,26 @@
     "campania": "26/27",
     "cultivo": "SORGO",
     "grupo": "NUTRICIÓN",
+    "insumo": "AGRIKER AMIN Zn",
+    "descripcion": "A.A.: 6% Zn: 8%",
+    "dosisHa": 2,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SORGO",
+    "grupo": "NUTRICIÓN",
     "insumo": "AZUFRE 9,7 % + MANGANESO 9,7 % + ZINC 9,7 % AL",
     "descripcion": null,
+    "dosisHa": 0.3,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SORGO",
+    "grupo": "NUTRICIÓN",
+    "insumo": "Amino Active Supreme",
+    "descripcion": "BioAtivadores Mn-ZN",
     "dosisHa": 0.3,
     "unidad": "L"
   },
@@ -1326,8 +1371,26 @@
     "campania": "26/27",
     "cultivo": "SORGO",
     "grupo": "NUTRICIÓN",
+    "insumo": "CYTRONUTRI ZIC MN",
+    "descripcion": "AZUFRE 9,7 % + MANGANESO 9,7 % + ZINC 9,7 % AL",
+    "dosisHa": 0.3,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SORGO",
+    "grupo": "NUTRICIÓN",
     "insumo": "Methylobacterium symbioticum 3x10*7 UFC/g",
     "descripcion": null,
+    "dosisHa": 0.3,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SORGO",
+    "grupo": "NUTRICIÓN",
+    "insumo": "UTRISHA N",
+    "descripcion": "Methylobacterium symbioticum 3x10*7 UFC/g",
     "dosisHa": 0.3,
     "unidad": "L"
   },

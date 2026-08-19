@@ -540,12 +540,12 @@ function renderInsumosParcela(){
     ipRec.innerHTML =
       chip('Con receta', conReceta, 'rc-con', 'Insumos de lote que se pudieron comparar contra una receta de la campaña')+
       chip('Sobre receta', conteoReceta.get(RECETA_ESTADO.SOBRE)||0, 'rc-sobre', 'La dosis aplicada por hectárea superó la receta en más de '+RECETA_TOLERANCIA_PCT+'%')+
-      chip('Bajo receta', conteoReceta.get(RECETA_ESTADO.BAJO)||0, 'rc-bajo', 'La dosis aplicada por hectárea quedó más de '+RECETA_TOLERANCIA_PCT+'% por debajo de la receta')+
-      chip('Dentro de tolerancia', conteoReceta.get(RECETA_ESTADO.TOLERANCIA)||0, 'rc-tol', 'El desvío no supera la tolerancia de ±'+RECETA_TOLERANCIA_PCT+'% definida para la campaña')+
+      chip('Bajo receta', conteoReceta.get(RECETA_ESTADO.BAJO)||0, 'rc-bajo', 'La dosis aplicada por hectárea quedó por debajo de la receta. La tolerancia solo aplica hacia arriba: aplicar de menos siempre se marca, aunque sea por poco')+
+      chip('Dentro de tolerancia', conteoReceta.get(RECETA_ESTADO.TOLERANCIA)||0, 'rc-tol', 'Se aplicó de más, pero sin superar la tolerancia de +'+RECETA_TOLERANCIA_PCT+'% definida para la campaña')+
       chip('Según receta', conteoReceta.get(RECETA_ESTADO.SEGUN)||0, 'rc-segun', 'La dosis aplicada coincide exactamente con la de la receta')+
       chip('Sin receta', conteoReceta.get(RECETA_ESTADO.SIN)||0, 'rc-sin', 'No hay una receta inequívoca para ese cultivo e insumo: no se compara ni se estima')+
       chip('Unidad no comparable', conteoReceta.get(RECETA_ESTADO.UNIDAD)||0, 'rc-unid', 'Hay receta, pero su unidad no es de la misma magnitud que la aplicada — nunca se convierte entre kilos y litros')+
-      '<div class="rc-pie">'+fmt(recetaFilas)+' insumo(s) por lote evaluados · tolerancia ±'+RECETA_TOLERANCIA_PCT+'%'+
+      '<div class="rc-pie">'+fmt(recetaFilas)+' insumo(s) por lote evaluados · tolerancia +'+RECETA_TOLERANCIA_PCT+'% (solo hacia arriba: aplicar de menos siempre se marca)'+
       (recetaSinDosis? ' · '+fmt(recetaSinDosis)+' sin dosis real (el lote no registra hectáreas), no se comparan':'')+'</div>';
   }
 
@@ -631,7 +631,7 @@ function ipTipReceta(r, i){
   if(r.estadoReceta===RECETA_ESTADO.UNIDAD)
     return 'Receta «'+(r.recetaInsumo||'')+'» en '+(r.unidadReceta||'sin unidad')+': no es comparable con '+i.unidad+', y nunca se convierte entre magnitudes distintas';
   const base = 'Receta «'+(r.recetaInsumo||'')+'»'+(r.recetaGrupo?' ('+r.recetaGrupo+')':'')+' — '+fmt2(r.dosisRecetaHa)+' '+(r.unidadReceta||'')+'/ha';
-  if(r.estadoReceta===RECETA_ESTADO.TOLERANCIA) return base+'. El desvío no supera la tolerancia de ±'+RECETA_TOLERANCIA_PCT+'% de la campaña';
+  if(r.estadoReceta===RECETA_ESTADO.TOLERANCIA) return base+'. Se aplicó de más, sin superar la tolerancia de +'+RECETA_TOLERANCIA_PCT+'% de la campaña';
   return base;
 }
 // Porcentaje con signo explícito: "+1,33%" se lee distinto de "1,33%" cuando lo que importa es de
