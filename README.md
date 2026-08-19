@@ -189,19 +189,20 @@ El alias va último a propósito: así nunca pisa una receta que ya coincide sol
 
 **Unidades.** Solo se unifican equivalencias evidentes de la misma magnitud: `kg/kgs/Kilo(s)/Kilogramo(s)` → kg, `L/lt/lts/Litro(s)` → L, `ton/tn/Tonelada(s)` → ton. La **única conversión** permitida es `1 ton = 1000 kg` (el presupuesto carga los fertilizantes en toneladas por hectárea y las OT los descargan en kilos). Nunca se convierte entre masa y volumen ni desde/hacia `BLS`: en ese caso el estado es "Unidad no comparable" y no se calcula porcentaje. La dosis de receta se imprime con la **misma unidad que la dosis real de la fila**, para que una fila no alterne `Kilos/ha` con `kg/ha`.
 
-**Estados**, matemáticos y neutrales a propósito — el negocio todavía no definió una tolerancia agronómica, así que el dashboard no declara nada "correcto" ni "incorrecto", solo de qué lado quedó y cuánto:
+**Estados.** El único juicio de valor es la **tolerancia de negocio**: `RECETA_TOLERANCIA_PCT` (`config.js`), hoy **5%**, general para todos los cultivos e insumos — cambiarla es editar esa única línea. Dentro de ese margen la aplicación se considera aceptable; fuera de él el dashboard sigue sin declarar nada "correcto" ni "incorrecto": dice de qué lado quedó y cuánto.
 
 | Estado | Cuándo |
 | --- | --- |
-| Sobre receta | dosis real > receta |
-| Bajo receta | dosis real < receta |
-| Según receta | iguales, con comparación numérica relativa (`RECETA_EPSILON_RELATIVO` = 1e-9, margen de punto flotante — **nunca** el valor redondeado que se muestra) |
+| Sobre receta | dosis real > receta en más de la tolerancia |
+| Bajo receta | dosis real < receta en más de la tolerancia |
+| Dentro de tolerancia | hay desvío, pero `abs(desvíoPct) <= RECETA_TOLERANCIA_PCT` |
+| Según receta | iguales, con comparación numérica relativa (`RECETA_EPSILON_RELATIVO` = 1e-9, margen de punto flotante — **nunca** el valor redondeado que se muestra). Se evalúa **antes** que la tolerancia, para que "dio justo" no quede absorbido por "dio distinto pero aceptable" |
 | Sin receta | no hay receta inequívoca (sin coincidencia, ambigua, o JSON no disponible) |
 | Unidad no comparable | hay receta y el producto coincide, pero las unidades no son de la misma magnitud (o la receta no trae unidad) |
 
 **Resumen y filtro.** Arriba de la tabla hay contadores por estado que reaccionan a los filtros del módulo. El filtro **Estado de Receta** se aplica *después* de agrupar, no sobre las líneas de `consultaOT`: el estado no es un dato de la línea sino el resultado de comparar la dosis del conjunto, así que filtrar líneas cambiaría esas mismas sumas y el estado se volvería circular. Acota qué lotes e insumos se listan; los importes de cada lote siguen siendo los del lote completo (el sub-título lo aclara cuando el filtro está activo). Los contadores se excluyen a sí mismos del recorte, igual que el resto de los filtros del módulo.
 
-**Cobertura actual** (campaña 26/27, 445 insumos por lote): 172 con receta — 76 sobre, 93 bajo, 3 según — y 273 sin receta (292 sin coincidencia de nombre y 14 ambiguas, contando todas las campañas). El resto de los productos simplemente no está en el presupuesto reducido con ese nombre; para comparar más hay que **agregar alias a mano**, nunca ampliar la coincidencia por parecido.
+**Cobertura actual** (campaña 26/27, 445 insumos por lote): 172 con receta — 23 sobre, 76 bajo, **70 dentro de tolerancia**, 3 según — y 273 sin receta (292 sin coincidencia de nombre y 14 ambiguas, contando todas las campañas). El resto de los productos simplemente no está en el presupuesto reducido con ese nombre; para comparar más hay que **agregar alias a mano**, nunca ampliar la coincidencia por parecido.
 
 **Si el JSON falla:** el dashboard carga igual, la dosis real, las cantidades y los costos se muestran igual, y el panel de seguimiento avisa que no está disponible.
 

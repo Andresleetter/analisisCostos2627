@@ -207,6 +207,14 @@ const RECETAS_SRC_JSON_RESPALDO = "https://raw.githubusercontent.com/"+REPO+"/"+
 // Tolerancia SOLO para decidir "Según receta" — no es una tolerancia agronomica (el negocio todavia
 // no definio ninguna), es el margen de error de punto flotante: 1e-9 relativo al valor comparado.
 const RECETA_EPSILON_RELATIVO = 1e-9;
+// Tolerancia de negocio: un desvio de hasta este porcentaje respecto de la receta se considera
+// aceptable y la fila se rotula "Dentro de tolerancia" en vez de "Sobre receta"/"Bajo receta".
+// A diferencia de RECETA_EPSILON_RELATIVO (que es puro margen de punto flotante), este valor SI es
+// una decision de negocio, definida por el usuario en 5%. Es general: aplica a todos los cultivos e
+// insumos por igual. Cambiarla es editar esta unica linea.
+// Ojo con el orden de los estados: "Según receta" sigue reservado para la coincidencia exacta, asi
+// que "dio justo" y "dio distinto pero aceptable" nunca se confunden.
+const RECETA_TOLERANCIA_PCT = 5;
 // Equivalencias DECLARADAS A MANO entre el nombre del insumo en Albor (consultaOT) y el nombre en
 // el JSON de recetas. Nunca se generan por parecido: si un producto no esta aca y no coincide
 // exacto, queda "Sin receta", que es el resultado seguro.

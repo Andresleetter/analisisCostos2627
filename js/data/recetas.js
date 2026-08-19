@@ -14,19 +14,21 @@
 // coincidencias son exactas sobre nombre normalizado; no hay coincidencia aproximada de ningun tipo,
 // y cualquier ambiguedad real del dato termina en "Sin receta" en vez de elegir una receta al azar.
 
-// Estados posibles de la comparacion. Son matematicos y neutrales a proposito: el negocio todavia
-// no definio una tolerancia agronomica, asi que el dashboard no declara "correcto" ni "incorrecto",
-// solo de que lado del valor de receta quedo la aplicacion y cuanto.
+// Estados posibles de la comparacion. El unico juicio de valor es la tolerancia definida por el
+// negocio (RECETA_TOLERANCIA_PCT en config.js, hoy 5%): dentro de ese margen la aplicacion se
+// considera aceptable. Fuera de el, el dashboard sigue sin declarar "correcto" ni "incorrecto":
+// dice de que lado de la receta quedo y cuanto, y deja la lectura agronomica a quien audita.
 const RECETA_ESTADO = {
-  SOBRE:  'Sobre receta',
-  BAJO:   'Bajo receta',
-  SEGUN:  'Según receta',
-  SIN:    'Sin receta',
-  UNIDAD: 'Unidad no comparable',
+  SOBRE:      'Sobre receta',
+  BAJO:       'Bajo receta',
+  TOLERANCIA: 'Dentro de tolerancia',
+  SEGUN:      'Según receta',
+  SIN:        'Sin receta',
+  UNIDAD:     'Unidad no comparable',
 };
 // Orden de presentacion de los contadores del resumen (render.js).
-const RECETA_ESTADOS_ORDEN = [RECETA_ESTADO.SOBRE, RECETA_ESTADO.BAJO, RECETA_ESTADO.SEGUN,
-  RECETA_ESTADO.SIN, RECETA_ESTADO.UNIDAD];
+const RECETA_ESTADOS_ORDEN = [RECETA_ESTADO.SOBRE, RECETA_ESTADO.BAJO, RECETA_ESTADO.TOLERANCIA,
+  RECETA_ESTADO.SEGUN, RECETA_ESTADO.SIN, RECETA_ESTADO.UNIDAD];
 
 // ---- Unidades ----
 // Solo se unifican equivalencias EVIDENTES de la misma magnitud fisica. Cualquier unidad que no
@@ -216,10 +218,18 @@ function evaluarDosisContraReceta(indice, datos){
   }
   // "Según receta" se decide con una comparacion numerica relativa, NUNCA con el valor redondeado
   // que se muestra en pantalla: 0,1500000001 y 0,15 son el mismo dato, pero 0,1504 no lo es aunque
-  // ambos se impriman "0,15".
+  // ambos se impriman "0,15". Se evalua ANTES que la tolerancia para que la coincidencia exacta no
+  // quede absorbida por ella: "dio justo" y "dio distinto pero aceptable" son cosas distintas.
   const escala = Math.max(Math.abs(salida.dosisRecetaComparable), Math.abs(dosisRealHa));
   if(Math.abs(salida.desvioAbsoluto) <= escala*RECETA_EPSILON_RELATIVO){
     salida.estadoReceta = RECETA_ESTADO.SEGUN;
+    return salida;
+  }
+  // Dentro de la tolerancia de negocio (RECETA_TOLERANCIA_PCT, config.js). Se mide sobre el desvio
+  // PORCENTUAL, asi que requiere que exista: con una receta de dosis 0 no hay porcentaje posible y
+  // la fila cae en Sobre/Bajo, que sigue siendo la lectura correcta.
+  if(salida.desvioPct!=null && Math.abs(salida.desvioPct) <= RECETA_TOLERANCIA_PCT){
+    salida.estadoReceta = RECETA_ESTADO.TOLERANCIA;
     return salida;
   }
   salida.estadoReceta = salida.desvioAbsoluto>0 ? RECETA_ESTADO.SOBRE : RECETA_ESTADO.BAJO;
