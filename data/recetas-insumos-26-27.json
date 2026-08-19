@@ -578,10 +578,37 @@
   {
     "campania": "26/27",
     "cultivo": "MAIZ",
+    "grupo": "FUNGICIDAS",
+    "insumo": "PIRACLOSTROBINA 26% + DIFENOCONAZOLE 30 % EC",
+    "descripcion": null,
+    "dosisHa": 0.4,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "MAIZ",
+    "grupo": "FUNGICIDAS",
+    "insumo": "TRIFEND",
+    "descripcion": "BIXAFEN 12,5 % + CIPROCONAZOLE 9 % + DIFENOCONAZOLE 15 % SC",
+    "dosisHa": 0.4,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "MAIZ",
     "grupo": "HERBICIDAS PRÉ EMERGENTES",
     "insumo": "Alfamex",
     "descripcion": "S-metalaclor",
     "dosisHa": 1.2,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "MAIZ",
+    "grupo": "HERBICIDAS PRÉ EMERGENTES",
+    "insumo": "Glufosinato",
+    "descripcion": null,
+    "dosisHa": 2,
     "unidad": "L"
   },
   {
@@ -597,6 +624,15 @@
     "campania": "26/27",
     "cultivo": "MAIZ",
     "grupo": "HERBICIDAS PRÉ EMERGENTES",
+    "insumo": "S-metalaclor",
+    "descripcion": null,
+    "dosisHa": 1.2,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "MAIZ",
+    "grupo": "HERBICIDAS PRÉ EMERGENTES",
     "insumo": "Saflufenacil",
     "descripcion": null,
     "dosisHa": 0.07,
@@ -606,8 +642,26 @@
     "campania": "26/27",
     "cultivo": "MAIZ",
     "grupo": "HERBICIDAS PÓS EMERGENTES",
+    "insumo": "Atrazina 76% + Mesotriona 12,5%",
+    "descripcion": null,
+    "dosisHa": 1.2,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "MAIZ",
+    "grupo": "HERBICIDAS PÓS EMERGENTES",
     "insumo": "Glifex full",
     "descripcion": "Glifosato Sal Amonio 75%",
+    "dosisHa": 1.8,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "MAIZ",
+    "grupo": "HERBICIDAS PÓS EMERGENTES",
+    "insumo": "Glifosato Sal Amonio 75%",
+    "descripcion": null,
     "dosisHa": 1.8,
     "unidad": "L"
   },
@@ -624,9 +678,36 @@
     "campania": "26/27",
     "cultivo": "MAIZ",
     "grupo": "INSECTICIDAS",
+    "insumo": "Bifentrina 40%",
+    "descripcion": null,
+    "dosisHa": 0.37,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "MAIZ",
+    "grupo": "INSECTICIDAS",
     "insumo": "Biogard",
     "descripcion": "Imidacloprid 60%",
     "dosisHa": 0.2,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "MAIZ",
+    "grupo": "INSECTICIDAS",
+    "insumo": "Clorantraniliprole 75%",
+    "descripcion": null,
+    "dosisHa": 0.24,
+    "unidad": "kg"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "MAIZ",
+    "grupo": "INSECTICIDAS",
+    "insumo": "Clorfenapir 24%",
+    "descripcion": null,
+    "dosisHa": 2,
     "unidad": "L"
   },
   {
@@ -642,8 +723,35 @@
     "campania": "26/27",
     "cultivo": "MAIZ",
     "grupo": "INSECTICIDAS",
+    "insumo": "Clotianidina 60%",
+    "descripcion": null,
+    "dosisHa": 0.2,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "MAIZ",
+    "grupo": "INSECTICIDAS",
     "insumo": "Destroyer",
     "descripcion": "Metomil 90%",
+    "dosisHa": 0.4,
+    "unidad": "kg"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "MAIZ",
+    "grupo": "INSECTICIDAS",
+    "insumo": "Imidacloprid 60%",
+    "descripcion": null,
+    "dosisHa": 0.2,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "MAIZ",
+    "grupo": "INSECTICIDAS",
+    "insumo": "Metomil 90%",
+    "descripcion": null,
     "dosisHa": 0.4,
     "unidad": "kg"
   },
@@ -678,10 +786,28 @@
     "campania": "26/27",
     "cultivo": "MAIZ",
     "grupo": "INSECTICIDAS",
+    "insumo": "Teflubenzuron 30%",
+    "descripcion": null,
+    "dosisHa": 0.08,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "MAIZ",
+    "grupo": "INSECTICIDAS",
     "insumo": "Tefluquit",
     "descripcion": "Teflubenzuron 30%",
     "dosisHa": 0.08,
     "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "MAIZ",
+    "grupo": "NUTRICIÓN",
+    "insumo": "(Co 0,5% + Mo 5% + Ni 1% + Zn 25% + Kinetina (Kin) 0,02% + Acido Giberelico 0,01% + Acido Indolbutirico (IBA) 0,01% + Acido Indolacetico (IAA) 0,01%)",
+    "descripcion": null,
+    "dosisHa": 0.25,
+    "unidad": null
   },
   {
     "campania": "26/27",
@@ -696,10 +822,37 @@
     "campania": "26/27",
     "cultivo": "MAIZ",
     "grupo": "NUTRICIÓN",
+    "insumo": "AGRIKER AMIN Zn",
+    "descripcion": "A.A.: 6% Zn: 8%",
+    "dosisHa": 2,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "MAIZ",
+    "grupo": "NUTRICIÓN",
     "insumo": "AZUFRE 9,7 % + MANGANESO 9,7 % + ZINC 9,7 % AL",
     "descripcion": null,
     "dosisHa": 0.3,
     "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "MAIZ",
+    "grupo": "NUTRICIÓN",
+    "insumo": "Amino Active Supreme",
+    "descripcion": "BioAtivadores Mn-ZN",
+    "dosisHa": 0.3,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "MAIZ",
+    "grupo": "NUTRICIÓN",
+    "insumo": "BIOSTART + Zn",
+    "descripcion": "(Co 0,5% + Mo 5% + Ni 1% + Zn 25% + Kinetina (Kin) 0,02% + Acido Giberelico 0,01% + Acido Indolbutirico (IBA) 0,01% + Acido Indolacetico (IAA) 0,01%)",
+    "dosisHa": 0.25,
+    "unidad": null
   },
   {
     "campania": "26/27",
@@ -723,10 +876,37 @@
     "campania": "26/27",
     "cultivo": "MAIZ",
     "grupo": "NUTRICIÓN",
+    "insumo": "CYTRONUTRI ZIC MN",
+    "descripcion": "AZUFRE 9,7 % + MANGANESO 9,7 % + ZINC 9,7 % AL",
+    "dosisHa": 0.3,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "MAIZ",
+    "grupo": "NUTRICIÓN",
     "insumo": "Methylobacterium symbioticum 3x10*7 UFC/g",
     "descripcion": null,
     "dosisHa": 0.3,
     "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "MAIZ",
+    "grupo": "NUTRICIÓN",
+    "insumo": "UTRISHA N",
+    "descripcion": "Methylobacterium symbioticum 3x10*7 UFC/g",
+    "dosisHa": 0.3,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "MAIZ",
+    "grupo": "SEMILLAS",
+    "insumo": "NS80",
+    "descripcion": null,
+    "dosisHa": 1.3,
+    "unidad": "BLS"
   },
   {
     "campania": "26/27",

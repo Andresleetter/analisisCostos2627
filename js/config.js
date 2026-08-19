@@ -197,7 +197,7 @@ const AUDITORIA_GASTO_DESALIJO = "Desalijo Karanda'y / Carandai";
 // Se comparan normalizados (normHdr) contra la Actividad de consultaOT.
 const AUDITORIA_INSUMOS_CULTIVOS_EXCLUIDOS = ['AVENA', 'COBERTURA'];
 // ---- AUDITORIA DE INSUMOS POR PARCELA: seguimiento de receta ----
-// Version reducida del presupuesto de insumos de la campania (158 registros). Es la UNICA fuente de
+// Version reducida del presupuesto de insumos de la campania (178 registros). Es la UNICA fuente de
 // las dosis recomendadas: los Excel de presupuesto no se leen, y este JSON no aporta costos ni
 // volumenes totales, solo dosis por hectarea. Se descarga una sola vez al iniciar el dashboard.
 // Mismo criterio de respaldo que SRC_XLSX. Si falla, el modulo sigue funcionando y el seguimiento
@@ -226,6 +226,17 @@ const RECETA_TOLERANCIA_PCT = 5;
 // Campos: insumo (nombre en consultaOT), receta (nombre en el JSON), y opcionalmente cultivo y
 // grupo para desempatar cuando el JSON trae el mismo producto en mas de un grupo con dosis
 // distintas.
+// Recetas que se reutilizan en otra campania/cultivo. La zafriña de maiz se registra en Albor bajo
+// la campania "26" (Zafriña26) y con dos rotulos de cultivo distintos (MAIZ y MAIZ ZAFRIÑA), pero
+// no tiene presupuesto propio: se siembra con la MISMA formula de la hoja de MAIZ 26/27 — a
+// excepcion de la semilla, que es otra. Por eso el mapeo es explicito y acotado a esas dos
+// combinaciones: no se aplica a ningun otro cultivo ni campania.
+// La semilla NO se aliasa a proposito: al ser distinta, si no coincide por nombre queda "Sin
+// receta", que es la respuesta correcta — nunca se la compara contra la semilla de la 26/27.
+const RECETAS_EQUIVALENCIAS = [
+  {campania:'26', cultivo:'MAIZ',         usarCampania:'26/27', usarCultivo:'MAIZ'},
+  {campania:'26', cultivo:'MAIZ ZAFRIÑA', usarCampania:'26/27', usarCultivo:'MAIZ'},
+];
 const RECETAS_INSUMO_ALIAS = [
   // Mismo producto, separador decimal distinto: Albor lo carga con punto y el presupuesto con coma.
   // Cubre ARROZ, MAIZ, SOJA y SORGO de una sola vez porque la comparacion ignora mayusculas.
@@ -266,6 +277,23 @@ const RECETAS_INSUMO_ALIAS = [
   // Va acotado a SORGO: en ARROZ el mismo producto figura en dos grupos pero con la MISMA dosis
   // (3 L/ha las dos), asi que no es ambiguo y no necesita desempate.
   {insumo:'GLIFEX GOLD 60.8', receta:'Glifex gold 60,8', cultivo:'SORGO', grupo:'DESECACIÓN'},
+  // ---- Zafriña de maiz (campania 26): los productos aplicados son los MISMOS de la formula de
+  // MAIZ 26/27 pero Albor los nombra distinto. Cada equivalencia se verifico contra la formula
+  // (columna Discripcion del presupuesto), no por parecido de nombre. Van sin cultivo porque el
+  // mapeo de campania ya los deja apuntando al bloque de MAIZ (ver RECETAS_EQUIVALENCIAS).
+  // La SEMILLA no esta aca a proposito: es el unico insumo que cambia entre la campania y la
+  // zafriña, asi que debe quedar en "Sin receta" y nunca compararse contra la semilla de la 26/27.
+  // Abono 04.30.10: mismo grado, guiones en vez de puntos.
+  {insumo:'Abono 04-30-10 COFCO', receta:'Abono 04.30.10 +4,5S'},
+  // Kalium es el glifosato de la desecacion, igual que en ARROZ y SORGO.
+  {insumo:'Kalium', receta:'Glifex gold 60,8', cultivo:'MAIZ'},
+  // Metomil 90% y Bifentrina 40%: el presupuesto los carga por principio activo o por marca.
+  {insumo:'METOMIL', receta:'Metomil 90%'},
+  {insumo:'SNIPER 40% SG', receta:'Sniper'},
+  // Urea: el presupuesto la carga como 45.00.00 y Albor como 46-00-00. Es el mismo fertilizante
+  // (la urea es 46% de N; el 45 del presupuesto es un error de tipeo, no otro producto), y la dosis
+  // real de 150,23 kg/ha coincide con los 0,15 ton/ha presupuestados.
+  {insumo:'Urea 46-00-00', receta:'Urea'},
 ];
 
 const INFRA_MAP = {
