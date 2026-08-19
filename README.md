@@ -1,11 +1,14 @@
 # Dashboard Campaña 26/27 · Del Sur
 
-Dashboard de seguimiento de campaña agrícola (Campo La Teresa). Es una web estática (HTML/CSS/JS vanilla, sin build step) que al cargar descarga dos `.xlsx` publicados en este mismo repo:
+Dashboard de seguimiento de campaña agrícola (Campo La Teresa). Es una web estática (HTML/CSS/JS vanilla, sin build step) que al cargar descarga tres archivos de datos publicados en este mismo repo, todos bajo **`data/`**:
 
-- **`datosCampania2627.xlsx`** — 3 hojas: `consultaOT`, `consultaCultivos`, `consultaInsumos`.
-- **`PRESUPUESTO ALISON INFRAESTRUTURA 26-27.xlsx`** — 1 hoja (`INFRAESTRUTURA 26-27`), el presupuesto de infraestructura usado en la pestaña Auditoría.
+- **`data/datosCampania2627.xlsx`** — 3 hojas: `consultaOT`, `consultaCultivos`, `consultaInsumos`.
+- **`data/PRESUPUESTO ALISON INFRAESTRUTURA 26-27.xlsx`** — 1 hoja (`INFRAESTRUTURA 26-27`), el presupuesto de infraestructura usado en la pestaña Auditoría.
+- **`data/recetas-insumos-26-27.json`** — 139 registros con la dosis por hectárea recomendada por cultivo e insumo. Es una versión **reducida** del presupuesto de insumos: solo dosis, sin costos ni volúmenes. Alimenta el seguimiento de receta de Auditoría de Insumos por Parcela.
 
-Ambos se parsean en el navegador con SheetJS y a partir de ellos se renderizan KPIs, tablas y alertas.
+Los dos `.xlsx` se parsean en el navegador con SheetJS; el JSON de recetas **no** pasa por SheetJS (`resp.json()`). A partir de ellos se renderizan KPIs, tablas y alertas.
+
+> **La carpeta `data/`.** Los archivos de datos vivían en la raíz del repo y se movieron a `data/`. La ruta se arma una sola vez en `config.js` (`SRC_DATA`), de donde salen `SRC_XLSX`, `INFRA_SRC_XLSX` y `RECETAS_SRC_JSON` con sus respectivos respaldos de GitHub.
 
 ## Cómo arrancar un servidor local
 
@@ -23,7 +26,7 @@ Luego abrir `http://localhost:8080` (o el puerto que indique el comando).
 
 La app descarga ambos `.xlsx` en tiempo real (con `cache:'no-store'`, para no servir una copia vieja del navegador), así que hace falta servirla desde un servidor; sin acceso al archivo se muestra la pantalla de error con reintento.
 
-**De dónde salen los `.xlsx`:** del **propio sitio**, por ruta relativa (`datosCampania2627.xlsx`). Cloudflare despliega el repo completo como assets estáticos (`wrangler.jsonc`: `assets.directory: "."`), así que el Excel que está en el repo se sirve desde el dominio del dashboard, por el CDN de Cloudflare. Si esa descarga falla, `loader.js` reintenta **una vez** contra `raw.githubusercontent.com` como respaldo (ver `SRC_XLSX` / `SRC_XLSX_RESPALDO` en `config.js`) — eso cubre el caso de abrir `index.html` directo desde el disco, donde `fetch` de una ruta relativa no funciona.
+**De dónde salen los archivos de datos:** del **propio sitio**, por ruta relativa (`data/datosCampania2627.xlsx`). Cloudflare despliega el repo completo como assets estáticos (`wrangler.jsonc`: `assets.directory: "."`), así que el Excel que está en el repo se sirve desde el dominio del dashboard, por el CDN de Cloudflare. Si esa descarga falla, `loader.js` reintenta **una vez** contra `raw.githubusercontent.com` como respaldo (ver `SRC_XLSX` / `SRC_XLSX_RESPALDO` en `config.js`) — eso cubre el caso de abrir `index.html` directo desde el disco, donde `fetch` de una ruta relativa no funciona.
 
 > Antes se leía siempre desde `raw.githubusercontent.com`. Se cambió el 17/08/2026: `raw` no es un CDN para tráfico de usuarios y limita conexiones — devolvió `503 Backend.max_conn reached` y `429 Too Many Requests` de forma sostenida desde el nodo de Buenos Aires, dejando el dashboard sin cargar (afectaba por igual al presupuesto de infraestructura, que no se había tocado).
 
@@ -46,9 +49,9 @@ Si el archivo está abierto en Excel al momento de necesitar inspeccionarlo (ej.
 - **`index.html`** — Markup semántico de la página (header, tabs, secciones por pestaña). No contiene estilos ni scripts inline; solo referencias a `css/` y `js/`. El orden de los botones `<button class="tab">` y de las `<section class="page">` debe coincidir 1 a 1 (`show(i, btn)` en `render.js` las empareja por posición, no por id) — mover una pestaña de lugar implica mover el botón **y** su sección juntos.
 - **`css/`** — Un archivo por bloque visual, cargados en `index.html` en este orden: `base.css` (reset, variables `:root`, tipografía global, `.wrap`), `overlay.css`, `header.css`, `tabs.css`, `panel.css`, `kpis.css`, `cultivos.css`, `problemas.css`, `tables.css`, `gastos.css` (Servicios + Combustible + Insumos comparten estos estilos: `.gfilter`, `.kpis`/`.gkpis`, tablas con `.sopbar`), `alertas.css` (incluye el color de fila por días de atraso), `auditoria.css` (sub-navegación de la pestaña Auditoría y el sub-módulo Insumos por Parcela), `footer.css`.
 - **`js/`** — Un módulo por responsabilidad, cargados en `index.html` en este orden (scripts clásicos con `defer`, sin módulos ES ni bundler):
-  - `config.js` — constantes de la app: URLs de ambos `.xlsx`, nombres de hoja, catálogos de cultivos/etapas/operativas, `CAMPANIA_ACTUAL`, el mapeo manual `INFRA_MAP` (presupuesto ↔ Servicio de OT, ver sección Auditoría), y la variable de estado global `D`.
+  - `config.js` — constantes de la app: URLs de los tres archivos de `data/` (`SRC_DATA` + `SRC_XLSX` / `INFRA_SRC_XLSX` / `RECETAS_SRC_JSON`), nombres de hoja, catálogos de cultivos/etapas/operativas, `CAMPANIA_ACTUAL`, el mapeo manual `INFRA_MAP` (presupuesto ↔ Servicio de OT, ver sección Auditoría), y la variable de estado global `D`.
   - `utils.js` — funciones puras de formateo, parsing de números/fechas (incluye objetos `Date` nativos de SheetJS), normalización de texto, y `stockInicioDePeriodo()` — arrastre de stock mes a mes **genérico**, reutilizado tanto por Combustible como por Insumos (antes estaba escrito en línea solo para Combustible).
-  - `data.js` — **orquestador** del modelo de datos. Conserva la única función pública `buildData(raw, proyecciones, insumos, presupuestoInfra)`, que ya no calcula nada: prepara las entradas, llama a las funciones de `js/data/` pasándoles explícitamente lo que necesitan, y ensambla el objeto final que consume `render.js`.
+  - `data.js` — **orquestador** del modelo de datos. Conserva la única función pública `buildData(raw, proyecciones, insumos, presupuestoInfra, recetas)`, que ya no calcula nada: prepara las entradas, llama a las funciones de `js/data/` pasándoles explícitamente lo que necesitan, y ensambla el objeto final que consume `render.js`.
   - `js/data/` — el modelo de datos separado por dominio. Cada archivo expone funciones puras (reciben lo que necesitan por parámetro, devuelven colecciones explícitas) y **ninguno toca el DOM**:
     - `ordenes.js` — base compartida de `consultaOT`: normalización de filas, filtro por campaña (más la copia con todas las campañas que usa Servicios), agrupación por OT, modalidad de trabajo (hectáreas/horas/peso), importes, estados y KPIs de OT. Va primero porque todo lo demás depende de sus colecciones.
     - `cultivos.js` — plan RTK desde `consultaCultivos`, avance de campo por cultivo y etapa, y Control de Hectáreas (excesos, lotes inhabilitados, OT sin correspondencia en el plan).
@@ -56,13 +59,15 @@ Si el archivo está abierto en Excel al momento de necesitar inspeccionarlo (ej.
     - `combustible.js` — consumo e ingresos de gasoil y stock inicial.
     - `insumos.js` — ingresos, consumos y flujo de stock por (Tipo, Insumo, Unidad).
     - `auditoria.js` — los dos sub-módulos de la pestaña Auditoría: Infraestructura (presupuesto vs ejecución) e Insumos por Parcela.
+    - `recetas.js` — comparación de la dosis realmente aplicada por hectárea contra la receta de la campaña (`data/recetas-insumos-26-27.json`): normalización y conversión de unidades, índice de recetas, búsqueda conservadora y cálculo de desvío/estado. No lee ningún Excel.
     - `alertas.js` — OT Pendientes/En Ejecución y cuáles están atrasadas.
     - `resumen.js` — Gastos Operativos y todo `D.resumen` (KPIs, estados de OT, actividad mensual, posibles problemas). Se calcula último: reutiliza colecciones ya construidas por los demás dominios, nunca vuelve a recorrer las OT desde cero.
 
-    **Orden de carga** (ver `index.html`): los ocho `js/data/*.js` van **antes** de `js/data.js`. Entre sí no tienen orden obligatorio (solo definen funciones, no ejecutan nada al cargarse), pero `data.js` sí tiene que ir último porque `buildData()` las invoca. `loader.js` sigue llamando a `buildData()` exactamente igual que antes.
+    **Orden de carga** (ver `index.html`): los nueve `js/data/*.js` van **antes** de `js/data.js`. Entre sí no tienen orden obligatorio (solo definen funciones, no ejecutan nada al cargarse), pero `data.js` sí tiene que ir último porque `buildData()` las invoca. `loader.js` sigue llamando a `buildData()` exactamente igual que antes.
   - `render.js` — todas las funciones que pintan el DOM (`renderAll`, `renderG`, `renderCombustible`, `renderInsumos`, `renderAlertas`, `renderAuditoria`, etc.) y el cambio de pestaña (`show`).
   - `events.js` — conecta los elementos interactivos del HTML (pestañas, selects de filtro, botón de reintento) con las funciones de `render.js`/`loader.js`. El filtro dependiente Tipo de Insumo → Insumo se resuelve acá: el `change` de `#itipo` llama primero a `actualizarFiltroInsumo()` (repuebla `#iinsumo` y limpia la selección si ya no aplica) y **después** a `renderInsumos()`.
-  - `loader.js` — descarga ambos `.xlsx`, los parsea con SheetJS, separa `consultaInsumos` en combustible/existencia inicial/otros insumos, parsea el presupuesto de infraestructura (`leerPresupuestoInfra()`, rango fijo de filas — ver sección Auditoría), y dispara la carga inicial al terminar de cargar el DOM.
+  - `loader.js` — descarga ambos `.xlsx` y el JSON de recetas (`cargarRecetas()`), los parsea, separa `consultaInsumos` en combustible/existencia inicial/otros insumos, parsea el presupuesto de infraestructura (`leerPresupuestoInfra()`, rango fijo de filas — ver sección Auditoría), y dispara la carga inicial al terminar de cargar el DOM. Las tres descargas van en un mismo `Promise.all`, pero la del JSON de recetas **no puede tumbar la carga**: si falla, se registra en consola y devuelve `null`, y el dashboard sigue igual con el seguimiento de receta marcado como no disponible.
+- **`data/`** — los archivos de datos que el dashboard descarga en runtime: `datosCampania2627.xlsx`, `PRESUPUESTO ALISON INFRAESTRUTURA 26-27.xlsx` y `recetas-insumos-26-27.json`. No hay build: se sirven tal cual desde el repo, así que actualizar los datos es commitear estos archivos.
 - **`vendor/xlsx.full.min.js`** — copia sin modificar de [SheetJS](https://sheetjs.com) (`xlsx@0.18.5`), usada para leer los `.xlsx` en el navegador.
 
 ## Filtro de campaña (`CAMPANIA_ACTUAL`)
@@ -162,9 +167,43 @@ Segundo sub-módulo de la pestaña Auditoría (`js/data/auditoria.js` → `const
 - el **KPI** divide por las hectáreas *trabajadas* = suma de las `Has. Reales` de las OT **distintas** (cada OT una sola vez; una misma OT aporta varias líneas de insumo y sumarlas multiplicaría la superficie);
 - la **tabla** divide por la superficie del *lote* = **máximo** de las `Has. Reales` de sus OT, no la suma: varias aplicaciones se hacen sobre la misma superficie física, y sumarlas diluiría el costo por hectárea justo en los lotes más trabajados. Columna rotulada "Costo / ha del Lote".
 
-**Qué NO tiene:** no hay comparación contra promedios ni umbrales de desvío. Se retiraron a pedido del usuario ("como no tienes datos de presupuesto"), junto con el detalle línea por línea. Quedan los 4 KPIs, "Cantidad Utilizada por Unidad de Medida" y "Resumen por Lote" con su detalle desplegable por insumo — donde sigue estando la trazabilidad hasta la OT y las fechas de aplicación.
+**Qué NO tiene:** no hay comparación contra promedios de otros lotes ni umbrales de desvío inventados. Se retiraron a pedido del usuario, junto con el detalle línea por línea. Quedan los 4 KPIs, "Cantidad Utilizada por Unidad de Medida", el "Seguimiento de Receta" (abajo) y "Resumen por Lote" con su detalle desplegable por insumo — donde sigue estando la trazabilidad hasta la OT y las fechas de aplicación.
 
 **Unidades:** cada unidad de medida se totaliza por separado (litros, kilos y unidades nunca se suman entre sí) y toda cantidad por hectárea se muestra con su unidad (`142,73 Kilos/ha`).
+
+### Seguimiento de receta
+
+Compara la **dosis real por hectárea** (la que ya calculaba y mostraba el módulo) contra la **dosis recomendada** de `data/recetas-insumos-26-27.json`. La lógica vive en `js/data/recetas.js`; `render.js` solo presenta — no hay ninguna fórmula de desvío ahí.
+
+**Fuente única de la dosis real.** El valor que se compara es *exactamente* el que imprime la columna "Dosis Real" (`cantidad del insumo en el lote ÷ hectáreas del lote`, calculado una sola vez en `ipInsumosDeParcela()`). No se recalcula por otro camino: la receta **enriquece** los registros, no cambia ninguna cantidad, hectárea ni costo. Verificado con un volcado completo del modelo antes/después: `insumos_parcela` queda byte-idéntico.
+
+**Coincidencia conservadora.** Una comparación incorrecta es peor que un "Sin receta", así que no hay coincidencia aproximada de ningún tipo. El orden es:
+
+1. campaña + cultivo + nombre exacto normalizado contra `receta.insumo`;
+2. si no hay, lo mismo contra `receta.descripcion`;
+3. si no hay, un **alias declarado a mano** en `RECETAS_INSUMO_ALIAS` (`config.js`).
+
+El alias va último a propósito: así nunca pisa una receta que ya coincide sola. Importa con el dato real — `Potasio KCL 00-00-60` existe tal cual en las recetas de MAIZ y SORGO, y con puntos en las de ARROZ; con este orden cada cultivo usa la suya y el alias solo cubre ARROZ. Hoy hay **cuatro** alias: dos por separador decimal (`GLIFEX GOLD 60.8` → `60,8`; `Potasio KCL 00-00-60` → `00.00.60`), y `BIOSTART Zn FL Root` → `Biostar + Zn` fijando además el **grupo** `TRATAMIENTO DE SEMILLAS`.
+
+**Recetas ambiguas.** El JSON trae el mismo producto en más de un grupo dentro del mismo cultivo. Si todas esas filas dicen la misma dosis y unidad (ARROZ `GLIFEX GOLD 60,8`: 3 L/ha en dos grupos) la receta es utilizable. Si difieren (ARROZ `Pyrazosulfuron` 0,21 vs 0,08 L/ha; ARROZ `Metomax` 0,1 kg vs 0,14 L; SORGO `Glifex gold 60,8` 3 vs 0,4 L/ha) **no se elige ninguna**: la fila queda "Sin receta" con el motivo en el tooltip. Un alias puede desempatar declarando el grupo.
+
+**Unidades.** Solo se unifican equivalencias evidentes de la misma magnitud: `kg/kgs/Kilo(s)/Kilogramo(s)` → kg, `L/lt/lts/Litro(s)` → L, `ton/tn/Tonelada(s)` → ton. La **única conversión** permitida es `1 ton = 1000 kg` (el presupuesto carga los fertilizantes en toneladas por hectárea y las OT los descargan en kilos). Nunca se convierte entre masa y volumen ni desde/hacia `BLS`: en ese caso el estado es "Unidad no comparable" y no se calcula porcentaje. La dosis de receta se imprime con la **misma unidad que la dosis real de la fila**, para que una fila no alterne `Kilos/ha` con `kg/ha`.
+
+**Estados**, matemáticos y neutrales a propósito — el negocio todavía no definió una tolerancia agronómica, así que el dashboard no declara nada "correcto" ni "incorrecto", solo de qué lado quedó y cuánto:
+
+| Estado | Cuándo |
+| --- | --- |
+| Sobre receta | dosis real > receta |
+| Bajo receta | dosis real < receta |
+| Según receta | iguales, con comparación numérica relativa (`RECETA_EPSILON_RELATIVO` = 1e-9, margen de punto flotante — **nunca** el valor redondeado que se muestra) |
+| Sin receta | no hay receta inequívoca (sin coincidencia, ambigua, o JSON no disponible) |
+| Unidad no comparable | hay receta y el producto coincide, pero las unidades no son de la misma magnitud (o la receta no trae unidad) |
+
+**Resumen y filtro.** Arriba de la tabla hay contadores por estado que reaccionan a los filtros del módulo. El filtro **Estado de Receta** se aplica *después* de agrupar, no sobre las líneas de `consultaOT`: el estado no es un dato de la línea sino el resultado de comparar la dosis del conjunto, así que filtrar líneas cambiaría esas mismas sumas y el estado se volvería circular. Acota qué lotes e insumos se listan; los importes de cada lote siguen siendo los del lote completo (el sub-título lo aclara cuando el filtro está activo). Los contadores se excluyen a sí mismos del recorte, igual que el resto de los filtros del módulo.
+
+**Cobertura actual** (campaña 26/27, 445 insumos por lote): 172 con receta — 76 sobre, 93 bajo, 3 según — y 273 sin receta (292 sin coincidencia de nombre y 14 ambiguas, contando todas las campañas). El resto de los productos simplemente no está en el presupuesto reducido con ese nombre; para comparar más hay que **agregar alias a mano**, nunca ampliar la coincidencia por parecido.
+
+**Si el JSON falla:** el dashboard carga igual, la dosis real, las cantidades y los costos se muestran igual, y el panel de seguimiento avisa que no está disponible.
 
 ## Reorganización general (histórico)
 

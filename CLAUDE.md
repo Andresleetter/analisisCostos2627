@@ -27,6 +27,9 @@ gasta tokens y son limitados. El proxy del Worker (`worker/index.js`, con el Dur
 la API sin que el usuario lo pida. No es un problema técnico: se validó contra el dato real que la
 API devuelve exactamente los mismos KPIs, costos y OT que la hoja `consultaOT`.
 
+Los archivos de datos viven en **`data/`** (ruta armada una sola vez en `config.js`: `SRC_DATA`).
+Además de los dos `.xlsx` está `data/recetas-insumos-26-27.json` (dosis por hectárea de la campaña),
+que se carga con `fetch`+`resp.json()`, **no** con SheetJS, y cuyo fallo nunca bloquea la carga.
 Los `.xlsx` se descargan **del propio sitio** por ruta relativa (Cloudflare sirve el repo como
 assets estáticos), con `raw.githubusercontent.com` solo como respaldo. Ver README.
 
@@ -43,6 +46,7 @@ assets estáticos), con `raw.githubusercontent.com` solo como respaldo. Ver READ
 | `combustible.js` | Gasoil |
 | `insumos.js` | Módulo Insumos |
 | `auditoria.js` | Infraestructura + Insumos por Parcela |
+| `recetas.js` | Dosis real vs receta: unidades, índice, búsqueda y desvío |
 | `alertas.js` | OT pendientes/atrasadas |
 | `resumen.js` | Gastos Operativos y `D.resumen` |
 
@@ -50,7 +54,7 @@ Reglas al tocar esto:
 
 - Los archivos de `js/data/` **no tocan el DOM** y reciben lo que necesitan por parámetro.
 - `render.js` **solo pinta**, no calcula. Si te encontrás calculando en `render.js`, va a `js/data/`.
-- **Orden de carga en `index.html`:** los ocho `js/data/*.js` van antes de `js/data.js`. Si agregás
+- **Orden de carga en `index.html`:** los nueve `js/data/*.js` van antes de `js/data.js`. Si agregás
   uno nuevo, acordate del `<script>`.
 - No renombrar propiedades del objeto que devuelve `buildData()`: es el contrato que leen
   `render.js` y `events.js`.
