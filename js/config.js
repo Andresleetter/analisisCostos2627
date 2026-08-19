@@ -145,6 +145,24 @@ const INFRA_PUENTES_HORAS_SERV = 'Construccion de Puentes retro excavadora x Hs'
 // SIEMBRA_SERVICIOS_NO_SIEMBRA: "Tratamiento de semilla arroz tractor x Hs" es otra labor, se mide
 // realmente en horas y debe seguir mostrandose en horas.
 const SERVICIOS_TRABAJO_MEDIDO_EN_INSUMOS = ['tratamiento de semillas'];
+// Servicios ejecutados con personal propio, donde el Contratista vacio NO significa "no
+// corresponde" sino que la labor la hizo la empresa. En el Detalle por Labor se rotulan "Labor
+// Propia" en vez de "No aplica" (ver labelContratista en utils.js).
+// Es una lista aparte de SERVICIOS_TRABAJO_MEDIDO_EN_INSUMOS a proposito: como se mide el trabajo
+// ejecutado y quien lo ejecuto son dos cosas distintas — "Construccion puentes labor propia" no
+// tiene trabajo ejecutado medible (esta en SERVICIOS_SIN_TRABAJO_EJECUTADO, muestra "—") pero si
+// tiene ejecucion propia.
+// El rotulo NO sale de esta lista sola: ademas se exige que la OT traiga realmente una linea de
+// tipo "Labor Propia" (ver servicios.js). Si alguna de estas labores se ejecutara con un tercero,
+// se sigue mostrando el contratista real. Se comparan normalizados con normHdr.
+const SERVICIOS_EJECUCION_PROPIA = [
+  'tratamiento de semillas',
+  'construccion puentes labor propia',
+  // Misma labor cargada de dos formas distintas en consultaOT, igual que en
+  // SERVICIOS_SIN_TRABAJO_EJECUTADO: hay que listar las dos variantes.
+  'aplicacion herbicida con mochila',
+  'aplicacion de herbicida con mochila',
+];
 // Servicios en los que la OT NO representa trabajo ejecutado medible: lo único real de esas OT es
 // el insumo aplicado/consumido, y la cantidad que traen en Has. Reales / horas no corresponde a una
 // superficie ni a un tiempo de labor. La columna "Trabajo Ejecutado" del Detalle por Labor

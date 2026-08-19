@@ -30,9 +30,11 @@
     // El contratista sale del dato, nunca del nombre de la labor: si hay contratista cargado se usa
     // ese (Labor Tercero sigue exactamente igual que antes). El marcador '(Ejecución Labor Propia)'
     // solo se usa cuando la OT trae realmente una linea de tipo "Labor Propia" — ahi el campo no es
-    // "No aplica" sino un dato: la labor la ejecuto personal propio. Se limita a estas labores para
-    // no cambiar el texto que ya muestran todas las demas filas del Detalle por Labor.
-    const ejecucionPropia = esTrabajoPorInsumos && o.lines.some(l=>l.tipo==='Labor Propia');
+    // "No aplica" sino un dato: la labor la ejecuto personal propio. Se limita a las labores de
+    // SERVICIOS_EJECUCION_PROPIA (config.js) para no cambiar el texto que ya muestran todas las
+    // demas filas del Detalle por Labor.
+    const ejecucionPropia = SERVICIOS_EJECUCION_PROPIA.includes(normHdr(o.serv))
+      && o.lines.some(l=>l.tipo==='Labor Propia');
     const contratista = o.contr && o.contr.trim() ? o.contr.trim()
       : (o.tercero>0 ? '(Sin contratista)' : (ejecucionPropia ? '(Ejecución Labor Propia)' : '(Labor Propia)'));
     // esH usa la modalidad de la LINEA PRINCIPAL de labor (o.modalidad, ver mas arriba), no
