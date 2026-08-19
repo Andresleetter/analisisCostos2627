@@ -3,7 +3,7 @@
 // Insumos por Parcela) contra la dosis recomendada de la campania.
 //
 // FUENTE UNICA: data/recetas-insumos-26-27.json, una version reducida del presupuesto de insumos
-// (158 registros, campos campania/cultivo/grupo/insumo/descripcion/dosisHa/unidad). Los Excel de
+// (178 registros, campos campania/cultivo/grupo/insumo/descripcion/dosisHa/unidad). Los Excel de
 // presupuesto NO se leen: este modulo no usa SheetJS ni ningun parser, solo el JSON.
 //
 // La receta es SOLO una referencia para auditar. Nada de lo que hay aca modifica la dosis real, ni
@@ -65,7 +65,7 @@ function factorConversionDosis(desde, hacia){
 // Clave: campania | cultivo | insumo, todo normalizado con las utilidades que ya usa el proyecto
 // (normHdr para campania/cultivo, normInsumoNombre para el nombre del insumo — el mismo
 // normalizador con que se comparan los INSUMOS_EXCLUIDOS). Se arma UNA sola vez al cargar el
-// dashboard; despues cada celda resuelve su receta con un Map.get(), sin recorrer los 158 registros.
+// dashboard; despues cada celda resuelve su receta con un Map.get(), sin recorrer los 178 registros.
 // Cada clave guarda un ARRAY: el JSON real trae el mismo insumo en mas de un grupo dentro del mismo
 // cultivo (ej. ARROZ "Pyrazosulfuron" en dos grupos con 0,21 y 0,08 L/ha). Esa ambiguedad se
 // resuelve al buscar, no al indexar — ver resolverCandidatasReceta.
@@ -137,8 +137,19 @@ function resolverCandidatasReceta(lista, grupo){
 // "Potasio KCL 00-00-60" existe tal cual en las recetas de MAIZ y SORGO, y con puntos
 // ("Potasio KCL 00.00.60") en las de ARROZ; con este orden, MAIZ y SORGO usan su receta propia y el
 // alias solo entra a cubrir ARROZ.
-function buscarReceta(indice, campania, cultivo, insumo){
+// Traduce (campania, cultivo) a la combinacion cuyas recetas hay que usar, cuando el negocio
+// declaro una equivalencia explicita en RECETAS_EQUIVALENCIAS (config.js). Sin equivalencia devuelve
+// lo mismo que recibio: nunca se cruza una campania o un cultivo con otro por su cuenta.
+function resolverEquivalenciaReceta(campania, cultivo){
+  const eq = RECETAS_EQUIVALENCIAS.find(e=>normHdr(e.campania)===normHdr(campania)
+    && normHdr(e.cultivo)===normHdr(cultivo));
+  return eq ? {campania:eq.usarCampania, cultivo:eq.usarCultivo} : {campania, cultivo};
+}
+function buscarReceta(indice, campania, cultivo, insumoOriginal){
   if(!indice || !indice.disponible) return {fila:null, motivo:'sin_indice', via:null};
+  const eq = resolverEquivalenciaReceta(campania, cultivo);
+  campania = eq.campania; cultivo = eq.cultivo;
+  const insumo = insumoOriginal;
   const base = normHdr(campania)+'|'+normHdr(cultivo)+'|';
   const clave = base+normInsumoNombre(insumo);
   const porNombre = indice.porInsumo.get(clave);
