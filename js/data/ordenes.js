@@ -100,6 +100,12 @@ const esEnEjecucion = o => normEstadio(o.estado)===normEstadio('En Ejecución');
         // totalAplicado de esas lineas, mismo criterio con que `horas` suma Unidades/Dosis de las
         // lineas por Horas.
         kg: g.filter(x=>x.esPeso).reduce((s,x)=>s+x.ta,0),
+        // n_insumos = cantidad de LINEAS de tipo "Insumo" de la OT. Son lineas, no productos
+        // unicos: si el mismo producto aparece en dos lineas, cuenta dos veces. Se calcula aca,
+        // sobre las lineas que la OT ya tiene agrupadas, para no releer ni reagrupar el Excel.
+        // Lo consume el "Trabajo Ejecutado" de las labores de SERVICIOS_TRABAJO_MEDIDO_EN_INSUMOS
+        // (ver servicios.js); no interviene en ningun costo.
+        n_insumos: g.filter(x=>x.tipo==='Insumo').length,
         imp: g.reduce((s,x)=>s+x.imp,0),
         propia: g.filter(x=>x.tipo==='Labor Propia').reduce((s,x)=>s+x.imp,0),
         tercero: g.filter(x=>x.tipo==='Labor Tercero').reduce((s,x)=>s+x.imp,0),

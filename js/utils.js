@@ -35,6 +35,11 @@ function color(av){ return av>=95?'g':(av>=80?'y':(av>=50?'o':'r')); }
 function labelContratista(key){
   if(key==='(Labor Propia)') return 'No aplica';
   if(key==='(Sin contratista)') return 'Sin contratista';
+  // Marcador propio de las labores de SERVICIOS_TRABAJO_MEDIDO_EN_INSUMOS cuya OT SI trae una linea
+  // de labor de tipo "Labor Propia": ahi el campo no esta vacio por no corresponder (que es lo que
+  // dice "No aplica"), sino que la ejecucion fue propia y eso es el dato. Se distingue del marcador
+  // '(Labor Propia)' de arriba para no cambiar el texto de las demas labores.
+  if(key==='(Ejecución Labor Propia)') return 'Labor Propia';
   return key||'Sin contratista';
 }
 // Porcentaje seguro: evita division por cero devolviendo null (no NaN/Infinity) cuando no hay una
