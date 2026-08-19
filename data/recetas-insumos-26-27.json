@@ -30,6 +30,15 @@
     "campania": "26/27",
     "cultivo": "ARROZ",
     "grupo": "ACEITES Y ADJUVANTES",
+    "insumo": "Snow Zero",
+    "descripcion": "Aceite vegetal",
+    "dosisHa": 1.75,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "ACEITES Y ADJUVANTES",
     "insumo": "Tafir Oil",
     "descripcion": "Aceite vegetal",
     "dosisHa": 1.75,
