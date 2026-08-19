@@ -4,7 +4,7 @@ Dashboard de seguimiento de campaña agrícola (Campo La Teresa). Es una web est
 
 - **`data/datosCampania2627.xlsx`** — 3 hojas: `consultaOT`, `consultaCultivos`, `consultaInsumos`.
 - **`data/PRESUPUESTO ALISON INFRAESTRUTURA 26-27.xlsx`** — 1 hoja (`INFRAESTRUTURA 26-27`), el presupuesto de infraestructura usado en la pestaña Auditoría.
-- **`data/recetas-insumos-26-27.json`** — 139 registros con la dosis por hectárea recomendada por cultivo e insumo. Es una versión **reducida** del presupuesto de insumos: solo dosis, sin costos ni volúmenes. Alimenta el seguimiento de receta de Auditoría de Insumos por Parcela.
+- **`data/recetas-insumos-26-27.json`** — 146 registros con la dosis por hectárea recomendada por cultivo e insumo. Es una versión **reducida** del presupuesto de insumos: solo dosis, sin costos ni volúmenes. Alimenta el seguimiento de receta de Auditoría de Insumos por Parcela.
 
 Los dos `.xlsx` se parsean en el navegador con SheetJS; el JSON de recetas **no** pasa por SheetJS (`resp.json()`). A partir de ellos se renderizan KPIs, tablas y alertas.
 
@@ -183,7 +183,7 @@ Compara la **dosis real por hectárea** (la que ya calculaba y mostraba el módu
 2. si no hay, lo mismo contra `receta.descripcion`;
 3. si no hay, un **alias declarado a mano** en `RECETAS_INSUMO_ALIAS` (`config.js`).
 
-El alias va último a propósito: así nunca pisa una receta que ya coincide sola. Importa con el dato real — `Potasio KCL 00-00-60` existe tal cual en las recetas de MAIZ y SORGO, y con puntos en las de ARROZ; con este orden cada cultivo usa la suya y el alias solo cubre ARROZ. Hoy hay **cuatro** alias: dos por separador decimal (`GLIFEX GOLD 60.8` → `60,8`; `Potasio KCL 00-00-60` → `00.00.60`), y `BIOSTART Zn FL Root` → `Biostar + Zn` fijando además el **grupo** `TRATAMIENTO DE SEMILLAS`.
+El alias va último a propósito: así nunca pisa una receta que ya coincide sola. Importa con el dato real — `Potasio KCL 00-00-60` existe tal cual en las recetas de MAIZ y SORGO, y con puntos en las de ARROZ; con este orden cada cultivo usa la suya y el alias solo cubre ARROZ. Hoy hay **ocho** alias: dos por separador decimal (`GLIFEX GOLD 60.8` → `60,8`; `Potasio KCL 00-00-60` → `00.00.60`), `BIOSTART Zn FL Root` → `Biostar + Zn` fijando además el **grupo** `TRATAMIENTO DE SEMILLAS`, y cuatro más verificados uno por uno contra la fila del Excel que los define: `Glifex Full K` → `Glifex Full`, `PowerOil` → `Power Oil`, `TFP 50 FS` → `T.F.P` y `CIAMETOXAN` → `Ciametoxam`.
 
 **Recetas ambiguas.** El JSON trae el mismo producto en más de un grupo dentro del mismo cultivo. Si todas esas filas dicen la misma dosis y unidad (ARROZ `GLIFEX GOLD 60,8`: 3 L/ha en dos grupos) la receta es utilizable. Si difieren (ARROZ `Pyrazosulfuron` 0,21 vs 0,08 L/ha; ARROZ `Metomax` 0,1 kg vs 0,14 L; SORGO `Glifex gold 60,8` 3 vs 0,4 L/ha) **no se elige ninguna**: la fila queda "Sin receta" con el motivo en el tooltip. Un alias puede desempatar declarando el grupo.
 
@@ -202,7 +202,7 @@ El alias va último a propósito: así nunca pisa una receta que ya coincide sol
 
 **Resumen y filtro.** Arriba de la tabla hay contadores por estado que reaccionan a los filtros del módulo. El filtro **Estado de Receta** se aplica *después* de agrupar, no sobre las líneas de `consultaOT`: el estado no es un dato de la línea sino el resultado de comparar la dosis del conjunto, así que filtrar líneas cambiaría esas mismas sumas y el estado se volvería circular. Acota qué lotes e insumos se listan; los importes de cada lote siguen siendo los del lote completo (el sub-título lo aclara cuando el filtro está activo). Los contadores se excluyen a sí mismos del recorte, igual que el resto de los filtros del módulo.
 
-**Cobertura actual** (campaña 26/27, 445 insumos por lote): 172 con receta — 23 sobre, 76 bajo, **70 dentro de tolerancia**, 3 según — y 273 sin receta (292 sin coincidencia de nombre y 14 ambiguas, contando todas las campañas). El resto de los productos simplemente no está en el presupuesto reducido con ese nombre; para comparar más hay que **agregar alias a mano**, nunca ampliar la coincidencia por parecido.
+**Cobertura actual** (campaña 26/27, 445 insumos por lote): **307 con receta** — 24 sobre, 176 bajo, 104 dentro de tolerancia, 3 según — y **138 sin receta** (157 sin coincidencia de nombre y 14 ambiguas, contando todas las campañas). Lo que queda fuera son productos que directamente no están en el presupuesto (`Weedex Max`, `Kalium`, `FUEL 72 DMA`, `CLETOGROP`, `SPECTRO`, `Snow Zero`, `Tafir-Oil`) más el `GLIFEX GOLD 60.8` de SORGO, que es ambiguo en el propio presupuesto. Para comparar más hay que **agregar alias a mano**, nunca ampliar la coincidencia por parecido.
 
 **Si el JSON falla:** el dashboard carga igual, la dosis real, las cantidades y los costos se muestran igual, y el panel de seguimiento avisa que no está disponible.
 
