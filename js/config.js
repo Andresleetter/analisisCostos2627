@@ -197,7 +197,7 @@ const AUDITORIA_GASTO_DESALIJO = "Desalijo Karanda'y / Carandai";
 // Se comparan normalizados (normHdr) contra la Actividad de consultaOT.
 const AUDITORIA_INSUMOS_CULTIVOS_EXCLUIDOS = ['AVENA', 'COBERTURA'];
 // ---- AUDITORIA DE INSUMOS POR PARCELA: seguimiento de receta ----
-// Version reducida del presupuesto de insumos de la campania (151 registros). Es la UNICA fuente de
+// Version reducida del presupuesto de insumos de la campania (158 registros). Es la UNICA fuente de
 // las dosis recomendadas: los Excel de presupuesto no se leen, y este JSON no aporta costos ni
 // volumenes totales, solo dosis por hectarea. Se descarga una sola vez al iniciar el dashboard.
 // Mismo criterio de respaldo que SRC_XLSX. Si falla, el modulo sigue funcionando y el seguimiento
@@ -207,13 +207,16 @@ const RECETAS_SRC_JSON_RESPALDO = "https://raw.githubusercontent.com/"+REPO+"/"+
 // Tolerancia SOLO para decidir "Según receta" — no es una tolerancia agronomica (el negocio todavia
 // no definio ninguna), es el margen de error de punto flotante: 1e-9 relativo al valor comparado.
 const RECETA_EPSILON_RELATIVO = 1e-9;
-// Tolerancia de negocio: un desvio de hasta este porcentaje respecto de la receta se considera
-// aceptable y la fila se rotula "Dentro de tolerancia" en vez de "Sobre receta"/"Bajo receta".
+// Tolerancia de negocio: pasarse de la receta hasta este porcentaje se considera aceptable y la
+// fila se rotula "Dentro de tolerancia" en vez de "Sobre receta".
+// Es ASIMETRICA a pedido del usuario: solo aplica HACIA ARRIBA. Aplicar de menos queda siempre como
+// "Bajo receta", aunque el desvio sea menor al 5% — que el producto no haya llegado a la parcela es
+// un hallazgo de auditoria, pasarse un poco es variacion operativa.
 // A diferencia de RECETA_EPSILON_RELATIVO (que es puro margen de punto flotante), este valor SI es
-// una decision de negocio, definida por el usuario en 5%. Es general: aplica a todos los cultivos e
-// insumos por igual. Cambiarla es editar esta unica linea.
+// una decision de negocio. Es general: aplica a todos los cultivos e insumos por igual, y cambiarla
+// es editar esta unica linea.
 // Ojo con el orden de los estados: "Según receta" sigue reservado para la coincidencia exacta, asi
-// que "dio justo" y "dio distinto pero aceptable" nunca se confunden.
+// que "dio justo" y "dio de mas pero aceptable" nunca se confunden.
 const RECETA_TOLERANCIA_PCT = 5;
 // Equivalencias DECLARADAS A MANO entre el nombre del insumo en Albor (consultaOT) y el nombre en
 // el JSON de recetas. Nunca se generan por parecido: si un producto no esta aca y no coincide
@@ -254,6 +257,15 @@ const RECETAS_INSUMO_ALIAS = [
   // Fila "Power Oil - Iop Full - Tafir Oil" del presupuesto de ARROZ: Albor lo carga con un guion
   // en el medio ("Tafir- Oil"), que normInsumoNombre no puede igualar a "Tafir Oil".
   {insumo:'Tafir- Oil', receta:'Tafir Oil'},
+  // El presupuesto de SORGO trae "Glifex gold 60,8" DOS veces con dosis distintas: 3 L/ha en
+  // DESECACION y 0,4 L/ha en HERBICIDAS PRE EMERGENTES. Sin desempate quedaba en "Sin receta".
+  // Se fija DESECACION por decision del usuario, respaldada por el dato: las 14 OT de SORGO con
+  // este producto aplican ~3,03 L/ha y sus servicios son "Desecacion imperator" y "Fumigacion
+  // Imperator", ambos en el estadio Preparacion de Suelo — quemado previo a la siembra, no una
+  // aplicacion pre-emergente.
+  // Va acotado a SORGO: en ARROZ el mismo producto figura en dos grupos pero con la MISMA dosis
+  // (3 L/ha las dos), asi que no es ambiguo y no necesita desempate.
+  {insumo:'GLIFEX GOLD 60.8', receta:'Glifex gold 60,8', cultivo:'SORGO', grupo:'DESECACIÓN'},
 ];
 
 const INFRA_MAP = {
