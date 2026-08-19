@@ -197,7 +197,7 @@ const AUDITORIA_GASTO_DESALIJO = "Desalijo Karanda'y / Carandai";
 // Se comparan normalizados (normHdr) contra la Actividad de consultaOT.
 const AUDITORIA_INSUMOS_CULTIVOS_EXCLUIDOS = ['AVENA', 'COBERTURA'];
 // ---- AUDITORIA DE INSUMOS POR PARCELA: seguimiento de receta ----
-// Version reducida del presupuesto de insumos de la campania (139 registros). Es la UNICA fuente de
+// Version reducida del presupuesto de insumos de la campania (146 registros). Es la UNICA fuente de
 // las dosis recomendadas: los Excel de presupuesto no se leen, y este JSON no aporta costos ni
 // volumenes totales, solo dosis por hectarea. Se descarga una sola vez al iniciar el dashboard.
 // Mismo criterio de respaldo que SRC_XLSX. Si falla, el modulo sigue funcionando y el seguimiento
@@ -235,6 +235,17 @@ const RECETAS_INSUMO_ALIAS = [
   // SEMILLAS 0,15 L), asi que el alias fija ademas el grupo — sin eso la receta seria ambigua y la
   // fila quedaria en "Sin receta".
   {insumo:'BIOSTART Zn FL Root', receta:'Biostar + Zn', grupo:'TRATAMIENTO DE SEMILLAS'},
+  // Los cuatro siguientes salen de la HOJA DE TRABAJO PRESP 26-27 ARROZ: el presupuesto y Albor
+  // escriben el MISMO producto de forma distinta. No son parecidos encontrados por similitud —
+  // cada uno se verifico contra la fila del Excel que lo define.
+  // "GLIFEX GOLD 60,8 y Glifex Full": Albor le agrega la K final.
+  {insumo:'Glifex Full K', receta:'Glifex Full'},
+  // "Power Oil e Iop Full": Albor lo escribe sin el espacio.
+  {insumo:'PowerOil', receta:'Power Oil'},
+  // Nombre comercial abreviado en el presupuesto (T.F.P) y con la concentracion en Albor.
+  {insumo:'TFP 50 FS', receta:'T.F.P'},
+  // Misma molecula (Tiametoxan 50%), ultima letra distinta entre los dos sistemas.
+  {insumo:'CIAMETOXAN', receta:'Ciametoxam'},
 ];
 
 const INFRA_MAP = {

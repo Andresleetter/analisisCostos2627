@@ -3,7 +3,7 @@
 // Insumos por Parcela) contra la dosis recomendada de la campania.
 //
 // FUENTE UNICA: data/recetas-insumos-26-27.json, una version reducida del presupuesto de insumos
-// (139 registros, campos campania/cultivo/grupo/insumo/descripcion/dosisHa/unidad). Los Excel de
+// (146 registros, campos campania/cultivo/grupo/insumo/descripcion/dosisHa/unidad). Los Excel de
 // presupuesto NO se leen: este modulo no usa SheetJS ni ningun parser, solo el JSON.
 //
 // La receta es SOLO una referencia para auditar. Nada de lo que hay aca modifica la dosis real, ni
@@ -64,7 +64,7 @@ function factorConversionDosis(desde, hacia){
 // Clave: campania | cultivo | insumo, todo normalizado con las utilidades que ya usa el proyecto
 // (normHdr para campania/cultivo, normInsumoNombre para el nombre del insumo — el mismo
 // normalizador con que se comparan los INSUMOS_EXCLUIDOS). Se arma UNA sola vez al cargar el
-// dashboard; despues cada celda resuelve su receta con un Map.get(), sin recorrer los 139 registros.
+// dashboard; despues cada celda resuelve su receta con un Map.get(), sin recorrer los 146 registros.
 // Cada clave guarda un ARRAY: el JSON real trae el mismo insumo en mas de un grupo dentro del mismo
 // cultivo (ej. ARROZ "Pyrazosulfuron" en dos grupos con 0,21 y 0,08 L/ha). Esa ambiguedad se
 // resuelve al buscar, no al indexar — ver resolverCandidatasReceta.

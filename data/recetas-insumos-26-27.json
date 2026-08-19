@@ -12,7 +12,16 @@
     "campania": "26/27",
     "cultivo": "ARROZ",
     "grupo": "ACEITES Y ADJUVANTES",
-    "insumo": "Iop",
+    "insumo": "Iop Full",
+    "descripcion": "Aceite vegetal",
+    "dosisHa": 1.75,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "ACEITES Y ADJUVANTES",
+    "insumo": "Power Oil",
     "descripcion": "Aceite vegetal",
     "dosisHa": 1.75,
     "unidad": "L"
@@ -21,7 +30,7 @@
     "campania": "26/27",
     "cultivo": "ARROZ",
     "grupo": "DESECACIÓN",
-    "insumo": "CEANSPRAY",
+    "insumo": "CLEANSPRAY",
     "descripcion": "2.4D 72%",
     "dosisHa": 1.5,
     "unidad": "L"
@@ -32,7 +41,16 @@
     "grupo": "DESECACIÓN",
     "insumo": "GLIFEX GOLD 60,8",
     "descripcion": "Glifosato sal DMA 60.8%",
-    "dosisHa": 3.0,
+    "dosisHa": 3,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "DESECACIÓN",
+    "insumo": "Glifex Full",
+    "descripcion": "Glifosato sal DMA 60.8%",
+    "dosisHa": 3,
     "unidad": "L"
   },
   {
@@ -158,7 +176,7 @@
     "grupo": "HERBICIDAS PUNTO DE AGUJA",
     "insumo": "GLIFEX GOLD 60,8",
     "descripcion": "Glifosato sal DMA 60.8%",
-    "dosisHa": 3.0,
+    "dosisHa": 3,
     "unidad": "L"
   },
   {
@@ -183,15 +201,6 @@
     "campania": "26/27",
     "cultivo": "ARROZ",
     "grupo": "HERBICIDAS PÓS EMERGENTES",
-    "insumo": "Basanex",
-    "descripcion": "Bentazona 60%",
-    "dosisHa": 1.8,
-    "unidad": "L"
-  },
-  {
-    "campania": "26/27",
-    "cultivo": "ARROZ",
-    "grupo": "HERBICIDAS PÓS EMERGENTES",
     "insumo": "BISPYRYCE",
     "descripcion": "Bispiribac 40%",
     "dosisHa": 0.15,
@@ -201,9 +210,27 @@
     "campania": "26/27",
     "cultivo": "ARROZ",
     "grupo": "HERBICIDAS PÓS EMERGENTES",
+    "insumo": "Basanex",
+    "descripcion": "Bentazona 60%",
+    "dosisHa": 1.8,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "HERBICIDAS PÓS EMERGENTES",
     "insumo": "Fyn",
     "descripcion": "Quinclorac 25% SC",
-    "dosisHa": 2.0,
+    "dosisHa": 2,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "HERBICIDAS PÓS EMERGENTES",
+    "insumo": "Morfeu",
+    "descripcion": "Triclopyr 48%",
+    "dosisHa": 0.5,
     "unidad": "L"
   },
   {
@@ -275,7 +302,16 @@
     "grupo": "NUTRICIÓN",
     "insumo": "A.A.: 6% Zn: 8%",
     "descripcion": null,
-    "dosisHa": 2.0,
+    "dosisHa": 2,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "NUTRICIÓN",
+    "insumo": "AGRIKER AMIN Zn",
+    "descripcion": "A.A.: 6% Zn: 8%",
+    "dosisHa": 2,
     "unidad": "L"
   },
   {
@@ -284,6 +320,15 @@
     "grupo": "NUTRICIÓN",
     "insumo": "AZUFRE 9,7 % + MANGANESO 9,7 % + ZINC 9,7 % AL",
     "descripcion": null,
+    "dosisHa": 0.3,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "NUTRICIÓN",
+    "insumo": "Amino Active Supreme",
+    "descripcion": "BioAtivadores Mn-ZN",
     "dosisHa": 0.3,
     "unidad": "L"
   },
@@ -309,8 +354,26 @@
     "campania": "26/27",
     "cultivo": "ARROZ",
     "grupo": "NUTRICIÓN",
+    "insumo": "CYTRONUTRI ZIC MN",
+    "descripcion": "AZUFRE 9,7 % + MANGANESO 9,7 % + ZINC 9,7 % AL",
+    "dosisHa": 0.3,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "NUTRICIÓN",
     "insumo": "Methylobacterium symbioticum 3x10*7 UFC/g",
     "descripcion": null,
+    "dosisHa": 0.3,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "NUTRICIÓN",
+    "insumo": "UTRISHA N",
+    "descripcion": "Methylobacterium symbioticum 3x10*7 UFC/g",
     "dosisHa": 0.3,
     "unidad": "L"
   },
@@ -320,7 +383,7 @@
     "grupo": "SEMILLAS",
     "insumo": "FMG1100",
     "descripcion": null,
-    "dosisHa": 90.0,
+    "dosisHa": 90,
     "unidad": "kg"
   },
   {
@@ -329,7 +392,7 @@
     "grupo": "SEMILLAS",
     "insumo": "OS902",
     "descripcion": null,
-    "dosisHa": 85.0,
+    "dosisHa": 85,
     "unidad": "kg"
   },
   {
@@ -338,7 +401,7 @@
     "grupo": "SEMILLAS",
     "insumo": "Semilla de arroz V. BRSA706CL 26/27",
     "descripcion": "BRS A706 CL",
-    "dosisHa": 85.0,
+    "dosisHa": 85,
     "unidad": "kg"
   },
   {
@@ -347,7 +410,7 @@
     "grupo": "SEMILLAS",
     "insumo": "Senilla de Arroz V.424RI 26/27",
     "descripcion": "424RI",
-    "dosisHa": 85.0,
+    "dosisHa": 85,
     "unidad": "kg"
   },
   {
@@ -363,16 +426,7 @@
     "campania": "26/27",
     "cultivo": "ARROZ",
     "grupo": "TRATAMIENTO DE SEMILLAS",
-    "insumo": "Fipronil 25% + Piraclostrobina 2.5% + Tiofanato 22.5%",
-    "descripcion": null,
-    "dosisHa": 0.15,
-    "unidad": "L"
-  },
-  {
-    "campania": "26/27",
-    "cultivo": "ARROZ",
-    "grupo": "TRATAMIENTO DE SEMILLAS",
-    "insumo": "Metomax",
+    "insumo": "Ciametoxam",
     "descripcion": "Tiametoxan 50%",
     "dosisHa": 0.14,
     "unidad": "L"
@@ -383,6 +437,15 @@
     "grupo": "TRATAMIENTO DE SEMILLAS",
     "insumo": "Seed+",
     "descripcion": null,
+    "dosisHa": 0.15,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "TRATAMIENTO DE SEMILLAS",
+    "insumo": "T.F.P",
+    "descripcion": "Fipronil 25% + Piraclostrobina 2.5% + Tiofanato 22.5%",
     "dosisHa": 0.15,
     "unidad": "L"
   },
@@ -410,7 +473,7 @@
     "grupo": "DESECACIÓN",
     "insumo": "Cleanspray",
     "descripcion": "2,4-D DMA 72%",
-    "dosisHa": 2.0,
+    "dosisHa": 2,
     "unidad": "L"
   },
   {
@@ -419,7 +482,7 @@
     "grupo": "DESECACIÓN",
     "insumo": "Glifex gold 60,8",
     "descripcion": "Glifosato DMA 60.8%",
-    "dosisHa": 3.0,
+    "dosisHa": 3,
     "unidad": "L"
   },
   {
@@ -482,7 +545,7 @@
     "grupo": "HERBICIDAS PRÉ EMERGENTES",
     "insumo": "Imperator Glufosinato de amonio",
     "descripcion": "Glufosinato",
-    "dosisHa": 2.0,
+    "dosisHa": 2,
     "unidad": "L"
   },
   {
@@ -527,7 +590,7 @@
     "grupo": "INSECTICIDAS",
     "insumo": "Clorfenax",
     "descripcion": "Clorfenapir 24%",
-    "dosisHa": 2.0,
+    "dosisHa": 2,
     "unidad": "L"
   },
   {
@@ -581,7 +644,7 @@
     "grupo": "NUTRICIÓN",
     "insumo": "A.A.: 6% Zn: 8%",
     "descripcion": null,
-    "dosisHa": 2.0,
+    "dosisHa": 2,
     "unidad": "L"
   },
   {
@@ -644,7 +707,7 @@
     "grupo": "ACEITES Y ADJUVANTES",
     "insumo": "Iop",
     "descripcion": "Aceite vegetaL",
-    "dosisHa": 2.0,
+    "dosisHa": 2,
     "unidad": "L"
   },
   {
@@ -662,7 +725,7 @@
     "grupo": "DESECACIÓN",
     "insumo": "Glifex Gold 60,8",
     "descripcion": "Glifosato DMA 60.8%",
-    "dosisHa": 3.0,
+    "dosisHa": 3,
     "unidad": "L"
   },
   {
@@ -671,7 +734,7 @@
     "grupo": "DESECACIÓN",
     "insumo": "Imperator Glufosinato de amonio",
     "descripcion": "Glufosinato 50%",
-    "dosisHa": 2.0,
+    "dosisHa": 2,
     "unidad": "L"
   },
   {
@@ -770,7 +833,7 @@
     "grupo": "HERBICIDAS PRÉ EMERGENTES",
     "insumo": "Imperator Glufosinato de amonio",
     "descripcion": "Glufosinato",
-    "dosisHa": 2.0,
+    "dosisHa": 2,
     "unidad": "L"
   },
   {
@@ -788,7 +851,7 @@
     "grupo": "HERBICIDAS PÓS EMERGENTES",
     "insumo": "Bromus",
     "descripcion": "Diquat",
-    "dosisHa": 2.0,
+    "dosisHa": 2,
     "unidad": "L"
   },
   {
@@ -797,7 +860,7 @@
     "grupo": "HERBICIDAS PÓS EMERGENTES",
     "insumo": "Cletogrop",
     "descripcion": "Cletodim 24%",
-    "dosisHa": 1.0,
+    "dosisHa": 1,
     "unidad": "L"
   },
   {
@@ -878,7 +941,7 @@
     "grupo": "NUTRICIÓN",
     "insumo": "Aminoácidos",
     "descripcion": null,
-    "dosisHa": 1.0,
+    "dosisHa": 1,
     "unidad": "L"
   },
   {
@@ -887,7 +950,7 @@
     "grupo": "NUTRICIÓN",
     "insumo": "Potásio",
     "descripcion": null,
-    "dosisHa": 1.0,
+    "dosisHa": 1,
     "unidad": "L"
   },
   {
@@ -914,7 +977,7 @@
     "grupo": "SEMILLAS",
     "insumo": "DM64IX64",
     "descripcion": null,
-    "dosisHa": 60.0,
+    "dosisHa": 60,
     "unidad": "kg"
   },
   {
@@ -923,7 +986,7 @@
     "grupo": "SEMILLAS",
     "insumo": "DM66I68",
     "descripcion": null,
-    "dosisHa": 65.0,
+    "dosisHa": 65,
     "unidad": "kg"
   },
   {
@@ -932,7 +995,7 @@
     "grupo": "SEMILLAS",
     "insumo": "HO PIRAPO",
     "descripcion": null,
-    "dosisHa": 60.0,
+    "dosisHa": 60,
     "unidad": "kg"
   },
   {
@@ -941,7 +1004,7 @@
     "grupo": "SEMILLAS",
     "insumo": "Variedad 4",
     "descripcion": null,
-    "dosisHa": 60.0,
+    "dosisHa": 60,
     "unidad": "kg"
   },
   {
@@ -950,7 +1013,7 @@
     "grupo": "SEMILLAS",
     "insumo": "Variedad 5",
     "descripcion": null,
-    "dosisHa": 60.0,
+    "dosisHa": 60,
     "unidad": "kg"
   },
   {
@@ -1022,7 +1085,7 @@
     "grupo": "DESECACIÓN",
     "insumo": "Cleanspray",
     "descripcion": "2,4-D DMA 72%",
-    "dosisHa": 2.0,
+    "dosisHa": 2,
     "unidad": "L"
   },
   {
@@ -1031,7 +1094,7 @@
     "grupo": "DESECACIÓN",
     "insumo": "Glifex gold 60,8",
     "descripcion": "Glifosato DMA 60.8%",
-    "dosisHa": 3.0,
+    "dosisHa": 3,
     "unidad": "L"
   },
   {
@@ -1103,7 +1166,7 @@
     "grupo": "HERBICIDAS PRÉ EMERGENTES",
     "insumo": "Squadra",
     "descripcion": "IMAZETAPIR 10 %",
-    "dosisHa": 1.0,
+    "dosisHa": 1,
     "unidad": "kg"
   },
   {
@@ -1139,7 +1202,7 @@
     "grupo": "INSECTICIDAS",
     "insumo": "Paretto Huron",
     "descripcion": "Clorfenapir 24%",
-    "dosisHa": 2.0,
+    "dosisHa": 2,
     "unidad": "L"
   },
   {
@@ -1184,7 +1247,7 @@
     "grupo": "NUTRICIÓN",
     "insumo": "A.A.: 6% Zn: 8%",
     "descripcion": null,
-    "dosisHa": 2.0,
+    "dosisHa": 2,
     "unidad": "L"
   },
   {
