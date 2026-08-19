@@ -197,7 +197,7 @@ const AUDITORIA_GASTO_DESALIJO = "Desalijo Karanda'y / Carandai";
 // Se comparan normalizados (normHdr) contra la Actividad de consultaOT.
 const AUDITORIA_INSUMOS_CULTIVOS_EXCLUIDOS = ['AVENA', 'COBERTURA'];
 // ---- AUDITORIA DE INSUMOS POR PARCELA: seguimiento de receta ----
-// Version reducida del presupuesto de insumos de la campania (146 registros). Es la UNICA fuente de
+// Version reducida del presupuesto de insumos de la campania (151 registros). Es la UNICA fuente de
 // las dosis recomendadas: los Excel de presupuesto no se leen, y este JSON no aporta costos ni
 // volumenes totales, solo dosis por hectarea. Se descarga una sola vez al iniciar el dashboard.
 // Mismo criterio de respaldo que SRC_XLSX. Si falla, el modulo sigue funcionando y el seguimiento
@@ -251,6 +251,9 @@ const RECETAS_INSUMO_ALIAS = [
   // ARROZ, MAIZ y SORGO ya dicen "Iop Full" y cruzan solos con su propia dosis (1,75 / 1,6 / 1,6),
   // asi que este alias no debe alcanzarlos.
   {insumo:'IOP FULL', receta:'Iop', cultivo:'SOJA'},
+  // Fila "Power Oil - Iop Full - Tafir Oil" del presupuesto de ARROZ: Albor lo carga con un guion
+  // en el medio ("Tafir- Oil"), que normInsumoNombre no puede igualar a "Tafir Oil".
+  {insumo:'Tafir- Oil', receta:'Tafir Oil'},
 ];
 
 const INFRA_MAP = {
