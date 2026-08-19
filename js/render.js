@@ -530,7 +530,7 @@ function renderInsumosParcela(){
     conteoReceta.set(e, (conteoReceta.get(e)||0)+1);
   }));
   const conReceta = (conteoReceta.get(RECETA_ESTADO.SOBRE)||0)+(conteoReceta.get(RECETA_ESTADO.BAJO)||0)
-    +(conteoReceta.get(RECETA_ESTADO.SEGUN)||0);
+    +(conteoReceta.get(RECETA_ESTADO.TOLERANCIA)||0)+(conteoReceta.get(RECETA_ESTADO.SEGUN)||0);
   const ipRec = document.getElementById('ip-receta');
   if(!D.recetas || !D.recetas.disponible){
     ipRec.innerHTML = '<div class="rc-nodisp">Seguimiento de receta <b>no disponible</b>: no se pudieron cargar las recetas de la campaña. '+
@@ -539,12 +539,13 @@ function renderInsumosParcela(){
     const chip = (lbl,n,cls,tip) => '<div class="rc-chip '+cls+'" title="'+tip+'"><span class="rc-n">'+fmt(n)+'</span><span class="rc-l">'+lbl+'</span></div>';
     ipRec.innerHTML =
       chip('Con receta', conReceta, 'rc-con', 'Insumos de lote que se pudieron comparar contra una receta de la campaña')+
-      chip('Sobre receta', conteoReceta.get(RECETA_ESTADO.SOBRE)||0, 'rc-sobre', 'La dosis aplicada por hectárea superó la de la receta')+
-      chip('Bajo receta', conteoReceta.get(RECETA_ESTADO.BAJO)||0, 'rc-bajo', 'La dosis aplicada por hectárea quedó por debajo de la receta')+
-      chip('Según receta', conteoReceta.get(RECETA_ESTADO.SEGUN)||0, 'rc-segun', 'La dosis aplicada coincide con la de la receta')+
+      chip('Sobre receta', conteoReceta.get(RECETA_ESTADO.SOBRE)||0, 'rc-sobre', 'La dosis aplicada por hectárea superó la receta en más de '+RECETA_TOLERANCIA_PCT+'%')+
+      chip('Bajo receta', conteoReceta.get(RECETA_ESTADO.BAJO)||0, 'rc-bajo', 'La dosis aplicada por hectárea quedó más de '+RECETA_TOLERANCIA_PCT+'% por debajo de la receta')+
+      chip('Dentro de tolerancia', conteoReceta.get(RECETA_ESTADO.TOLERANCIA)||0, 'rc-tol', 'El desvío no supera la tolerancia de ±'+RECETA_TOLERANCIA_PCT+'% definida para la campaña')+
+      chip('Según receta', conteoReceta.get(RECETA_ESTADO.SEGUN)||0, 'rc-segun', 'La dosis aplicada coincide exactamente con la de la receta')+
       chip('Sin receta', conteoReceta.get(RECETA_ESTADO.SIN)||0, 'rc-sin', 'No hay una receta inequívoca para ese cultivo e insumo: no se compara ni se estima')+
       chip('Unidad no comparable', conteoReceta.get(RECETA_ESTADO.UNIDAD)||0, 'rc-unid', 'Hay receta, pero su unidad no es de la misma magnitud que la aplicada — nunca se convierte entre kilos y litros')+
-      '<div class="rc-pie">'+fmt(recetaFilas)+' insumo(s) por lote evaluados'+
+      '<div class="rc-pie">'+fmt(recetaFilas)+' insumo(s) por lote evaluados · tolerancia ±'+RECETA_TOLERANCIA_PCT+'%'+
       (recetaSinDosis? ' · '+fmt(recetaSinDosis)+' sin dosis real (el lote no registra hectáreas), no se comparan':'')+'</div>';
   }
 
@@ -617,8 +618,8 @@ function ipDetalleParcela(p, listaCompleta){
 }
 // Clase CSS por estado (colores en css/auditoria.css).
 const RECETA_ESTADO_CLASE = {
-  'Sobre receta':'rc-e-sobre', 'Bajo receta':'rc-e-bajo', 'Según receta':'rc-e-segun',
-  'Sin receta':'rc-e-sin', 'Unidad no comparable':'rc-e-unid',
+  'Sobre receta':'rc-e-sobre', 'Bajo receta':'rc-e-bajo', 'Dentro de tolerancia':'rc-e-tol',
+  'Según receta':'rc-e-segun', 'Sin receta':'rc-e-sin', 'Unidad no comparable':'rc-e-unid',
 };
 // Explicación del estado, en el tooltip: por qué se comparó contra esa receta, o por qué no se pudo.
 function ipTipReceta(r, i){
@@ -629,7 +630,9 @@ function ipTipReceta(r, i){
   }
   if(r.estadoReceta===RECETA_ESTADO.UNIDAD)
     return 'Receta «'+(r.recetaInsumo||'')+'» en '+(r.unidadReceta||'sin unidad')+': no es comparable con '+i.unidad+', y nunca se convierte entre magnitudes distintas';
-  return 'Receta «'+(r.recetaInsumo||'')+'»'+(r.recetaGrupo?' ('+r.recetaGrupo+')':'')+' — '+fmt2(r.dosisRecetaHa)+' '+(r.unidadReceta||'')+'/ha';
+  const base = 'Receta «'+(r.recetaInsumo||'')+'»'+(r.recetaGrupo?' ('+r.recetaGrupo+')':'')+' — '+fmt2(r.dosisRecetaHa)+' '+(r.unidadReceta||'')+'/ha';
+  if(r.estadoReceta===RECETA_ESTADO.TOLERANCIA) return base+'. El desvío no supera la tolerancia de ±'+RECETA_TOLERANCIA_PCT+'% de la campaña';
+  return base;
 }
 // Porcentaje con signo explícito: "+1,33%" se lee distinto de "1,33%" cuando lo que importa es de
 // qué lado de la receta quedó la aplicación.

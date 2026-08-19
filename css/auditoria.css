@@ -74,3 +74,8 @@ tr.detcols td:first-child{padding-left:22px}
 /* Dosis de receta que NO se pudo convertir a la unidad de la fila: se muestra igual, en su unidad
    original y atenuada, para que se vea que la receta existe aunque no sea comparable. */
 .rc-crudo{color:var(--muted)}
+/* "Dentro de tolerancia": el desvío existe pero no supera el margen aceptado por el negocio
+   (RECETA_TOLERANCIA_PCT). Comparte la familia verde de "Según receta" —ambos son resultados
+   conformes— pero en un tono más apagado, para que se lea "aceptable" y no "exacto". */
+.rc-tol{border-color:#cfe0c4} .rc-tol .rc-n{color:#4a7a2a}
+.rc-e-tol{background:#eef5e6;color:#4a7a2a}
