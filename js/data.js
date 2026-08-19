@@ -7,7 +7,7 @@
 //
 // El contrato de salida (los nombres de las propiedades devueltas) es el que leen render.js y
 // events.js: no se renombra nada aunque internamente venga de otro archivo.
-function buildData(raw, proyecciones, insumos, presupuestoInfra){
+function buildData(raw, proyecciones, insumos, presupuestoInfra, recetas){
   const { combustible: combustibleRaw, existenciaInicial, otros: otrosInsumos, excluidos: insumosExcluidosRaw } = insumos || {};
 
   // ---- Base compartida ----
@@ -25,6 +25,11 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
   const {auditoria_items,auditoria_metros,auditoria_puentes,auditoria_gastos} =
     construirAuditoriaInfraestructura(rows, presupuestoInfra);
   const insumos_parcela = construirAuditoriaInsumosParcela(rawTodasCampanias);
+  // Indice de recetas (data/recetas-insumos-26-27.json). Se arma una sola vez y queda en memoria.
+  // NO toca insumos_parcela: la comparacion con receta se resuelve por fila al renderizar, sobre la
+  // dosis real que ya calcula ese modulo. Si el JSON no se pudo cargar queda un indice vacio y todo
+  // el dashboard sigue igual.
+  const recetas_indice = recetas ? construirIndiceRecetas(recetas) : indiceRecetasVacio();
 
   // ---- Servicios ----
   // SERVICIOS es el paquete de la campania vigente; construirServiciosPorCampania lo reutiliza tal
@@ -71,6 +76,9 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra){
     // Auditoría de Insumos por Parcela (pestaña Auditoría) — mismas filas de consumo del módulo
     // Insumos, cruzadas con la parcela y la OT que las generó. Ningún otro módulo la lee.
     insumos_parcela,
+    // Recetas de la campania para el seguimiento de dosis de la Auditoria de Insumos por Parcela.
+    // Solo lo lee ese modulo; ningun calculo economico depende de esto.
+    recetas: recetas_indice,
     // Filas excluidas del módulo Insumos (hoy solo "Afrecho de Arroz - CH", ver INSUMOS_EXCLUIDOS
     // en config.js) — se conservan crudas acá solo para trazabilidad, ningún render.js las lee.
     insumos_excluidos:insumosExcluidosRaw||[],
