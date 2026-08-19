@@ -16,8 +16,10 @@ const BRANCH = "main";
 // Respaldo: si el archivo no se puede bajar del sitio (caso típico: abrir index.html directo desde
 // el disco, sin servidor, donde fetch de una ruta relativa no funciona), loader.js reintenta contra
 // GitHub. Nunca al revés: GitHub es el plan B, no el camino normal.
-const SRC_XLSX = "datosCampania2627.xlsx";
-const SRC_XLSX_RESPALDO = "https://raw.githubusercontent.com/"+REPO+"/"+BRANCH+"/datosCampania2627.xlsx";
+// Los archivos de datos viven en la carpeta data/ del repo, no en la raiz.
+const SRC_DATA = "data/";
+const SRC_XLSX = SRC_DATA+"datosCampania2627.xlsx";
+const SRC_XLSX_RESPALDO = "https://raw.githubusercontent.com/"+REPO+"/"+BRANCH+"/"+SRC_DATA+"datosCampania2627.xlsx";
 const HOJA_OT = "consultaOT";
 const HOJA_CULTIVOS = "consultaCultivos";
 const HOJA_INSUMOS = "consultaInsumos";
@@ -104,8 +106,8 @@ const LOTES_NO_PARCELA = ['SECADERO', 'FLETES', 'PARCELA'];
 // presupuesto, fila 14 = fila de TOTAL. Filas 47-51 son calculos sueltos sin relacion a la tabla
 // de items (sin Especificacion ni Cta. Contable) — se excluyen del parseo.
 // Mismo criterio que SRC_XLSX: se descarga del propio sitio, con GitHub como respaldo.
-const INFRA_SRC_XLSX = "PRESUPUESTO%20ALISON%20INFRAESTRUTURA%2026-27.xlsx";
-const INFRA_SRC_XLSX_RESPALDO = "https://raw.githubusercontent.com/"+REPO+"/"+BRANCH+"/PRESUPUESTO%20ALISON%20INFRAESTRUTURA%2026-27.xlsx";
+const INFRA_SRC_XLSX = SRC_DATA+"PRESUPUESTO%20ALISON%20INFRAESTRUTURA%2026-27.xlsx";
+const INFRA_SRC_XLSX_RESPALDO = "https://raw.githubusercontent.com/"+REPO+"/"+BRANCH+"/"+SRC_DATA+"PRESUPUESTO%20ALISON%20INFRAESTRUTURA%2026-27.xlsx";
 const INFRA_HOJA = "INFRAESTRUTURA 26-27";
 // Indices de columna (0-based) dentro de cada fila de item, leida con header:1 (array crudo).
 // OJO: la cantidad presupuestada real NO esta en la columna "Cant. De trabajo" (viene vacia en
@@ -194,6 +196,39 @@ const AUDITORIA_GASTO_DESALIJO = "Desalijo Karanda'y / Carandai";
 // parcela sin ambiguedad — por eso el modulo filtra y rotula por Lote, no por nombre de parcela.
 // Se comparan normalizados (normHdr) contra la Actividad de consultaOT.
 const AUDITORIA_INSUMOS_CULTIVOS_EXCLUIDOS = ['AVENA', 'COBERTURA'];
+// ---- AUDITORIA DE INSUMOS POR PARCELA: seguimiento de receta ----
+// Version reducida del presupuesto de insumos de la campania (139 registros). Es la UNICA fuente de
+// las dosis recomendadas: los Excel de presupuesto no se leen, y este JSON no aporta costos ni
+// volumenes totales, solo dosis por hectarea. Se descarga una sola vez al iniciar el dashboard.
+// Mismo criterio de respaldo que SRC_XLSX. Si falla, el modulo sigue funcionando y el seguimiento
+// se marca como no disponible (ver loader.js): nunca bloquea la carga.
+const RECETAS_SRC_JSON = SRC_DATA+"recetas-insumos-26-27.json";
+const RECETAS_SRC_JSON_RESPALDO = "https://raw.githubusercontent.com/"+REPO+"/"+BRANCH+"/"+SRC_DATA+"recetas-insumos-26-27.json";
+// Tolerancia SOLO para decidir "Según receta" — no es una tolerancia agronomica (el negocio todavia
+// no definio ninguna), es el margen de error de punto flotante: 1e-9 relativo al valor comparado.
+const RECETA_EPSILON_RELATIVO = 1e-9;
+// Equivalencias DECLARADAS A MANO entre el nombre del insumo en Albor (consultaOT) y el nombre en
+// el JSON de recetas. Nunca se generan por parecido: si un producto no esta aca y no coincide
+// exacto, queda "Sin receta", que es el resultado seguro.
+// Se aplican DESPUES de la busqueda exacta por nombre y por descripcion, asi que un alias no puede
+// pisar una receta que ya coincide sola (ver buscarReceta en js/data/recetas.js).
+// Campos: insumo (nombre en consultaOT), receta (nombre en el JSON), y opcionalmente cultivo y
+// grupo para desempatar cuando el JSON trae el mismo producto en mas de un grupo con dosis
+// distintas.
+const RECETAS_INSUMO_ALIAS = [
+  // Mismo producto, separador decimal distinto: Albor lo carga con punto y el presupuesto con coma.
+  // Cubre ARROZ, MAIZ, SOJA y SORGO de una sola vez porque la comparacion ignora mayusculas.
+  {insumo:'GLIFEX GOLD 60.8', receta:'GLIFEX GOLD 60,8'},
+  // Mismo fertilizante con separadores distintos (guion vs punto). Solo hace falta para ARROZ y
+  // SOJA: las recetas de MAIZ y SORGO ya lo traen escrito con guiones y coinciden solas.
+  {insumo:'Potasio KCL 00-00-60', receta:'Potasio KCL 00.00.60'},
+  // Tratamiento de semillas: el producto se llama distinto en cada sistema. El JSON trae
+  // "Biostar + Zn" DOS veces para el mismo cultivo (NUTRICIÓN 0,25 sin unidad y TRATAMIENTO DE
+  // SEMILLAS 0,15 L), asi que el alias fija ademas el grupo — sin eso la receta seria ambigua y la
+  // fila quedaria en "Sin receta".
+  {insumo:'BIOSTART Zn FL Root', receta:'Biostar + Zn', grupo:'TRATAMIENTO DE SEMILLAS'},
+];
+
 const INFRA_MAP = {
   'Contrucion camino nuevo': [
     'Construccion de Camino retro excavadora x Hs',

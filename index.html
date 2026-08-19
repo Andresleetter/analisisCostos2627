@@ -237,10 +237,24 @@
         <select id="iptipo"><option value="ALL">Todos</option></select>
         <label for="ipinsumo">Insumo</label>
         <select id="ipinsumo"><option value="ALL">Todos</option></select>
+        <!-- Estado de receta: a diferencia de los demás, no filtra líneas de consultaOT sino el
+             resultado de comparar la dosis del lote contra la receta, así que se aplica después de
+             agrupar (ver ipEstadoRecetaSel en render.js) y por eso no se repuebla en cascada. -->
+        <label for="ipreceta">Estado de Receta</label>
+        <select id="ipreceta" onchange="cambiarFiltroInsumosParcela()">
+          <option value="ALL">Todos</option>
+          <option value="Sobre receta">Sobre receta</option>
+          <option value="Bajo receta">Bajo receta</option>
+          <option value="Según receta">Según receta</option>
+          <option value="Sin receta">Sin receta</option>
+          <option value="Unidad no comparable">Unidad no comparable</option>
+        </select>
       </div>
-      <div class="ip-fuente">Fuente: hoja <b>consultaOT</b> — líneas de insumo de órdenes de trabajo <b>confirmadas</b>, sin combustible (tiene su propio módulo). Cantidad = Unidades/Dosis · Costo = Unidades/Dosis × Precio Unitario · Hectáreas = Has. Reales de la orden.</div>
+      <div class="ip-fuente">Fuente: hoja <b>consultaOT</b> — líneas de insumo de órdenes de trabajo <b>confirmadas</b>, sin combustible (tiene su propio módulo). Cantidad = Unidades/Dosis · Costo = Unidades/Dosis × Precio Unitario · Hectáreas = Has. Reales de la orden. Dosis de receta: <b>data/recetas-insumos-26-27.json</b> (presupuesto reducido de la campaña, solo dosis por hectárea).</div>
       <div class="kpis" id="ip-kpis"></div>
       <div class="ip-aviso hidden" id="ip-aviso"></div>
+      <div class="panel sub"><h3>Seguimiento de Receta <span>Dosis realmente aplicada por hectárea contra la dosis del presupuesto de la campaña (data/recetas-insumos-26-27.json) — la receta es una referencia de auditoría: no modifica ninguna cantidad, hectárea ni costo</span></h3>
+        <div class="rc-resumen" id="ip-receta"></div></div>
       <div class="panel sub"><h3>Cantidad Utilizada por Unidad de Medida <span>Cada unidad se totaliza por separado — litros, kilos y unidades nunca se suman entre sí</span></h3>
         <div class="scroll"><table><thead><tr><th>Unidad de Medida</th><th class="tr">Insumos Distintos</th><th class="tr">Cantidad Utilizada</th><th class="tr">Costo Total</th></tr></thead><tbody id="ip-unidades"></tbody></table></div></div>
       <div class="panel hero-panel"><h3>Resumen por Lote <span id="ip-parcelas-sub"></span></h3>
@@ -270,6 +284,7 @@
 <script src="js/data/combustible.js" defer></script>
 <script src="js/data/insumos.js" defer></script>
 <script src="js/data/auditoria.js" defer></script>
+<script src="js/data/recetas.js" defer></script>
 <script src="js/data/alertas.js" defer></script>
 <script src="js/data/resumen.js" defer></script>
 <script src="js/data.js" defer></script>

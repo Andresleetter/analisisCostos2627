@@ -43,6 +43,41 @@ function cargarXLSX(nombre, url, urlRespaldo){
       throw e instanceof Error ? e : new Error('Error al descargar '+nombre+': '+e);
     });
 }
+// Recetas de insumos: JSON estatico y chico (data/recetas-insumos-26-27.json). Se descarga UNA sola
+// vez, en la carga inicial, junto con los .xlsx — nunca al cambiar un filtro, abrir un lote o
+// cambiar de pestaña: el indice queda en memoria durante toda la sesion (ver D.recetas).
+// NO usa SheetJS: es JSON, se parsea con resp.json().
+// Mismo esquema de respaldo que los .xlsx (sitio primero, GitHub como plan B).
+function cargarRecetas(url, urlRespaldo){
+  var pedir = function(u){
+    console.log('Iniciando carga:', u);
+    return fetch(u, {cache:'no-store'}).then(function(resp){
+      console.log('HTTP Status:', resp.status, '(recetas de insumos)');
+      if(!resp.ok) throw new Error('HTTP '+resp.status+' al descargar las recetas de insumos');
+      return resp.json();
+    });
+  };
+  return pedir(url)
+    .catch(function(e){
+      if(!urlRespaldo) throw e;
+      console.warn('No se pudieron cargar las recetas desde el sitio ('+(e.message||e)+'). Reintentando desde GitHub…');
+      return pedir(urlRespaldo);
+    })
+    .then(function(json){
+      if(!Array.isArray(json)) throw new Error('El JSON de recetas no es una lista de registros.');
+      return json;
+    })
+    // El seguimiento de receta es informacion ADICIONAL: si no se puede cargar, la Auditoria debe
+    // seguir mostrando la dosis real, las cantidades y los costos igual que siempre. Por eso el
+    // error se registra y se devuelve null en vez de propagarse — no entra al catch de loadData()
+    // ni muestra la pantalla de error.
+    .catch(function(e){
+      console.error('No se pudieron cargar las recetas de insumos:', e.message||e,
+        '— la Auditoría de Insumos por Parcela funciona igual, sin el seguimiento de receta.');
+      return null;
+    });
+}
+
 // Fecha/hora de última modificación real del .xlsx (metadata de Office, docProps/core.xml —
 // Excel la actualiza sola cada vez que se guarda el archivo, sin intervención del usuario). Se
 // usa para el rótulo de "actualizado" del header (ver render.js) porque representa cuándo cambió
@@ -126,10 +161,11 @@ function loadData(){
 
   Promise.all([
     cargarXLSX('datosCampania2627.xlsx', SRC_XLSX, SRC_XLSX_RESPALDO),
-    cargarXLSX('PRESUPUESTO ALISON INFRAESTRUTURA 26-27.xlsx', INFRA_SRC_XLSX, INFRA_SRC_XLSX_RESPALDO)
+    cargarXLSX('PRESUPUESTO ALISON INFRAESTRUTURA 26-27.xlsx', INFRA_SRC_XLSX, INFRA_SRC_XLSX_RESPALDO),
+    cargarRecetas(RECETAS_SRC_JSON, RECETAS_SRC_JSON_RESPALDO)
   ])
     .then(function(wbs){
-      var wb = wbs[0], wbInfra = wbs[1];
+      var wb = wbs[0], wbInfra = wbs[1], recetas = wbs[2];
       var consultaOT = hojaARows(wb, HOJA_OT);
       var consultaCultivos = hojaARows(wb, HOJA_CULTIVOS);
       var consultaInsumos = hojaARows(wb, HOJA_INSUMOS);
@@ -142,7 +178,8 @@ function loadData(){
         ', excluidos='+insumos.excluidos.length+' ('+INSUMOS_EXCLUIDOS.join(', ')+')');
       var presupuestoInfra = leerPresupuestoInfra(wbInfra);
       console.log('Presupuesto de Infraestructura — items:', presupuestoInfra.length);
-      try{ D = buildData(consultaOT, consultaCultivos, insumos, presupuestoInfra); }
+      console.log('Recetas de insumos — registros:', recetas ? recetas.length : '(no disponibles)');
+      try{ D = buildData(consultaOT, consultaCultivos, insumos, presupuestoInfra, recetas); }
       catch(e){ console.error('Error al construir indicadores:', e); throw new Error('Error procesando los datos: '+e.message); }
       // D.excel_actualizado se fija UNA sola vez acá, por carga exitosa — nunca se recalcula en
       // render.js ni cambia al navegar entre módulos, usar filtros o abrir/cerrar el menú móvil.

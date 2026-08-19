@@ -36,3 +36,41 @@ tr.ip-parcela.open td{background:#eef4ea}
 .ip-nota{color:var(--muted);font-size:11px}
 /* Sin hectáreas reales: un guion gris, nunca 0,00 — un cero se leería como "se midió y dio cero". */
 .ip-sin{color:var(--muted)}
+
+/* ---- Seguimiento de Receta (Auditoría de Insumos por Parcela) ----
+   La receta es una referencia de auditoría, no una nota: por eso ningún estado usa el rojo de error
+   del dashboard. "Sobre receta" y "Bajo receta" son hechos matemáticos, no faltas — mientras el
+   negocio no defina una tolerancia agronómica, se distinguen por color pero ninguno se marca como
+   incorrecto. Los colores salen de la misma paleta que ya usa el resto del dashboard. */
+.rc-resumen{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch;padding:2px 0}
+.rc-chip{flex:1 1 130px;border:1px solid var(--line);border-radius:var(--radius-sm);padding:9px 12px;background:var(--card);display:flex;flex-direction:column;gap:2px;cursor:default}
+.rc-chip .rc-n{font-size:19px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+.rc-chip .rc-l{font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.3px}
+.rc-con{border-color:#bcd6ae}   .rc-con   .rc-n{color:var(--u-ha)}
+.rc-sobre{border-color:#e0c08a} .rc-sobre .rc-n{color:#8a5b00}
+.rc-bajo{border-color:#a8cfe0}  .rc-bajo  .rc-n{color:#1c5f7a}
+.rc-segun{border-color:#bcd6ae} .rc-segun .rc-n{color:var(--u-ha)}
+.rc-sin{border-color:var(--line)}  .rc-sin  .rc-n{color:var(--muted)}
+.rc-unid{border-color:var(--line)} .rc-unid .rc-n{color:var(--muted)}
+.rc-pie{flex:1 1 100%;font-size:11px;color:var(--muted);padding-top:2px}
+.rc-nodisp{font-size:12px;color:#6b5300;background:#fdf7e6;border:1px solid var(--y);border-radius:var(--radius-sm);padding:10px 14px;line-height:1.5}
+
+/* Fila de encabezados del detalle: hacen falta ahora que el detalle tiene 7 columnas distintas
+   (antes eran 5 y se entendían solas). Mismo tono que .dethead, un escalón más tenue. */
+tr.detcols td{font-size:9.5px;text-transform:uppercase;letter-spacing:.3px;color:var(--muted);font-weight:700;padding:1px 8px 5px;border-bottom:1px solid #f4f0f0;background:#fdfbfb}
+tr.detcols td:first-child{padding-left:22px}
+
+/* Estado de cada insumo dentro del detalle. */
+.rc-est{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:700;white-space:nowrap}
+.rc-e-sobre{background:#f8ecd5;color:#8a5b00}
+.rc-e-bajo{background:#dcecf3;color:#1c5f7a}
+.rc-e-segun{background:#e8f3dc;color:var(--u-ha)}
+.rc-e-sin{background:#f1efef;color:var(--muted)}
+.rc-e-unid{background:#f1efef;color:var(--muted)}
+/* Desvío: la flecha de color va en el porcentaje, y el valor absoluto debajo en gris — el signo ya
+   dice el sentido, el color solo lo refuerza. */
+.rc-up{color:#8a5b00;font-weight:700} .rc-down{color:#1c5f7a;font-weight:700}
+.rc-abs{font-size:10.5px;color:var(--muted);font-weight:400;margin-top:1px}
+/* Dosis de receta que NO se pudo convertir a la unidad de la fila: se muestra igual, en su unidad
+   original y atenuada, para que se vea que la receta existe aunque no sea comparable. */
+.rc-crudo{color:var(--muted)}

@@ -1,0 +1,1253 @@
+[
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "ACEITES Y ADJUVANTES",
+    "insumo": "Garant",
+    "descripcion": null,
+    "dosisHa": 0.35,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "ACEITES Y ADJUVANTES",
+    "insumo": "Iop",
+    "descripcion": "Aceite vegetal",
+    "dosisHa": 1.75,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "DESECACIÓN",
+    "insumo": "CEANSPRAY",
+    "descripcion": "2.4D 72%",
+    "dosisHa": 1.5,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "DESECACIÓN",
+    "insumo": "GLIFEX GOLD 60,8",
+    "descripcion": "Glifosato sal DMA 60.8%",
+    "dosisHa": 3.0,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "DESECACIÓN",
+    "insumo": "HERBEX MAX",
+    "descripcion": "Metsulfuron 60%",
+    "dosisHa": 0.005,
+    "unidad": "kg"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "FERTILIZANTES",
+    "insumo": "Abono 04.30.10 +4,5S",
+    "descripcion": "04.30.10",
+    "dosisHa": 0.23,
+    "unidad": "ton"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "FERTILIZANTES",
+    "insumo": "Abono 11.52.00 COFCO",
+    "descripcion": "11.52.00",
+    "dosisHa": 0.14,
+    "unidad": "ton"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "FERTILIZANTES",
+    "insumo": "Fertilizante COFCO 07-40-00",
+    "descripcion": "07.40.00",
+    "dosisHa": 0.19,
+    "unidad": "ton"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "FERTILIZANTES",
+    "insumo": "Potasio KCL 00.00.60",
+    "descripcion": "00.00.60",
+    "dosisHa": 0.15,
+    "unidad": "ton"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "FERTILIZANTES",
+    "insumo": "Urea",
+    "descripcion": "45.00.00",
+    "dosisHa": 0.27,
+    "unidad": "ton"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "FUNGICIDAS",
+    "insumo": "Bingo",
+    "descripcion": "Triciclazole",
+    "dosisHa": 0.4,
+    "unidad": "kg"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "FUNGICIDAS",
+    "insumo": "Brivo",
+    "descripcion": "Piraclostrobin 26% + Difenoconazol 30%",
+    "dosisHa": 0.4,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "FUNGICIDAS",
+    "insumo": "Notaro",
+    "descripcion": "Difenocazole 25%",
+    "dosisHa": 0.3,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "FUNGICIDAS",
+    "insumo": "OXICLORURO DE COBRE 85% WP",
+    "descripcion": null,
+    "dosisHa": 0.4,
+    "unidad": "kg"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "FUNGICIDAS",
+    "insumo": "Quartzo",
+    "descripcion": "AZOSXTROBIN 20 % + TEBUCONAZOLE 20 %",
+    "dosisHa": 0.35,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "FUNGICIDAS",
+    "insumo": "Zafiro",
+    "descripcion": "Tebuconazole 43%",
+    "dosisHa": 0.3,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "HERBICIDAS PUNTO DE AGUJA",
+    "insumo": "Conductor Clomazone",
+    "descripcion": "Clomazone 48%",
+    "dosisHa": 0.5,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "HERBICIDAS PUNTO DE AGUJA",
+    "insumo": "GLIFEX GOLD 60,8",
+    "descripcion": "Glifosato sal DMA 60.8%",
+    "dosisHa": 3.0,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "HERBICIDAS PUNTO DE AGUJA",
+    "insumo": "Maxirice",
+    "descripcion": "Imazapic 17.5% + Imazapir 52.5% WG",
+    "dosisHa": 0.12,
+    "unidad": "kg"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "HERBICIDAS PUNTO DE AGUJA",
+    "insumo": "Pyrazosulfuron",
+    "descripcion": null,
+    "dosisHa": 0.21,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "HERBICIDAS PÓS EMERGENTES",
+    "insumo": "Basanex",
+    "descripcion": "Bentazona 60%",
+    "dosisHa": 1.8,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "HERBICIDAS PÓS EMERGENTES",
+    "insumo": "BISPYRYCE",
+    "descripcion": "Bispiribac 40%",
+    "dosisHa": 0.15,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "HERBICIDAS PÓS EMERGENTES",
+    "insumo": "Fyn",
+    "descripcion": "Quinclorac 25% SC",
+    "dosisHa": 2.0,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "HERBICIDAS PÓS EMERGENTES",
+    "insumo": "Pyrazosulfuron",
+    "descripcion": null,
+    "dosisHa": 0.08,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "HERBICIDAS PÓS EMERGENTES",
+    "insumo": "Triclon",
+    "descripcion": "Triclopyr 48%",
+    "dosisHa": 0.5,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "INSECTICIDAS",
+    "insumo": "Biogard",
+    "descripcion": "Imidacloprid 60%",
+    "dosisHa": 0.4,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "INSECTICIDAS",
+    "insumo": "Emamex",
+    "descripcion": "Emamectin Benzoato 10% + Lufenuron 40% WG",
+    "dosisHa": 0.5,
+    "unidad": "kg"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "INSECTICIDAS",
+    "insumo": "Metomax",
+    "descripcion": "Thiametoxan 75%",
+    "dosisHa": 0.1,
+    "unidad": "kg"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "INSECTICIDAS",
+    "insumo": "Pilarclotrin",
+    "descripcion": "Clotianidina 60%",
+    "dosisHa": 0.2,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "INSECTICIDAS",
+    "insumo": "Sniper",
+    "descripcion": "Bifentrina 40%",
+    "dosisHa": 0.21,
+    "unidad": "kg"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "NUTRICIÓN",
+    "insumo": "A.A.: 6% Zn: 8%",
+    "descripcion": null,
+    "dosisHa": 2.0,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "NUTRICIÓN",
+    "insumo": "AZUFRE 9,7 % + MANGANESO 9,7 % + ZINC 9,7 % AL",
+    "descripcion": null,
+    "dosisHa": 0.3,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "NUTRICIÓN",
+    "insumo": "BioAtivadores Mn-ZN",
+    "descripcion": null,
+    "dosisHa": 0.3,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "NUTRICIÓN",
+    "insumo": "Biostar + Zn",
+    "descripcion": "(Co 0,5% + Mo 5% + Ni 1% + Zn 25% + Kinetina (Kin) 0,02% + Acido Giberelico 0,01% + Acido Indolbutirico (IBA) 0,01% + Acido Indolacetico (IAA) 0,01%)",
+    "dosisHa": 0.25,
+    "unidad": null
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "NUTRICIÓN",
+    "insumo": "Methylobacterium symbioticum 3x10*7 UFC/g",
+    "descripcion": null,
+    "dosisHa": 0.3,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "SEMILLAS",
+    "insumo": "FMG1100",
+    "descripcion": null,
+    "dosisHa": 90.0,
+    "unidad": "kg"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "SEMILLAS",
+    "insumo": "OS902",
+    "descripcion": null,
+    "dosisHa": 85.0,
+    "unidad": "kg"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "SEMILLAS",
+    "insumo": "Semilla de arroz V. BRSA706CL 26/27",
+    "descripcion": "BRS A706 CL",
+    "dosisHa": 85.0,
+    "unidad": "kg"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "SEMILLAS",
+    "insumo": "Senilla de Arroz V.424RI 26/27",
+    "descripcion": "424RI",
+    "dosisHa": 85.0,
+    "unidad": "kg"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "TRATAMIENTO DE SEMILLAS",
+    "insumo": "Biostar + Zn",
+    "descripcion": "Biostart + ZN",
+    "dosisHa": 0.15,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "TRATAMIENTO DE SEMILLAS",
+    "insumo": "Fipronil 25% + Piraclostrobina 2.5% + Tiofanato 22.5%",
+    "descripcion": null,
+    "dosisHa": 0.15,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "TRATAMIENTO DE SEMILLAS",
+    "insumo": "Metomax",
+    "descripcion": "Tiametoxan 50%",
+    "dosisHa": 0.14,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "TRATAMIENTO DE SEMILLAS",
+    "insumo": "Seed+",
+    "descripcion": null,
+    "dosisHa": 0.15,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "MAIZ",
+    "grupo": "ACEITES Y ADJUVANTES",
+    "insumo": "Garant",
+    "descripcion": null,
+    "dosisHa": 0.4,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "MAIZ",
+    "grupo": "ACEITES Y ADJUVANTES",
+    "insumo": "Iop Full",
+    "descripcion": "Aceite vegetaL",
+    "dosisHa": 1.6,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "MAIZ",
+    "grupo": "DESECACIÓN",
+    "insumo": "Cleanspray",
+    "descripcion": "2,4-D DMA 72%",
+    "dosisHa": 2.0,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "MAIZ",
+    "grupo": "DESECACIÓN",
+    "insumo": "Glifex gold 60,8",
+    "descripcion": "Glifosato DMA 60.8%",
+    "dosisHa": 3.0,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "MAIZ",
+    "grupo": "FERTILIZANTES",
+    "insumo": "Abono 04.30.10 +4,5S",
+    "descripcion": "04.30.10",
+    "dosisHa": 0.25,
+    "unidad": "ton"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "MAIZ",
+    "grupo": "FERTILIZANTES",
+    "insumo": "Potasio KCL 00-00-60",
+    "descripcion": "00.00.60",
+    "dosisHa": 0.1,
+    "unidad": "ton"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "MAIZ",
+    "grupo": "FERTILIZANTES",
+    "insumo": "Urea",
+    "descripcion": "45.00.00",
+    "dosisHa": 0.15,
+    "unidad": "ton"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "MAIZ",
+    "grupo": "FUNGICIDAS",
+    "insumo": "BIXAFEN 12,5 % + CIPROCONAZOLE 9 % + DIFENOCONAZOLE 15 % SC",
+    "descripcion": null,
+    "dosisHa": 0.4,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "MAIZ",
+    "grupo": "FUNGICIDAS",
+    "insumo": "Brivo",
+    "descripcion": "PIRACLOSTROBINA 26% + DIFENOCONAZOLE 30 % EC",
+    "dosisHa": 0.4,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "MAIZ",
+    "grupo": "HERBICIDAS PRÉ EMERGENTES",
+    "insumo": "Alfamex",
+    "descripcion": "S-metalaclor",
+    "dosisHa": 1.2,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "MAIZ",
+    "grupo": "HERBICIDAS PRÉ EMERGENTES",
+    "insumo": "Imperator Glufosinato de amonio",
+    "descripcion": "Glufosinato",
+    "dosisHa": 2.0,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "MAIZ",
+    "grupo": "HERBICIDAS PRÉ EMERGENTES",
+    "insumo": "Saflufenacil",
+    "descripcion": null,
+    "dosisHa": 0.07,
+    "unidad": "kg"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "MAIZ",
+    "grupo": "HERBICIDAS PÓS EMERGENTES",
+    "insumo": "Glifex full",
+    "descripcion": "Glifosato Sal Amonio 75%",
+    "dosisHa": 1.8,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "MAIZ",
+    "grupo": "HERBICIDAS PÓS EMERGENTES",
+    "insumo": "Sineret",
+    "descripcion": "Atrazina 76% + Mesotriona 12,5%",
+    "dosisHa": 1.2,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "MAIZ",
+    "grupo": "INSECTICIDAS",
+    "insumo": "Biogard",
+    "descripcion": "Imidacloprid 60%",
+    "dosisHa": 0.2,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "MAIZ",
+    "grupo": "INSECTICIDAS",
+    "insumo": "Clorfenax",
+    "descripcion": "Clorfenapir 24%",
+    "dosisHa": 2.0,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "MAIZ",
+    "grupo": "INSECTICIDAS",
+    "insumo": "Destroyer",
+    "descripcion": "Metomil 90%",
+    "dosisHa": 0.4,
+    "unidad": "kg"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "MAIZ",
+    "grupo": "INSECTICIDAS",
+    "insumo": "Paretto huron",
+    "descripcion": "Clotianidina 60%",
+    "dosisHa": 0.2,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "MAIZ",
+    "grupo": "INSECTICIDAS",
+    "insumo": "Rhino",
+    "descripcion": "Clorantraniliprole 75%",
+    "dosisHa": 0.24,
+    "unidad": "kg"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "MAIZ",
+    "grupo": "INSECTICIDAS",
+    "insumo": "Sniper",
+    "descripcion": "Bifentrina 40%",
+    "dosisHa": 0.37,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "MAIZ",
+    "grupo": "INSECTICIDAS",
+    "insumo": "Tefluquit",
+    "descripcion": "Teflubenzuron 30%",
+    "dosisHa": 0.08,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "MAIZ",
+    "grupo": "NUTRICIÓN",
+    "insumo": "A.A.: 6% Zn: 8%",
+    "descripcion": null,
+    "dosisHa": 2.0,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "MAIZ",
+    "grupo": "NUTRICIÓN",
+    "insumo": "AZUFRE 9,7 % + MANGANESO 9,7 % + ZINC 9,7 % AL",
+    "descripcion": null,
+    "dosisHa": 0.3,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "MAIZ",
+    "grupo": "NUTRICIÓN",
+    "insumo": "BioAtivadores Mn-ZN",
+    "descripcion": null,
+    "dosisHa": 0.3,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "MAIZ",
+    "grupo": "NUTRICIÓN",
+    "insumo": "Biostar + Zn",
+    "descripcion": "(Co 0,5% + Mo 5% + Ni 1% + Zn 25% + Kinetina (Kin) 0,02% + Acido Giberelico 0,01% + Acido Indolbutirico (IBA) 0,01% + Acido Indolacetico (IAA) 0,01%)",
+    "dosisHa": 0.25,
+    "unidad": null
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "MAIZ",
+    "grupo": "NUTRICIÓN",
+    "insumo": "Methylobacterium symbioticum 3x10*7 UFC/g",
+    "descripcion": null,
+    "dosisHa": 0.3,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "MAIZ",
+    "grupo": "SEMILLAS",
+    "insumo": "Semilla Maiz NS80 Vip 3 Z 25.26",
+    "descripcion": "NS80",
+    "dosisHa": 1.3,
+    "unidad": "BLS"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "ACEITES Y ADJUVANTES",
+    "insumo": "Garant",
+    "descripcion": null,
+    "dosisHa": 0.4,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "ACEITES Y ADJUVANTES",
+    "insumo": "Iop",
+    "descripcion": "Aceite vegetaL",
+    "dosisHa": 2.0,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "DESECACIÓN",
+    "insumo": "Cleanspray",
+    "descripcion": "2,4-D DMA 72%",
+    "dosisHa": 1.5,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "DESECACIÓN",
+    "insumo": "Glifex Gold 60,8",
+    "descripcion": "Glifosato DMA 60.8%",
+    "dosisHa": 3.0,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "DESECACIÓN",
+    "insumo": "Imperator Glufosinato de amonio",
+    "descripcion": "Glufosinato 50%",
+    "dosisHa": 2.0,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "FERTILIZANTES",
+    "insumo": "Abono 04.30.10 + S4,5",
+    "descripcion": "04.30.10",
+    "dosisHa": 0.22,
+    "unidad": "ton"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "FERTILIZANTES",
+    "insumo": "Potasio 00.00.60 KCL",
+    "descripcion": "00.00.60",
+    "dosisHa": 0.2,
+    "unidad": "ton"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "FUNGICIDAS",
+    "insumo": "Brivo",
+    "descripcion": "Piraclostrobin 26% + Difenoconazol 30%",
+    "dosisHa": 0.4,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "FUNGICIDAS",
+    "insumo": "Lead Mancozeb",
+    "descripcion": "Mancozeb 75%",
+    "dosisHa": 4.5,
+    "unidad": "kg"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "FUNGICIDAS",
+    "insumo": "Priaxor",
+    "descripcion": "Fluxapixorade + estrobilurina",
+    "dosisHa": 0.3,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "FUNGICIDAS",
+    "insumo": "Prothioconazole + Bixafen + Picoxystrobin",
+    "descripcion": null,
+    "dosisHa": 0.47,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "FUNGICIDAS",
+    "insumo": "Silver",
+    "descripcion": "Clorotalonil 72%",
+    "dosisHa": 1.5,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "FUNGICIDAS",
+    "insumo": "Zafiro",
+    "descripcion": "Tebuconazole 43%",
+    "dosisHa": 0.3,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "HERBICIDAS PRÉ EMERGENTES",
+    "insumo": "Alfamex",
+    "descripcion": "S-Metolaclor 96%",
+    "dosisHa": 1.2,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "HERBICIDAS PRÉ EMERGENTES",
+    "insumo": "Brutus",
+    "descripcion": "Diclosulam 84%",
+    "dosisHa": 0.035,
+    "unidad": "kg"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "HERBICIDAS PRÉ EMERGENTES",
+    "insumo": "Imperator Glufosinato de amonio",
+    "descripcion": "Glufosinato",
+    "dosisHa": 2.0,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "HERBICIDAS PRÉ EMERGENTES",
+    "insumo": "Saflufenacil",
+    "descripcion": null,
+    "dosisHa": 0.03,
+    "unidad": "kg"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "HERBICIDAS PÓS EMERGENTES",
+    "insumo": "Bromus",
+    "descripcion": "Diquat",
+    "dosisHa": 2.0,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "HERBICIDAS PÓS EMERGENTES",
+    "insumo": "Cletogrop",
+    "descripcion": "Cletodim 24%",
+    "dosisHa": 1.0,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "HERBICIDAS PÓS EMERGENTES",
+    "insumo": "Glifex Full",
+    "descripcion": "Glifosato Sal Amonio 75% WG",
+    "dosisHa": 1.8,
+    "unidad": "kg"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "INSECTICIDAS",
+    "insumo": "Biogard",
+    "descripcion": "Imidacloprid 60%",
+    "dosisHa": 0.2,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "INSECTICIDAS",
+    "insumo": "Destroyer",
+    "descripcion": "Metomil 90%",
+    "dosisHa": 0.4,
+    "unidad": "kg"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "INSECTICIDAS",
+    "insumo": "Metomax",
+    "descripcion": "Thiametoxan 75%",
+    "dosisHa": 0.1,
+    "unidad": "kg"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "INSECTICIDAS",
+    "insumo": "Pilarclotrin",
+    "descripcion": "Clotianidina 60%",
+    "dosisHa": 0.2,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "INSECTICIDAS",
+    "insumo": "Rhino",
+    "descripcion": "Clorantraniliprole 75%",
+    "dosisHa": 0.06,
+    "unidad": "kg"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "INSECTICIDAS",
+    "insumo": "Sniper",
+    "descripcion": "Bifentrina 40%",
+    "dosisHa": 0.3,
+    "unidad": "kg"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "INSECTICIDAS",
+    "insumo": "Tefluquit",
+    "descripcion": "Teflubenzuron 30%",
+    "dosisHa": 0.16,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "NUTRICIÓN",
+    "insumo": "Aminoácidos",
+    "descripcion": null,
+    "dosisHa": 1.0,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "NUTRICIÓN",
+    "insumo": "Potásio",
+    "descripcion": null,
+    "dosisHa": 1.0,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "NUTRICIÓN",
+    "insumo": "Stimulate",
+    "descripcion": null,
+    "dosisHa": 0.25,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "NUTRICIÓN",
+    "insumo": "Valiant",
+    "descripcion": "Valliant",
+    "dosisHa": 0.1,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "SEMILLAS",
+    "insumo": "DM64IX64",
+    "descripcion": null,
+    "dosisHa": 60.0,
+    "unidad": "kg"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "SEMILLAS",
+    "insumo": "DM66I68",
+    "descripcion": null,
+    "dosisHa": 65.0,
+    "unidad": "kg"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "SEMILLAS",
+    "insumo": "HO PIRAPO",
+    "descripcion": null,
+    "dosisHa": 60.0,
+    "unidad": "kg"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "SEMILLAS",
+    "insumo": "Variedad 4",
+    "descripcion": null,
+    "dosisHa": 60.0,
+    "unidad": "kg"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "SEMILLAS",
+    "insumo": "Variedad 5",
+    "descripcion": null,
+    "dosisHa": 60.0,
+    "unidad": "kg"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "TRATAMIENTO DE SEMILLAS",
+    "insumo": "Agriker",
+    "descripcion": "nutrientes + extratos de alga",
+    "dosisHa": 0.1,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "TRATAMIENTO DE SEMILLAS",
+    "insumo": "Ampere",
+    "descripcion": "Clorantraniliprol + Clotianidina",
+    "dosisHa": 0.1,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "TRATAMIENTO DE SEMILLAS",
+    "insumo": "Nodu Soja",
+    "descripcion": "Bradyrhizobium Japonicun 1x1010",
+    "dosisHa": 0.5,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "TRATAMIENTO DE SEMILLAS",
+    "insumo": "PGPR",
+    "descripcion": "azospirilum brasiliense 4x10^9 + 4 esp bacillus + sacaromices",
+    "dosisHa": 0.15,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "TRATAMIENTO DE SEMILLAS",
+    "insumo": "Vibrance max",
+    "descripcion": "Fludioxonil + metalaxil + sedaxanes",
+    "dosisHa": 0.075,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SORGO",
+    "grupo": "ACEITES Y ADJUVANTES",
+    "insumo": "Garant",
+    "descripcion": null,
+    "dosisHa": 0.4,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SORGO",
+    "grupo": "ACEITES Y ADJUVANTES",
+    "insumo": "Iop Full",
+    "descripcion": "Aceite vegetaL",
+    "dosisHa": 1.6,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SORGO",
+    "grupo": "DESECACIÓN",
+    "insumo": "Cleanspray",
+    "descripcion": "2,4-D DMA 72%",
+    "dosisHa": 2.0,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SORGO",
+    "grupo": "DESECACIÓN",
+    "insumo": "Glifex gold 60,8",
+    "descripcion": "Glifosato DMA 60.8%",
+    "dosisHa": 3.0,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SORGO",
+    "grupo": "FERTILIZANTES",
+    "insumo": "Abomo 04.30.10 +4,5s",
+    "descripcion": "04.30.10",
+    "dosisHa": 0.15,
+    "unidad": "ton"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SORGO",
+    "grupo": "FERTILIZANTES",
+    "insumo": "Potasio KCL 00-00-60",
+    "descripcion": "00.00.60",
+    "dosisHa": 0.15,
+    "unidad": "ton"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SORGO",
+    "grupo": "FERTILIZANTES",
+    "insumo": "Urea",
+    "descripcion": "45.00.00",
+    "dosisHa": 0.15,
+    "unidad": "ton"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SORGO",
+    "grupo": "FUNGICIDAS",
+    "insumo": "Brivo",
+    "descripcion": "PIRACLOSTROBINA 26% + DIFENOCONAZOLE 30 % EC",
+    "dosisHa": 0.4,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SORGO",
+    "grupo": "FUNGICIDAS",
+    "insumo": "Lead mancozeb",
+    "descripcion": "Mancozeb",
+    "dosisHa": 1.5,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SORGO",
+    "grupo": "HERBICIDAS PRÉ EMERGENTES",
+    "insumo": "Alfamex",
+    "descripcion": "S-metalclor",
+    "dosisHa": 1.1,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SORGO",
+    "grupo": "HERBICIDAS PRÉ EMERGENTES",
+    "insumo": "Glifex gold 60,8",
+    "descripcion": "Glifosato DMA 60.8%",
+    "dosisHa": 0.4,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SORGO",
+    "grupo": "HERBICIDAS PRÉ EMERGENTES",
+    "insumo": "Squadra",
+    "descripcion": "IMAZETAPIR 10 %",
+    "dosisHa": 1.0,
+    "unidad": "kg"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SORGO",
+    "grupo": "HERBICIDAS PÓS EMERGENTES",
+    "insumo": "Maxirice",
+    "descripcion": "Imazapic 17.5% + Imazapir 52.5% WG",
+    "dosisHa": 0.14,
+    "unidad": "kg"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SORGO",
+    "grupo": "INSECTICIDAS",
+    "insumo": "Biogard",
+    "descripcion": "Imidacloprid 60%",
+    "dosisHa": 0.2,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SORGO",
+    "grupo": "INSECTICIDAS",
+    "insumo": "Destroyer 900",
+    "descripcion": "Metomil 90%",
+    "dosisHa": 0.4,
+    "unidad": "kg"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SORGO",
+    "grupo": "INSECTICIDAS",
+    "insumo": "Paretto Huron",
+    "descripcion": "Clorfenapir 24%",
+    "dosisHa": 2.0,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SORGO",
+    "grupo": "INSECTICIDAS",
+    "insumo": "Pilarclotrin",
+    "descripcion": "Clotianidina 60%",
+    "dosisHa": 0.2,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SORGO",
+    "grupo": "INSECTICIDAS",
+    "insumo": "Rhino",
+    "descripcion": "Clorantraniliprole 75%",
+    "dosisHa": 0.24,
+    "unidad": "kg"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SORGO",
+    "grupo": "INSECTICIDAS",
+    "insumo": "Sniper",
+    "descripcion": "Bifentrina 40%",
+    "dosisHa": 0.37,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SORGO",
+    "grupo": "INSECTICIDAS",
+    "insumo": "Tefluquit",
+    "descripcion": "Teflubenzuron 30%",
+    "dosisHa": 0.08,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SORGO",
+    "grupo": "NUTRICIÓN",
+    "insumo": "A.A.: 6% Zn: 8%",
+    "descripcion": null,
+    "dosisHa": 2.0,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SORGO",
+    "grupo": "NUTRICIÓN",
+    "insumo": "AZUFRE 9,7 % + MANGANESO 9,7 % + ZINC 9,7 % AL",
+    "descripcion": null,
+    "dosisHa": 0.3,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SORGO",
+    "grupo": "NUTRICIÓN",
+    "insumo": "BioAtivadores Mn-ZN",
+    "descripcion": null,
+    "dosisHa": 0.3,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SORGO",
+    "grupo": "NUTRICIÓN",
+    "insumo": "Biostar + Zn",
+    "descripcion": "(Co 0,5% + Mo 5% + Ni 1% + Zn 25% + Kinetina (Kin) 0,02% + Acido Giberelico 0,01% + Acido Indolbutirico (IBA) 0,01% + Acido Indolacetico (IAA) 0,01%)",
+    "dosisHa": 0.25,
+    "unidad": null
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SORGO",
+    "grupo": "NUTRICIÓN",
+    "insumo": "Methylobacterium symbioticum 3x10*7 UFC/g",
+    "descripcion": null,
+    "dosisHa": 0.3,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SORGO",
+    "grupo": "SEMILLAS",
+    "insumo": "Semilla de Sorgo ADVF7450 Z25.26",
+    "descripcion": "ADVF7450",
+    "dosisHa": 5.1,
+    "unidad": "kg"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SORGO",
+    "grupo": "SEMILLAS",
+    "insumo": "Semilla de Sorgo ADVF8450 Z25.26",
+    "descripcion": "ADVF8450",
+    "dosisHa": 7.5,
+    "unidad": "kg"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SORGO",
+    "grupo": "TRATAMIENTO DE SEMILLAS",
+    "insumo": "Fluxofenim 96%",
+    "descripcion": null,
+    "dosisHa": 0.0028,
+    "unidad": "L"
+  }
+]

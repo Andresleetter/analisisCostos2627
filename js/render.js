@@ -309,6 +309,13 @@ const IP_FILTROS = [
   {sel:'ipinsumo', campo:'insumo'},
 ];
 function ipValor(sel){ const el=document.getElementById(sel); return el?el.value:'ALL'; }
+// El "Estado de receta" NO entra en IP_FILTROS y no se aplica sobre los movimientos: el estado no
+// es un dato de la linea de consultaOT sino el resultado de comparar la dosis del conjunto
+// (cantidad del insumo en el lote / hectareas del lote) contra la receta. Filtrar movimientos por
+// el estado cambiaria esas mismas sumas y el estado se volveria circular. Por eso se aplica DESPUES
+// de agrupar, acotando que insumos y que lotes se listan; las cantidades, hectareas y costos de
+// cada lote se siguen calculando sobre el lote completo.
+function ipEstadoRecetaSel(){ return ipValor('ipreceta'); }
 // Aplica todos los filtros activos menos el indicado en `excepto` (que se usa para calcular las
 // opciones disponibles de ese propio selector: un filtro nunca debe limitar su propia lista, si no
 // al elegir un valor desaparecerían todos los demás y no se podría cambiar la selección).
@@ -391,7 +398,7 @@ function ipAgruparParcelas(movs){
   const map = new Map();
   movs.forEach(m=>{
     let o = map.get(m.parcela);
-    if(!o){ o={parcela:m.parcela, lote:m.lote, cultivo:m.cultivo, zona:m.zona, campo:m.campo,
+    if(!o){ o={parcela:m.parcela, lote:m.lote, cultivo:m.cultivo, campania:m.campania, zona:m.zona, campo:m.campo,
       ha:null, ots:new Set(), insumos:new Set(), costo:0, movs:[]}; map.set(m.parcela,o); }
     o.costo += m.costoTotal;
     if(m.otRef) o.ots.add(m.otRef);
@@ -411,6 +418,34 @@ function ipFecha(d){ return d ? ('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth
 function ipCelda(valor, ha, formato){
   if(ha==null || !ha) return '<span class="ip-sin" title="Esta orden no registra una superficie trabajada: sin hectáreas reales no se puede calcular el valor por hectárea">—</span>';
   return formato(valor);
+}
+
+// Insumos de un lote, agrupados por (insumo, unidad) — un mismo insumo registrado en dos unidades
+// distintas nunca se suma en una sola cantidad. Se extrajo de ipDetalleParcela() sin cambiarle una
+// coma, para poder reusarlo tambien en los contadores del seguimiento de receta, que necesitan el
+// estado de TODOS los lotes y no solo del que este abierto.
+// dosisRealHa es la UNICA fuente de verdad de la dosis real: el mismo numero que imprime la columna
+// "Dosis Real" es el que se pasa a la comparacion con receta. No se recalcula en ningun otro lado.
+function ipInsumosDeParcela(p){
+  const porInsumo = new Map();
+  p.movs.forEach(m=>{
+    const k = m.insumo+'|'+m.unidad;
+    if(!porInsumo.has(k)) porInsumo.set(k, {insumo:m.insumo, unidad:m.unidad, cantidad:0, costo:0, fechas:new Set(), ots:new Set()});
+    const o = porInsumo.get(k);
+    o.cantidad += m.cantidad; o.costo += m.costoTotal;
+    if(m.fecha) o.fechas.add(ipFecha(m.fecha));
+    if(m.otRef) o.ots.add(m.otRef);
+  });
+  return [...porInsumo.values()].sort((a,b)=>b.costo-a.costo).map(i=>{
+    const dosisRealHa = p.ha ? i.cantidad/p.ha : null;
+    return Object.assign({}, i, {dosisRealHa, receta: evaluarDosisContraReceta(D.recetas,
+      {campania:p.campania, cultivo:p.cultivo, insumo:i.insumo, unidad:i.unidad, dosisRealHa})});
+  });
+}
+// Un lote entra en el listado si alguno de sus insumos esta en el estado de receta seleccionado.
+function ipInsumosVisibles(lista){
+  const est = ipEstadoRecetaSel();
+  return est==='ALL' ? lista : lista.filter(i=>i.receta.estadoReceta===est);
 }
 
 function renderInsumosParcela(){
@@ -477,11 +512,50 @@ function renderInsumosParcela(){
     `<tr><td>${u.unidad}</td><td class="tr mono">${u.insumos.size}</td><td class="tr mono qty-unit">${fmtCantidadUnidad(u.cantidad,u.unidad)}</td><td class="tr mono">US$ ${fmtUSD(u.costo)}</td></tr>`
   ).join('') : '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:16px">Sin aplicaciones para los filtros seleccionados</td></tr>';
 
+  // ---- Seguimiento de receta ----
+  // Los contadores se calculan sobre TODOS los lotes que dejan pasar los filtros del módulo, no
+  // sobre el lote abierto ni sobre las filas visibles en pantalla. El filtro "Estado de receta" se
+  // excluye a propósito del propio conteo (mismo criterio que el resto de los filtros del módulo,
+  // que nunca limitan su propia lista): así el resumen sigue mostrando el panorama completo y se
+  // puede volver a otro estado sin limpiar antes el filtro.
+  const parcelasTodas = ipAgruparParcelas(movs);
+  const insumosPorParcela = new Map();
+  parcelasTodas.forEach(p=>insumosPorParcela.set(p.parcela, ipInsumosDeParcela(p)));
+  const conteoReceta = new Map(RECETA_ESTADOS_ORDEN.map(e=>[e,0]));
+  let recetaSinDosis = 0, recetaFilas = 0;
+  insumosPorParcela.forEach(lista=>lista.forEach(i=>{
+    recetaFilas++;
+    const e = i.receta.estadoReceta;
+    if(e==null){ recetaSinDosis++; return; }
+    conteoReceta.set(e, (conteoReceta.get(e)||0)+1);
+  }));
+  const conReceta = (conteoReceta.get(RECETA_ESTADO.SOBRE)||0)+(conteoReceta.get(RECETA_ESTADO.BAJO)||0)
+    +(conteoReceta.get(RECETA_ESTADO.SEGUN)||0);
+  const ipRec = document.getElementById('ip-receta');
+  if(!D.recetas || !D.recetas.disponible){
+    ipRec.innerHTML = '<div class="rc-nodisp">Seguimiento de receta <b>no disponible</b>: no se pudieron cargar las recetas de la campaña. '+
+      'La dosis real, las cantidades y los costos no se ven afectados.</div>';
+  } else {
+    const chip = (lbl,n,cls,tip) => '<div class="rc-chip '+cls+'" title="'+tip+'"><span class="rc-n">'+fmt(n)+'</span><span class="rc-l">'+lbl+'</span></div>';
+    ipRec.innerHTML =
+      chip('Con receta', conReceta, 'rc-con', 'Insumos de lote que se pudieron comparar contra una receta de la campaña')+
+      chip('Sobre receta', conteoReceta.get(RECETA_ESTADO.SOBRE)||0, 'rc-sobre', 'La dosis aplicada por hectárea superó la de la receta')+
+      chip('Bajo receta', conteoReceta.get(RECETA_ESTADO.BAJO)||0, 'rc-bajo', 'La dosis aplicada por hectárea quedó por debajo de la receta')+
+      chip('Según receta', conteoReceta.get(RECETA_ESTADO.SEGUN)||0, 'rc-segun', 'La dosis aplicada coincide con la de la receta')+
+      chip('Sin receta', conteoReceta.get(RECETA_ESTADO.SIN)||0, 'rc-sin', 'No hay una receta inequívoca para ese cultivo e insumo: no se compara ni se estima')+
+      chip('Unidad no comparable', conteoReceta.get(RECETA_ESTADO.UNIDAD)||0, 'rc-unid', 'Hay receta, pero su unidad no es de la misma magnitud que la aplicada — nunca se convierte entre kilos y litros')+
+      '<div class="rc-pie">'+fmt(recetaFilas)+' insumo(s) por lote evaluados'+
+      (recetaSinDosis? ' · '+fmt(recetaSinDosis)+' sin dosis real (el lote no registra hectáreas), no se comparan':'')+'</div>';
+  }
+
   // ---- Resumen por lote (ordenado por costo/ha: es la comparación que busca la auditoría) ----
-  const parcelas = ipAgruparParcelas(movs)
+  const estRec = ipEstadoRecetaSel();
+  const parcelas = parcelasTodas
+    .filter(p=>estRec==='ALL' || ipInsumosVisibles(insumosPorParcela.get(p.parcela)).length>0)
     .sort((a,b)=>(b.costoHa==null?-1:b.costoHa)-(a.costoHa==null?-1:a.costoHa) || b.costo-a.costo);
   document.getElementById('ip-parcelas-sub').textContent =
-    parcelas.length+' lote(s) · hectáreas = superficie real máxima de sus OT · clic en una fila para ver su detalle';
+    parcelas.length+' lote(s) · hectáreas = superficie real máxima de sus OT · clic en una fila para ver su detalle'+
+    (estRec==='ALL' ? '' : ' · filtrado por estado de receta «'+estRec+'»: los importes de cada lote siguen siendo los del lote completo');
   document.getElementById('ip-parcelas').innerHTML = parcelas.length ? parcelas.map(p=>{
     const abierta = ipParcelaAbierta===p.parcela;
     let html = `<tr class="ip-parcela${abierta?' open':''}" data-parcela="${encodeURIComponent(p.parcela)}">`+
@@ -491,41 +565,75 @@ function renderInsumosParcela(){
       `<td class="tr mono">${p.nOT}</td><td class="tr mono">${p.nInsumos}</td>`+
       `<td class="tr mono col-tot">US$ ${fmtUSD(p.costo)}</td>`+
       `<td class="tr mono">${ipCelda(p.costoHa, p.ha, v=>'US$ '+fmtUSD(v))}</td></tr>`;
-    if(abierta) html += ipDetalleParcela(p);
+    if(abierta) html += ipDetalleParcela(p, insumosPorParcela.get(p.parcela));
     return html;
   }).join('') : '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:16px">Sin aplicaciones para los filtros seleccionados</td></tr>';
 
 }
 
-// Detalle de un lote: qué insumos se usaron, cuánto de cada uno, por hectárea, cuánto costaron,
-// en qué fechas y qué órdenes los originaron. Se agrupa por (insumo, unidad) — un mismo insumo
-// registrado en dos unidades distintas nunca se suma en una sola cantidad.
-function ipDetalleParcela(p){
-  const porInsumo = new Map();
-  p.movs.forEach(m=>{
-    const k = m.insumo+'|'+m.unidad;
-    if(!porInsumo.has(k)) porInsumo.set(k, {insumo:m.insumo, unidad:m.unidad, cantidad:0, costo:0, fechas:new Set(), ots:new Set()});
-    const o = porInsumo.get(k);
-    o.cantidad += m.cantidad; o.costo += m.costoTotal;
-    if(m.fecha) o.fechas.add(ipFecha(m.fecha));
-    if(m.otRef) o.ots.add(m.otRef);
-  });
-  const lista = [...porInsumo.values()].sort((a,b)=>b.costo-a.costo);
-  let html = `<tr class="dethead"><td colspan="7">Insumos utilizados en el lote ${p.lote} · ${lista.length} insumo(s) · ${p.nOT} orden(es) de trabajo`+
+// Detalle de un lote: qué insumos se usaron, cuánto de cada uno, por hectárea, cuánto costaron, en
+// qué fechas, qué órdenes los originaron, y cómo se compara la dosis aplicada contra la receta de
+// la campaña. Son las mismas 7 columnas de la tabla de lotes: las fechas y las OT pasaron a una
+// segunda línea dentro de la celda del insumo —no se perdió ningún dato— para dejar lugar a dosis
+// de receta, desvío y estado.
+// Acá NO hay ninguna fórmula de comparación: la dosis de receta, el desvío y el estado llegan ya
+// resueltos por evaluarDosisContraReceta() (js/data/recetas.js).
+function ipDetalleParcela(p, listaCompleta){
+  const lista = ipInsumosVisibles(listaCompleta || ipInsumosDeParcela(p));
+  const estRec = ipEstadoRecetaSel();
+  let html = `<tr class="dethead"><td colspan="7">Insumos utilizados en el lote ${p.lote} · ${lista.length} insumo(s)`+
+    (estRec==='ALL'?'':' en estado «'+estRec+'»')+` · ${p.nOT} orden(es) de trabajo`+
     (p.ha!=null?` · superficie ${fmt2(p.ha)} ha`:' · sin hectáreas reales disponibles')+`</td></tr>`;
-  html += lista.map(i=>
-    `<tr class="det"><td class="dl">${i.insumo}</td>`+
-    `<td class="qty-unit">${fmtCantidadUnidad(i.cantidad,i.unidad)}</td>`+
-    // La cantidad por hectárea lleva SIEMPRE su unidad real ("142,73 Kilos/ha"), igual que la
-    // cantidad total de la celda anterior: un número suelto no se puede
-    // interpretar cuando el lote mezcla insumos en kilos, litros y unidades.
-    `<td class="tr mono qty-unit">${ipCelda(i.cantidad/(p.ha||1), p.ha, v=>fmtCantidadUnidad(v,i.unidad)+'/ha')}</td>`+
-    `<td class="tr mono">US$ ${fmtUSD(i.costo)}</td>`+
-    `<td class="tr mono qty-unit">${ipCelda(i.costo/(p.ha||1), p.ha, v=>'US$ '+fmtUSD(v)+'/ha')}</td>`+
-    `<td colspan="2" class="ip-nota">${[...i.fechas].join(' · ')} — ${[...i.ots].join(' · ')}</td></tr>`
-  ).join('');
+  html += `<tr class="detcols"><td>Insumo · fechas y órdenes</td><td>Cantidad</td><td class="tr">Dosis Real</td>`+
+    `<td class="tr">Dosis Receta</td><td class="tr">Desvío</td><td class="tr">Estado</td><td class="tr">Costo</td></tr>`;
+  html += lista.map(i=>{
+    const r = i.receta;
+    // La dosis de receta se imprime con la MISMA unidad que la dosis real de la fila (ya convertida
+    // cuando hizo falta, ton -> kg). Así una misma fila nunca alterna "Kilos/ha" con "kg/ha".
+    const dosisReceta = r.dosisRecetaComparable!=null
+      ? fmtCantidadUnidad(r.dosisRecetaComparable, i.unidad)+'/ha'
+      : (r.recetaEncontrada && r.dosisRecetaHa!=null
+          ? `<span class="rc-crudo" title="La receta está en «${r.unidadReceta||'sin unidad'}», que no es comparable con ${i.unidad}">${fmt2(r.dosisRecetaHa)} ${r.unidadReceta||''}/ha</span>`
+          : '<span class="ip-sin">—</span>');
+    const desvio = (r.desvioAbsoluto!=null)
+      ? `<span class="${r.desvioAbsoluto>0?'rc-up':(r.desvioAbsoluto<0?'rc-down':'')}">${r.desvioPct!=null?fmtPctFirmado(r.desvioPct):'—'}</span>`+
+        `<div class="rc-abs">${fmtCantidadUnidad(r.desvioAbsoluto, i.unidad)}/ha</div>`
+      : '<span class="ip-sin">—</span>';
+    const estado = r.estadoReceta
+      ? `<span class="rc-est ${RECETA_ESTADO_CLASE[r.estadoReceta]||''}" title="${ipTipReceta(r,i)}">${r.estadoReceta}</span>`
+      : '<span class="ip-sin" title="El lote no registra hectáreas reales: sin dosis real no hay comparación posible">—</span>';
+    return `<tr class="det"><td class="dl">${i.insumo}<div class="ip-nota">${[...i.fechas].join(' · ')} — ${[...i.ots].join(' · ')}</div></td>`+
+      `<td class="qty-unit">${fmtCantidadUnidad(i.cantidad,i.unidad)}</td>`+
+      // La cantidad por hectárea lleva SIEMPRE su unidad real ("142,73 Kilos/ha"), igual que la
+      // cantidad total de la celda anterior: un número suelto no se puede
+      // interpretar cuando el lote mezcla insumos en kilos, litros y unidades.
+      `<td class="tr mono qty-unit">${ipCelda(i.dosisRealHa, p.ha, v=>fmtCantidadUnidad(v,i.unidad)+'/ha')}</td>`+
+      `<td class="tr mono qty-unit">${dosisReceta}</td>`+
+      `<td class="tr mono">${desvio}</td>`+
+      `<td class="tr">${estado}</td>`+
+      `<td class="tr mono">US$ ${fmtUSD(i.costo)}<div class="rc-abs">${ipCelda(i.costo/(p.ha||1), p.ha, v=>'US$ '+fmtUSD(v)+'/ha')}</div></td></tr>`;
+  }).join('');
   return html;
 }
+// Clase CSS por estado (colores en css/auditoria.css).
+const RECETA_ESTADO_CLASE = {
+  'Sobre receta':'rc-e-sobre', 'Bajo receta':'rc-e-bajo', 'Según receta':'rc-e-segun',
+  'Sin receta':'rc-e-sin', 'Unidad no comparable':'rc-e-unid',
+};
+// Explicación del estado, en el tooltip: por qué se comparó contra esa receta, o por qué no se pudo.
+function ipTipReceta(r, i){
+  if(r.estadoReceta===RECETA_ESTADO.SIN){
+    if(r.motivo==='sin_indice') return 'No se pudieron cargar las recetas de la campaña';
+    if(r.motivo==='ambigua') return 'El presupuesto trae este producto con más de una dosis para el mismo cultivo: no se elige ninguna';
+    return 'El presupuesto de la campaña no tiene una receta para este cultivo e insumo';
+  }
+  if(r.estadoReceta===RECETA_ESTADO.UNIDAD)
+    return 'Receta «'+(r.recetaInsumo||'')+'» en '+(r.unidadReceta||'sin unidad')+': no es comparable con '+i.unidad+', y nunca se convierte entre magnitudes distintas';
+  return 'Receta «'+(r.recetaInsumo||'')+'»'+(r.recetaGrupo?' ('+r.recetaGrupo+')':'')+' — '+fmt2(r.dosisRecetaHa)+' '+(r.unidadReceta||'')+'/ha';
+}
+// Porcentaje con signo explícito: "+1,33%" se lee distinto de "1,33%" cuando lo que importa es de
+// qué lado de la receta quedó la aplicación.
+function fmtPctFirmado(v){ return (v>0?'+':'')+fmt2(v)+'%'; }
 
 // ---- Alertas Operacionales: filtro por Estado (Pendiente / En Ejecución / Todas) ----
 function renderAlertas(){
