@@ -29,8 +29,26 @@
   {
     "campania": "26/27",
     "cultivo": "ARROZ",
+    "grupo": "ACEITES Y ADJUVANTES",
+    "insumo": "Tafir Oil",
+    "descripcion": "Aceite vegetal",
+    "dosisHa": 1.75,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
     "grupo": "DESECACIÓN",
     "insumo": "CLEANSPRAY",
+    "descripcion": "2.4D 72%",
+    "dosisHa": 1.5,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "DESECACIÓN",
+    "insumo": "Fuel 72 DMA",
     "descripcion": "2.4D 72%",
     "dosisHa": 1.5,
     "unidad": "L"
@@ -61,6 +79,33 @@
     "descripcion": "Metsulfuron 60%",
     "dosisHa": 0.005,
     "unidad": "kg"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "DESECACIÓN",
+    "insumo": "Kalium",
+    "descripcion": "Glifosato sal DMA 60.8%",
+    "dosisHa": 3,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "DESECACIÓN",
+    "insumo": "Spectro",
+    "descripcion": "Metsulfuron 60%",
+    "dosisHa": 0.005,
+    "unidad": "kg"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "DESECACIÓN",
+    "insumo": "Weedex max",
+    "descripcion": "2.4D 72%",
+    "dosisHa": 1.5,
+    "unidad": "L"
   },
   {
     "campania": "26/27",
