@@ -4,7 +4,7 @@ Dashboard de seguimiento de campaña agrícola (Campo La Teresa). Es una web est
 
 - **`data/datosCampania2627.xlsx`** — 3 hojas: `consultaOT`, `consultaCultivos`, `consultaInsumos`.
 - **`data/PRESUPUESTO ALISON INFRAESTRUTURA 26-27.xlsx`** — 1 hoja (`INFRAESTRUTURA 26-27`), el presupuesto de infraestructura usado en la pestaña Auditoría.
-- **`data/recetas-insumos-26-27.json`** — 178 registros con la dosis por hectárea recomendada por cultivo e insumo. Es una versión **reducida** del presupuesto de insumos: solo dosis, sin costos ni volúmenes. Alimenta el seguimiento de receta de Auditoría de Insumos por Parcela.
+- **`data/recetas-insumos-26-27.json`** — 179 registros con la dosis por hectárea recomendada por cultivo e insumo. Es una versión **reducida** del presupuesto de insumos: solo dosis, sin costos ni volúmenes. Alimenta el seguimiento de receta de Auditoría de Insumos por Parcela.
 
 Los dos `.xlsx` se parsean en el navegador con SheetJS; el JSON de recetas **no** pasa por SheetJS (`resp.json()`). A partir de ellos se renderizan KPIs, tablas y alertas.
 
