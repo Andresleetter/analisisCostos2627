@@ -1,5 +1,5 @@
 // ================== DATOS · SERVICIOS ==================
-// Modulo Servicios completo: detalle por labor, gasoil por area, filtros y el paquete equivalente
+// Modulo Servicios completo: detalle por servicio, gasoil por area, filtros y el paquete equivalente
 // para cada campania presente en consultaOT.
 
   // ---- GASTOS: detalle labores reales + gasoil por área (modulo SERVICIOS) ----
@@ -23,7 +23,7 @@
   // contempla) — nunca se inventa un nombre. labelContratista() (utils.js) traduce estos
   // marcadores al texto que se muestra en la interfaz.
   const dmap={};
-  detOT.forEach(o=>{ const m=o.fr?o.fr.getMonth()+1:0; const est=o.estadio&&o.estadio.trim()?o.estadio.trim():'(Sin etapa)';
+  detOT.forEach(o=>{ const m=o.fr?o.fr.getMonth()+1:0; const est=o.estadio&&o.estadio.trim()?o.estadio.trim():'(Sin estadio)';
     // esTrabajoPorInsumos: labores de SERVICIOS_TRABAJO_MEDIDO_EN_INSUMOS (config.js), donde el
     // trabajo ejecutado se expresa en cantidad de lineas de insumo y no en hectareas/horas/kilos.
     const esTrabajoPorInsumos = SERVICIOS_TRABAJO_MEDIDO_EN_INSUMOS.includes(normHdr(o.serv));
@@ -32,7 +32,7 @@
     // solo se usa cuando la OT trae realmente una linea de tipo "Labor Propia" — ahi el campo no es
     // "No aplica" sino un dato: la labor la ejecuto personal propio. Se limita a las labores de
     // SERVICIOS_EJECUCION_PROPIA (config.js) para no cambiar el texto que ya muestran todas las
-    // demas filas del Detalle por Labor.
+    // demas filas del Detalle por Servicio.
     const ejecucionPropia = SERVICIOS_EJECUCION_PROPIA.includes(normHdr(o.serv))
       && o.lines.some(l=>l.tipo==='Labor Propia');
     const contratista = o.contr && o.contr.trim() ? o.contr.trim()
@@ -76,7 +76,7 @@
   const meses=[...new Set([...gastos.map(d=>d.mesnum),...gasoil_sec.map(g=>g.mesnum)])].filter(m=>m>0).sort((a,b)=>a-b).map(m=>({k:m,lbl:MES[m]}));
   const labores=[...new Set(gastos.map(d=>d.labor))].sort((a,b)=>a.localeCompare(b,'es'));
   const estadios_labor=[...new Set(gastos.map(d=>d.estadio))].sort((a,b)=>a.localeCompare(b,'es'));
-  // Contratistas reales de "Detalle por Labor" (para el filtro dependiente), con los marcadores
+  // Contratistas reales de "Detalle por Servicio" (para el filtro dependiente), con los marcadores
   // '(Labor Propia)'/'(Sin contratista)' siempre al final — labelContratista() (utils.js) los
   // traduce al texto que se muestra tanto en el filtro como en la columna de la tabla.
   const contratistas_labor=[...new Set(gastos.map(d=>d.contratista))].sort((a,b)=>{

@@ -31,7 +31,7 @@ function color(av){ return av>=95?'g':(av>=80?'y':(av>=50?'o':'r')); }
 // Traduce la clave interna de contratista (el nombre real de consultaOT, o los marcadores
 // '(Labor Propia)'/'(Sin contratista)' usados para agrupar en data.js) al texto que se muestra en
 // la interfaz — nunca undefined/null/vacío. Se centraliza acá porque la usan tanto la tabla
-// "Detalle por Labor" como su filtro "Contratista" (misma fuente y normalización, ver render.js).
+// "Detalle por Servicio" como su filtro "Contratista" (misma fuente y normalización, ver render.js).
 function labelContratista(key){
   if(key==='(Labor Propia)') return 'No aplica';
   if(key==='(Sin contratista)') return 'Sin contratista';

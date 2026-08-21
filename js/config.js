@@ -148,7 +148,7 @@ const INFRA_PUENTES_HORAS_SERV = 'Construccion de Puentes retro excavadora x Hs'
 // realmente en horas y debe seguir mostrandose en horas.
 const SERVICIOS_TRABAJO_MEDIDO_EN_INSUMOS = ['tratamiento de semillas'];
 // Servicios ejecutados con personal propio, donde el Contratista vacio NO significa "no
-// corresponde" sino que la labor la hizo la empresa. En el Detalle por Labor se rotulan "Labor
+// corresponde" sino que la labor la hizo la empresa. En el Detalle por Servicio se rotulan "Labor
 // Propia" en vez de "No aplica" (ver labelContratista en utils.js).
 // Es una lista aparte de SERVICIOS_TRABAJO_MEDIDO_EN_INSUMOS a proposito: como se mide el trabajo
 // ejecutado y quien lo ejecuto son dos cosas distintas — "Construccion puentes labor propia" no
@@ -167,7 +167,7 @@ const SERVICIOS_EJECUCION_PROPIA = [
 ];
 // Servicios en los que la OT NO representa trabajo ejecutado medible: lo único real de esas OT es
 // el insumo aplicado/consumido, y la cantidad que traen en Has. Reales / horas no corresponde a una
-// superficie ni a un tiempo de labor. La columna "Trabajo Ejecutado" del Detalle por Labor
+// superficie ni a un tiempo de labor. La columna "Trabajo Ejecutado" del Detalle por Servicio
 // (Servicios) muestra "—" para estas filas en vez de un número que no significa nada; los costos
 // (Labor Tercero / Insumos / Total) y la cantidad de OT no se tocan.
 // Se comparan normalizados con normHdr (sin acentos, minúsculas) porque el mismo servicio aparece

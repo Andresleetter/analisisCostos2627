@@ -105,28 +105,28 @@
   <section class="page">
     <!-- Filtros de Servicios. "Campaña" es EXCLUSIVO de este módulo: cambia sobre qué campaña de
          consultasOT se calcula toda la pestaña (opciones dinámicas, ver renderAll en render.js) y
-         no afecta a ningún otro módulo. Se combina con Mes y con los filtros de Detalle por Labor. -->
+         no afecta a ningún otro módulo. Se combina con Mes y con los filtros de Detalle por Servicio. -->
     <div class="gfilter"><label for="gcampania">Campaña</label>
       <select id="gcampania"></select>
       <label for="gmes">Mes</label>
       <select id="gmes"><option value="ALL">Toda la Campaña</option></select>
       <span class="fnote" id="gnote"></span></div>
     <div class="gkpis" id="gkpis"></div>
-    <div class="panel hero-panel"><h3>Detalle por Labor <span id="gld-sub"></span></h3>
+    <div class="panel hero-panel"><h3>Detalle por Servicio <span id="gld-sub"></span></h3>
       <div class="scontr">
-        <label for="glabor">Labor</label>
-        <select id="glabor"><option value="ALL">Todas las labores</option></select>
-        <label for="gestadio">Etapa</label>
-        <select id="gestadio"><option value="ALL">Todas las etapas</option></select>
+        <label for="glabor">Servicio</label>
+        <select id="glabor"><option value="ALL">Todos los servicios</option></select>
+        <label for="gestadio">Estadio</label>
+        <select id="gestadio"><option value="ALL">Todos los estadios</option></select>
         <label for="gcontratista">Contratista</label>
         <select id="gcontratista"><option value="ALL">Todos</option></select>
-        <span class="sc-note">Filtra solo esta tabla · una misma labor puede repetirse en más de una etapa</span>
+        <span class="sc-note">Filtra solo esta tabla · un mismo servicio puede repetirse en más de un estadio</span>
       </div>
       <div class="scroll scroll-tall"><table class="ldt"><thead><tr>
         <!-- "Trabajo Ejecutado" unifica las viejas columnas "Ha Ejec." y "Horas Ejec.": cada fila
              muestra la cantidad con SU unidad (ha / hrs / kg), nunca convertida a otra — ver
              renderLaborDetalle (render.js). -->
-        <th>Labor</th><th>Etapa</th><th class="tr">OT Conf.</th><th class="tr">Trabajo Ejecutado</th>
+        <th>Servicio</th><th>Estadio</th><th class="tr">OT Conf.</th><th class="tr">Trabajo Ejecutado</th>
         <th class="tr grp-pt">Labor Tercero</th><th>Contratista</th>
         <th class="tr">Insumos</th><th class="tr">Costo Total</th></tr></thead><tbody id="gld"></tbody></table></div></div>
     <div class="panel sub"><h3>Consumo de Gasoil por Área <span>"Labor Propia" = personal interno</span></h3>
