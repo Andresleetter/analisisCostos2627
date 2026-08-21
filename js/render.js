@@ -798,7 +798,17 @@ function renderInsumos(){
 
 function monthTotals(S){ const t={}; S.meses.forEach(m=>t[m.k]={k:m.k,lbl:m.lbl,tot:0,ot:0,horas:0});
   S.gastos.forEach(r=>{const o=t[r.mesnum]; if(o){o.tot+=r.propia+r.tercero+r.insumos;o.ot+=r.n;o.horas+=(r.esH?r.horas:0);}}); return S.meses.map(m=>t[m.k]); }
-// ---- Combustible: balance Ingreso vs Consumo + detalle por tercero/proveedor ----
+// ---- Combustible: balance Ingreso vs Consumo + consumo por Uso / Detalle ----
+// Qué fila del Consumo está desplegada (clave usoOrigen|usoKey, ver renderCombustible). Vive acá
+// y no en el DOM porque la tabla se regenera completa en cada cambio de filtro — mismo patrón que
+// ipParcelaAbierta en la Auditoría de Insumos por Parcela.
+let combUsoAbierto = null;
+// Escape mínimo para meter texto del Excel dentro del HTML que arma esta página. Las observaciones
+// de OT son texto libre cargado en Albor: hoy ninguna trae < > & o comillas (verificado sobre las
+// 449 observaciones del archivo), pero cualquier carga futura podría traerlas y romper la tabla o
+// el atributo title.
+function escHtml(v){ return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function escAttr(v){ return escHtml(v).replace(/"/g,'&quot;'); }
 function renderCombustible(){
   const mesV=document.getElementById('cmes').value, mes=mesV==='ALL'?'ALL':parseInt(mesV);
   const tercV=document.getElementById('cterc').value;
@@ -827,7 +837,7 @@ function renderCombustible(){
     `<div class="kpi"><div class="k-lab">Stock Inicial</div><div class="k-val c-g">${fmt2(stockInicioPeriodo)}<small> L</small></div></div>`+
     `<div class="kpi"><div class="k-lab">Ingreso</div><div class="k-val c-g">${fmt2(totIngresoMes)}<small> L</small></div></div>`+
     `<div class="kpi"><div class="k-lab">Consumo</div><div class="k-val c-o">${fmt2(totConsumoMes)}<small> L</small></div></div>`+
-    `<div class="kpi"><div class="k-lab">Balance (Stock Inicial + Ingreso − Consumo)</div><div class="k-val c-${balCol}">${fmt2(balance)}<small> L</small></div><div class="k-foot">${balance>=0?'Queda stock disponible':'Stock consumido en exceso'}</div></div>`;
+    `<div class="kpi"><div class="k-lab">Balance</div><div class="k-val c-${balCol}">${fmt2(balance)}<small> L</small></div><div class="k-foot">${balance>=0?'Queda stock disponible':'Stock consumido en exceso'}</div></div>`;
 
   // ---- Ingresos de Combustible (arriba): solo respeta el filtro de Mes ----
   const byIng={};
@@ -838,18 +848,78 @@ function renderCombustible(){
     `<tr><td><b>${r.quien}</b></td><td class="tr mono">${r.n}</td><td class="tr mono">${fmt2(r.litros)}</td><td class="tr"><div class="sopbar"><div style="width:${r.litros/mxIng*100}%"></div></div></td><td class="tr mono">${totIngresoMes?(r.litros/totIngresoMes*100).toFixed(1):0}%</td></tr>`
   ).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px">Sin ingresos de stock en el período</td></tr>';
 
-  // ---- Consumo de Combustible (abajo): respeta Mes y también el filtro de Tercero ----
-  let recs=consumoMes;
-  if(tercV!=='ALL') recs=recs.filter(r=>r.quien===tercV);
-  const by={};
-  recs.forEach(r=>{ if(!by[r.quien]) by[r.quien]={quien:r.quien,n:0,litros:0}; const o=by[r.quien]; o.n+=r.n; o.litros+=r.litros; });
-  const rowsC=Object.values(by).sort((a,b)=>b.litros-a.litros);
+  // ---- Consumo de Combustible (abajo): agrupado por Uso / Detalle ----
+  // La agrupación ya viene resuelta en D.combustible_uso (Mes + Uso / Detalle, ver
+  // js/data/combustible.js): acá NO se cruza nada contra consultaOT ni se decide de dónde sale el
+  // texto del uso — solo se filtra por Mes/Tercero y se presenta.
+  // Se reagrupa a partir de los movimientos individuales de cada grupo (y no de sus totales ya
+  // sumados) por una sola razón: el filtro de Tercero es por movimiento. Un único camino de
+  // agrupación evita que la tabla filtrada y la sin filtrar se calculen de dos maneras distintas;
+  // los litros son los mismos valores, así que "Toda la Campaña" da exactamente el mismo total que
+  // el KPI de Consumo.
+  const usoMes = mes==='ALL' ? D.combustible_uso : D.combustible_uso.filter(g=>g.mesnum===mes);
+  // "Labor Propia" sigue siendo el rótulo del FILTRO de Tercero (proveedor vacío) porque ese filtro
+  // no cambió — lo que dejó de usarse es como etiqueta del uso del combustible en la tabla.
+  const quienDeMov = m => m.tercero ? m.tercero : 'Labor Propia';
+  const byUso={};
+  usoMes.forEach(g=>{ g.movs.forEach(m=>{
+    if(tercV!=='ALL' && quienDeMov(m)!==tercV) return;
+    const key=g.usoOrigen+'|'+g.usoKey;
+    if(!byUso[key]) byUso[key]={uso:g.uso,usoOrigen:g.usoOrigen,usoKey:g.usoKey,esOT:g.esOT,n:0,litros:0,movs:[]};
+    const o=byUso[key]; o.n++; o.litros+=m.litros; o.movs.push(m);
+  }); });
+  const rowsC=Object.values(byUso)
+    .map(o=>({...o, litros:Math.round(o.litros*100)/100,
+      movs:o.movs.slice().sort((a,b)=>(b.fecha-a.fecha)||(b.litros-a.litros))}))
+    .sort((a,b)=>b.litros-a.litros);
   const tot=rowsC.reduce((s,r)=>s+r.litros,0);
   document.getElementById('cnote').textContent=selTxt+(tercV!=='ALL'?' · Tercero: '+tercV:'');
+  // Control discreto de trazabilidad, en el subtítulo del panel: cuántos movimientos del período
+  // encontraron su OT y cuántos no. No es un KPI nuevo, es una línea de texto.
+  const nMov=rowsC.reduce((s,r)=>s+r.n,0);
+  const nConOT=rowsC.filter(r=>r.esOT).reduce((s,r)=>s+r.n,0);
+  document.getElementById('comb-uso-sub').textContent =
+    nMov ? fmtMovimientos(nMov)+' · vinculados a OT: '+nConOT+' · sin OT vinculada: '+(nMov-nConOT)+' · clic en una fila para ver su detalle'
+         : 'Sin movimientos en el período';
   const mx=Math.max(1,...rowsC.map(r=>r.litros));
-  document.getElementById('combbody').innerHTML = rowsC.length ? rowsC.map(r=>
-    `<tr><td><b>${r.quien}</b></td><td class="tr mono">${r.n}</td><td class="tr mono">${fmt2(r.litros)}</td><td class="tr"><div class="sopbar"><div style="width:${r.litros/mx*100}%"></div></div></td><td class="tr mono">${tot?(r.litros/tot*100).toFixed(1):0}%</td></tr>`
-  ).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px">Sin registros de combustible para el filtro seleccionado</td></tr>';
+  document.getElementById('combbody').innerHTML = rowsC.length ? rowsC.map(r=>{
+    const clave=r.usoOrigen+'|'+r.usoKey;
+    const abierta=combUsoAbierto===clave;
+    // Observaciones largas (hay una de 349 caracteres en el dato real): la celda trunca con
+    // ellipsis por CSS y el texto completo queda en el title. Nunca se recorta el dato en sí.
+    let html=`<tr class="cu-fila${abierta?' open':''}" data-uso="${encodeURIComponent(clave)}">`+
+      `<td class="cu-uso" title="${escAttr(r.uso)}"><span class="ip-caret">${abierta?'▾':'▸'}</span> `+
+      `<b>${escHtml(r.uso)}</b>${r.esOT?' <span class="chip chip-ot">OT</span>':''}</td>`+
+      `<td class="tr mono">${r.n}</td><td class="tr mono">${fmt2(r.litros)}</td>`+
+      `<td class="tr"><div class="sopbar"><div style="width:${r.litros/mx*100}%"></div></div></td>`+
+      `<td class="tr mono">${tot?(r.litros/tot*100).toFixed(1):0}%</td></tr>`;
+    if(abierta) html+=combDetalleUso(r);
+    return html;
+  }).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px">Sin registros de combustible para el filtro seleccionado</td></tr>';
+}
+// Detalle de un Uso / Detalle: los movimientos individuales que lo componen.
+// Las columnas cambian según el grupo tenga OT vinculada o no, para no mostrar columnas vacías:
+//  - con OT: Fecha · OT | Estadio | Lote | Cultivo | Litros. No se muestra "Labor" porque en estas
+//    OT el campo Servicio viene SIEMPRE vacío (verificado: 340 de 340 OT vinculadas) — el Estadio
+//    es el dato que sí describe el trabajo. Tampoco se muestra Campo: es siempre "LA TERESA".
+//  - sin OT: Fecha | Comprobante | Tipo de comprobante | Litros, que es todo lo que existe.
+function combDetalleUso(g){
+  const cols = g.esOT
+    ? ['Fecha · OT','Estadio','Lote','Cultivo','Litros']
+    : ['Fecha','Comprobante','Tipo de comprobante','','Litros'];
+  let html=`<tr class="dethead"><td colspan="5">${escHtml(g.uso)} · ${fmtMovimientos(g.n)} · ${fmt2(g.litros)} L</td></tr>`;
+  html+=`<tr class="detcols">`+cols.map((c,i)=>`<td${i===4?' class="tr"':''}>${c}</td>`).join('')+`</tr>`;
+  html+=g.movs.map(m=>{
+    const litros=`<td class="tr mono">${fmt2(m.litros)}</td>`;
+    if(g.esOT) return `<tr class="det"><td class="dl">${ipFecha(m.fecha)} · <b>OT ${escHtml(m.ot)}</b></td>`+
+      `<td>${escHtml(m.estadio)||'<span class="ip-sin">—</span>'}</td>`+
+      `<td>${escHtml(m.lote)||'<span class="ip-sin">—</span>'}</td>`+
+      `<td>${escHtml(m.cultivo)||'<span class="ip-sin">—</span>'}</td>${litros}</tr>`;
+    return `<tr class="det"><td class="dl">${ipFecha(m.fecha)}</td>`+
+      `<td class="mono">${escHtml(m.referencia)||'<span class="ip-sin">—</span>'}</td>`+
+      `<td>${escHtml(m.tipoComp)||'<span class="ip-sin">—</span>'}</td><td></td>${litros}</tr>`;
+  }).join('');
+  return html;
 }
 
 // ================== SERVICIOS ==================
@@ -893,7 +963,7 @@ function renderG(){
   const labs=Object.values(by).map(o=>({...o,tot:o.prop+o.terc+o.ins})).sort((a,b)=>b.tot-a.tot);
   const gasto=labs.reduce((s,l)=>s+l.tot,0), nOT=labs.reduce((s,l)=>s+l.n,0);
   const totTerc=labs.reduce((s,l)=>s+l.terc,0), totIns=labs.reduce((s,l)=>s+l.ins,0);
-  const K=[['Gasto Total (labores)','US$ '+fmtUSD(gasto),''],['OT Confirmadas',nOT,'con labor'],['Labores Ejecutadas',labs.length,'tipos de labor'],
+  const K=[['Gasto Total (servicios)','US$ '+fmtUSD(gasto),''],['OT Confirmadas',nOT,'con labor'],['Labores Ejecutadas',labs.length,'tipos de labor'],
     ['Costo Labor Tercero','US$ '+fmtUSD(totTerc),gasto?Math.round(totTerc/gasto*100)+'% del gasto':''],
     ['Costo Insumos','US$ '+fmtUSD(totIns),gasto?Math.round(totIns/gasto*100)+'% del gasto':'']];
   document.getElementById('gkpis').innerHTML=K.map(k=>`<div class="gkpi"><div class="k-lab">${k[0]}</div><div class="k-val">${k[1]}</div><div class="k-foot">${k[2]}</div></div>`).join('');
