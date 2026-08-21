@@ -39,7 +39,7 @@ Si el archivo está abierto en Excel al momento de necesitar inspeccionarlo (ej.
 1. **Resumen Ejecutivo** — KPIs ejecutivos, Detalle de Etapas por Cultivo, estado de las OT, actividad operacional por mes, distribución del gasto en áreas no agrícolas y Posibles Problemas en la Campaña. Ver sección propia más abajo.
 2. **Servicios** *(antes "Resumen de Gastos" — se renombró el botón, sin tocar cálculos ni ids internos)* — gasto por servicio/estadio, consumo de gasoil por área, evolución del gasto.
    > **Los rótulos visibles de este módulo usan los nombres de la OT.** El panel se llama "Detalle por Servicio" (antes "Detalle por Labor") y sus columnas son **Servicio** y **Estadio** (antes "Labor" y "Etapa"), igual que los campos `servicio` y `estadio` de `consultaOT`. Es un cambio de rótulo: no se tocaron los ids (`glabor`, `gestadio`, `gld`, `gld-sub`), ni las claves internas (`r.labor`, `r.estadio`), ni un solo cálculo. La única cadena de datos que cambió es el marcador de las OT sin estadio cargado, `'(Sin etapa)'` → `'(Sin estadio)'` (`servicios.js`), que se muestra tal cual en el filtro y en la columna. "Detalle de Etapas por Cultivo" (Resumen Ejecutivo) **no** se renombró: es otro módulo y agrupa por las cuatro etapas de `ETAPA_ORDEN`, no por el estadio crudo de la OT.
-3. **Combustible** — Ingreso/Consumo de combustible por tercero, KPI de Stock Inicial (dinámico) y Balance, con arrastre mes a mes.
+3. **Combustible** — Ingreso por proveedor, **Consumo por Uso / Detalle** (la observación de la OT que generó el movimiento), KPI de Stock Inicial (dinámico) y Balance, con arrastre mes a mes.
 4. **Insumos** — Ingreso/Consumo de insumos no-combustible en **cantidad real** (nunca en dinero), con flujo de Stock dinámico y filtros dependientes Tipo de Insumo → Insumo. Ver sección propia más abajo.
 5. **Control de Hectáreas** — lotes con exceso de superficie vs. RTK, OT sin correspondencia en el plan.
 6. **Alertas Operacionales** — OT atrasadas, con filtro por Estado (Pendiente / En Ejecución / Todas) y color por fila según días de atraso.
@@ -104,6 +104,44 @@ Orden de la pestaña, de arriba hacia abajo:
 - **Stock Inicial dinámico**: sale de `consultaInsumos`, filas con `tipoInsumo="COMBUSTIBLES"` y `tipoMovimiento="Existencia inicial"` (fechadas al 1/1). `data.js` suma estas filas **con signo** (no en valor absoluto — las filas individuales vienen con signo mixto, la suma neta es la que da el stock real de arranque) en `D.stock_inicial_combustible`.
 - **Balance** = Stock Inicial + Ingreso − Consumo, acumulado mes a mes. El Stock Inicial de un mes puntual se calcula con `stockInicioDePeriodo()` (`utils.js`, genérica): stock base + todo lo ingresado/consumido en los meses **anteriores** — así el balance de cada mes sigue naturalmente al del anterior en vez de recalcularse desde cero.
 - `unidades` en `consultaInsumos` viene con signo (negativo=egreso, positivo=ingreso); se normaliza a valor absoluto al separar Ingreso/Consumo en `loader.js`.
+
+### Consumo por Uso / Detalle — vínculo con la Orden de Trabajo
+
+La tabla de Consumo ya **no** agrupa por proveedor. Agrupa por el uso real del combustible, que sale de la OT que generó el movimiento.
+
+**El vínculo.** Un movimiento de combustible de `consultaInsumos` trae en `referencia` el comprobante de stock que lo generó (`"2026 - STK - 10424"`); la línea de `consultaOT` que lo originó trae ese mismo comprobante en `referenciaAsiento`. La comparación es **exacta** sobre el texto recortado (`trim`), sin fuzzy matching y sin tocar números ni identificadores; las referencias vacías no son clave, son ausencia de referencia.
+
+`construirIndiceOTPorAsiento()` (`ordenes.js`) arma el índice `referenciaAsiento → línea de OT` **una sola vez**, al construir el modelo. `construirCombustible()` recorre los movimientos una vez y busca cada referencia en ese índice: el cruce es `O(nOT + nMovimientos)`, nunca `O(nOT × nMovimientos)`, y no se repite en ningún render. `render.js` solo presenta — no hay una sola línea de cruce ahí.
+
+> **El índice se arma con TODAS las campañas, no solo con la vigente.** A diferencia de `consultaOT`, `consultaInsumos` no se recorta por campaña (ver arriba), así que hay movimientos cuya OT pertenece a otra. De los 359 que cruzan, **23 apuntan a OT de 25/26 y 26**: recortando a `CAMPANIA_ACTUAL` se perderían esos vínculos sin ninguna razón. Se reutiliza `normalizarFilasOT()` — no existe una segunda interpretación de `consultaOT` en paralelo.
+
+**De dónde sale el texto de Uso / Detalle**, en este orden:
+
+| # | Situación | Uso / Detalle | Movimientos | Litros |
+|---|---|---|---|---|
+| 1 | OT vinculada **con** observación | `consultaOT.observaciones` | 359 | 28.507 L |
+| 2 | OT vinculada **sin** observación | `Sin detalle` (`USO_SIN_DETALLE`) | 0 | 0 L |
+| 3 | Sin OT, con proveedor informado | el nombre del proveedor | 1.577 | 404.722 L |
+| 4 | Sin OT y sin proveedor | `Sin OT vinculada` (`USO_SIN_OT`) | 546 | 46.268 L |
+
+Nunca se usa `consultaInsumos.observaciones` como uso: en estos movimientos dice siempre lo mismo (`"Orden de Trabajo Agrícola > Comprobante Automático de Egreso de Stock"`) y no describe nada. **`Labor Propia` desapareció como etiqueta de uso** — sigue existiendo solo como opción del filtro de Tercero (proveedor vacío), que no cambió.
+
+> **Por qué el caso 3 conserva el nombre del proveedor.** El pedido original mandaba `Sin OT vinculada` para todo lo que no cruzara. Eso habría metido 2.123 movimientos y 450.990 L — el **94% del consumo** — en una sola fila anónima, borrando de la vista a Cedrela S.A (817 mov, 251.761 L), Agro Vial, Rafael Heisecke y el resto, que hoy sí se leen. Decisión confirmada con el usuario: se conserva el proveedor cuando existe. **No** es la vieja suposición "proveedor vacío = Labor Propia" — es un nombre que el dato sí trae. El genérico que se quería eliminar era el caso 4, y ese bucket bajó de 905 a 546 movimientos.
+
+**Clave de agrupación**: `mes + origen + normHdr(uso)`. `normHdr` (`utils.js`) recorta, colapsa espacios repetidos e ignora mayúsculas y acentos, así que `"Logistica - UAB800"` y `"Logística - UAB800"` no aparecen como dos usos distintos; se guarda aparte el texto legible original. Sin corrección semántica ni fuzzy matching: dos observaciones que difieran en algo más que espaciado o acentos quedan separadas. El **origen entra en la clave** a propósito, para que una observación de OT nunca se fusione con un nombre de proveedor que casualmente se escriba igual.
+
+**OT con varias líneas.** El índice devuelve **una sola** línea por `referenciaAsiento`, con regla determinista: gana la primera línea con observación no vacía; si ninguna la tiene, la primera del archivo. Nunca se concatenan observaciones. Así un movimiento de combustible no puede duplicarse por tener la OT varias líneas — verificado: 2.482 movimientos listados, 2.482 claves distintas, cero duplicados. En el dato de hoy el caso no se presenta (cada `referenciaAsiento` aparece en una única línea, y ninguna clave del índice tiene dos observaciones distintas), pero la regla queda fija.
+
+**Detalle desplegable** (clic en la fila; `combUsoAbierto` en `render.js`, delegación de evento sobre `#combbody` en `events.js` — mismo patrón que el detalle de parcelas de la Auditoría). Las columnas cambian según el grupo, para no mostrar columnas vacías:
+
+- **con OT**: `Fecha · OT` | `Estadio` | `Lote` | `Cultivo` | `Litros`. No se muestra "Labor" porque en estas OT el campo `servicio` viene **siempre vacío** (verificado: 340 de 340 OT vinculadas) — el `Estadio` es el dato que sí describe el trabajo. Tampoco `Campo`: es siempre `LA TERESA`.
+- **sin OT**: `Fecha` | `Comprobante` | `Tipo de comprobante` | `Litros`, que es todo lo que existe.
+
+**Nada de esto toca un cálculo.** `D.combustible` (agrupada por proveedor) se dejó **intacta**: de ella salen los KPI, el arrastre de stock y los filtros. `D.combustible_uso` es una colección nueva en paralelo que agrupa **los mismos** movimientos. Verificado: el dump completo del modelo mantiene sus 61 claves previas **idénticas byte a byte**, y la suma de la tabla cuadra con el KPI de Consumo mes por mes (479.495,89 L / 2.482 movimientos en toda la campaña). Los movimientos sin OT **no se ocultan**: siguen dentro de todos los totales.
+
+`hectareasReales` de la OT vinculada se conserva en cada movimiento aunque hoy no se muestre, para poder calcular litros/ha más adelante sin volver a tocar el vínculo.
+
+> **`referenciaOrigen` no sirve mejor.** Los movimientos traen también `referenciaOrigen` con el número de OT (`"2026 - OT - 1545"`), que parece un vínculo más directo. Se midió contra `consultaOT.referencia` y cubre **menos** (340 de 886 contra 359 por `referenciaAsiento`), así que se descartó.
 
 ## Insumos
 

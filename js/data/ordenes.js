@@ -40,6 +40,15 @@ const esEnEjecucion = o => normEstadio(o.estado)===normEstadio('En Ejecución');
       insumo:String(keyOf(r,['insumo','Insumo'])||'').trim(),
       unidad:String(keyOf(r,['unidadMedida','Unidad de medida'])||'').trim(),
       obs:String(keyOf(r,['observaciones','Observación','Observacion'])||'').trim(),
+      // ---- Metadata para el cruce con Combustible (no interviene en ningun calculo) ----
+      // refAsiento = comprobante de stock que genero la linea ("2026 - STK - 10424"). Es la unica
+      // clave que vincula un movimiento de combustible de consultaInsumos con su OT: se compara
+      // contra consultaInsumos.referencia (ver construirIndiceOTPorAsiento mas abajo y
+      // js/data/combustible.js). Campo/cultivo se conservan por el mismo motivo: describir el
+      // destino real del gasoil en el detalle del modulo Combustible.
+      refAsiento:String(keyOf(r,['referenciaAsiento','Referencia Asiento'])||'').trim(),
+      campo:String(keyOf(r,['campo','Campo'])||'').trim(),
+      cultivo:String(keyOf(r,['cultivo','Cultivo'])||'').trim(),
     })).filter(r=>r.ot && r.ot!=='undefined' && r.ot!=='nan');
     // esPeso = LINEA DE LABOR medida en peso. Hoy son las dos familias de fletes del dato real:
     // Unidad de Medida "Dosis" (Servicio "Fletes") y "Kilos" (Servicio "Flete verde silo terceros
@@ -113,6 +122,38 @@ const esEnEjecucion = o => normEstadio(o.estado)===normEstadio('En Ejecución');
         lines: g };
     });
   }
+  // ---- Indice referenciaAsiento -> linea de OT, para vincular los movimientos de combustible ----
+  // Lo consume construirCombustible() (js/data/combustible.js): un movimiento de consultaInsumos
+  // trae `referencia` con el comprobante de stock que lo genero, y la linea de OT que lo origino
+  // trae ese mismo comprobante en `referenciaAsiento`. Se arma UNA sola vez, en la construccion del
+  // modelo, para que el cruce sea O(nOT + nMovimientos) y no O(nOT x nMovimientos).
+  //
+  // Se construye sobre las filas de TODAS las campanias, no sobre las de CAMPANIA_ACTUAL: a
+  // diferencia de consultaOT, consultaInsumos no se recorta por campania (ver loader.js), asi que
+  // hay movimientos de combustible cuya OT pertenece a otra campania. Verificado en el dato real:
+  // de los 359 movimientos que cruzan, 23 apuntan a OT de 25/26 y 26 — recortando a 26/27 se
+  // perderian esos vinculos sin ninguna razon.
+  //
+  // Comparacion EXACTA sobre el texto ya recortado (trim); sin fuzzy matching, sin tocar numeros
+  // ni identificadores. Las referencias vacias no entran al indice: no son una clave, son ausencia
+  // de referencia.
+  //
+  // Regla determinista cuando varias lineas comparten el mismo referenciaAsiento: gana la primera
+  // linea CON observacion no vacia; si ninguna la tiene, la primera del archivo. Nunca se
+  // concatenan observaciones ni se devuelve mas de una linea por clave, para que un movimiento de
+  // combustible no pueda duplicarse por tener la OT varias lineas. En el dato real de hoy el caso
+  // no se presenta (cada referenciaAsiento aparece en una sola linea), pero la regla queda fija.
+  function construirIndiceOTPorAsiento(rowsIn){
+    const idx = new Map();
+    rowsIn.forEach(r=>{
+      const k = r.refAsiento;
+      if(!k) return;
+      const previo = idx.get(k);
+      if(!previo){ idx.set(k, r); return; }
+      if(!previo.obs && r.obs) idx.set(k, r);
+    });
+    return idx;
+  }
 // Prepara la base de OT que consumen TODOS los demas dominios: normaliza las columnas, separa la
 // copia con todas las campanias (solo para el filtro de Campaña de Servicios), recorta a
 // CAMPANIA_ACTUAL, arma las filas y las OT agrupadas, y calcula los KPI de OT.
@@ -160,6 +201,10 @@ function construirBaseOT(raw){
     totalEnEjecucion=OTS.filter(esEnEjecucion).length,
     totalPendientes=OTS.filter(esPendiente).length;
   const costo_total=CONF.reduce((s,o)=>s+o.imp,0);
-  return {rawTodasCampanias,campanias_ot,rows,HOY,OTS,CONF,
+  // Indice para el cruce con Combustible. Se normalizan TODAS las campanias (no solo la vigente,
+  // ver construirIndiceOTPorAsiento) reusando normalizarFilasOT — misma interpretacion de
+  // consultaOT que el resto del modelo, sin una segunda implementacion en paralelo.
+  const indice_ot_asiento = construirIndiceOTPorAsiento(normalizarFilasOT(rawTodasCampanias));
+  return {rawTodasCampanias,campanias_ot,rows,HOY,OTS,CONF,indice_ot_asiento,
     total_ot,ot_conf,totalEnEjecucion,totalPendientes,costo_total};
 }

@@ -147,8 +147,13 @@
     <div class="kpis" id="comb-balance"></div>
     <div class="panel sub"><h3>Ingresos <span>No es consumo — indica quién abastece, no quién usa</span></h3>
       <div class="scroll"><table><thead><tr><th>Proveedor</th><th class="tr">Registros</th><th class="tr">Litros</th><th class="tr">Participación</th><th class="tr">%</th></tr></thead><tbody id="combingbody"></tbody></table></div></div>
-    <div class="panel sub"><h3>Consumo <span>Tercero vacío = Labor Propia</span></h3>
-      <div class="scroll"><table><thead><tr><th>Tercero</th><th class="tr">Registros</th><th class="tr">Litros</th><th class="tr">Participación</th><th class="tr">%</th></tr></thead><tbody id="combbody"></tbody></table></div></div>
+    <!-- Consumo: la columna ya no es "Tercero" sino "Uso / Detalle". El texto sale de la
+         observación de la OT que generó el movimiento (consultaInsumos.referencia cruzado contra
+         consultaOT.referenciaAsiento, ver js/data/combustible.js); si no hay OT se usa el proveedor
+         informado, y si tampoco hay proveedor queda "Sin OT vinculada". El cruce se resuelve al
+         construir el modelo, nunca al renderizar. Clic en una fila para ver sus movimientos. -->
+    <div class="panel sub"><h3>Consumo <span id="comb-uso-sub"></span></h3>
+      <div class="scroll"><table><thead><tr><th>Uso / Detalle</th><th class="tr">Movimientos</th><th class="tr">Consumo</th><th class="tr">Participación</th><th class="tr">%</th></tr></thead><tbody id="combbody"></tbody></table></div></div>
   </section>
 
   <!-- TAB 4: Insumos -->

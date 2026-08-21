@@ -64,6 +64,16 @@ document.addEventListener('DOMContentLoaded', function(){
   document.getElementById('gcontratista').addEventListener('change', renderLaborDetalle);
   document.getElementById('cmes').addEventListener('change', renderCombustible);
   document.getElementById('cterc').addEventListener('change', renderCombustible);
+  // Clic en una fila de "Consumo" (Combustible): despliega/pliega los movimientos de ese
+  // Uso / Detalle. Delegado sobre el tbody (fijo en el HTML) porque la tabla se redibuja entera en
+  // cada cambio de filtro — mismo patrón que el detalle de parcelas de la Auditoría.
+  document.getElementById('combbody').addEventListener('click', function(e){
+    const fila = e.target.closest('tr.cu-fila');
+    if(!fila) return;
+    const uso = decodeURIComponent(fila.dataset.uso);
+    combUsoAbierto = (combUsoAbierto===uso) ? null : uso;
+    renderCombustible();
+  });
   document.getElementById('imes').addEventListener('change', renderInsumos);
   // Tipo de Insumo es el filtro "padre" del dependiente Insumo: primero se repueblan sus opciones
   // (y se limpia la seleccion si ya no corresponde al nuevo tipo), recien despues se re-renderiza.

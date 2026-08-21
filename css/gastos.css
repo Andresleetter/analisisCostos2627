@@ -69,3 +69,16 @@
 .sopbar>div{height:100%;background:var(--teal);border-radius:var(--radius-bar)}
 .scroll-tall{max-height:640px}
 @media(max-width:900px){.gkpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+/* ---- Combustible · Consumo por Uso / Detalle ---- */
+/* Fila clicable que despliega los movimientos del uso. Mismos tonos y mismo caret (.ip-caret) que
+   el detalle de parcelas de la Auditoría, para que el gesto se lea igual en los dos módulos. */
+tr.cu-fila{cursor:pointer}
+tr.cu-fila:hover td{background:#f2f6ef}
+tr.cu-fila.open td{background:#eef4ea}
+/* Las observaciones de OT son texto libre y hay una de 349 caracteres: se trunca visualmente y el
+   texto completo queda en el title, sin recortar el dato ni desbordar la tabla. */
+.cu-uso{max-width:460px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* Chip que marca las filas cuyo texto sale de la observación de una OT vinculada (las demás son el
+   proveedor informado, o "Sin OT vinculada"). */
+.chip-ot{background:#dff0ec;color:var(--u-hrs);margin-left:6px}
+@media(max-width:700px){.cu-uso{max-width:200px}}

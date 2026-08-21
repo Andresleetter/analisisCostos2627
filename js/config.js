@@ -63,6 +63,16 @@ const OPERATIVAS = ['OPERATIVO','PARCELA ARROZ','PARCELA SOJA','PARCELA SORGO','
 // al inicio), separadas del Ingreso/Consumo porque no son un movimiento sino un saldo de partida.
 const TIPO_INSUMO_COMBUSTIBLE = 'COMBUSTIBLES';
 const MOV_EXISTENCIA_INICIAL = 'Existencia inicial';
+// Etiquetas de "Uso / Detalle" del módulo Combustible para los dos casos en que no hay una
+// observación de OT que describa el uso. Son dos situaciones DISTINTAS y no deben mezclarse:
+//  - USO_SIN_DETALLE: el movimiento sí se vinculó con una OT, pero esa OT no tiene observación
+//    cargada. El vínculo existe; falta el texto.
+//  - USO_SIN_OT: la referencia del comprobante no aparece en ninguna referenciaAsiento de
+//    consultaOT, así que no hay OT que consultar. Es lo que antes caía en el genérico
+//    "Labor Propia" (546 movimientos y 46.268 L en el dato de hoy).
+// Estos movimientos NUNCA se ocultan: siguen dentro de los totales de litros y de movimientos.
+const USO_SIN_DETALLE = 'Sin detalle';
+const USO_SIN_OT = 'Sin OT vinculada';
 // Insumos excluidos por completo del módulo Insumos (a pedido del usuario) — no participan de
 // ningún filtro, KPI, tabla ni resumen visible; se separan en loader.js (separarInsumos()) antes
 // de que data.js construya nada, y se conservan aparte solo para trazabilidad (D.insumos_excluidos).
