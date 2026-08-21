@@ -908,7 +908,7 @@ function renderG(){
   renderGasoil();
 }
 
-// ---- Detalle por Labor: filtros de Labor, Etapa y Contratista, afectan SOLO esta tabla ----
+// ---- Detalle por Servicio: filtros de Servicio, Estadio y Contratista, afectan SOLO esta tabla ----
 // (los KPIs, ranking y resumen por mes de arriba siguen agregando por labor sin importar la
 // etapa/contratista, tal como antes; acá se desglosa además por Estadio y por Contratista real
 // (campo "contratista" de consultaOT) para poder aislar en qué etapa y con qué contratista se
@@ -933,7 +933,7 @@ function renderLaborDetalle(){
     if(!by[key]) by[key]={labor:r.labor,estadio:r.estadio,contratista:r.contratista,esH:r.esH,unidadTrabajo:r.unidadTrabajo,n:0,ha:0,horas:0,kg:0,ins_lineas:0,prop:0,terc:0,ins:0};
     const o=by[key]; o.n+=r.n; o.ha+=r.ha; o.horas+=r.horas; o.kg+=r.kg; o.ins_lineas+=r.ins_lineas; o.prop+=r.propia; o.terc+=r.tercero; o.ins+=r.insumos; });
   const labs=Object.values(by).map(o=>({...o,tot:o.prop+o.terc+o.ins})).sort((a,b)=>b.tot-a.tot);
-  document.getElementById('gld-sub').textContent=labs.length+' combinación(es) labor/etapa/contratista · ordenado por costo total';
+  document.getElementById('gld-sub').textContent=labs.length+' combinación(es) servicio/estadio/contratista · ordenado por costo total';
   document.getElementById('gld').innerHTML= labs.length ? labs.map(l=>{
     // "Trabajo Ejecutado": una sola columna con la cantidad ejecutada en la unidad propia de ese
     // trabajo (l.unidadTrabajo, ver dmap en data.js). Nunca se convierte ni se suma entre unidades:
