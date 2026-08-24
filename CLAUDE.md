@@ -42,7 +42,7 @@ assets estáticos), con `raw.githubusercontent.com` solo como respaldo. Ver READ
 |---|---|
 | `ordenes.js` | Base de `consultaOT` — todo lo demás depende de sus colecciones |
 | `cultivos.js` | Plan RTK, avance por cultivo/etapa, Control de Hectáreas |
-| `servicios.js` | Módulo Servicios y el paquete por campaña |
+| `servicios.js` | Módulo Servicios y el paquete por campaña — `unidadTrabajo` elige entre ha / hrs / kg / ins / trabajos |
 | `combustible.js` | Gasoil — incluye el cruce con la OT que generó cada movimiento (`referencia` = `referenciaAsiento`) para el Consumo por Uso / Detalle |
 | `insumos.js` | Módulo Insumos |
 | `auditoria.js` | Infraestructura + Insumos por Parcela |

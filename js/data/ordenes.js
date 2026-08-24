@@ -14,6 +14,38 @@ const campaniaDeFila = row => String(row['campania']||'').trim();
 const esPendiente = o => normEstadio(o.estado)===normEstadio('Pendiente');
 const esEnEjecucion = o => normEstadio(o.estado)===normEstadio('En Ejecución');
 
+// ---- Camión + grúa: única fuente de la deteccion y de la cuenta de trabajos ----
+// Estas dos funciones son el ÚNICO lugar del proyecto donde se compara el nombre del servicio y
+// donde se aplica la formula de 6 horas. Ni servicios.js ni render.js repiten ninguna de las dos.
+
+// Devuelve la configuracion del servicio (SERVICIOS_CAMION_GRUA, config.js) o null si no es uno de
+// ellos. La comparacion es EXACTA sobre el texto normalizado con normHdr() — la misma normalizacion
+// que ya usa el resto del proyecto: recorta, colapsa espacios repetidos, ignora mayusculas/
+// minusculas y acentos. No es una coincidencia parcial: un servicio que solo comparta las palabras
+// ("Estirar camion con tractor x Hs", "Descargar camión retropala x Hs", "Camioneta…") no entra.
+function esCamionGrua(servicio){
+  const s = normHdr(servicio);
+  if(!s) return null;
+  return SERVICIOS_CAMION_GRUA.find(c=>normHdr(c.servicio)===s) || null;
+}
+// Cantidad de trabajos de UNA jornada, por bloques de 6 horas con el limite inferior inclusivo:
+//   0 < h < 6 -> 1    6 <= h < 12 -> 2    12 <= h < 18 -> 3    18 <= h < 24 -> 4 …
+// Es Math.floor(h/6)+1, NO Math.ceil(h/6): con ceil, 6 horas exactas darian 1 trabajo y deben dar 2.
+// Horas nulas, negativas o no numericas -> 0 trabajos (no se inventa una jornada que no existe).
+function calcularTrabajosCamionGrua(horas){
+  const h = numN(horas);
+  if(h==null || !isFinite(h) || h<=0) return 0;
+  return Math.floor(h/CAMION_GRUA_BLOQUE_HORAS)+1;
+}
+// Trabajos de una LINEA de labor (= una jornada). Devuelve 0 si la linea no es de Camión + grúa.
+// Se calcula por linea y despues se suman los resultados, nunca al reves: sumar las horas de varias
+// jornadas y recien ahi aplicar la formula daria un numero distinto (5h + 6h + 8h = 3 jornadas de
+// 1+2+2 = 5 trabajos, no 19 horas = 4 trabajos).
+function trabajosCamionGruaDeLinea(linea){
+  const cfg = esCamionGrua(linea.serv);
+  return cfg ? calcularTrabajosCamionGrua(cfg.horasDelTramo) : 0;
+}
+
   // Normalizacion de filas de consultaOT. Se extrajo a funcion (antes iba en linea recta acá) para
   // poder reusarla TAL CUAL con las filas de otra campania en el filtro de Campaña de Servicios,
   // sin duplicar ni reescribir la logica.
@@ -85,8 +117,13 @@ const esEnEjecucion = o => normEstadio(o.estado)===normEstadio('En Ejecución');
   // esas unidades caian en el cajon de "todo lo demas es hectareas" y el flete se mostraba como 0,01
   // ha. No altera la clasificacion de ninguna otra linea: 'horas' sigue teniendo prioridad y el resto
   // sigue cayendo en 'hectareas' igual que antes.
+  // Se agrego una cuarta modalidad, 'camion_grua', que se evalua ANTES que todas las demas y SOLO
+  // para los servicios declarados en SERVICIOS_CAMION_GRUA (config.js) — comparacion exacta por
+  // nombre de servicio, nunca por unidadMedida. Ninguna otra labor puede caer en ella: si el
+  // servicio no esta en esa lista, esta funcion se comporta exactamente igual que antes.
   function modalidadLaborOT(lineas){
     const laborLineas = lineas.filter(l=>l.tipo==='Labor Propia'||l.tipo==='Labor Tercero');
+    if(laborLineas.some(l=>esCamionGrua(l.serv))) return 'camion_grua';
     if(!laborLineas.length) return lineas.length && lineas.every(l=>l.esHoras) ? 'horas' : null; // sin linea de labor identificable
     if(laborLineas.some(l=>l.esHoras)) return 'horas';
     return laborLineas.some(l=>l.esPeso) ? 'peso' : 'hectareas';
@@ -115,6 +152,12 @@ const esEnEjecucion = o => normEstadio(o.estado)===normEstadio('En Ejecución');
         // Lo consume el "Trabajo Ejecutado" de las labores de SERVICIOS_TRABAJO_MEDIDO_EN_INSUMOS
         // (ver servicios.js); no interviene en ningun costo.
         n_insumos: g.filter(x=>x.tipo==='Insumo').length,
+        // trabajos = cantidad de trabajos de Camión + grúa de esta OT. Se calcula POR LINEA DE
+        // LABOR (cada linea es una jornada) y despues se suman los resultados — nunca se suman las
+        // horas para aplicar la formula una sola vez al final. Vale 0 para todas las demas labores,
+        // que no cambian en nada. En el dato de hoy cada OT trae una unica jornada.
+        trabajos: g.filter(x=>x.tipo==='Labor Propia'||x.tipo==='Labor Tercero')
+          .reduce((s,x)=>s+trabajosCamionGruaDeLinea(x),0),
         imp: g.reduce((s,x)=>s+x.imp,0),
         propia: g.filter(x=>x.tipo==='Labor Propia').reduce((s,x)=>s+x.imp,0),
         tercero: g.filter(x=>x.tipo==='Labor Tercero').reduce((s,x)=>s+x.imp,0),
@@ -181,6 +224,16 @@ function construirBaseOT(raw){
     const cols=raw.length?Object.keys(raw[0]).join(', '):'(ninguna)';
     throw new Error('El archivo remoto no tiene el formato esperado: no se encontró la columna «OT» del export de Órdenes de Trabajo. Columnas recibidas: '+cols.slice(0,160));
   }
+  // Control de consistencia de Camión + grúa. Es SOLO un aviso en consola: no transforma ninguna
+  // fila ni activa la modalidad especial. La unidad "General" nunca decide nada — la modalidad la
+  // decide el nombre del servicio (ver esCamionGrua) — pero si aparece una fila General de otro
+  // servicio, o una de Camión + grúa con otra unidad, conviene enterarse.
+  const generalNoGrua = rows.filter(r=>normHdr(r.unidad)==='general' && !esCamionGrua(r.serv));
+  const gruaNoGeneral = rows.filter(r=>esCamionGrua(r.serv) && normHdr(r.unidad)!=='general');
+  if(generalNoGrua.length) console.warn('consultaOT: '+generalNoGrua.length+' fila(s) con Unidad de medida "General" que NO son Camión + grúa ('+
+    [...new Set(generalNoGrua.map(r=>r.serv))].join(', ')+') — siguen calculándose igual que siempre, sin la modalidad especial.');
+  if(gruaNoGeneral.length) console.warn('consultaOT: '+gruaNoGeneral.length+' fila(s) de Camión + grúa con una unidad distinta de "General" ('+
+    [...new Set(gruaNoGeneral.map(r=>r.unidad||'(vacía)'))].join(', ')+') — la modalidad especial se aplica igual, porque depende del servicio y no de la unidad.');
   // "HOY" = fecha real más reciente registrada en las OT (columna Fecha Real). Se recalcula en
   // cada carga para reflejar automáticamente la actualización del Excel/CSV de campania, tanto
   // para el rótulo "Datos al…" como para el cálculo de días de atraso.
