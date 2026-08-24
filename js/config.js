@@ -188,6 +188,34 @@ const SERVICIOS_SIN_TRABAJO_EJECUTADO = [
   'aplicacion herbicida con mochila',
   'construccion puentes labor propia',
 ];
+// ---- Camión + grúa: el trabajo ejecutado se cuenta en TRABAJOS, no en horas ni hectáreas ----
+// Un trabajo es cada bloque de 6 horas de jornada, con el límite inferior INCLUSIVO:
+//   0 < h < 6 -> 1 trabajo    6 <= h < 12 -> 2 trabajos    12 <= h < 18 -> 3 trabajos …
+// La fórmula vive en calcularTrabajosCamionGrua() (ordenes.js), única fuente de la cuenta.
+const CAMION_GRUA_BLOQUE_HORAS = 6;
+// OJO — el servicio "Camion + grua" a secas NO EXISTE en consultaOT. Verificado contra el .xlsx:
+// existen DOS servicios distintos, que son además los únicos dos registros con unidadMedida
+// "General" de toda la hoja (2 de 2.139 filas):
+//     OT 4586  "Camion + grua por dia >6hs"   General   En Ejecución   Agro Continental S.A.
+//     OT 4497  "Camion + grua por dia <6hs"   General   En Ejecución   Agro Continental S.A.
+// Es decir: Albor ya codifica el corte de 6 horas EN EL NOMBRE del servicio, y no carga las horas
+// en ningún lado — hsPersonal, hsMaquinarias, cantidadResultado y toneladas valen 0 en las 2.139
+// filas de la hoja, y estas OT traen unidadesDosis = 0,01 (el marcador de "sin cantidad", el mismo
+// que usan las labores por hectárea), dosisReales = 0 y hectareasReales = 0.
+// Por eso cada servicio declara acá las horas que representa su tramo, y la cuenta de trabajos
+// sale de aplicarles la MISMA fórmula de 6 horas (1 h -> 1 trabajo; 6 h -> 2 trabajos). Decisión
+// confirmada con el usuario: es lo único que el dato permite hoy. Limitación conocida y aceptada:
+// una jornada de 14 h también se carga como ">6hs" y debería ser 3 trabajos, pero el dato no lo
+// distingue. El día que Albor cargue horas reales, alcanza con leerlas y pasarlas a la fórmula.
+//
+// La detección es por NOMBRE DE SERVICIO, con comparación exacta tras normHdr() — nunca por
+// unidadMedida === "General", que convertiría la excepción en una regla global. La unidad se usa
+// solo como control de consistencia (ver avisos en construirBaseOT). Al ser comparación exacta y no
+// parcial, "Camion", "Grua", "Camioneta" o "Camion + otro servicio" NO entran acá.
+const SERVICIOS_CAMION_GRUA = [
+  {servicio:'Camion + grua por dia <6hs', horasDelTramo:1},
+  {servicio:'Camion + grua por dia >6hs', horasDelTramo:CAMION_GRUA_BLOQUE_HORAS},
+];
 // Sección "Gastos" de Auditoría: ÚNICO concepto que debe mostrarse (a pedido del usuario, en
 // reemplazo de la vieja búsqueda amplia por la palabra suelta "desalijo", que mezclaba también
 // "Desalijo Silo Bolsa" y "Construccion de Puentes...x Hs"). Fuente única de verdad para la

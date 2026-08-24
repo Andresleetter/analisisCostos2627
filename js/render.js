@@ -1000,8 +1000,10 @@ function renderLaborDetalle(){
   // queda ahora con una única unidad, y su cantidad se acumula solo en el campo que le corresponde.
   const by={};
   recs.forEach(r=>{ const key=r.labor+'|'+r.estadio+'|'+r.contratista+'|'+r.unidadTrabajo;
-    if(!by[key]) by[key]={labor:r.labor,estadio:r.estadio,contratista:r.contratista,esH:r.esH,unidadTrabajo:r.unidadTrabajo,n:0,ha:0,horas:0,kg:0,ins_lineas:0,prop:0,terc:0,ins:0};
-    const o=by[key]; o.n+=r.n; o.ha+=r.ha; o.horas+=r.horas; o.kg+=r.kg; o.ins_lineas+=r.ins_lineas; o.prop+=r.propia; o.terc+=r.tercero; o.ins+=r.insumos; });
+    if(!by[key]) by[key]={labor:r.labor,estadio:r.estadio,contratista:r.contratista,esH:r.esH,unidadTrabajo:r.unidadTrabajo,n:0,ha:0,horas:0,kg:0,ins_lineas:0,trabajos:0,prop:0,terc:0,ins:0};
+    // trabajos (Camión + grúa) se SUMA como los demás acumuladores: la cuenta ya viene resuelta por
+    // jornada desde el modelo (agruparOTS → servicios.js) y acá nunca se recalcula la fórmula.
+    const o=by[key]; o.n+=r.n; o.ha+=r.ha; o.horas+=r.horas; o.kg+=r.kg; o.ins_lineas+=r.ins_lineas; o.trabajos+=(r.trabajos||0); o.prop+=r.propia; o.terc+=r.tercero; o.ins+=r.insumos; });
   const labs=Object.values(by).map(o=>({...o,tot:o.prop+o.terc+o.ins})).sort((a,b)=>b.tot-a.tot);
   document.getElementById('gld-sub').textContent=labs.length+' combinación(es) servicio/estadio/contratista · ordenado por costo total';
   document.getElementById('gld').innerHTML= labs.length ? labs.map(l=>{
@@ -1020,6 +1022,12 @@ function renderLaborDetalle(){
     // a las hectareas, que para estas labores no describen el trabajo. Las tres unidades medidas
     // ('ha', 'hrs', 'kg') siguen renderizandose exactamente igual que antes.
     const porInsumos = l.unidadTrabajo==='ins';
+    // Quinto caso: Camión + grúa, donde el trabajo ejecutado es una CANTIDAD DE TRABAJOS (bloques
+    // de 6 horas de jornada, ver SERVICIOS_CAMION_GRUA en config.js y calcularTrabajosCamionGrua en
+    // ordenes.js). Como el conteo de líneas de insumo, no lleva chip de unidad ni decimales: es un
+    // entero. Nunca muestra "General" (la unidad de medida cruda de estas OT) ni hectáreas — estas
+    // OT traen Has. Reales = 0. La cuenta llega ya resuelta desde el modelo: acá no hay fórmula.
+    const porTrabajos = l.unidadTrabajo==='trabajos';
     // Servicios sin trabajo ejecutado medible (solo se usan insumos, ver
     // SERVICIOS_SIN_TRABAJO_EJECUTADO en config.js): la celda queda en "—". Solo afecta a esta
     // columna y al chip de unidad de la columna Labor (sin trabajo ejecutado no hay unidad de
@@ -1027,8 +1035,9 @@ function renderLaborDetalle(){
     const sinEjec=SERVICIOS_SIN_TRABAJO_EJECUTADO.includes(normHdr(l.labor));
     const ejec=sinEjec?'<span class="tw-sin" title="Solo se usan insumos: la OT no registra trabajo ejecutado">—</span>'
       :porInsumos?`${l.ins_lineas} <span class="tw-unid tw-unid-ins" title="Líneas de insumo aplicadas en las OT de esta labor">${l.ins_lineas===1?'insumo utilizado':'insumos utilizados'}</span>`
+      :porTrabajos?`${l.trabajos} <span class="tw-unid tw-unid-trabajos" title="Cada bloque de 6 horas de jornada es un trabajo (el límite inferior es inclusivo: 6 h ya son 2 trabajos)">${l.trabajos===1?'trabajo':'trabajos'}</span>`
       :`${fmt2(u.val)} <span class="tw-unid ${u.unid}">${u.txt}</span>`;
-    const chip=(sinEjec||porInsumos)?'':`<span class="chip ${u.chip}">${u.txt}</span>`;
+    const chip=(sinEjec||porInsumos||porTrabajos)?'':`<span class="chip ${u.chip}">${u.txt}</span>`;
     const contratistaTxt=labelContratista(l.contratista);
     // Labor Propia no tiene costo de tercero asignado en el sistema (siempre US$ 0 en la columna
     // "Labor Tercero") — no hay columna de costo separada para Labor Propia en esta tabla.

@@ -52,10 +52,20 @@
     // la clave de agrupacion y acumula en su propio campo, sin tocar como se clasifican ni se suman
     // 'ha', 'hrs' y 'kg'. Se evalua primero porque estas OT traen la superficie del lote en Has.
     // Reales y con el criterio anterior caian en 'ha'.
-    const unidadTrabajo = esTrabajoPorInsumos ? 'ins' : (esH ? 'hrs' : (o.modalidad==='peso' ? 'kg' : 'ha'));
+    // 'trabajos' es la quinta unidad de trabajo, con el mismo criterio con que se agregaron 'kg' e
+    // 'ins': entra en la clave de agrupacion y acumula en su propio campo, sin tocar como se
+    // clasifican ni se suman 'ha', 'hrs', 'kg' e 'ins'. Depende de la modalidad 'camion_grua', que
+    // solo pueden tener los servicios de SERVICIOS_CAMION_GRUA (config.js) — ninguna otra labor,
+    // tenga la unidad que tenga, puede caer aca.
+    const esCamionGruaOT = o.modalidad==='camion_grua';
+    const unidadTrabajo = esTrabajoPorInsumos ? 'ins'
+      : (esCamionGruaOT ? 'trabajos'
+      : (esH ? 'hrs' : (o.modalidad==='peso' ? 'kg' : 'ha')));
     const key=m+'|'+o.serv+'|'+est+'|'+unidadTrabajo+'|'+contratista;
-    if(!dmap[key]) dmap[key]={mesnum:m,labor:o.serv,estadio:est,esH,unidadTrabajo,contratista,n:0,ha:0,horas:0,kg:0,ins_lineas:0,propia:0,tercero:0,insumos:0};
-    const d=dmap[key]; d.n++; d.ha+=(o.ha||0); d.horas+=o.horas; d.kg+=(o.kg||0); d.ins_lineas+=o.n_insumos; d.propia+=o.propia; d.tercero+=o.tercero; d.insumos+=o.insumos; });
+    if(!dmap[key]) dmap[key]={mesnum:m,labor:o.serv,estadio:est,esH,unidadTrabajo,contratista,n:0,ha:0,horas:0,kg:0,ins_lineas:0,trabajos:0,propia:0,tercero:0,insumos:0};
+    // Los trabajos ya vienen calculados por jornada en cada OT (agruparOTS, ordenes.js): aca solo
+    // se SUMAN. Nunca se vuelve a aplicar la formula de 6 horas despues de agrupar.
+    const d=dmap[key]; d.n++; d.ha+=(o.ha||0); d.horas+=o.horas; d.kg+=(o.kg||0); d.ins_lineas+=o.n_insumos; d.trabajos+=(o.trabajos||0); d.propia+=o.propia; d.tercero+=o.tercero; d.insumos+=o.insumos; });
   const gastos=Object.values(dmap).map(d=>({...d,ha:Math.round(d.ha*100)/100,horas:Math.round(d.horas*100)/100,
     kg:Math.round(d.kg*100)/100,
     propia:Math.round(d.propia*100)/100,tercero:Math.round(d.tercero*100)/100,insumos:Math.round(d.insumos*100)/100}));

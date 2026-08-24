@@ -39,6 +39,10 @@
    largo — por eso va en el gris de apoyo del dashboard y con el peso normal de la tabla, para que
    no compita visualmente con las cantidades de ha/hrs/kg. */
 .tw-unid-ins{color:var(--muted);font-weight:600;font-size:12px}
+/* Camión + grúa: cantidad de trabajos (bloques de 6 h de jornada). Mismo tratamiento discreto
+   que .tw-unid-ins — no es una unidad de medida física, es un conteo, y por eso tampoco lleva
+   chip de color en la columna Servicio. */
+.tw-unid-trabajos{color:var(--muted);font-weight:600;font-size:12px}
 /* Servicios donde la OT solo aporta insumos (SERVICIOS_SIN_TRABAJO_EJECUTADO): la celda muestra un
    guion gris, no un cero — un 0,00 se leeria como "se ejecuto y dio cero". */
 .tw-sin{color:var(--muted);cursor:default}

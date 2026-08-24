@@ -99,6 +99,56 @@ Orden de la pestaña, de arriba hacia abajo:
 5. **Gastos Operativos** (`#opex-total`/`#opex-rows`, `renderGastosOperativos()`) — misma posición y misma tarjeta (`.panel`) que ocupaba la vieja "Distribución del Gasto: Áreas No Agrícolas" (mismo cálculo, `D.operativas`/`D.oper_costo`/`D.oper_part` sobre `OPERATIVAS` en `config.js`, nunca se inventó una clasificación nueva ni se recalculó nada en `render.js`). Tarjeta con el total y **una sola fila por categoría** (nombre, barra proporcional, importe, % sobre el total operativo y OT, con el botón "Ver detalle" al final de la misma fila) — sin tabla aparte que repita la misma información (se eliminó a pedido del usuario). Cada categoría se puede expandir ("Ver detalle", delegación de evento en `events.js` sobre `#opex-rows`, sin listeners por fila) para ver, debajo de su propia fila, su composición real por Servicio + Contratista (mismos marcadores `'(Labor Propia)'`/`'(Sin contratista)'` que ya usa "Detalle por Servicio" en Servicios). El % de cada categoría (`o.partOperativo`) es sobre el total operativo, no sobre el costo total de toda la campaña; el total general solo se muestra en la tarjeta superior, no se repite al final de las filas. Sin gastos operativos para el alcance actual, muestra el estado vacío explícito (total en US$ 0,00, sin porcentajes inválidos).
 6. **Posibles Problemas en la Campaña** (`#probs`, `renderProblemasResumen()`) — alertas dinámicas con severidad (`critica`/`alta`/`media`/`informativa`, colores `.prob-r/-o/-y/-gris`), ordenadas por severidad y luego por impacto. Reglas: OT atrasadas (misma lógica de Alertas Operacionales), cultivos con avance por debajo del promedio de campaña (desviación relativa, nunca un "atraso agronómico" confirmado), superficie ejecutada por encima del plan, OT sin correspondencia en el plan RTK, cultivos planificados sin ejecución registrada, concentración elevada del gasto en una sola labor, y datos incompletos (OT sin Actividad o sin Fecha Teórica). Los botones "Ver detalle" navegan a la pestaña correspondiente reutilizando `show()` (delegación de evento en `events.js`, sin `onclick` inline). Sin problemas detectados, se muestra un estado positivo explícito, nunca la sección vacía.
 
+## Servicios
+
+### Unidades de "Trabajo Ejecutado"
+
+La columna muestra la cantidad ejecutada en la unidad propia de cada trabajo, **nunca convertida a otra**. Hay cinco, y la elige `unidadTrabajo` (`servicios.js`) a partir de la modalidad de la línea principal de labor (`modalidadLaborOT`, `ordenes.js`):
+
+| unidadTrabajo | qué muestra | de dónde sale |
+|---|---|---|
+| `ha` | hectáreas | `Has. Reales` |
+| `hrs` | horas | `Unidades/Dosis` de las líneas en "Horas" |
+| `kg` | kilos | `totalAplicado` de los fletes medidos por peso |
+| `ins` | líneas de insumo aplicadas | `SERVICIOS_TRABAJO_MEDIDO_EN_INSUMOS` |
+| `trabajos` | cantidad de trabajos | `SERVICIOS_CAMION_GRUA` (ver abajo) |
+
+Los servicios de `SERVICIOS_SIN_TRABAJO_EJECUTADO` muestran "—".
+
+### Camión + grúa: el trabajo se cuenta en trabajos, no en horas
+
+Un trabajo es cada bloque de **6 horas** de jornada, con el límite inferior **inclusivo**:
+
+```
+0 < h < 6   -> 1 trabajo       12 <= h < 18 -> 3 trabajos
+6 <= h < 12 -> 2 trabajos      18 <= h < 24 -> 4 trabajos
+```
+
+La fórmula es `Math.floor(h / 6) + 1`, **no** `Math.ceil(h / 6)`: con `ceil`, 6 horas exactas darían 1 trabajo y deben dar 2. Con `h <= 0` (o un valor no numérico) da **0 trabajos** — no se inventa una jornada que no existe. Vive en `calcularTrabajosCamionGrua()` (`ordenes.js`), única fuente de la cuenta; `servicios.js` y `render.js` solo **suman** y presentan lo ya calculado.
+
+**Se calcula por jornada y después se suma**, nunca al revés: tres jornadas de 5 h, 6 h y 8 h son `1 + 2 + 2 = 5 trabajos`, no `19 h = 4 trabajos`. Cada línea de labor es una jornada (`trabajosCamionGruaDeLinea()`), y `agruparOTS` suma las de la OT.
+
+> **El servicio `Camion + grua` a secas NO EXISTE en `consultaOT`.** Verificado contra el .xlsx: existen **dos** servicios, que son además los **únicos dos registros con `unidadMedida` = "General"** de toda la hoja (2 de 2.139 filas):
+>
+> | OT | Servicio | Unidad | Estado | Precio unit. | Contratista |
+> |---|---|---|---|---|---|
+> | 4586 | `Camion + grua por dia >6hs` | General | En Ejecución | 83,221 | Agro Continental S.A. |
+> | 4497 | `Camion + grua por dia <6hs` | General | En Ejecución | 82,9474 | Agro Continental S.A. |
+>
+> Albor ya codifica el corte de 6 horas **en el nombre del servicio**, y **no carga las horas en ningún lado**: `hsPersonal`, `hsMaquinarias`, `cantidadResultado` y `toneladas` valen 0 en las 2.139 filas de la hoja, y estas OT traen `unidadesDosis = 0,01` (el marcador de "sin cantidad", el mismo de las labores por hectárea), `dosisReales = 0` y `hectareasReales = 0`.
+>
+> Por eso cada servicio declara en `SERVICIOS_CAMION_GRUA` (`config.js`) las horas que representa su tramo (1 h y 6 h), y la cuenta sale de aplicarles la **misma** fórmula de 6 horas: `<6hs` → 1 trabajo, `>6hs` → 2 trabajos. Decisión confirmada con el usuario. **Limitación conocida y aceptada:** una jornada de 14 h también se carga como ">6hs" y debería ser 3 trabajos, pero el dato no lo distingue. El día que Albor cargue horas reales, alcanza con leérselas y pasarlas a la fórmula.
+>
+> Como ambas están **En Ejecución** y el Detalle por Servicio solo muestra OT `Confirmado`, hoy todavía no se ven en la tabla.
+
+**La detección es por nombre de servicio, jamás por unidad.** `esCamionGrua()` (`ordenes.js`) compara con `normHdr()` — recorta, colapsa espacios, ignora mayúsculas y acentos — contra la lista declarada, con coincidencia **exacta**, no parcial. Verificado: entran `"  CAMION + GRUA POR DIA <6HS  "` y `"Camión  +  grúa  por  dia  >6hs"`; **no** entran `Camion + grua`, `Camion`, `Grua`, `Camioneta`, `Camion + otro servicio`, `Estirar camion con tractor x Hs` ni `Descargar camión retropala x Hs`.
+
+> **Nunca se creó una regla `unidadMedida === "General"`.** Eso habría convertido la excepción en una regla global. La unidad se usa solo como **control de consistencia**: `construirBaseOT` avisa por consola si aparece una fila "General" que no sea Camión + grúa, o una de Camión + grúa con otra unidad — avisa, no transforma. Probado con cuatro servicios sintéticos de unidad "General" (`Servicio X con unidad General`, `Camion`, `Grua`, `Camion + otro servicio`): los cuatro siguen dando modalidad `hectareas`, `unidadTrabajo` `ha` y el mismo importe.
+
+**Los costos no se tocan.** El importe sigue siendo `Unidades/Dosis × Precio Unitario`, igual que antes; la cuenta de trabajos no entra en ninguna fórmula económica. Verificado con el dump completo del modelo: las **62 claves son idénticas** una vez que se descuenta el campo nuevo `trabajos` — incluidos `costo_total`, `gasto_total`, `costo_total_consolidado` y `costo_por_campania`.
+
+En la tabla se muestra `1 trabajo` / `N trabajos` (singular y plural), sin chip de unidad y sin decimales: es un conteo, no una medida. Nunca muestra "General" ni hectáreas.
+
 ## Combustible
 
 - **Stock Inicial dinámico**: sale de `consultaInsumos`, filas con `tipoInsumo="COMBUSTIBLES"` y `tipoMovimiento="Existencia inicial"` (fechadas al 1/1). `data.js` suma estas filas **con signo** (no en valor absoluto — las filas individuales vienen con signo mixto, la suma neta es la que da el stock real de arranque) en `D.stock_inicial_combustible`.
