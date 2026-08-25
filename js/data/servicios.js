@@ -2,6 +2,66 @@
 // Modulo Servicios completo: detalle por servicio, gasoil por area, filtros y el paquete equivalente
 // para cada campania presente en consultaOT.
 
+// ---- Cultivo de una OT ----
+// El cultivo real de la OT es el campo "actividad" de consultaOT (o.act en el modelo): es el que
+// ya usa construirCultivos() para el avance de campo del Resumen Ejecutivo, y el que compara
+// contra CULTIVOS (config.js). NO se usa la columna "cultivo" del Excel: esa trae el nombre
+// completo de la parcela ("LA TERESA 211 ARROZ 26/27"), no el cultivo.
+// key = normHdr() (la misma normalizacion del resto del proyecto: recorta, colapsa espacios,
+// ignora mayusculas/minusculas y acentos) para que "ARROZ", "Arroz" y " arroz " sean UN solo
+// cultivo; label = el texto en mayusculas, que es como ya viene el dato real.
+const CULTIVO_SIN_DATO='(Sin cultivo)';
+function cultivoDeOT(o){
+  const crudo=String(o.act||'').trim();
+  return crudo ? {key:normHdr(crudo), label:crudo.toUpperCase()}
+               : {key:normHdr(CULTIVO_SIN_DATO), label:CULTIVO_SIN_DATO};
+}
+// Resumen de UNA OT dentro de su grupo de Servicios. Guarda solo lo que necesitan el desplegable
+// del Detalle por Servicio (OT, fecha, cultivo, lote, trabajo ejecutado y costo) y la propia suma
+// del grupo. No es una segunda lectura de consultaOT: son las OT ya agrupadas por agruparOTS()
+// (ordenes.js), asi que una OT con tres lineas de insumo y una de servicio entra UNA sola vez.
+// Ningun valor se recalcula aca: ha / horas / kg / n_insumos / trabajos y los tres importes se
+// copian tal cual los dejo el modelo.
+function resumenOTServicio(o){
+  const cult=cultivoDeOT(o);
+  return {ot:o.ot, fr:o.fr, cultivo:cult.label, cultivoKey:cult.key, lote:o.lote,
+    ha:o.ha, horas:o.horas, kg:o.kg, n_insumos:o.n_insumos, trabajos:o.trabajos,
+    propia:o.propia, tercero:o.tercero, insumos:o.insumos};
+}
+// Orden del desplegable: fecha ascendente y, a igual fecha, numero de OT ascendente. Nunca el
+// orden accidental del Excel. Las OT sin fecha real van al final.
+function ordenarOTsServicio(ots){
+  return ots.slice().sort((a,b)=>{
+    const fa=a.fr?a.fr.getTime():Infinity, fb=b.fr?b.fr.getTime():Infinity;
+    if(fa!==fb) return fa-fb;
+    const na=parseInt(a.ot,10), nb=parseInt(b.ot,10);
+    if(!isNaN(na)&&!isNaN(nb)&&na!==nb) return na-nb;
+    return String(a.ot).localeCompare(String(b.ot),'es');
+  });
+}
+// ---- Suma de un grupo del Detalle por Servicio ----
+// UNICA implementacion de las cuentas de una fila de Servicios. La usan las dos entradas posibles:
+// la construccion del modulo (construirServicios, mas abajo) y el filtro de Cultivo
+// (filtrarServiciosPorCultivo), que vuelve a sumar el MISMO grupo sobre el subconjunto de sus OT.
+// Asi el filtro no puede inventar una segunda forma de calcular un total.
+// Los trabajos de Camion + grua y las lineas de insumo ya vienen resueltos por OT desde el modelo
+// (agruparOTS, ordenes.js): aca solo se SUMAN, nunca se vuelve a aplicar ninguna formula.
+function acumularGrupoServicio(meta, ots){
+  const d={...meta,n:0,ha:0,horas:0,kg:0,ins_lineas:0,trabajos:0,propia:0,tercero:0,insumos:0};
+  ots.forEach(o=>{ d.n++; d.ha+=(o.ha||0); d.horas+=o.horas; d.kg+=(o.kg||0); d.ins_lineas+=o.n_insumos;
+    d.trabajos+=(o.trabajos||0); d.propia+=o.propia; d.tercero+=o.tercero; d.insumos+=o.insumos; });
+  return {...d,ha:Math.round(d.ha*100)/100,horas:Math.round(d.horas*100)/100,
+    kg:Math.round(d.kg*100)/100,
+    propia:Math.round(d.propia*100)/100,tercero:Math.round(d.tercero*100)/100,insumos:Math.round(d.insumos*100)/100,
+    ots:ordenarOTsServicio(ots)};
+}
+// Mismo criterio para el gasoil por area: una unica funcion de suma, reusada por el filtro.
+function acumularGrupoGasoil(meta, ots){
+  const g={...meta,n:0,litros:0,total:0};
+  ots.forEach(o=>{ g.n++; g.litros+=o.litros; g.total+=o.total; });
+  return {...g,litros:Math.round(g.litros*10)/10,total:Math.round(g.total*100)/100,ots};
+}
+
   // ---- GASTOS: detalle labores reales + gasoil por área (modulo SERVICIOS) ----
   // Todo el calculo del modulo Servicios quedo encapsulado en construirServicios(): recibe las OT
   // CONFIRMADAS de UNA campania y devuelve el paquete completo que consume la pestaña (gastos,
@@ -62,13 +122,12 @@
       : (esCamionGruaOT ? 'trabajos'
       : (esH ? 'hrs' : (o.modalidad==='peso' ? 'kg' : 'ha')));
     const key=m+'|'+o.serv+'|'+est+'|'+unidadTrabajo+'|'+contratista;
-    if(!dmap[key]) dmap[key]={mesnum:m,labor:o.serv,estadio:est,esH,unidadTrabajo,contratista,n:0,ha:0,horas:0,kg:0,ins_lineas:0,trabajos:0,propia:0,tercero:0,insumos:0};
-    // Los trabajos ya vienen calculados por jornada en cada OT (agruparOTS, ordenes.js): aca solo
-    // se SUMAN. Nunca se vuelve a aplicar la formula de 6 horas despues de agrupar.
-    const d=dmap[key]; d.n++; d.ha+=(o.ha||0); d.horas+=o.horas; d.kg+=(o.kg||0); d.ins_lineas+=o.n_insumos; d.trabajos+=(o.trabajos||0); d.propia+=o.propia; d.tercero+=o.tercero; d.insumos+=o.insumos; });
-  const gastos=Object.values(dmap).map(d=>({...d,ha:Math.round(d.ha*100)/100,horas:Math.round(d.horas*100)/100,
-    kg:Math.round(d.kg*100)/100,
-    propia:Math.round(d.propia*100)/100,tercero:Math.round(d.tercero*100)/100,insumos:Math.round(d.insumos*100)/100}));
+    // El grupo ya no acumula en linea: junta las OT que le corresponden y la suma la resuelve
+    // acumularGrupoServicio(). Las OT entran en el mismo orden de detOT que antes, asi que los
+    // totales dan exactamente lo mismo hasta el ultimo decimal. La clave de agrupacion no cambio.
+    if(!dmap[key]) dmap[key]={meta:{mesnum:m,labor:o.serv,estadio:est,esH,unidadTrabajo,contratista},ots:[]};
+    dmap[key].ots.push(resumenOTServicio(o)); });
+  const gastos=Object.values(dmap).map(g=>acumularGrupoServicio(g.meta,g.ots));
   // gasoil por (mes,area,personal) — se usa "Personal" (operario que retiró el combustible) y no
   // "Contratista" porque en las OT de gasoil el campo Contratista viene vacío; quien queda
   // registrado es el Personal interno que hizo la carga.
@@ -76,9 +135,10 @@
   gasOT.forEach(o=>{ const m=o.fr?o.fr.getMonth()+1:0; const area=o.estadio||'(sin área)'; const pers=o.personal&&o.personal.trim()?o.personal.trim():'(Sin dato)';
     const key=m+'|'+area+'|'+pers;
     const litros=o.lines.reduce((s,l)=>s+l.ud,0);
-    if(!gmap[key]) gmap[key]={mesnum:m,area,personal:pers,n:0,litros:0,total:0};
-    const gg=gmap[key]; gg.n++; gg.litros+=litros; gg.total+=o.imp; });
-  const gasoil_sec=Object.values(gmap).map(g=>({...g,litros:Math.round(g.litros*10)/10,total:Math.round(g.total*100)/100}));
+    const cult=cultivoDeOT(o);
+    if(!gmap[key]) gmap[key]={meta:{mesnum:m,area,personal:pers},ots:[]};
+    gmap[key].ots.push({ot:o.ot,cultivo:cult.label,cultivoKey:cult.key,litros,total:o.imp}); });
+  const gasoil_sec=Object.values(gmap).map(g=>acumularGrupoGasoil(g.meta,g.ots));
   const gasto_total=gastos.reduce((s,d)=>s+d.propia+d.tercero+d.insumos,0);
   const gasoil_total=gasOT.reduce((s,o)=>s+o.imp,0), gasoil_litros_total=gasOT.reduce((s,o)=>s+o.lines.reduce((a,l)=>a+l.ud,0),0);
   const gmes={}, glit={};
@@ -99,9 +159,54 @@
   // OT de retiro de gasoil). Se suma directo sobre CONFin y no como gasto_total+gasoil_total porque
   // `gastos` ya viene redondeado a 2 decimales por fila y esa suma arrastra centavos de diferencia.
   const costo_conf=CONFin.reduce((s,o)=>s+o.imp,0);
+  // Cultivos realmente presentes en las OT confirmadas de esta campania, nunca una lista inventada
+  // ni una segunda lectura del Excel. Se recorre CONFin entero (las OT del Detalle por Servicio Y
+  // las de retiro de gasoil) para que el filtro sea una particion completa del modulo: ningun
+  // registro queda fuera de alcance del selector. Por eso puede aparecer un cultivo que solo tenga
+  // OT de gasoil (hoy: "SECADERO" en 26/27, "OPERATIVO" en 25/26) — ahi el Detalle por Servicio
+  // queda vacio y el consumo de gasoil no.
+  // Orden: primero los cultivos prioritarios de CULTIVOS (config.js — ARROZ, SOJA, SORGO, MAIZ) y
+  // solo si existen en el dato; despues, el resto en orden alfabetico. Se recalcula por campania,
+  // asi que cambiar de campania cambia las opciones disponibles.
+  const cultivosVistos=new Map();
+  CONFin.forEach(o=>{ const c=cultivoDeOT(o); if(!cultivosVistos.has(c.key)) cultivosVistos.set(c.key,c.label); });
+  const prioridad=CULTIVOS.map(c=>normHdr(c));
+  const cultivos_labor=[...cultivosVistos.entries()].map(([val,lbl])=>({val,lbl}))
+    .sort((a,b)=>{
+      const ia=prioridad.indexOf(a.val), ib=prioridad.indexOf(b.val);
+      if(ia!==-1 && ib!==-1) return ia-ib;
+      if(ia!==-1) return -1;
+      if(ib!==-1) return 1;
+      return a.lbl.localeCompare(b.lbl,'es');
+    });
   return {gastos,gasoil_sec,meses,gasto_total,gasoil_total,gasoil_litros_total,gmes,glit,
-    labores,estadios_labor,contratistas_labor,costo_conf};
+    labores,estadios_labor,contratistas_labor,cultivos_labor,costo_conf};
   }
+
+// ---- Filtro de Cultivo del modulo Servicios ----
+// Devuelve el MISMO paquete con `gastos` y `gasoil_sec` recalculados sobre las OT del cultivo
+// elegido. No es un filtro visual: los grupos se vuelven a sumar con las mismas funciones
+// (acumularGrupoServicio / acumularGrupoGasoil) sobre el subconjunto de sus propias OT, asi que
+// los KPIs, el acumulado por mes y el Detalle por Servicio quedan todos expresados sobre
+// Campaña + Cultivo. Con 'ALL' devuelve el paquete original SIN TOCARLO: no se recalcula nada y
+// los numeros son, byte a byte, los de siempre.
+// Los agregados de campania completa que viaja en el paquete (gasto_total, gmes, glit,
+// costo_conf, y las opciones Mes/Servicio/Estadio/Contratista) se conservan como estan: son de la
+// campania entera por definicion y ningun render del modulo los lee filtrados.
+const META_GRUPO_SERVICIO=['mesnum','labor','estadio','esH','unidadTrabajo','contratista'];
+const META_GRUPO_GASOIL=['mesnum','area','personal'];
+function metaDeGrupo(g,campos){ const m={}; campos.forEach(k=>{ m[k]=g[k]; }); return m; }
+function filtrarServiciosPorCultivo(S, cultivoKey){
+  if(!S || !cultivoKey || cultivoKey==='ALL') return S;
+  const esDelCultivo=o=>o.cultivoKey===cultivoKey;
+  const gastos=(S.gastos||[])
+    .map(g=>acumularGrupoServicio(metaDeGrupo(g,META_GRUPO_SERVICIO),(g.ots||[]).filter(esDelCultivo)))
+    .filter(g=>g.n>0);
+  const gasoil_sec=(S.gasoil_sec||[])
+    .map(g=>acumularGrupoGasoil(metaDeGrupo(g,META_GRUPO_GASOIL),(g.ots||[]).filter(esDelCultivo)))
+    .filter(g=>g.n>0);
+  return {...S, gastos, gasoil_sec};
+}
 
 // Un paquete de Servicios por cada campania presente en consultaOT, mas los totales consolidados.
 function construirServiciosPorCampania(rawTodasCampanias, campanias_ot, SERVICIOS){

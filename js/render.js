@@ -933,6 +933,17 @@ function serviciosActivos(){
   const c=sel?sel.value:null;
   return (D.servicios_campanias && D.servicios_campanias[c]) ? D.servicios_campanias[c] : D;
 }
+// Cultivo elegido en el filtro (clave normalizada, ver cultivoDeOT en js/data/servicios.js).
+function cultivoSeleccionado(){ const sel=document.getElementById('gcultivo'); return sel?sel.value:'ALL'; }
+// Paquete sobre el que se DIBUJA el módulo: el de la campaña activa, ya recalculado para el
+// cultivo elegido. El filtro de Cultivo no esconde filas ya sumadas: vuelve a sumar cada grupo
+// sobre sus propias OT de ese cultivo, con las mismas funciones del modelo (ver
+// filtrarServiciosPorCultivo, js/data/servicios.js). Con "Todos" devuelve el paquete original tal
+// cual, sin recalcular nada. Lo usan renderG, renderLaborDetalle y renderGasoil — nunca
+// serviciosActivos() directo, para que los tres muestren siempre el mismo conjunto.
+// poblarFiltrosServicios() sí usa serviciosActivos(): las opciones de los selectores son las de la
+// campaña completa y no dependen del cultivo elegido (elegir un cultivo no reinicia los demás filtros).
+function serviciosFiltrados(){ return filtrarServiciosPorCultivo(serviciosActivos(), cultivoSeleccionado()); }
 // Opciones de Mes / Labor / Etapa / Contratista: dependen de la campaña activa, así que se
 // repueblan al cargar y en cada cambio de campaña. Si el valor que estaba elegido sigue existiendo
 // en la campaña nueva se conserva; si no existe, vuelve a "ALL" (nunca queda un filtro apuntando a
@@ -946,6 +957,10 @@ function poblarFiltrosServicios(){
     sel.value=[...sel.options].some(o=>o.value===previo)?previo:'ALL';
   };
   llenar('gmes', S.meses.map(m=>({val:String(m.k),lbl:m.lbl})), v=>v.lbl);
+  // Cultivo: opciones reales de la campaña seleccionada, con ARROZ/SOJA/SORGO/MAIZ primero y el
+  // resto alfabético (el orden lo define construirServicios, acá solo se vuelca). Si el cultivo
+  // que estaba elegido no existe en la campaña nueva, llenar() lo devuelve solo a "Todos".
+  llenar('gcultivo', (S.cultivos_labor||[]).map(c=>({val:c.val,lbl:c.lbl})), v=>v.lbl);
   // Labor / Etapa / Contratista: opciones de toda la campaña seleccionada, no dependen del mes
   llenar('glabor', S.labores.map(l=>({val:l})), v=>v.val);
   llenar('gestadio', S.estadios_labor.map(e=>({val:e})), v=>v.val);
@@ -955,7 +970,7 @@ function poblarFiltrosServicios(){
 // recién después se re-renderiza — mismo patrón que el filtro dependiente de Insumos.
 function cambiarCampaniaServicios(){ poblarFiltrosServicios(); renderG(); }
 function renderG(){
-  const S=serviciosActivos();
+  const S=serviciosFiltrados();
   const selV=document.getElementById('gmes').value, sel=selV==='ALL'?'ALL':parseInt(selV);
   const mt=monthTotals(S); const recs=sel==='ALL'?S.gastos:S.gastos.filter(r=>r.mesnum===sel);
   const by={}; recs.forEach(r=>{ if(!by[r.labor])by[r.labor]={labor:r.labor,esH:r.esH,n:0,ha:0,horas:0,prop:0,terc:0,ins:0};
@@ -978,6 +993,60 @@ function renderG(){
   renderGasoil();
 }
 
+// Qué fila del Detalle por Servicio está desplegada. Vive acá y no en el DOM porque la tabla se
+// regenera entera en cada cambio de filtro — mismo patrón que ipParcelaAbierta (Auditoría) y
+// combUsoAbierto (Combustible). Una sola fila abierta a la vez: abrir otra cierra la anterior.
+let servFilaAbierta = null;
+// Identificador estable de una fila: es la MISMA clave con que renderLaborDetalle agrupa (labor +
+// estadio + contratista + unidad de trabajo), así que no depende del orden de la tabla ni de los
+// filtros activos.
+const claveFilaServicio = l => l.labor+'|'+l.estadio+'|'+l.contratista+'|'+l.unidadTrabajo;
+// Unidades medidas de la columna "Trabajo Ejecutado". `chip` (columna Servicio) y `unid` (columna
+// Trabajo Ejecutado) usan el MISMO color por unidad — ver las variables --u-ha/--u-hrs/--u-kg en
+// gastos.css, única fuente de esos tres colores. 'ins' y 'trabajos' no entran acá: son conteos, no
+// unidades de medida, y por eso no llevan chip.
+const U_TRABAJO={ha:{txt:'ha',chip:'chip-ha',unid:'tw-unid-ha'},
+  hrs:{txt:'hrs',chip:'chip-hr',unid:'tw-unid-hrs'},
+  kg:{txt:'kg',chip:'chip-kg',unid:'tw-unid-kg'}};
+// "Trabajo Ejecutado" — ÚNICA implementación del formato de esa celda. La usan la fila principal
+// del Detalle por Servicio y cada OT de su desplegable, así que el desplegable no puede mostrar
+// otra unidad ni otra regla que la fila que lo contiene. Acá NO hay ninguna fórmula: los cinco
+// valores llegan ya resueltos desde el modelo (hectáreas, horas, kilos, líneas de insumo de
+// Tratamiento de semillas y trabajos de Camión + grúa); esta función solo elige cuál mostrar
+// según la unidad del grupo y le pone su rótulo.
+function celdaTrabajoEjecutado(unidadTrabajo, v, sinEjec){
+  // Servicios sin trabajo ejecutado medible (solo se usan insumos, ver
+  // SERVICIOS_SIN_TRABAJO_EJECUTADO en config.js): la celda queda en "—", nunca en 0,00.
+  if(sinEjec) return '<span class="tw-sin" title="Solo se usan insumos: la OT no registra trabajo ejecutado">—</span>';
+  // Conteo de líneas de insumo (SERVICIOS_TRABAJO_MEDIDO_EN_INSUMOS): sin chip de unidad ni
+  // decimales, y nunca junto a las hectáreas, que para estas labores no describen el trabajo.
+  if(unidadTrabajo==='ins') return `${v.ins} <span class="tw-unid tw-unid-ins" title="Líneas de insumo aplicadas en las OT de esta labor">${v.ins===1?'insumo utilizado':'insumos utilizados'}</span>`;
+  // Camión + grúa: cantidad de trabajos (bloques de 6 h de jornada). La cuenta llega resuelta por
+  // OT desde el modelo (calcularTrabajosCamionGrua, ordenes.js): acá no se vuelve a aplicar.
+  if(unidadTrabajo==='trabajos') return `${v.trabajos} <span class="tw-unid tw-unid-trabajos" title="Cada bloque de 6 horas de jornada es un trabajo (el límite inferior es inclusivo: 6 h ya son 2 trabajos)">${v.trabajos===1?'trabajo':'trabajos'}</span>`;
+  const u=U_TRABAJO[unidadTrabajo]||U_TRABAJO.ha;
+  const val=unidadTrabajo==='hrs'?v.horas:(unidadTrabajo==='kg'?v.kg:v.ha);
+  return `${fmt2(val)} <span class="tw-unid ${u.unid}">${u.txt}</span>`;
+}
+// Desplegable de una fila: las OT individuales que la componen. NO vuelve a leer consultaOT ni
+// recalcula nada — recorre `l.ots`, el resumen que construirServicios() (js/data/servicios.js)
+// dejó guardado sobre las OT YA agrupadas por agruparOTS(), así que una OT con varias líneas
+// (servicio + labor + insumos) aparece una sola vez. El costo total de cada OT es su aporte real
+// al grupo: Labor Propia + Labor Tercero + Insumos, sin redondear antes de sumar.
+function svDetalleOTs(l, sinEjec){
+  const ots=ordenarOTsServicio(l.ots||[]);
+  const filas=ots.map(o=>{
+    const ejec=celdaTrabajoEjecutado(l.unidadTrabajo,{ha:o.ha,horas:o.horas,kg:o.kg,ins:o.n_insumos,trabajos:o.trabajos},sinEjec);
+    return `<tr><td class="mono"><b>${escHtml(o.ot)}</b></td><td class="mono">${ipFecha(o.fr)}</td>`+
+      `<td>${escHtml(o.cultivo)}</td><td>${escHtml(o.lote)||'<span class="ip-sin">—</span>'}</td>`+
+      `<td class="tr mono">${ejec}</td>`+
+      `<td class="tr mono col-tot">US$ ${fmtUSD(o.propia+o.tercero+o.insumos)}</td></tr>`;
+  }).join('');
+  return `<tr class="sv-det"><td colspan="8"><div class="sv-det-tit">${ots.length} orden(es) de trabajo · ${escHtml(l.labor)} · ${escHtml(l.estadio)}</div>`+
+    `<div class="sv-det-wrap"><table class="sv-ots"><thead><tr><th>OT</th><th>Fecha</th><th>Cultivo</th><th>Lote</th>`+
+    `<th class="tr">Trabajo Ejecutado</th><th class="tr">Costo Total</th></tr></thead><tbody>${filas}</tbody></table></div>`+
+    `</td></tr>`;
+}
 // ---- Detalle por Servicio: filtros de Servicio, Estadio y Contratista, afectan SOLO esta tabla ----
 // (los KPIs, ranking y resumen por mes de arriba siguen agregando por labor sin importar la
 // etapa/contratista, tal como antes; acá se desglosa además por Estadio y por Contratista real
@@ -986,7 +1055,7 @@ function renderG(){
 // OT de más de un contratista real (~19% de los grupos labor+etapa); ahora cada fila de la tabla
 // pertenece a un único contratista, o a "No aplica"/"Sin contratista" cuando corresponde).
 function renderLaborDetalle(){
-  const S=serviciosActivos();
+  const S=serviciosFiltrados();
   const selV=document.getElementById('gmes').value, sel=selV==='ALL'?'ALL':parseInt(selV);
   const laborV=document.getElementById('glabor').value, estV=document.getElementById('gestadio').value;
   const contV=document.getElementById('gcontratista').value;
@@ -1000,54 +1069,46 @@ function renderLaborDetalle(){
   // queda ahora con una única unidad, y su cantidad se acumula solo en el campo que le corresponde.
   const by={};
   recs.forEach(r=>{ const key=r.labor+'|'+r.estadio+'|'+r.contratista+'|'+r.unidadTrabajo;
-    if(!by[key]) by[key]={labor:r.labor,estadio:r.estadio,contratista:r.contratista,esH:r.esH,unidadTrabajo:r.unidadTrabajo,n:0,ha:0,horas:0,kg:0,ins_lineas:0,trabajos:0,prop:0,terc:0,ins:0};
+    if(!by[key]) by[key]={labor:r.labor,estadio:r.estadio,contratista:r.contratista,esH:r.esH,unidadTrabajo:r.unidadTrabajo,n:0,ha:0,horas:0,kg:0,ins_lineas:0,trabajos:0,prop:0,terc:0,ins:0,ots:[]};
     // trabajos (Camión + grúa) se SUMA como los demás acumuladores: la cuenta ya viene resuelta por
     // jornada desde el modelo (agruparOTS → servicios.js) y acá nunca se recalcula la fórmula.
-    const o=by[key]; o.n+=r.n; o.ha+=r.ha; o.horas+=r.horas; o.kg+=r.kg; o.ins_lineas+=r.ins_lineas; o.trabajos+=(r.trabajos||0); o.prop+=r.propia; o.terc+=r.tercero; o.ins+=r.insumos; });
+    // `ots` se concatena por el mismo motivo: son los resúmenes de OT que ya trae cada grupo del
+    // modelo. Esta tabla une los grupos de varios meses, así que la lista se reordena al mostrarla
+    // (ordenarOTsServicio, mismo criterio del modelo). Una OT pertenece a un solo grupo, nunca a dos.
+    const o=by[key]; o.n+=r.n; o.ha+=r.ha; o.horas+=r.horas; o.kg+=r.kg; o.ins_lineas+=r.ins_lineas; o.trabajos+=(r.trabajos||0); o.prop+=r.propia; o.terc+=r.tercero; o.ins+=r.insumos; o.ots=o.ots.concat(r.ots||[]); });
   const labs=Object.values(by).map(o=>({...o,tot:o.prop+o.terc+o.ins})).sort((a,b)=>b.tot-a.tot);
-  document.getElementById('gld-sub').textContent=labs.length+' combinación(es) servicio/estadio/contratista · ordenado por costo total';
+  // Si la fila que estaba desplegada ya no forma parte del resultado (cambió Campaña, Mes,
+  // Cultivo, Servicio, Estadio o Contratista), se cierra sola: nunca queda abierto un detalle que
+  // corresponde a un filtro anterior.
+  if(servFilaAbierta && !labs.some(l=>claveFilaServicio(l)===servFilaAbierta)) servFilaAbierta=null;
+  document.getElementById('gld-sub').textContent=labs.length+' combinación(es) servicio/estadio/contratista · ordenado por costo total · clic en una fila para ver sus OT';
   document.getElementById('gld').innerHTML= labs.length ? labs.map(l=>{
     // "Trabajo Ejecutado": una sola columna con la cantidad ejecutada en la unidad propia de ese
-    // trabajo (l.unidadTrabajo, ver dmap en data.js). Nunca se convierte ni se suma entre unidades:
-    //   'ha'  -> Has. Reales      'hrs' -> horas de la labor      'kg' -> totalAplicado (fletes por Dosis)
-    // `chip` (columna Labor) y `unid` (columna Trabajo Ejecutado) usan el MISMO color por unidad —
-    // ver las variables --u-ha/--u-hrs/--u-kg en gastos.css, unica fuente de esos tres colores.
-    const U={ha:{val:l.ha,txt:'ha',chip:'chip-ha',unid:'tw-unid-ha'},
-      hrs:{val:l.horas,txt:'hrs',chip:'chip-hr',unid:'tw-unid-hrs'},
-      kg:{val:l.kg,txt:'kg',chip:'chip-kg',unid:'tw-unid-kg'}};
-    const u=U[l.unidadTrabajo]||U.ha;
-    // Cuarto caso: labores cuyo trabajo ejecutado son las lineas de insumo aplicadas
-    // (unidadTrabajo 'ins', ver SERVICIOS_TRABAJO_MEDIDO_EN_INSUMOS en config.js). No lleva chip de
-    // unidad ni numero decimal: es un conteo de lineas, y se muestra SOLO ese conteo — nunca junto
-    // a las hectareas, que para estas labores no describen el trabajo. Las tres unidades medidas
-    // ('ha', 'hrs', 'kg') siguen renderizandose exactamente igual que antes.
-    const porInsumos = l.unidadTrabajo==='ins';
-    // Quinto caso: Camión + grúa, donde el trabajo ejecutado es una CANTIDAD DE TRABAJOS (bloques
-    // de 6 horas de jornada, ver SERVICIOS_CAMION_GRUA en config.js y calcularTrabajosCamionGrua en
-    // ordenes.js). Como el conteo de líneas de insumo, no lleva chip de unidad ni decimales: es un
-    // entero. Nunca muestra "General" (la unidad de medida cruda de estas OT) ni hectáreas — estas
-    // OT traen Has. Reales = 0. La cuenta llega ya resuelta desde el modelo: acá no hay fórmula.
-    const porTrabajos = l.unidadTrabajo==='trabajos';
-    // Servicios sin trabajo ejecutado medible (solo se usan insumos, ver
-    // SERVICIOS_SIN_TRABAJO_EJECUTADO en config.js): la celda queda en "—". Solo afecta a esta
-    // columna y al chip de unidad de la columna Labor (sin trabajo ejecutado no hay unidad de
-    // trabajo que rotular); OT Confirmadas y los tres importes siguen igual.
+    // trabajo (l.unidadTrabajo, ver dmap en js/data/servicios.js). Nunca se convierte ni se suma
+    // entre unidades. El formato de la celda lo resuelve celdaTrabajoEjecutado(), la misma función
+    // que usa cada OT del desplegable.
     const sinEjec=SERVICIOS_SIN_TRABAJO_EJECUTADO.includes(normHdr(l.labor));
-    const ejec=sinEjec?'<span class="tw-sin" title="Solo se usan insumos: la OT no registra trabajo ejecutado">—</span>'
-      :porInsumos?`${l.ins_lineas} <span class="tw-unid tw-unid-ins" title="Líneas de insumo aplicadas en las OT de esta labor">${l.ins_lineas===1?'insumo utilizado':'insumos utilizados'}</span>`
-      :porTrabajos?`${l.trabajos} <span class="tw-unid tw-unid-trabajos" title="Cada bloque de 6 horas de jornada es un trabajo (el límite inferior es inclusivo: 6 h ya son 2 trabajos)">${l.trabajos===1?'trabajo':'trabajos'}</span>`
-      :`${fmt2(u.val)} <span class="tw-unid ${u.unid}">${u.txt}</span>`;
-    const chip=(sinEjec||porInsumos||porTrabajos)?'':`<span class="chip ${u.chip}">${u.txt}</span>`;
+    const ejec=celdaTrabajoEjecutado(l.unidadTrabajo,{ha:l.ha,horas:l.horas,kg:l.kg,ins:l.ins_lineas,trabajos:l.trabajos},sinEjec);
+    // El chip de unidad de la columna Servicio solo existe para las tres unidades MEDIDAS: sin
+    // trabajo ejecutado no hay unidad que rotular, y 'ins'/'trabajos' son conteos, no unidades.
+    const u=U_TRABAJO[l.unidadTrabajo];
+    const chip=(sinEjec||!u)?'':`<span class="chip ${u.chip}">${u.txt}</span>`;
     const contratistaTxt=labelContratista(l.contratista);
+    // La fila es desplegable: el caret ▸/▾ va en la celda de "OT Conf." (no hay columna extra de
+    // "Ver detalle") y el clic se atiende delegado sobre #gld, ver js/events.js.
+    const clave=claveFilaServicio(l);
+    const abierta=servFilaAbierta===clave;
     // Labor Propia no tiene costo de tercero asignado en el sistema (siempre US$ 0 en la columna
     // "Labor Tercero") — no hay columna de costo separada para Labor Propia en esta tabla.
-    return `<tr><td><span class="lname">${l.labor}</span> ${chip}</td><td><span class="chip chip-etapa">${l.estadio}</span></td><td class="tr mono">${l.n}</td><td class="tr mono">${ejec}</td><td class="tr mono col-terc">US$ ${fmtUSD(l.terc)}</td><td class="col-contratista" title="${contratistaTxt}">${contratistaTxt}</td><td class="tr mono col-ins">US$ ${fmtUSD(l.ins)}</td><td class="tr mono col-tot">US$ ${fmtUSD(l.tot)}</td></tr>`;
+    let html=`<tr class="sv-fila${abierta?' open':''}" data-fila="${encodeURIComponent(clave)}"><td><span class="lname">${l.labor}</span> ${chip}</td><td><span class="chip chip-etapa">${l.estadio}</span></td><td class="tr mono"><span class="ip-caret">${abierta?'▾':'▸'}</span> ${l.n}</td><td class="tr mono">${ejec}</td><td class="tr mono col-terc">US$ ${fmtUSD(l.terc)}</td><td class="col-contratista" title="${contratistaTxt}">${contratistaTxt}</td><td class="tr mono col-ins">US$ ${fmtUSD(l.ins)}</td><td class="tr mono col-tot">US$ ${fmtUSD(l.tot)}</td></tr>`;
+    if(abierta) html+=svDetalleOTs(l, sinEjec);
+    return html;
   }).join('') : '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:16px">Sin registros para el filtro seleccionado</td></tr>';
 }
 
 // ---- Consumo de Gasoil por Área ----
 function renderGasoil(){
-  const S=serviciosActivos();
+  const S=serviciosFiltrados();
   const selV=document.getElementById('gmes').value, sel=selV==='ALL'?'ALL':parseInt(selV);
   const recs=sel==='ALL'?S.gasoil_sec:S.gasoil_sec.filter(r=>r.mesnum===sel);
   const by={}; recs.forEach(r=>{ const key=r.area;

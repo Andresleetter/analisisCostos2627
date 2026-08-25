@@ -59,9 +59,24 @@ document.addEventListener('DOMContentLoaded', function(){
   // completo (ver cambiarCampaniaServicios en render.js). Solo afecta a la pestaña Servicios.
   document.getElementById('gcampania').addEventListener('change', cambiarCampaniaServicios);
   document.getElementById('gmes').addEventListener('change', renderG);
+  // Cultivo tiene el mismo alcance que Mes (KPIs, acumulado, Detalle por Servicio y Gasoil por
+  // Área), así que dispara el mismo render completo. No repuebla los demás filtros: elegir un
+  // cultivo no reinicia Servicio/Estadio/Contratista.
+  document.getElementById('gcultivo').addEventListener('change', renderG);
   document.getElementById('glabor').addEventListener('change', renderLaborDetalle);
   document.getElementById('gestadio').addEventListener('change', renderLaborDetalle);
   document.getElementById('gcontratista').addEventListener('change', renderLaborDetalle);
+  // Clic en una fila de "Detalle por Servicio": despliega/pliega las OT que componen esa fila.
+  // Delegado sobre el tbody (fijo en el HTML) porque la tabla se redibuja entera en cada cambio de
+  // filtro — mismo patrón que el detalle de parcelas de la Auditoría y el Consumo de Combustible.
+  // Una sola fila abierta a la vez: abrir otra cierra la anterior.
+  document.getElementById('gld').addEventListener('click', function(e){
+    const fila = e.target.closest('tr.sv-fila');
+    if(!fila) return;
+    const clave = decodeURIComponent(fila.dataset.fila);
+    servFilaAbierta = (servFilaAbierta===clave) ? null : clave;
+    renderLaborDetalle();
+  });
   document.getElementById('cmes').addEventListener('change', renderCombustible);
   document.getElementById('cterc').addEventListener('change', renderCombustible);
   // Clic en una fila de "Consumo" (Combustible): despliega/pliega los movimientos de ese

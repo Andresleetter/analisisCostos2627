@@ -73,6 +73,29 @@
 .sopbar>div{height:100%;background:var(--teal);border-radius:var(--radius-bar)}
 .scroll-tall{max-height:640px}
 @media(max-width:900px){.gkpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+/* Cultivo (Servicios): valores cortos tipo "ARROZ" — mismo criterio que #gcampania, no necesita
+   el min-width de 200px del resto de los selects para no empujar la barra a otra línea. */
+#gcultivo{min-width:150px}
+/* ---- Servicios · Detalle por Servicio desplegable ---- */
+/* Fila clicable que despliega las OT que componen ese servicio. Mismos tonos y mismo caret
+   (.ip-caret) que el detalle de parcelas de la Auditoría y el Consumo de Combustible, para que el
+   gesto se lea igual en los tres módulos. */
+tr.sv-fila{cursor:pointer}
+tr.sv-fila:hover td{background:#f2f6ef}
+tr.sv-fila.open td{background:#eef4ea}
+tr.sv-det>td{background:#f7faf5;padding:10px 12px}
+.sv-det-tit{font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.3px;margin-bottom:8px}
+/* La tabla interna scrollea sola en pantallas angostas: las seis columnas (OT · Fecha · Cultivo ·
+   Lote · Trabajo Ejecutado · Costo Total) se conservan siempre, nunca se oculta ninguna. */
+.sv-det-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.sv-ots{width:100%;border-collapse:collapse;min-width:520px}
+.sv-ots th{font-size:10px;text-transform:uppercase;letter-spacing:.3px;color:var(--muted);font-weight:700;
+  text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+.sv-ots td{font-size:12px;padding:6px 8px;border-bottom:1px solid #edf1e9;white-space:nowrap}
+/* .tr (tables.css) alinea a la derecha, pero `.sv-ots th` tiene más especificidad y le ganaría:
+   se repite acá para las dos columnas numéricas de la cabecera interna. */
+.sv-ots th.tr{text-align:right}
+.sv-ots tr:last-child td{border-bottom:none}
 /* ---- Combustible · Consumo por Uso / Detalle ---- */
 /* Fila clicable que despliega los movimientos del uso. Mismos tonos y mismo caret (.ip-caret) que
    el detalle de parcelas de la Auditoría, para que el gesto se lea igual en los dos módulos. */
