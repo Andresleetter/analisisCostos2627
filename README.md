@@ -101,6 +101,24 @@ Orden de la pestaña, de arriba hacia abajo:
 
 ## Servicios
 
+### Filtro de Cultivo
+
+Va al lado de Mes y tiene **el mismo alcance**: KPIs, gasto acumulado, Detalle por Servicio y Consumo de Gasoil por Área quedan todos expresados sobre `Campaña + Mes + Cultivo`. **No es un filtro visual**: `filtrarServiciosPorCultivo()` (`servicios.js`) vuelve a sumar cada grupo sobre sus propias OT de ese cultivo, con las mismas funciones que usó la construcción del módulo (`acumularGrupoServicio` / `acumularGrupoGasoil`) — no hay una segunda forma de calcular un total. Con `Todos` devuelve el paquete original **sin recalcular nada**.
+
+El cultivo de una OT es el campo **`actividad`** de `consultaOT` (`o.act`), el mismo que ya usa el avance de campo del Resumen Ejecutivo. **No** se usa la columna `cultivo` del Excel: esa trae el nombre completo de la parcela (`"LA TERESA 211 ARROZ 26/27"`), no el cultivo. La clave se normaliza con `normHdr()`, así que `ARROZ`, `Arroz` y `" arroz "` son un único cultivo.
+
+Las opciones se recalculan por campaña, en este orden: `Todos`, después los prioritarios de `CULTIVOS` (`ARROZ`, `SOJA`, `SORGO`, `MAIZ`) **solo si existen en el dato**, y después el resto alfabéticamente. Si el cultivo elegido no existe en la campaña nueva, el selector vuelve solo a `Todos`.
+
+> El selector se arma sobre **todas** las OT confirmadas de la campaña (las del Detalle por Servicio y las de retiro de gasoil), para que el filtro sea una partición completa del módulo y ningún registro quede fuera de su alcance. Por eso puede aparecer un cultivo que solo tenga OT de gasoil — hoy `SECADERO` en 26/27 y `OPERATIVO` en 25/26 —: ahí el Detalle por Servicio queda vacío y el consumo de gasoil no.
+
+### Detalle por Servicio desplegable
+
+Cada fila se abre con clic (caret `▸`/`▾` en la celda **OT Conf.**, sin columna extra de "Ver detalle") y muestra las OT que la componen: `OT · Fecha · Cultivo · Lote · Trabajo Ejecutado · Costo Total`. Una sola fila abierta a la vez; si la fila deja de estar en el resultado tras cambiar un filtro, se cierra sola.
+
+El desplegable **no recalcula nada ni vuelve a leer `consultaOT`**: recorre `l.ots`, el resumen que `construirServicios()` dejó guardado en el mismo recorrido con que sumó el grupo, sobre las OT **ya agrupadas** por `agruparOTS()` — por eso una OT con varias líneas (servicio + labor + insumos) aparece **una sola vez**. `Trabajo Ejecutado` usa `celdaTrabajoEjecutado()`, la misma función que la fila principal, con la unidad del grupo: hectáreas, horas, kilos, `3 insumos utilizados` en Tratamiento de semillas o `2 trabajos` en Camión + grúa. `Costo Total` de cada OT es su aporte real al grupo (`Labor Propia + Labor Tercero + Insumos`), sin redondear antes de sumar. Orden: fecha ascendente y, a igual fecha, número de OT ascendente.
+
+Verificado contra el dato real: en las 4 campañas y sus 175 grupos, la cantidad de OT del desplegable coincide con `OT Conf.` y las sumas de `ha`, `horas`, `kg`, líneas de insumo, trabajos y los tres importes coinciden con la fila principal (hasta un centavo de redondeo de presentación); ninguna OT aparece en dos grupos.
+
 ### Unidades de "Trabajo Ejecutado"
 
 La columna muestra la cantidad ejecutada en la unidad propia de cada trabajo, **nunca convertida a otra**. Hay cinco, y la elige `unidadTrabajo` (`servicios.js`) a partir de la modalidad de la línea principal de labor (`modalidadLaborOT`, `ordenes.js`):

@@ -110,6 +110,13 @@
       <select id="gcampania"></select>
       <label for="gmes">Mes</label>
       <select id="gmes"><option value="ALL">Toda la Campaña</option></select>
+      <!-- Cultivo tiene el MISMO alcance que Mes: no esconde filas ya calculadas, vuelve a sumar
+           cada grupo sobre las OT de ese cultivo (ver filtrarServiciosPorCultivo en
+           js/data/servicios.js), asi que KPIs, acumulado, Detalle por Servicio y Gasoil por Área
+           quedan todos expresados sobre Campaña + Mes + Cultivo. Opciones dinamicas por campaña,
+           con ARROZ/SOJA/SORGO/MAIZ primero. -->
+      <label for="gcultivo">Cultivo</label>
+      <select id="gcultivo"><option value="ALL">Todos</option></select>
       <span class="fnote" id="gnote"></span></div>
     <div class="gkpis" id="gkpis"></div>
     <div class="panel hero-panel"><h3>Detalle por Servicio <span id="gld-sub"></span></h3>
@@ -126,6 +133,9 @@
         <!-- "Trabajo Ejecutado" unifica las viejas columnas "Ha Ejec." y "Horas Ejec.": cada fila
              muestra la cantidad con SU unidad (ha / hrs / kg), nunca convertida a otra — ver
              renderLaborDetalle (render.js). -->
+        <!-- La columna "OT Conf." lleva el caret ▸/▾: cada fila se despliega y muestra las OT
+             individuales que la componen (OT · Fecha · Cultivo · Lote · Trabajo Ejecutado · Costo
+             Total), sin columna extra de "Ver detalle" — ver renderLaborDetalle (render.js). -->
         <th>Servicio</th><th>Estadio</th><th class="tr">OT Conf.</th><th class="tr">Trabajo Ejecutado</th>
         <th class="tr grp-pt">Labor Tercero</th><th>Contratista</th>
         <th class="tr">Insumos</th><th class="tr">Costo Total</th></tr></thead><tbody id="gld"></tbody></table></div></div>
