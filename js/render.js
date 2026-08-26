@@ -255,10 +255,34 @@ function renderCultivoDetalle(){
 // otro nombre).
 function renderAuditoria(){
   // Puentes por Unidad: Tercero (CONSTRUCCION PUENTE AGROVIAL) y Propia (CONSTRUCCION PUENTES
-  // LABOR PROPIA) — Ejecutadas = OT Confirmadas con ese Servicio exacto, no "En Ejecución".
-  document.getElementById('audit-puentes').innerHTML = D.auditoria_puentes.map(p=>
-    `<tr><td>${p.tipo}</td><td class="tr mono">${fmt2(p.presupuestado)}</td><td class="tr mono">${p.ejecutadas}</td><td class="tr mono">${p.avance!=null?fmt1(p.avance)+'%':'N/D'}</td></tr>`
-  ).join('');
+  // LABOR PROPIA). Las cuatro cifras llegan ya calculadas por OT única desde el modelo
+  // (puentesPorUnidad, js/data/auditoria.js): acá no se cuenta ni se divide nada. El % de avance
+  // es el de las Confirmadas — las columnas En Ejecución y Pendientes son informativas y se
+  // atenúan cuando valen 0, para que no compitan con el número que sí es ejecución real.
+  document.getElementById('audit-puentes').innerHTML = D.auditoria_puentes.map(p=>{
+    const enCurso = n => n ? `<span class="pu-curso">${n}</span>` : '<span class="ip-sin">—</span>';
+    return `<tr><td>${p.tipo}</td><td class="tr mono">${fmt2(p.presupuestado)}</td><td class="tr mono">${p.ejecutadas}</td>`+
+      `<td class="tr mono">${enCurso(p.enEjecucion)}</td><td class="tr mono">${enCurso(p.pendientes)}</td>`+
+      `<td class="tr mono">${p.avance!=null?fmt1(p.avance)+'%':'N/D'}</td></tr>`;
+  }).join('');
+
+  // Trabajo de Puentes por Horas: "Construccion de Puentes retro excavadora x Hs" del contratista
+  // Cedrela, separado por estado. Estas OT NO son puentes construidos y por eso no aparecen en la
+  // tabla de arriba. Las horas ya vienen sumadas por el modelo, con el marcador 0,01 de Albor
+  // descontado; cuando un estado tiene OT pero ninguna hora cargada se muestra "—" y se aclara
+  // cuántas OT están en esa situación, en vez de un 0,00 que se leería como "se trabajó cero".
+  const ph = D.auditoria_puentes_horas;
+  document.getElementById('audit-puentes-horas-sub').textContent =
+    ph.servicio+' · contratista '+ph.contratista+' · sin presupuesto de horas: no lleva % de avance';
+  document.getElementById('audit-puentes-horas').innerHTML = ph.estados.map(e=>{
+    // La aclaración va en la celda de Horas, que es la que muestra el guion: explica por qué no
+    // hay horas justo donde se ve el hueco, en vez de dejarlo sin motivo.
+    const nota = e.sinHorasCargadas>0
+      ? ` <span class="ip-nota">${e.sinHorasCargadas} OT sin horas cargadas</span>` : '';
+    const horas = e.nOT===0 ? '<span class="ip-sin">—</span>'
+      : (e.horas>0 ? fmt2(e.horas)+' h'+nota : `<span class="ip-sin">—</span>${nota}`);
+    return `<tr><td>${e.estado}</td><td class="tr mono">${e.nOT}</td><td class="tr mono">${horas}</td></tr>`;
+  }).join('');
 
   // Gastos: un único concepto, "Desalijo Karanda'y / Carandai" (AUDITORIA_GASTO_DESALIJO,
   // config.js) — ver nota en data.js sobre el criterio de coincidencia (concepto puntual dentro

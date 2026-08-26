@@ -45,7 +45,7 @@ assets estáticos), con `raw.githubusercontent.com` solo como respaldo. Ver READ
 | `servicios.js` | Módulo Servicios y el paquete por campaña — `unidadTrabajo` elige entre ha / hrs / kg / ins / trabajos; `acumularGrupoServicio()` es la única suma de una fila y `filtrarServiciosPorCultivo()` la reusa para el filtro de Cultivo |
 | `combustible.js` | Gasoil — incluye el cruce con la OT que generó cada movimiento (`referencia` = `referenciaAsiento`) para el Consumo por Uso / Detalle |
 | `insumos.js` | Módulo Insumos |
-| `auditoria.js` | Infraestructura + Insumos por Parcela |
+| `auditoria.js` | Infraestructura + Insumos por Parcela — Puentes por Unidad amplía los estados (Confirmado/En Ejecución/Pendiente) **solo acá**, sin tocar `CONF`; el avance sigue siendo solo Confirmados |
 | `recetas.js` | Dosis real vs receta: unidades, índice, búsqueda y desvío |
 | `alertas.js` | OT pendientes/atrasadas |
 | `resumen.js` | Gastos Operativos y `D.resumen` |

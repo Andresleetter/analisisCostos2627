@@ -147,6 +147,20 @@ const INFRA_PUENTES_PROPIA_ESP = 'Contrucion puentes Labor Propia';
 const INFRA_PUENTES_TERCERO_SERV = 'CONSTRUCCION PUENTE AGROVIAL';
 const INFRA_PUENTES_PROPIA_SERV = 'CONSTRUCCION PUENTES LABOR PROPIA';
 const INFRA_PUENTES_HORAS_SERV = 'Construccion de Puentes retro excavadora x Hs';
+// Contratista de ese trabajo por horas. Es el valor REAL de la columna "contratista" de
+// consultaOT, verificado contra el .xlsx: 'Cedrela S.A' — sin punto final y con esa capitalizacion.
+// Es ademas el unico contratista que hoy tiene ese servicio (17 de 17 OT) y el unico del archivo
+// cuyo nombre contiene "cedrela". La comparacion se hace con normHdr (ignora mayusculas, acentos y
+// espacios repetidos) contra este texto EXACTO — nunca por coincidencia parcial: si manana Albor
+// escribe otra variante, construirAuditoriaInfraestructura avisa por consola en vez de dejarla
+// entrar sola o descartarla en silencio.
+const INFRA_PUENTES_HORAS_CONTRATISTA = 'Cedrela S.A';
+// Marcador de "sin cantidad cargada" de Albor en Unidades/Dosis. NO es una duracion: son 36
+// segundos. Es el mismo 0,01 que ya traen las OT por hectarea sin superficie y las de Camión +
+// grúa (ver README). Solo lo usa la auditoria de puentes por horas, para no contar como trabajo
+// ejecutado unas horas que todavia no se cargaron — verificado: las 4 OT En Ejecución de este
+// servicio traen exactamente 0,01 y ninguna fecha real.
+const INFRA_HORAS_MARCADOR_SIN_CARGAR = 0.01;
 // Servicios cuyo trabajo ejecutado NO es una magnitud medida (hectareas/horas/kilos) sino la
 // cantidad de lineas de insumo aplicadas en la OT. Hoy es el tratamiento de semillas: la OT se
 // carga con la superficie del lote de referencia en Has. Reales, pero el trabajo no se ejecuta

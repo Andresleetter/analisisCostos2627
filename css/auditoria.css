@@ -37,6 +37,11 @@ tr.ip-parcela.open td{background:#eef4ea}
 /* Sin hectáreas reales: un guion gris, nunca 0,00 — un cero se leería como "se midió y dio cero". */
 .ip-sin{color:var(--muted)}
 
+/* Puentes por Unidad: las columnas "En Ejecución" y "Pendientes" son trabajo en curso o por
+   arrancar, no ejecución — van en el ámbar de aviso del dashboard (--y) para que se distingan de
+   los Confirmados de un vistazo, sin parecer un error. Cuando valen 0 el render usa .ip-sin. */
+.pu-curso{color:#8a5b00;font-weight:700}
+
 /* ---- Seguimiento de Receta (Auditoría de Insumos por Parcela) ----
    La receta es una referencia de auditoría, no una nota: por eso ningún estado usa el rojo de error
    del dashboard. "Sobre receta" y "Bajo receta" son hechos matemáticos, no faltas — mientras el
