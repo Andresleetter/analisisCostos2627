@@ -22,7 +22,7 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra, recetas){
   const {exceso,sinrtk,cancelados,exc_kpi} = construirControlHectareas(OTS, RTK);
   const {otsVisibles,otsAtrasadas,totalAtrasadas,TOLERANCIA_ATRASO_DIAS} = construirAlertas(OTS);
   const {operativas,oper_costo,oper_part} = construirOperativas(OTS, costo_total);
-  const {auditoria_items,auditoria_metros,auditoria_puentes,auditoria_gastos} =
+  const {auditoria_items,auditoria_metros,auditoria_puentes,auditoria_puentes_horas,auditoria_gastos} =
     construirAuditoriaInfraestructura(rows, presupuestoInfra);
   const insumos_parcela = construirAuditoriaInsumosParcela(rawTodasCampanias);
   // Indice de recetas (data/recetas-insumos-26-27.json). Se arma una sola vez y queda en memoria.
@@ -63,7 +63,7 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra, recetas){
 
   return {total_ot,ot_conf,ot_ejec:totalEnEjecucion,ot_pend:totalPendientes,costo_total,cultivos,operativas,oper_costo,oper_part,
     exceso,sinrtk,cancelados,exc_kpi,alertas:otsVisibles,n_ot_atrasadas:totalAtrasadas,
-    auditoria_items,auditoria_metros,auditoria_puentes,auditoria_gastos,
+    auditoria_items,auditoria_metros,auditoria_puentes,auditoria_puentes_horas,auditoria_gastos,
     gastos,gasoil_sec,meses,gasto_total,gasoil_total,gasoil_litros_total,gmes,glit,
     labores,estadios_labor,contratistas_labor,cultivos_labor,
     // Solo para el filtro de Campaña del modulo Servicios (ver render.js: serviciosActivos()).
