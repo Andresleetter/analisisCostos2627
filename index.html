@@ -237,13 +237,13 @@
     <!-- Puentes por Unidad. "Confirmados" son las unidades EJECUTADAS y las únicas que entran en el
          % de avance; En Ejecución y Pendientes se muestran al lado como trabajo en curso / por
          arrancar, nunca sumadas al avance (ver puentesPorUnidad en js/data/auditoria.js). -->
-    <div class="panel sub"><h3>Puentes por Unidad <span>Avance = solo OT Confirmadas con ese Servicio exacto · En Ejecución y Pendientes no cuentan como ejecutadas · Propia + Cedrela son los trabajados con la retroexcavadora del contratista: suman al total, pero el .xlsx no los presupuesta y por eso no tienen % propio · Costo = Costo Labor + Costo Insumo de las OT Confirmadas</span></h3>
+    <div class="panel sub"><h3>Puentes por Unidad</h3>
       <div class="scroll"><table><thead><tr><th>Tipo</th><th class="tr">Presupuestado</th><th class="tr">Confirmados</th><th class="tr">En Ejecución</th><th class="tr">Pendientes</th><th class="tr">Costo (Confirmados)</th><th class="tr">% Avance</th></tr></thead><tbody id="audit-puentes"></tbody></table></div></div>
     <!-- Trabajo de puentes medido en HORAS (retroexcavadora de Cedrela): es apoyo a los puentes de
          labor propia, no una unidad de puente construida, y por eso vive en su propia tabla y sus
          OT no entran en el avance de arriba. Sin presupuesto de horas en el .xlsx de
          infraestructura, así que no lleva % de avance. Clic en una fila para ver sus OT. -->
-    <div class="panel sub"><h3>Trabajo de Puentes Propia + Cedrela <span id="audit-puentes-horas-sub"></span></h3>
+    <div class="panel sub"><h3>Trabajo de Puentes Propia + Cedrela</h3>
       <div class="scroll"><table><thead><tr><th>Estado</th><th class="tr">OT</th><th class="tr">Horas</th></tr></thead><tbody id="audit-puentes-horas"></tbody></table></div></div>
     <div class="panel sub"><h3>Gastos (trabajos medidos en Horas o Litros) <span id="audit-gastos-sub"></span></h3>
       <div class="scroll"><table><thead><tr><th>Trabajo</th><th class="tr">Horas Ejecutadas</th><th class="tr">Litros</th><th class="tr">Costo (Labor+Insumo)</th><th class="tr">OT (Confirmadas)</th></tr></thead><tbody id="audit-gastos"></tbody></table></div></div>
@@ -283,14 +283,12 @@
           <option value="Unidad no comparable">Unidad no comparable</option>
         </select>
       </div>
-      <div class="ip-fuente">Fuente: hoja <b>consultaOT</b> — líneas de insumo de órdenes de trabajo <b>confirmadas</b>, sin combustible (tiene su propio módulo). Cantidad = Unidades/Dosis · Costo = Unidades/Dosis × Precio Unitario · Hectáreas = Has. Reales de la orden. Dosis de receta: <b>data/recetas-insumos-26-27.json</b> (presupuesto reducido de la campaña, solo dosis por hectárea).</div>
-      <div class="kpis" id="ip-kpis"></div>
       <div class="ip-aviso hidden" id="ip-aviso"></div>
-      <div class="panel sub"><h3>Seguimiento de Receta <span>Dosis realmente aplicada por hectárea contra la dosis del presupuesto de la campaña (data/recetas-insumos-26-27.json) — la receta es una referencia de auditoría: no modifica ninguna cantidad, hectárea ni costo</span></h3>
+      <div class="panel sub"><h3>Seguimiento de Receta</h3>
         <div class="rc-resumen" id="ip-receta"></div></div>
-      <div class="panel sub"><h3>Cantidad Utilizada por Unidad de Medida <span>Cada unidad se totaliza por separado — litros, kilos y unidades nunca se suman entre sí</span></h3>
+      <div class="panel sub"><h3>Cantidad Utilizada por Unidad de Medida</h3>
         <div class="scroll"><table><thead><tr><th>Unidad de Medida</th><th class="tr">Insumos Distintos</th><th class="tr">Cantidad Utilizada</th><th class="tr">Costo Total</th></tr></thead><tbody id="ip-unidades"></tbody></table></div></div>
-      <div class="panel hero-panel"><h3>Resumen por Lote <span id="ip-parcelas-sub"></span></h3>
+      <div class="panel hero-panel"><h3>Resumen por Lote</h3>
         <div class="scroll scroll-tall"><table class="ldt"><thead><tr><th>Lote</th><th>Cultivo</th><th class="tr">Hectáreas</th><th class="tr">Aplicaciones</th><th class="tr">Insumos Distintos</th><th class="tr">Costo Total</th><th class="tr" title="Costo total de insumos del lote dividido su superficie">Costo / ha del Lote</th></tr></thead><tbody id="ip-parcelas"></tbody></table></div></div>
     </div>
   </section>

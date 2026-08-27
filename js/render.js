@@ -343,16 +343,13 @@ function renderAuditoria(){
   // retroexcavadora del contratista Cedrela que apoyan la construcción de puentes de labor propia.
   // OJO con el rótulo: esta tabla cuenta SOLO esas horas de Cedrela. Los puentes de labor propia
   // como unidades construidas se cuentan arriba, en Puentes por Unidad, y no se repiten acá — una
-  // hora de retro no es un puente. El subtítulo lo dice explícitamente para que el título no se
-  // lea como "todo el trabajo propio de puentes".
+  // hora de retro no es un puente. Los dos paneles de puentes no llevan subtítulo (se quitaron a
+  // pedido del usuario): la regla vive acá y en el README, no en pantalla.
   //
   // Las horas ya vienen sumadas por el modelo, con el marcador 0,01 de Albor descontado; cuando un
   // estado tiene OT pero ninguna hora cargada se muestra "—" y se aclara cuántas OT están en esa
   // situación, en vez de un 0,00 que se leería como "se trabajó cero".
   const ph = D.auditoria_puentes_horas;
-  document.getElementById('audit-puentes-horas-sub').textContent =
-    'Horas de retroexcavadora de '+ph.contratista+' en apoyo a los puentes de labor propia · '+
-    ph.servicio+' · las unidades construidas se cuentan arriba, no acá · sin presupuesto de horas: no lleva % de avance';
   document.getElementById('audit-puentes-horas').innerHTML = ph.estados.map(e=>{
     // La aclaración va en la celda de Horas, que es la que muestra el guion: explica por qué no
     // hay horas justo donde se ve el hueco, en vez de dejarlo sin motivo.
@@ -599,36 +596,13 @@ function ipInsumosVisibles(lista){
   return est==='ALL' ? lista : lista.filter(i=>i.receta.estadoReceta===est);
 }
 
+// Este sub-módulo NO tiene fila de KPIs ni nota de fuente (se quitaron a pedido del usuario): sus
+// cifras se leen en los paneles de abajo, que las dan desglosadas —por unidad de medida y por
+// lote— en vez de agregadas en cuatro tarjetas. Las reglas de origen (qué hoja, qué fórmulas, de
+// dónde sale la receta) están documentadas en el README y en construirAuditoriaInsumosParcela.
 function renderInsumosParcela(){
   const movs = ipFiltrar(D.insumos_parcela.movs, null)
     .slice().sort((a,b)=>(b.fecha?b.fecha.getTime():0)-(a.fecha?a.fecha.getTime():0));
-  const insumoV = ipValor('ipinsumo');
-
-  // ---- KPIs ----
-  const costoTotal = Math.round(movs.reduce((s,m)=>s+m.costoTotal,0)*100)/100;
-  // Hectáreas trabajadas = suma de las hectáreas reales de las OT DISTINTAS que originaron estos
-  // aplicaciones, contando cada OT una sola vez (una misma OT aporta varias líneas de insumo, sumarlas
-  // por línea multiplicaría la superficie por la cantidad de insumos aplicados).
-  const haPorOT = new Map();
-  movs.forEach(m=>{ if(m.otRef && m.ha!=null && !haPorOT.has(m.otRef)) haPorOT.set(m.otRef, m.ha); });
-  const haTrabajadas = Math.round([...haPorOT.values()].reduce((s,h)=>s+h,0)*100)/100;
-  const costoHa = haTrabajadas ? costoTotal/haTrabajadas : null;
-  // Cantidad utilizada: solo se muestra como un número con su unidad cuando hay un Insumo puntual
-  // elegido y ese insumo resuelve a una única unidad real (mismo criterio que el módulo Insumos,
-  // ver unidadUnicaDe/fmtKpiUnidad en utils.js). Con "Todos", el KPI cuenta insumos distintos y el
-  // panel de abajo da la cantidad desglosada por unidad — nunca se suman litros con kilos.
-  const unidadSel = insumoV!=='ALL' ? unidadUnicaDe(movs) : null;
-  const cantTotal = movs.reduce((s,m)=>s+m.cantidad,0);
-  const nInsumos = new Set(movs.map(m=>m.tipo+'|'+m.insumo)).size;
-  const unidades = [...new Set(movs.map(m=>m.unidad))];
-  const kpiCant = (unidadSel && unidadSel!=='MULTI')
-    ? kpiCard('Insumos Utilizados', fmtKpiUnidad(cantTotal, unidadSel), insumoV, 'g')
-    : kpiCard('Insumos Utilizados', nInsumos, nInsumos===1?'1 insumo distinto':nInsumos+' insumos en '+unidades.length+' unidad(es) de medida', 'g');
-  document.getElementById('ip-kpis').innerHTML = kpiCant+
-    kpiCard('Costo Total de Insumos', 'US$ '+fmtUSD(costoTotal), movs.length+' aplicación(es) de insumo', 'gris')+
-    kpiCard('Hectáreas Trabajadas', haTrabajadas?fmt2(haTrabajadas):'—', haPorOT.size+' OT con hectáreas reales', 'gris')+
-    kpiCard('Costo de Insumos por ha', costoHa!=null?'US$ '+fmtUSD(costoHa):'—',
-      costoHa!=null?'Costo total ÷ ha trabajadas (suma de las OT)':'Sin hectáreas reales disponibles', costoHa!=null?'o':'gris');
 
   // ---- Aviso de cobertura de hectáreas ----
   // Las líneas sin hectáreas reales se muestran igual (lote, insumo,
@@ -673,12 +647,11 @@ function renderInsumosParcela(){
   const insumosPorParcela = new Map();
   parcelasTodas.forEach(p=>insumosPorParcela.set(p.parcela, ipInsumosDeParcela(p)));
   const conteoReceta = new Map(RECETA_ESTADOS_ORDEN.map(e=>[e,0]));
-  let recetaSinDosis = 0, recetaFilas = 0;
+  // estadoReceta null = el lote no registra hectáreas, así que no hay dosis real que comparar. Esas
+  // filas no entran en ningún contador: no se las cuenta como "sin receta", que sería otra cosa.
   insumosPorParcela.forEach(lista=>lista.forEach(i=>{
-    recetaFilas++;
     const e = i.receta.estadoReceta;
-    if(e==null){ recetaSinDosis++; return; }
-    conteoReceta.set(e, (conteoReceta.get(e)||0)+1);
+    if(e!=null) conteoReceta.set(e, (conteoReceta.get(e)||0)+1);
   }));
   const conReceta = (conteoReceta.get(RECETA_ESTADO.SOBRE)||0)+(conteoReceta.get(RECETA_ESTADO.BAJO)||0)
     +(conteoReceta.get(RECETA_ESTADO.TOLERANCIA)||0)+(conteoReceta.get(RECETA_ESTADO.SEGUN)||0);
@@ -687,17 +660,21 @@ function renderInsumosParcela(){
     ipRec.innerHTML = '<div class="rc-nodisp">Seguimiento de receta <b>no disponible</b>: no se pudieron cargar las recetas de la campaña. '+
       'La dosis real, las cantidades y los costos no se ven afectados.</div>';
   } else {
+    // Se muestran cuatro de los siete estados: "Bajo receta", "Según receta" y "Unidad no
+    // comparable" se quitaron del resumen a pedido del usuario. Los tres SIGUEN calculándose y
+    // marcándose por fila en el Resumen por Lote, y siguen disponibles en el filtro Estado de
+    // Receta — lo que se quitó son sus tarjetas, no el dato.
+    //
+    // OJO al leer el resumen: "Con receta" sigue contando los cuatro estados comparables (Sobre +
+    // Bajo + Dentro de tolerancia + Según), así que ya NO es la suma de las tarjetas visibles. Se
+    // deja igual a propósito: es la cantidad de insumos que se pudieron comparar, y cambiarla para
+    // que cierre con lo que se ve haría que el número dijera otra cosa.
     const chip = (lbl,n,cls,tip) => '<div class="rc-chip '+cls+'" title="'+tip+'"><span class="rc-n">'+fmt(n)+'</span><span class="rc-l">'+lbl+'</span></div>';
     ipRec.innerHTML =
       chip('Con receta', conReceta, 'rc-con', 'Insumos de lote que se pudieron comparar contra una receta de la campaña')+
       chip('Sobre receta', conteoReceta.get(RECETA_ESTADO.SOBRE)||0, 'rc-sobre', 'La dosis aplicada por hectárea superó la receta en más de '+RECETA_TOLERANCIA_PCT+'%')+
-      chip('Bajo receta', conteoReceta.get(RECETA_ESTADO.BAJO)||0, 'rc-bajo', 'La dosis aplicada por hectárea quedó por debajo de la receta. La tolerancia solo aplica hacia arriba: aplicar de menos siempre se marca, aunque sea por poco')+
       chip('Dentro de tolerancia', conteoReceta.get(RECETA_ESTADO.TOLERANCIA)||0, 'rc-tol', 'Se aplicó de más, pero sin superar la tolerancia de +'+RECETA_TOLERANCIA_PCT+'% definida para la campaña')+
-      chip('Según receta', conteoReceta.get(RECETA_ESTADO.SEGUN)||0, 'rc-segun', 'La dosis aplicada coincide exactamente con la de la receta')+
-      chip('Sin receta', conteoReceta.get(RECETA_ESTADO.SIN)||0, 'rc-sin', 'No hay una receta inequívoca para ese cultivo e insumo: no se compara ni se estima')+
-      chip('Unidad no comparable', conteoReceta.get(RECETA_ESTADO.UNIDAD)||0, 'rc-unid', 'Hay receta, pero su unidad no es de la misma magnitud que la aplicada — nunca se convierte entre kilos y litros')+
-      '<div class="rc-pie">'+fmt(recetaFilas)+' insumo(s) por lote evaluados · tolerancia +'+RECETA_TOLERANCIA_PCT+'% (solo hacia arriba: aplicar de menos siempre se marca)'+
-      (recetaSinDosis? ' · '+fmt(recetaSinDosis)+' sin dosis real (el lote no registra hectáreas), no se comparan':'')+'</div>';
+      chip('Sin receta', conteoReceta.get(RECETA_ESTADO.SIN)||0, 'rc-sin', 'No hay una receta inequívoca para ese cultivo e insumo: no se compara ni se estima');
   }
 
   // ---- Resumen por lote (ordenado por costo/ha: es la comparación que busca la auditoría) ----
@@ -705,9 +682,6 @@ function renderInsumosParcela(){
   const parcelas = parcelasTodas
     .filter(p=>estRec==='ALL' || ipInsumosVisibles(insumosPorParcela.get(p.parcela)).length>0)
     .sort((a,b)=>(b.costoHa==null?-1:b.costoHa)-(a.costoHa==null?-1:a.costoHa) || b.costo-a.costo);
-  document.getElementById('ip-parcelas-sub').textContent =
-    parcelas.length+' lote(s) · hectáreas = superficie real máxima de sus OT · clic en una fila para ver su detalle'+
-    (estRec==='ALL' ? '' : ' · filtrado por estado de receta «'+estRec+'»: los importes de cada lote siguen siendo los del lote completo');
   document.getElementById('ip-parcelas').innerHTML = parcelas.length ? parcelas.map(p=>{
     const abierta = ipParcelaAbierta===p.parcela;
     let html = `<tr class="ip-parcela${abierta?' open':''}" data-parcela="${encodeURIComponent(p.parcela)}">`+
