@@ -124,10 +124,26 @@ function separarInsumos(rows){
     combustible.push({
       'Fecha': r.fecha,
       'Referencia': r.referencia,
+      // referenciaOrigen = la ORDEN DE TRABAJO que genero el egreso ("2026 - OT - 4410"). Es un
+      // campo distinto de Referencia (el comprobante de stock, "2026 - STK - 10424") y los dos se
+      // conservan: Referencia sigue siendo la trazabilidad del comprobante y referenciaOrigen es
+      // la unica clave con que Combustible busca la OT (ver construirCombustible).
+      'Referencia Origen': r.referenciaOrigen,
       'Unidades': Math.abs(num(r.unidades)),
       'Tercero': r.proveedor || '',
       'Insumo': r.nombre,
       'Descripción Tipo de Comprobante': r.tipoMovimiento,
+      // Campania declarada por el propio movimiento. No filtra nada (consultaInsumos se sigue
+      // procesando completo): solo queda disponible en el detalle para poder distinguir un
+      // movimiento historico de uno de la campania vigente.
+      // Clave SIN ene: normHdr() (utils.js) quita los acentos y la tilde de la ene, asi que
+      // 'Campaña' llegaria a construirCombustible como 'campana' y no como 'campania'.
+      'Campania': r.campania || '',
+      // Parcela del movimiento: la columna 'cultivo' de consultaInsumos, que NO es el cultivo a
+      // secas sino el nombre completo de la parcela ("LA TERESA 211 ARROZ 26/27") — mismo criterio
+      // con que construirAuditoriaInsumosParcela ya la llama `parcela`. Describe DONDE se uso el
+      // combustible y la trae el propio movimiento, sin depender de la OT.
+      'Parcela': r.cultivo || '',
     });
   });
   return {combustible:combustible, existenciaInicial:existenciaInicial, otros:otros, excluidos:excluidos};

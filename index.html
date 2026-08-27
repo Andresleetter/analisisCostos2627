@@ -152,6 +152,12 @@
       <select id="cmes"><option value="ALL">Toda la Campaña</option></select>
       <label for="cterc">Tercero</label>
       <select id="cterc"><option value="ALL">Todos</option></select>
+      <!-- Máquina: sale de la observación de la OT (ver COMBUSTIBLE_MAQUINAS en js/config.js, que
+           reúne todas las variantes de escritura de cada equipo). Solo los movimientos con OT
+           vinculada tienen observación, así que elegir una máquina deja fuera del resultado a los
+           niveles "Solo contratista" y "OT no disponible" — es esperado, no un filtro roto. -->
+      <label for="cmaq">Máquina</label>
+      <select id="cmaq"><option value="ALL">Todas</option></select>
       <span class="fnote" id="cnote"></span>
     </div>
     <div class="kpis" id="comb-balance"></div>

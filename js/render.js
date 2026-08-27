@@ -74,6 +74,10 @@ function renderAll(){
   D.combustible_meses.forEach(m=>{const o=document.createElement('option');o.value=m.k;o.textContent=m.lbl;selCMes.appendChild(o);});
   const selCTerc=document.getElementById('cterc'); selCTerc.querySelectorAll('option:not([value=ALL])').forEach(o=>o.remove());
   D.combustible_terceros.forEach(t=>{const o=document.createElement('option');o.value=t;o.textContent=t;selCTerc.appendChild(o);});
+  // Máquina: la lista llega ya resuelta y ordenada desde el modelo (D.combustible_maquinas, ver
+  // js/data/combustible.js) y solo trae las que tienen movimientos. Acá no se normaliza ningún texto.
+  const selCMaq=document.getElementById('cmaq'); selCMaq.querySelectorAll('option:not([value=ALL])').forEach(o=>o.remove());
+  (D.combustible_maquinas||[]).forEach(m=>{const o=document.createElement('option');o.value=m.val;o.textContent=m.lbl;selCMaq.appendChild(o);});
   // filtros de la pestaña Insumos (Mes / Tipo de Insumo, independientes de Combustible)
   const selIMes=document.getElementById('imes'); selIMes.querySelectorAll('option:not([value=ALL])').forEach(o=>o.remove());
   D.insumos_meses.forEach(m=>{const o=document.createElement('option');o.value=m.k;o.textContent=m.lbl;selIMes.appendChild(o);});
@@ -836,6 +840,7 @@ function escAttr(v){ return escHtml(v).replace(/"/g,'&quot;'); }
 function renderCombustible(){
   const mesV=document.getElementById('cmes').value, mes=mesV==='ALL'?'ALL':parseInt(mesV);
   const tercV=document.getElementById('cterc').value;
+  const maqV=document.getElementById('cmaq').value;
   const selTxt=mesV==='ALL'?'Toda la campaña':document.getElementById('cmes').selectedOptions[0].text;
 
   // ---- KPI de balance: Ingreso vs Consumo del período (solo filtra por Mes, no por Tercero,
@@ -888,8 +893,12 @@ function renderCombustible(){
   const byUso={};
   usoMes.forEach(g=>{ g.movs.forEach(m=>{
     if(tercV!=='ALL' && quienDeMov(m)!==tercV) return;
+    // Filtro de Máquina: por movimiento, igual que el de Tercero. m.maquinaId llega ya resuelto
+    // desde el modelo — acá no se lee ninguna observación ni se reconoce ningún texto.
+    if(maqV!=='ALL' && m.maquinaId!==maqV) return;
     const key=g.usoOrigen+'|'+g.usoKey;
-    if(!byUso[key]) byUso[key]={uso:g.uso,usoOrigen:g.usoOrigen,usoKey:g.usoKey,esOT:g.esOT,n:0,litros:0,movs:[]};
+    if(!byUso[key]) byUso[key]={uso:g.uso,usoOrigen:g.usoOrigen,usoKey:g.usoKey,
+      tipoVinculo:g.tipoVinculo,esOT:g.esOT,maquina:g.maquina,maquinaId:g.maquinaId,n:0,litros:0,movs:[]};
     const o=byUso[key]; o.n++; o.litros+=m.litros; o.movs.push(m);
   }); });
   const rowsC=Object.values(byUso)
@@ -897,23 +906,31 @@ function renderCombustible(){
       movs:o.movs.slice().sort((a,b)=>(b.fecha-a.fecha)||(b.litros-a.litros))}))
     .sort((a,b)=>b.litros-a.litros);
   const tot=rowsC.reduce((s,r)=>s+r.litros,0);
-  document.getElementById('cnote').textContent=selTxt+(tercV!=='ALL'?' · Tercero: '+tercV:'');
-  // Control discreto de trazabilidad, en el subtítulo del panel: cuántos movimientos del período
-  // encontraron su OT y cuántos no. No es un KPI nuevo, es una línea de texto.
+  const maqTxt=maqV==='ALL'?'':document.getElementById('cmaq').selectedOptions[0].text;
+  document.getElementById('cnote').textContent=selTxt+(tercV!=='ALL'?' · Tercero: '+tercV:'')+(maqV!=='ALL'?' · Máquina: '+maqTxt:'');
+  // Control discreto de trazabilidad, en el subtítulo del panel: cómo se atribuyeron los
+  // movimientos del período. No es un KPI nuevo, es una línea de texto. Solo se nombran los
+  // niveles que realmente tienen movimientos, para no llenarla de ceros.
   const nMov=rowsC.reduce((s,r)=>s+r.n,0);
-  const nConOT=rowsC.filter(r=>r.esOT).reduce((s,r)=>s+r.n,0);
+  const porVinculo={};
+  rowsC.forEach(r=>{ porVinculo[r.tipoVinculo]=(porVinculo[r.tipoVinculo]||0)+r.n; });
+  const ordenVinculo=[VINCULO_OT,VINCULO_CONTRATISTA,VINCULO_OT_NO_DISPONIBLE,VINCULO_LABOR_PROPIA];
+  const desglose=ordenVinculo.filter(v=>porVinculo[v]).map(v=>VINCULO_LABEL[v]+': '+porVinculo[v]).join(' · ');
   document.getElementById('comb-uso-sub').textContent =
-    nMov ? fmtMovimientos(nMov)+' · vinculados a OT: '+nConOT+' · sin OT vinculada: '+(nMov-nConOT)+' · clic en una fila para ver su detalle'
+    nMov ? fmtMovimientos(nMov)+' · '+desglose+' · clic en una fila para ver su detalle'
          : 'Sin movimientos en el período';
   const mx=Math.max(1,...rowsC.map(r=>r.litros));
   document.getElementById('combbody').innerHTML = rowsC.length ? rowsC.map(r=>{
     const clave=r.usoOrigen+'|'+r.usoKey;
     const abierta=combUsoAbierto===clave;
+    // Chip del origen de la atribución: los cuatro niveles se distinguen de un vistazo y ninguno
+    // se hace pasar por otro. El texto sale de VINCULO_LABEL (config.js), única fuente del rótulo.
+    const chipVinc=`<span class="chip chip-vinc-${r.tipoVinculo}">${VINCULO_LABEL[r.tipoVinculo]||r.tipoVinculo}</span>`;
     // Observaciones largas (hay una de 349 caracteres en el dato real): la celda trunca con
     // ellipsis por CSS y el texto completo queda en el title. Nunca se recorta el dato en sí.
     let html=`<tr class="cu-fila${abierta?' open':''}" data-uso="${encodeURIComponent(clave)}">`+
       `<td class="cu-uso" title="${escAttr(r.uso)}"><span class="ip-caret">${abierta?'▾':'▸'}</span> `+
-      `<b>${escHtml(r.uso)}</b>${r.esOT?' <span class="chip chip-ot">OT</span>':''}</td>`+
+      `<b>${escHtml(r.uso)}</b> ${chipVinc}</td>`+
       `<td class="tr mono">${r.n}</td><td class="tr mono">${fmt2(r.litros)}</td>`+
       `<td class="tr"><div class="sopbar"><div style="width:${r.litros/mx*100}%"></div></div></td>`+
       `<td class="tr mono">${tot?(r.litros/tot*100).toFixed(1):0}%</td></tr>`;
@@ -921,27 +938,48 @@ function renderCombustible(){
     return html;
   }).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px">Sin registros de combustible para el filtro seleccionado</td></tr>';
 }
-// Detalle de un Uso / Detalle: los movimientos individuales que lo componen.
-// Las columnas cambian según el grupo tenga OT vinculada o no, para no mostrar columnas vacías:
-//  - con OT: Fecha · OT | Estadio | Lote | Cultivo | Litros. No se muestra "Labor" porque en estas
-//    OT el campo Servicio viene SIEMPRE vacío (verificado: 340 de 340 OT vinculadas) — el Estadio
-//    es el dato que sí describe el trabajo. Tampoco se muestra Campo: es siempre "LA TERESA".
-//  - sin OT: Fecha | Comprobante | Tipo de comprobante | Litros, que es todo lo que existe.
+// Detalle de un Uso / Detalle: los movimientos individuales que lo componen. Las columnas cambian
+// según el origen de la atribución, para no mostrar columnas vacías ni —sobre todo— datos de OT
+// que no existen. Acá NO se resuelve ningún vínculo: todo llega decidido desde
+// js/data/combustible.js.
+//  - OT vinculada       : Fecha · OT | Estadio | Lote | Retiró | Litros. No se muestra "Labor"
+//    porque en estas OT el campo Servicio viene SIEMPRE vacío — el Estadio es el dato que sí
+//    describe el trabajo. Tampoco Campo, que es siempre "LA TERESA". El Cultivo queda en el title
+//    del Lote (el texto ya incluye el lote: "LA TERESA 211 ARROZ 26/27"), y en su lugar se muestra
+//    "Retiró", que es el `personal` de la OT: en estas OT el Contratista viene siempre vacío y este
+//    es el campo que registra quién cargó el combustible.
+//  - OT no disponible   : Fecha | Referencia de origen | OT | Campaña | Litros. La referencia de
+//    origen es el dato clave: dice de qué OT salió el combustible aunque su registro no esté en el
+//    export. La columna OT dice "No disponible" — nunca un número inventado. No se muestran
+//    Servicio, Cultivo, Campo ni Lote porque para estos movimientos no existen.
+//  - Solo contratista / Labor Propia : Fecha | Comprobante | Tipo de comprobante | Campaña |
+//    Litros, que es todo lo que el movimiento trae.
 function combDetalleUso(g){
-  const cols = g.esOT
-    ? ['Fecha · OT','Estadio','Lote','Cultivo','Litros']
-    : ['Fecha','Comprobante','Tipo de comprobante','','Litros'];
-  let html=`<tr class="dethead"><td colspan="5">${escHtml(g.uso)} · ${fmtMovimientos(g.n)} · ${fmt2(g.litros)} L</td></tr>`;
+  const esOT = g.tipoVinculo===VINCULO_OT;
+  const esOTNoDisp = g.tipoVinculo===VINCULO_OT_NO_DISPONIBLE;
+  const cols = esOT ? ['Fecha · OT','Estadio','Lote','Retiró','Litros']
+    : esOTNoDisp ? ['Fecha','Referencia de origen','OT','Campaña','Litros']
+    : ['Fecha','Comprobante','Tipo de comprobante','Campaña','Litros'];
+  // La máquina es una propiedad del grupo (todos sus movimientos comparten la misma observación),
+  // así que va en la cabecera del detalle y no como una sexta columna que no entraría en la tabla.
+  const maqTxt = g.maquinaId ? ' · '+escHtml(g.maquina) : '';
+  let html=`<tr class="dethead"><td colspan="5">${escHtml(g.uso)} · ${VINCULO_LABEL[g.tipoVinculo]||''}${maqTxt} · ${fmtMovimientos(g.n)} · ${fmt2(g.litros)} L</td></tr>`;
   html+=`<tr class="detcols">`+cols.map((c,i)=>`<td${i===4?' class="tr"':''}>${c}</td>`).join('')+`</tr>`;
+  const guion='<span class="ip-sin">—</span>';
   html+=g.movs.map(m=>{
     const litros=`<td class="tr mono">${fmt2(m.litros)}</td>`;
-    if(g.esOT) return `<tr class="det"><td class="dl">${ipFecha(m.fecha)} · <b>OT ${escHtml(m.ot)}</b></td>`+
-      `<td>${escHtml(m.estadio)||'<span class="ip-sin">—</span>'}</td>`+
-      `<td>${escHtml(m.lote)||'<span class="ip-sin">—</span>'}</td>`+
-      `<td>${escHtml(m.cultivo)||'<span class="ip-sin">—</span>'}</td>${litros}</tr>`;
+    if(esOT) return `<tr class="det"><td class="dl">${ipFecha(m.fecha)} · <b>OT ${escHtml(m.ot)}</b></td>`+
+      `<td>${escHtml(m.estadio)||guion}</td>`+
+      `<td title="${escAttr(m.cultivo)}">${escHtml(m.lote)||guion}</td>`+
+      `<td>${escHtml(m.personal)||guion}</td>${litros}</tr>`;
+    if(esOTNoDisp) return `<tr class="det"><td class="dl">${ipFecha(m.fecha)}</td>`+
+      `<td class="mono">${escHtml(m.referenciaOrigen)||guion}</td>`+
+      `<td><span class="ip-sin">No disponible</span></td>`+
+      `<td>${escHtml(m.campania)||guion}</td>${litros}</tr>`;
     return `<tr class="det"><td class="dl">${ipFecha(m.fecha)}</td>`+
-      `<td class="mono">${escHtml(m.referencia)||'<span class="ip-sin">—</span>'}</td>`+
-      `<td>${escHtml(m.tipoComp)||'<span class="ip-sin">—</span>'}</td><td></td>${litros}</tr>`;
+      `<td class="mono">${escHtml(m.referencia)||guion}</td>`+
+      `<td>${escHtml(m.tipoComp)||guion}</td>`+
+      `<td>${escHtml(m.campania)||guion}</td>${litros}</tr>`;
   }).join('');
   return html;
 }

@@ -177,24 +177,104 @@ En la tabla se muestra `1 trabajo` / `N trabajos` (singular y plural), sin chip 
 
 La tabla de Consumo ya **no** agrupa por proveedor. Agrupa por el uso real del combustible, que sale de la OT que generó el movimiento.
 
-**El vínculo.** Un movimiento de combustible de `consultaInsumos` trae en `referencia` el comprobante de stock que lo generó (`"2026 - STK - 10424"`); la línea de `consultaOT` que lo originó trae ese mismo comprobante en `referenciaAsiento`. La comparación es **exacta** sobre el texto recortado (`trim`), sin fuzzy matching y sin tocar números ni identificadores; las referencias vacías no son clave, son ausencia de referencia.
+**El vínculo.** Un movimiento de combustible de `consultaInsumos` trae en **`referenciaOrigen`** la orden de trabajo que lo generó (`"2026 - OT - 4410"`), y ése es exactamente el valor de la **`referencia`** propia de esa OT en `consultaOT`. La comparación es **exacta** sobre el texto recortado (`trim`), sin fuzzy matching y sin tocar números ni identificadores; las referencias vacías no son clave, son ausencia de referencia.
 
-`construirIndiceOTPorAsiento()` (`ordenes.js`) arma el índice `referenciaAsiento → línea de OT` **una sola vez**, al construir el modelo. `construirCombustible()` recorre los movimientos una vez y busca cada referencia en ese índice: el cruce es `O(nOT + nMovimientos)`, nunca `O(nOT × nMovimientos)`, y no se repite en ningún render. `render.js` solo presenta — no hay una sola línea de cruce ahí.
+`construirIndiceOTPorReferencia()` (`ordenes.js`) arma el índice `referencia de OT → OT` **una sola vez**, al construir el modelo, y devuelve **una entrada por OT** (no una línea suelta), así que tener la OT varias líneas no puede duplicar un movimiento. `construirCombustible()` recorre los movimientos una vez: el cruce es `O(nOT + nMovimientos)`, nunca `O(nOT × nMovimientos)`, y no se repite en ningún render. `render.js` solo presenta.
 
-> **El índice se arma con TODAS las campañas, no solo con la vigente.** A diferencia de `consultaOT`, `consultaInsumos` no se recorta por campaña (ver arriba), así que hay movimientos cuya OT pertenece a otra. De los 359 que cruzan, **23 apuntan a OT de 25/26 y 26**: recortando a `CAMPANIA_ACTUAL` se perderían esos vínculos sin ninguna razón. Se reutiliza `normalizarFilasOT()` — no existe una segunda interpretación de `consultaOT` en paralelo.
+> **Por qué se abandonó `referencia = referenciaAsiento`.** Una auditoría completa contra el `.xlsx` lo descartó con datos:
+> - **La clave vieja no es única.** El número de comprobante de stock se comparte entre el subsistema agrícola y el ganadero: **848 comprobantes son usados por más de un movimiento y 673 de ellos mezclan un origen `OTG` (ganadero) con uno `OT` (agrícola)**. Eso colgaba **109 movimientos de ración vacuna de OT agrícolas sin relación** — p. ej. `2026 - STK - 9115` es a la vez 493 kg de "Silo Torta de maiz" (`OTG-1394`) y 7,4 L de IOP FULL (`OT-4027`), y la clave vieja le atribuía los dos a la OT 4027.
+> - **La clave nueva sí es única.** `consultaOT.referencia` viene cargada en las 2.228 filas, su número **siempre** coincide con `ordenTrabajo`, y ninguna referencia abarca más de una OT ni ninguna OT tiene más de una referencia.
+> - **Las cantidades cierran.** En los **371 grupos** OT+producto+unidad de combustible, la salida de stock coincide con el `totalAplicado` de la OT **hasta el último decimal** (0 diferencias), con el mismo producto y la misma unidad. La correspondencia además es biyectiva: las 371 OT con línea de gasoil tienen su movimiento y viceversa.
+> - **Cobertura del 100 % en la campaña vigente**: los **364 de 364** egresos por OT de 26/27 encuentran su orden (29.500,10 L de 29.500,10 L).
+>
+> `referenciaAsiento` **ya no se consulta en este módulo, ni siquiera como respaldo**. El campo se conserva en el modelo porque es una columna real de la OT, pero ninguna funcionalidad lo usa como clave.
 
-**De dónde sale el texto de Uso / Detalle**, en este orden:
+> **El índice se arma con TODAS las campañas, no solo con la vigente.** A diferencia de `consultaOT`, `consultaInsumos` no se recorta por campaña (ver arriba), así que hay movimientos cuya OT pertenece a otra. De los 390 que cruzan, **23 apuntan a OT de 25/26 y 3 a Zafriña 26**: recortando a `CAMPANIA_ACTUAL` se perderían esos vínculos sin ninguna razón. Se reutiliza `normalizarFilasOT()` — no existe una segunda interpretación de `consultaOT` en paralelo.
 
-| # | Situación | Uso / Detalle | Movimientos | Litros |
-|---|---|---|---|---|
-| 1 | OT vinculada **con** observación | `consultaOT.observaciones` | 359 | 28.507 L |
-| 2 | OT vinculada **sin** observación | `Sin detalle` (`USO_SIN_DETALLE`) | 0 | 0 L |
-| 3 | Sin OT, con proveedor informado | el nombre del proveedor | 1.577 | 404.722 L |
-| 4 | Sin OT y sin proveedor | `Sin OT vinculada` (`USO_SIN_OT`) | 546 | 46.268 L |
+### Atribución por niveles
 
-Nunca se usa `consultaInsumos.observaciones` como uso: en estos movimientos dice siempre lo mismo (`"Orden de Trabajo Agrícola > Comprobante Automático de Egreso de Stock"`) y no describe nada. **`Labor Propia` desapareció como etiqueta de uso** — sigue existiendo solo como opción del filtro de Tercero (proveedor vacío), que no cambió.
+Un movimiento cae en **uno solo** de estos cuatro niveles, evaluados en orden. Son situaciones realmente distintas y ninguna se hace pasar por otra:
 
-> **Por qué el caso 3 conserva el nombre del proveedor.** El pedido original mandaba `Sin OT vinculada` para todo lo que no cruzara. Eso habría metido 2.123 movimientos y 450.990 L — el **94% del consumo** — en una sola fila anónima, borrando de la vista a Cedrela S.A (817 mov, 251.761 L), Agro Vial, Rafael Heisecke y el resto, que hoy sí se leen. Decisión confirmada con el usuario: se conserva el proveedor cuando existe. **No** es la vieja suposición "proveedor vacío = Labor Propia" — es un nombre que el dato sí trae. El genérico que se quería eliminar era el caso 4, y ese bucket bajó de 905 a 546 movimientos.
+| # | `tipoVinculo` | Cuándo | Uso / Detalle | Chip | Movs | Litros |
+|---|---|---|---|---|---|---|
+| 1 | `ot` | `referenciaOrigen` encontró su OT | observación de la OT, o `Sin detalle` si está vacía | OT vinculada | 390 | 30.793,44 L |
+| 2 | `contratista` | sin `referenciaOrigen`, con contratista | el nombre real del contratista | Solo contratista | 1.595 | 408.647,55 L |
+| 3 | `ot_no_disponible` | con `referenciaOrigen`, pero esa OT no está en el export | la **parcela** que declara el propio movimiento | OT no disponible | 546 | 46.267,78 L |
+| 4 | `labor_propia` | ni referencia ni contratista | `Labor Propia` | Labor Propia | 0 | 0,00 L |
+
+Los cuatro suman exactamente el consumo original: **2.531 movimientos · 485.708,77 L**.
+
+**El nivel 3 no es "sin OT".** Esos movimientos **sí** vienen de una orden de trabajo y se sabe cuál es — el número viaja en el detalle (`2026 - OT - 3910`). Lo que falta es su registro en `consultaOT`, que viene recortado por campaña. Verificado: los 546 son **todos de 25/26**, campaña de la que el export trae sólo 61 OT de las 569 que los movimientos referencian. Llamarlos `Sin OT vinculada` sería falso y llamarlos `Labor Propia` sería inventar.
+
+**Y tampoco quedan bajo un rótulo genérico.** Su uso es la **parcela que trae el propio movimiento** (columna `cultivo` de `consultaInsumos`, el nombre completo `"LA TERESA Operativos OPERATIVO 25/26"` — mismo campo que `construirAuditoriaInsumosParcela` ya llama `parcela`). Aunque falte la OT, el dato dice **dónde** se usó el combustible, y los 546 movimientos se abren en 10 grupos legibles en vez de uno anónimo:
+
+| Parcela | Movs | Litros |
+|---|---|---|
+| LA TERESA Operativos OPERATIVO 25/26 | 308 | 28.056,03 |
+| LA TERESA Secadero Arroz ARROZ 25/26 | 149 | 10.610,64 |
+| LA TERESA PARCELA ARROZ 25/26 | 26 | 4.287,90 |
+| LA TERESA PARCELA SOJA 25/26 | 13 | 1.229,17 |
+| LA TERESA SECADERO 25/26 | 33 | 1.043,97 |
+| LA TERESA SILO BOLSAS CUIDADOS DE PATIOS GENERAL | 11 | 614,58 |
+| LA TERESA .03A SOJA 25/26 | 2 | 169,00 |
+| LA TERESA Secadero Soja SOJA 25/26 | 2 | 109,35 |
+| LA TERESA MANTENIMIENTO DE BOMBAS 25/26 | 1 | 91,70 |
+| LA TERESA PARCELA DE SORGO 25/26 | 1 | 55,44 |
+
+> **El campo está validado, no supuesto.** Mismo método que con el contratista: se comparó `consultaInsumos.cultivo` contra `consultaOT.cultivo` en los 390 movimientos donde ambas fuentes existen y **coincide en 390 de 390 (100 %)**. Está cargado en los 546 históricos (100 %) y en los 390 con OT; en las remisiones por venta viene vacío (0 %), que es coherente: ese combustible no se usó en una parcela propia.
+>
+> **El texto se muestra tal cual, sin partirlo en lote y cultivo.** El patrón `"LA TERESA {lote} {CULTIVO} {campaña}"` que usa `construirPlanRTK` **no** sirve acá: 2 de los 10 textos no calzan (`"LA TERESA SILO BOLSAS CUIDADOS DE PATIOS GENERAL"`, `"LA TERESA SECADERO 25/26"`) y otros parten mal — `"MANTENIMIENTO DE BOMBAS"` daría `lote="MANTENIMIENTO DE"` y `cultivo="BOMBAS"`. Partirlo sería inventar; el texto completo es el dato. `USO_OT_NO_DISPONIBLE` (`"OT histórica no disponible"`) queda solo como respaldo por si un movimiento futuro llegara sin parcela — hoy: 0 casos.
+
+**El contratista sirve para atribuir, nunca para deducir una OT.** No se usa contratista + fecha, + litros, + mes ni + producto para adivinar una orden: una OT se considera vinculada **sólo** si `referenciaOrigen = referencia`. Verificado en el modelo: **0 movimientos** fuera del nivel 1 traen número de OT, estadio, lote, cultivo, servicio o personal.
+
+> **El contratista no rescata a los históricos.** La validación previa lo midió: el campo viene vacío en el **100 %** de los egresos por OT (los 390 vinculados y los 546 históricos) y sólo está poblado en las remisiones por venta. La razón es operativa: el gasoil de las OT es siempre trabajo propio, y el que usa un tercero sale por remisión y se le factura. Por eso el nivel 2 cubre las remisiones y no los históricos, y por eso hizo falta el nivel 3.
+
+Nunca se usa `consultaInsumos.observaciones` como uso: en estos movimientos dice siempre lo mismo (`"Orden de Trabajo Agrícola > Comprobante Automático de Egreso de Stock"`) y no describe nada. `Labor Propia` sigue existiendo además como opción del **filtro de Tercero** (contratista vacío), que no cambió.
+
+### Detalle desplegable
+
+Las columnas cambian según el nivel, para no mostrar datos que no existen:
+
+| Nivel | Columnas |
+|---|---|
+| `ot` | Fecha · OT \| Estadio \| Lote \| **Retiró** \| Litros |
+| `ot_no_disponible` | Fecha \| Referencia de origen \| OT (`No disponible`) \| Campaña \| Litros |
+| `contratista` / `labor_propia` | Fecha \| Comprobante \| Tipo de comprobante \| Campaña \| Litros |
+
+### Filtro de Máquina
+
+La observación de la OT nombra el equipo que cargó el gasoil (`"Arreglo de camino - Motoniveladora"`, `"Corpida - Tr 14"`). No es un campo propio: es texto libre, y la misma máquina aparece escrita de muchas formas. `COMBUSTIBLE_MAQUINAS` (`config.js`) es la **única fuente** de esa equivalencia — 24 equipos con sus variantes reales, relevadas una por una contra el `.xlsx`.
+
+**Resultado: las 371 OT con observación identifican una máquina, ninguna queda sin identificar y ninguna coincide con dos a la vez.** El filtro suma exactamente los 390 movimientos y 30.793,44 L del nivel `ot`.
+
+| Máquina | Movs | Litros | | Máquina | Movs | Litros |
+|---|---|---|---|---|---|---|
+| Motoniveladora | 42 | 9.108,00 | | Tractor Deutz | 16 | 689,30 |
+| Excavadora Sany Neumática | 54 | 3.623,27 | | Tractor 03 | 9 | 423,11 |
+| Generador | 20 | 3.193,44 | | Tractor Case 230 | 7 | 412,07 |
+| Tractor 07 | 47 | 2.701,38 | | Tractor 01 | 7 | 375,13 |
+| Ford Ranger | 40 | 2.098,08 | | Amarok | 3 | 213,78 |
+| Tractor 04 | 24 | 1.829,52 | | FAD575 | 2 | 130,00 |
+| Tractor 14 | 34 | 1.550,33 | | Tractor Valtra | 4 | 96,30 |
+| S10 AAOZ829 | 19 | 1.121,39 | | Chevrolet BLB594 | 1 | 85,00 |
+| Chevrolet D20 (AGP645) | 21 | 1.053,94 | | AAUG855 | 1 | 76,00 |
+| Tractor 02 | 11 | 989,11 | | Tractor New Holland 7205 | 2 | 71,00 |
+| S10 UAB800 | 23 | 829,23 | | Chevrolet HDX314, Toyota Hilux, Scania OCE825 | 1 c/u | 124,06 |
+
+**Reglas de la normalización** — sin fuzzy matching, sin coincidencia parcial, sin alias inventados:
+
+- La variante se busca como **palabra completa** sobre el texto normalizado (`normHdr` + puntuación y guiones convertidos en espacios). El guion hace falta porque el dato trae la máquina pegada a él (`"Desalijo Silo Bolsa -Tr 07 AC"`) y el punto porque termina en él (`"Abastecer generador."`).
+- Las variantes se prueban **de la más larga a la más corta**, para que `tr 07 ac` gane sobre `tr 07`.
+- **Identidad de los tractores: el número de flota** (1-2 dígitos tras `Tr`). Por eso `Tr 07 AC`, `Tr 07`, `Tr 07AC` y `Tr 7 John Deere` quedan bajo el mismo Tractor 07.
+- Los números de **4 dígitos no son flota sino modelo** (`New Holland 7205`, `John Deere 6180`, `John Deere 7515`, `Case 230`): esas variantes van declaradas enteras y no se les extrae el número, para no inventar un "tractor 7205".
+
+> **Pendiente de desagregar.** El usuario confirmó que un tractor de marca (John Deere, New Holland) **no es necesariamente el mismo equipo** que el de la flota "AC" aunque compartan el número, y va a indicar cuáles separar. El dato tiene con qué hacerlo cuando llegue esa indicación: sobre las **125 menciones `Tr <número>` de toda la hoja** `consultaOT`, las 78 con **cero a la izquierda** (`Tr 01/02/03/04/07`) **no nombran ninguna marca**, y las 47 **sin cero** (`Tr 3`, `Tr 3J`, `Tr 7`, `Tr 14`) incluyen las 22 que sí la nombran. Las dos formas nunca se cruzan, así que alcanza con mover las variantes con marca a su propia entrada del catálogo.
+- El horómetro o el kilometraje entre paréntesis se ignoran: `Motoniveladora (17397.8 Hs)` y `Ford Ranger (92.635 km)` son la misma máquina que sin el paréntesis.
+- Un texto que no coincida con ninguna variante declarada **no recibe máquina** — no se le adivina una.
+
+Solo el nivel `ot` tiene observación, así que **elegir una máquina deja fuera del resultado a `Solo contratista` y `OT no disponible`**: esos 2.141 movimientos no dicen qué equipo cargó el combustible. Es esperado, no un filtro roto.
+
+**"Retiró"** es el campo `personal` de la OT: en las OT de gasoil el Contratista viene **siempre** vacío (390 de 390) y `personal` es el que registra quién cargó el combustible — el mismo criterio que ya usa el Consumo de Gasoil por Área de Servicios. Lo traen 389 de los 390 movimientos con OT. El Cultivo queda en el `title` del Lote (su texto ya incluye el lote: `"LA TERESA 211 ARROZ 26/27"`), y no se muestran Servicio ni Campo porque en estas OT el primero viene vacío y el segundo es siempre `LA TERESA`.
 
 **Clave de agrupación**: `mes + origen + normHdr(uso)`. `normHdr` (`utils.js`) recorta, colapsa espacios repetidos e ignora mayúsculas y acentos, así que `"Logistica - UAB800"` y `"Logística - UAB800"` no aparecen como dos usos distintos; se guarda aparte el texto legible original. Sin corrección semántica ni fuzzy matching: dos observaciones que difieran en algo más que espaciado o acentos quedan separadas. El **origen entra en la clave** a propósito, para que una observación de OT nunca se fusione con un nombre de proveedor que casualmente se escriba igual.
 

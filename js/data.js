@@ -14,7 +14,7 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra, recetas){
   // Plan RTK (consultaCultivos) y las colecciones de OT (consultaOT) que consumen todos los demas
   // dominios. Van primero porque el resto depende de ellas.
   const {RTK,RTK_TOT} = construirPlanRTK(proyecciones);
-  const {rawTodasCampanias,campanias_ot,rows,HOY,OTS,CONF,indice_ot_asiento,
+  const {rawTodasCampanias,campanias_ot,rows,HOY,OTS,CONF,indice_ot_referencia,
     total_ot,ot_conf,totalEnEjecucion,totalPendientes,costo_total} = construirBaseOT(raw);
 
   // ---- Dominios que solo dependen de la base ----
@@ -42,14 +42,14 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra, recetas){
 
   // ---- Dominios que salen de consultaInsumos ----
   // OJO: consultaInsumos NO se recorta por campania, a diferencia de consultaOT.
-  // indice_ot_asiento vincula cada movimiento de combustible con la linea de OT que lo genero
-  // (consultaInsumos.referencia = consultaOT.referenciaAsiento). Se arma una sola vez en
+  // indice_ot_referencia vincula cada movimiento de combustible con la OT que lo genero
+  // (consultaInsumos.referenciaOrigen = consultaOT.referencia). Se arma una sola vez en
   // construirBaseOT y se pasa explicitamente: combustible.js no lee consultaOT por su cuenta.
   const {combustible,combustible_ingresos,combustible_meses,combustible_terceros,
     combustible_litros_total,combustible_n_total,
-    combustible_ingresos_litros_total,combustible_ingresos_n_total,combustible_uso,
+    combustible_ingresos_litros_total,combustible_ingresos_n_total,combustible_uso,combustible_maquinas,
     combustible_existencia_inicial,stock_inicial_combustible} =
-    construirCombustible(combustibleRaw, existenciaInicial, indice_ot_asiento);
+    construirCombustible(combustibleRaw, existenciaInicial, indice_ot_referencia);
   const {insumos_ingreso,insumos_consumo,insumos_meses,insumos_tipos,insumos_por_tipo,
     insumos_stock_flujo,insumos_ingreso_mensual,insumos_consumo_mensual} =
     construirInsumos(otrosInsumos);
@@ -72,7 +72,7 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra, recetas){
     costo_total_consolidado,costo_por_campania,
     combustible,combustible_litros_total,combustible_n_total,combustible_meses,combustible_terceros,
     combustible_ingresos,combustible_ingresos_litros_total,combustible_ingresos_n_total,
-    combustible_uso,
+    combustible_uso,combustible_maquinas,
     combustible_existencia_inicial,stock_inicial_combustible,
     insumos_ingreso,insumos_consumo,insumos_meses,insumos_tipos,insumos_por_tipo,
     insumos_stock_flujo,insumos_ingreso_mensual,insumos_consumo_mensual,
