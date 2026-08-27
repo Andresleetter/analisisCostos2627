@@ -156,7 +156,9 @@ const COMBUSTIBLE_MAQUINAS = [
   {id:'generador', label:'Generador', variantes:['generador']},
   {id:'sany', label:'Excavadora Sany Neumática', variantes:['sany neumatico','sany neumatica','neumatica sany','sany']},
   // --- Vehículos (marca y/o chapa) ---
-  {id:'ford-ranger', label:'Ford Ranger', variantes:['ford ranger']},
+  // La chapa AAUG855 es la del propio Ford Ranger (confirmado por el usuario): las observaciones
+  // lo nombran unas veces por modelo y otras por chapa, y es un solo vehiculo.
+  {id:'ford-ranger', label:'Ford Ranger (AAUG855)', variantes:['ford ranger','aaug855']},
   {id:'d20', label:'Chevrolet D20 (AGP645)', variantes:['ford d20','chevrolet d20','d20 chevrolet','d20 agp645','d20','agp645']},
   {id:'s10-uab800', label:'S10 UAB800', variantes:['s10 uab800','uab800 pc','uab800','s10 aub800','aub800']},
   {id:'s10-aaoz829', label:'S10 AAOZ829', variantes:['s10 aaoz829','aaoz829']},
@@ -166,7 +168,6 @@ const COMBUSTIBLE_MAQUINAS = [
   {id:'blb594', label:'Chevrolet BLB594', variantes:['chevrolet blb594','blb594']},
   {id:'hdx314', label:'Chevrolet HDX314', variantes:['chevrolet hdx314','hdx314']},
   {id:'fad575', label:'FAD575', variantes:['fad575']},
-  {id:'aaug855', label:'AAUG855', variantes:['aaug855']},
 ];
 // Movimientos sin observación de OT (los niveles Solo contratista y OT no disponible) o cuya
 // observación no nombra ninguna máquina del catálogo. No se les inventa una.

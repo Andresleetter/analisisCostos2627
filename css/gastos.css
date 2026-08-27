@@ -76,9 +76,11 @@
 /* Cultivo (Servicios): valores cortos tipo "ARROZ" — mismo criterio que #gcampania, no necesita
    el min-width de 200px del resto de los selects para no empujar la barra a otra línea. */
 #gcultivo{min-width:150px}
-/* Combustible pasó de 2 a 3 selects (Mes / Tercero / Máquina). Con el min-width de 200px de
-   .gfilter los tres más la nota no entran en una fila de escritorio; se los deja crecer desde una
-   base menor, igual que se hizo con los 3 de Insumos. */
+/* Combustible tiene 3 selects (Mes / Tercero / Máquina). Con el min-width de 200px de .gfilter no
+   entran en una fila de escritorio; se los deja crecer desde una base menor y repartirse el ancho
+   en partes iguales, igual que los 3 de Insumos. La barra NO lleva nota de contexto (.fnote): los
+   propios selects ya dicen qué está filtrado, y su texto —de largo variable, ej. el nombre de un
+   contratista— movía el ancho de los selects cada vez que cambiaba el filtro. */
 #cmes, #cterc, #cmaq{flex:1 1 170px;min-width:150px}
 /* ---- Servicios · Detalle por Servicio desplegable ---- */
 /* Fila clicable que despliega las OT que componen ese servicio. Mismos tonos y mismo caret
