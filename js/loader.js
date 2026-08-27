@@ -43,6 +43,30 @@ function cargarXLSX(nombre, url, urlRespaldo){
       throw e instanceof Error ? e : new Error('Error al descargar '+nombre+': '+e);
     });
 }
+// Descarga y parsea un .json, con el MISMO esquema de respaldo que cargarXLSX (sitio primero,
+// GitHub como plan B, una sola vez). A diferencia de cargarRecetas, el error SI se propaga: este
+// cargador se usa para datos sin los cuales el dashboard no puede armarse.
+function descargarJSON(nombre, url){
+  console.log('Iniciando carga:', url);
+  return fetch(url, {cache:'no-store'}).then(function(resp){
+    console.log('HTTP Status:', resp.status, '('+nombre+')');
+    if(!resp.ok) throw new Error('HTTP '+resp.status+' '+(resp.statusText||'')+' al descargar '+nombre);
+    return resp.json();
+  });
+}
+function cargarJSON(nombre, url, urlRespaldo){
+  return descargarJSON(nombre, url)
+    .catch(function(e){
+      if(!urlRespaldo) throw e;
+      console.warn('No se pudo cargar '+nombre+' desde el sitio ('+(e.message||e)+'). Reintentando desde GitHub…');
+      return descargarJSON(nombre, urlRespaldo)
+        .catch(function(e2){
+          console.error('Error al cargar '+nombre+' — sitio:', e.message||e, '| respaldo:', e2.message||e2);
+          throw new Error('Error al descargar '+nombre+' desde '+urlRespaldo+': '+(e2.message||e2));
+        });
+    });
+}
+
 // Recetas de insumos: JSON estatico y chico (data/recetas-insumos-26-27.json). Se descarga UNA sola
 // vez, en la carga inicial, junto con los .xlsx — nunca al cambiar un filtro, abrir un lote o
 // cambiar de pestaña: el indice queda en memoria durante toda la sesion (ver D.recetas).
@@ -149,23 +173,24 @@ function separarInsumos(rows){
   return {combustible:combustible, existenciaInicial:existenciaInicial, otros:otros, excluidos:excluidos};
 }
 
-// Presupuesto de Infraestructura: estructura fija (ver INFRA_COL en config.js), filas 4-13 (indices
-// 3-12 en base 0) son los 10 items reales; fila 14 es el TOTAL y filas 47-51 son calculos sueltos
-// sin relacion a la tabla — ambas se excluyen tomando solo ese rango fijo, en vez de parsear todo
-// el archivo y filtrar despues.
-function leerPresupuestoInfra(wb){
-  var sheet = wb.Sheets[INFRA_HOJA];
-  if(!sheet) throw new Error('El presupuesto de infraestructura no contiene la hoja «'+INFRA_HOJA+'». Hojas disponibles: '+wb.SheetNames.join(', '));
-  var filas = XLSX.utils.sheet_to_json(sheet, {header:1, raw:true, defval:''});
-  return filas.slice(3,13).map(function(fila){
+// Presupuesto de Infraestructura: ya viene como lista de items en el JSON (ver INFRA_SRC_JSON en
+// config.js), con los mismos campos que antes producia el parseo del .xlsx. Aca solo se normaliza
+// y se valida: los campos se leen uno por uno (no se confia en la forma del archivo tal cual) y
+// los numeros pasan por num(), igual que antes. Los items sin Especificacion se descartan.
+function leerPresupuestoInfra(json){
+  if(!Array.isArray(json)) throw new Error('El presupuesto de infraestructura no es una lista de items.');
+  var items = json.map(function(item){
+    item = item || {};
     return {
-      especificacion: String(fila[INFRA_COL.especificacion]||'').trim(),
-      cantidadPresupuestada: num(fila[INFRA_COL.cantidadPresupuestada]),
-      unidadMedida: String(fila[INFRA_COL.unidadMedida]||'').trim(),
-      costo: num(fila[INFRA_COL.costo]),
-      importeTotal: num(fila[INFRA_COL.importeTotal]),
+      especificacion: String(item.especificacion||'').trim(),
+      cantidadPresupuestada: num(item.cantidadPresupuestada),
+      unidadMedida: String(item.unidadMedida||'').trim(),
+      costo: num(item.costo),
+      importeTotal: num(item.importeTotal),
     };
   }).filter(function(item){ return item.especificacion; });
+  if(!items.length) throw new Error('El presupuesto de infraestructura no contiene ningún item con Especificación.');
+  return items;
 }
 
 function loadData(){
@@ -177,11 +202,11 @@ function loadData(){
 
   Promise.all([
     cargarXLSX('datosCampania2627.xlsx', SRC_XLSX, SRC_XLSX_RESPALDO),
-    cargarXLSX('PRESUPUESTO ALISON INFRAESTRUTURA 26-27.xlsx', INFRA_SRC_XLSX, INFRA_SRC_XLSX_RESPALDO),
+    cargarJSON('presupuesto-infraestructura-26-27.json', INFRA_SRC_JSON, INFRA_SRC_JSON_RESPALDO),
     cargarRecetas(RECETAS_SRC_JSON, RECETAS_SRC_JSON_RESPALDO)
   ])
     .then(function(wbs){
-      var wb = wbs[0], wbInfra = wbs[1], recetas = wbs[2];
+      var wb = wbs[0], jsonInfra = wbs[1], recetas = wbs[2];
       var consultaOT = hojaARows(wb, HOJA_OT);
       var consultaCultivos = hojaARows(wb, HOJA_CULTIVOS);
       var consultaInsumos = hojaARows(wb, HOJA_INSUMOS);
@@ -192,7 +217,7 @@ function loadData(){
       console.log('consultaInsumos separado: combustible='+insumos.combustible.length+
         ', existencia inicial='+insumos.existenciaInicial.length+', otros insumos='+insumos.otros.length+
         ', excluidos='+insumos.excluidos.length+' ('+INSUMOS_EXCLUIDOS.join(', ')+')');
-      var presupuestoInfra = leerPresupuestoInfra(wbInfra);
+      var presupuestoInfra = leerPresupuestoInfra(jsonInfra);
       console.log('Presupuesto de Infraestructura — items:', presupuestoInfra.length);
       console.log('Recetas de insumos — registros:', recetas ? recetas.length : '(no disponibles)');
       try{ D = buildData(consultaOT, consultaCultivos, insumos, presupuestoInfra, recetas); }

@@ -3,12 +3,14 @@
 Dashboard de seguimiento de campaña agrícola (Campo La Teresa). Es una web estática (HTML/CSS/JS vanilla, sin build step) que al cargar descarga tres archivos de datos publicados en este mismo repo, todos bajo **`data/`**:
 
 - **`data/datosCampania2627.xlsx`** — 3 hojas: `consultaOT`, `consultaCultivos`, `consultaInsumos`.
-- **`data/PRESUPUESTO ALISON INFRAESTRUTURA 26-27.xlsx`** — 1 hoja (`INFRAESTRUTURA 26-27`), el presupuesto de infraestructura usado en la pestaña Auditoría.
+- **`data/presupuesto-infraestructura-26-27.json`** — 10 ítems con el presupuesto de infraestructura usado en la pestaña Auditoría (`especificacion`, `cantidadPresupuestada`, `unidadMedida`, `costo`, `importeTotal`).
 - **`data/recetas-insumos-26-27.json`** — 179 registros con la dosis por hectárea recomendada por cultivo e insumo. Es una versión **reducida** del presupuesto de insumos: solo dosis, sin costos ni volúmenes. Alimenta el seguimiento de receta de Auditoría de Insumos por Parcela.
 
-Los dos `.xlsx` se parsean en el navegador con SheetJS; el JSON de recetas **no** pasa por SheetJS (`resp.json()`). A partir de ellos se renderizan KPIs, tablas y alertas.
+El `.xlsx` se parsea en el navegador con SheetJS; los dos JSON **no** pasan por SheetJS (`resp.json()`). A partir de ellos se renderizan KPIs, tablas y alertas.
 
-> **La carpeta `data/`.** Los archivos de datos vivían en la raíz del repo y se movieron a `data/`. La ruta se arma una sola vez en `config.js` (`SRC_DATA`), de donde salen `SRC_XLSX`, `INFRA_SRC_XLSX` y `RECETAS_SRC_JSON` con sus respectivos respaldos de GitHub.
+> **El presupuesto de infraestructura pasó de Excel a JSON.** Antes se descargaba y parseaba un segundo `.xlsx` (`data/PRESUPUESTO ALISON INFRAESTRUTURA 26-27.xlsx`, hoja `INFRAESTRUTURA 26-27`) solo para leer 10 filas. Ese archivo **sigue en `data/` como origen del dato, pero ya no se descarga ni se lee en runtime**: el JSON se generó a partir de él con la misma lógica de parseo (mismo rango de filas, mismas columnas, mismos números pasados por `num()`), y se verificó que los indicadores de Auditoría salen **idénticos** con una fuente y con la otra. Para actualizar el presupuesto se edita el JSON, o se regenera desde el Excel actualizado.
+
+> **La carpeta `data/`.** Los archivos de datos vivían en la raíz del repo y se movieron a `data/`. La ruta se arma una sola vez en `config.js` (`SRC_DATA`), de donde salen `SRC_XLSX`, `INFRA_SRC_JSON` y `RECETAS_SRC_JSON` con sus respectivos respaldos de GitHub.
 
 ## Cómo arrancar un servidor local
 
@@ -67,9 +69,9 @@ Si el archivo está abierto en Excel al momento de necesitar inspeccionarlo (ej.
     **Orden de carga** (ver `index.html`): los nueve `js/data/*.js` van **antes** de `js/data.js`. Entre sí no tienen orden obligatorio (solo definen funciones, no ejecutan nada al cargarse), pero `data.js` sí tiene que ir último porque `buildData()` las invoca. `loader.js` sigue llamando a `buildData()` exactamente igual que antes.
   - `render.js` — todas las funciones que pintan el DOM (`renderAll`, `renderG`, `renderCombustible`, `renderInsumos`, `renderAlertas`, `renderAuditoria`, etc.) y el cambio de pestaña (`show`).
   - `events.js` — conecta los elementos interactivos del HTML (pestañas, selects de filtro, botón de reintento) con las funciones de `render.js`/`loader.js`. El filtro dependiente Tipo de Insumo → Insumo se resuelve acá: el `change` de `#itipo` llama primero a `actualizarFiltroInsumo()` (repuebla `#iinsumo` y limpia la selección si ya no aplica) y **después** a `renderInsumos()`.
-  - `loader.js` — descarga ambos `.xlsx` y el JSON de recetas (`cargarRecetas()`), los parsea, separa `consultaInsumos` en combustible/existencia inicial/otros insumos, parsea el presupuesto de infraestructura (`leerPresupuestoInfra()`, rango fijo de filas — ver sección Auditoría), y dispara la carga inicial al terminar de cargar el DOM. Las tres descargas van en un mismo `Promise.all`, pero la del JSON de recetas **no puede tumbar la carga**: si falla, se registra en consola y devuelve `null`, y el dashboard sigue igual con el seguimiento de receta marcado como no disponible.
-- **`data/`** — los archivos de datos que el dashboard descarga en runtime: `datosCampania2627.xlsx`, `PRESUPUESTO ALISON INFRAESTRUTURA 26-27.xlsx` y `recetas-insumos-26-27.json`. No hay build: se sirven tal cual desde el repo, así que actualizar los datos es commitear estos archivos.
-- **`vendor/xlsx.full.min.js`** — copia sin modificar de [SheetJS](https://sheetjs.com) (`xlsx@0.18.5`), usada para leer los `.xlsx` en el navegador.
+  - `loader.js` — descarga el `.xlsx` de campaña (`cargarXLSX()`), el JSON de presupuesto de infraestructura (`cargarJSON()`) y el JSON de recetas (`cargarRecetas()`), los parsea, separa `consultaInsumos` en combustible/existencia inicial/otros insumos, normaliza y valida el presupuesto de infraestructura (`leerPresupuestoInfra()`), y dispara la carga inicial al terminar de cargar el DOM. Las tres descargas van en un mismo `Promise.all`. `cargarJSON()` es genérico y usa el mismo esquema de respaldo que `cargarXLSX()` (el sitio primero, GitHub como plan B una sola vez), y su error **sí** se propaga: sin presupuesto no hay Auditoría. La del JSON de recetas, en cambio, **no puede tumbar la carga**: si falla, se registra en consola y devuelve `null`, y el dashboard sigue igual con el seguimiento de receta marcado como no disponible.
+- **`data/`** — los archivos de datos que el dashboard descarga en runtime: `datosCampania2627.xlsx`, `presupuesto-infraestructura-26-27.json` y `recetas-insumos-26-27.json`. No hay build: se sirven tal cual desde el repo, así que actualizar los datos es commitear estos archivos. También vive ahí `PRESUPUESTO ALISON INFRAESTRUTURA 26-27.xlsx`, que **ya no se descarga**: quedó como origen del JSON de presupuesto.
+- **`vendor/xlsx.full.min.js`** — copia sin modificar de [SheetJS](https://sheetjs.com) (`xlsx@0.18.5`), usada para leer el `.xlsx` en el navegador.
 
 ## Filtro de campaña (`CAMPANIA_ACTUAL`)
 
@@ -336,9 +338,11 @@ Filtro por **Estado** (`Todas` / `Pendiente` / `En Ejecución`), mismo patrón v
 
 ## Auditoría
 
-Presupuesto de infraestructura (`PRESUPUESTO ALISON INFRAESTRUTURA 26-27.xlsx`, hoja `INFRAESTRUTURA 26-27`) cruzado contra la ejecución real en `consultaOT`. Última pestaña de la barra.
+Presupuesto de infraestructura (`data/presupuesto-infraestructura-26-27.json`) cruzado contra la ejecución real en `consultaOT`. Última pestaña de la barra.
 
-**Estructura del archivo de presupuesto** (`leerPresupuestoInfra()` en `loader.js`, rango fijo de filas): fila 3 = encabezados, filas 4-13 = los 10 ítems reales, fila 14 = TOTAL, filas 47-51 = cálculos sueltos sin relación a la tabla (se excluyen). La cantidad presupuestada real está en la columna **"PRESUPUESTO Aprob"**, no en "Cant. De trabajo" (esa viene vacía en las 10 filas).
+**Estructura del archivo de presupuesto**: una lista de ítems, cada uno con `especificacion`, `cantidadPresupuestada`, `unidadMedida`, `costo` e `importeTotal`. `leerPresupuestoInfra()` (en `loader.js`) lo normaliza campo por campo — los números pasan por `num()` — y descarta los ítems sin `especificacion`.
+
+**De dónde salió ese JSON.** Se generó desde `PRESUPUESTO ALISON INFRAESTRUTURA 26-27.xlsx` (hoja `INFRAESTRUTURA 26-27`) con la lógica que antes corría en el navegador: fila 3 = encabezados, filas 4-13 = los 10 ítems reales, fila 14 = TOTAL, filas 47-51 = cálculos sueltos sin relación a la tabla (se excluían). La cantidad presupuestada real sale de la columna **"PRESUPUESTO Aprob"** (col E), no de "Cant. De trabajo" (esa viene vacía en las 10 filas); las demás columnas son Especificación (C), Unidad Medida (F), Costo (G) e Importe Total sin IVA (H). Ese detalle queda documentado acá porque es lo que hay que reproducir si algún día se regenera el JSON desde un Excel actualizado.
 
 **Cruce Especificación (presupuesto) ↔ Servicio (OT)**: no hay match de texto exacto ni parcial confiable para la mayoría de los ítems — el mapeo es **manual**, definido en `INFRA_MAP` (`config.js`), verificado ítem por ítem contra los datos reales. No se filtra por Estadio (una búsqueda amplia por palabra clave encontró trabajo real bajo varios Estadios distintos, no solo "Infraestructura") — solo por el Servicio exacto listado en `INFRA_MAP`. Ítems del presupuesto sin ningún Servicio real asociado todavía se muestran igual, con ceros, para dejar en evidencia qué falta cargar (o qué se cargó con otro nombre).
 
