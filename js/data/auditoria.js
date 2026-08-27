@@ -55,6 +55,18 @@ function construirAuditoriaInfraestructura(rows, presupuestoInfra){
   // sigue siendo un solo puente. Los estados usan los helpers ya existentes del proyecto
   // (esEnEjecucion / esPendiente, ordenes.js), que normalizan acentos y mayúsculas; "Confirmado"
   // mantiene la misma comparación exacta que ya usaba esta función, para no cambiar el número.
+  //
+  // COSTO: Costo Labor + Costo Insumo de las OT CONFIRMADAS, la misma fórmula que ya usa la sección
+  // de Gastos (gastoDeOTs). Se suma el valor propio de CADA LÍNEA, no un valor de nivel OT repetido
+  // — verificado contra el .xlsx: las 38 OT de los tres servicios de puentes tienen exactamente una
+  // línea cada una, así que hoy no hay ninguna posibilidad de duplicar. Si mañana una OT trajera
+  // varias líneas, la suma por línea sigue siendo la correcta (es cómo Albor reparte el costo).
+  // Solo Confirmadas, el mismo criterio que el % de avance: una OT En Ejecución o Pendiente no es
+  // trabajo ejecutado, y hoy además ninguna trae costo cargado.
+  function costoConfirmadoDe(cumpleServicio){
+    return Math.round(rows.filter(r=>cumpleServicio(r) && r.estado==='Confirmado')
+      .reduce((s,r)=>s+r.cl+r.ci, 0)*100)/100;
+  }
   function puentesPorUnidad(especificacion, servicio, tipoLabel){
     const presu = (presupuestoInfra||[]).find(i=>i.especificacion===especificacion);
     const presupuestado = presu ? presu.cantidadPresupuestada : 0;
@@ -63,14 +75,15 @@ function construirAuditoriaInfraestructura(rows, presupuestoInfra){
     const enEjecucion = otUnicas(esEnEjecucion);
     const pendientes = otUnicas(esPendiente);
     const avance = presupuestado>0 ? Math.round(ejecutadas/presupuestado*1000)/10 : null;
-    return {tipo:tipoLabel, presupuestado, ejecutadas, enEjecucion, pendientes, avance};
+    const costo = costoConfirmadoDe(r=>r.serv===servicio);
+    return {tipo:tipoLabel, presupuestado, ejecutadas, enEjecucion, pendientes, avance, costo};
   }
   const auditoria_puentes = [
     puentesPorUnidad(INFRA_PUENTES_TERCERO_ESP, INFRA_PUENTES_TERCERO_SERV, 'Tercero'),
     puentesPorUnidad(INFRA_PUENTES_PROPIA_ESP, INFRA_PUENTES_PROPIA_SERV, 'Propia'),
   ];
 
-  // ---- Sección 1b: Trabajo de Puentes por Horas (retroexcavadora, contratista Cedrela) ----
+  // ---- Sección 1b: Trabajo de Puentes Propia + Cedrela (retroexcavadora del contratista) ----
   // "Construccion de Puentes retro excavadora x Hs" (INFRA_PUENTES_HORAS_SERV, config.js) es un
   // trabajo de APOYO medido en HORAS: NUNCA es "1 OT = 1 puente". Por eso va en su propia sección y
   // sus OT no entran ni en las unidades ejecutadas ni en el % de avance de Puentes por Unidad de
@@ -86,7 +99,7 @@ function construirAuditoriaInfraestructura(rows, presupuestoInfra){
   const esContratistaPuentesHoras = r => normHdr(r.contr)===normHdr(INFRA_PUENTES_HORAS_CONTRATISTA);
   const puentesHorasRows = puentesHorasDelServicio.filter(esContratistaPuentesHoras);
   const puentesHorasOtroContratista = puentesHorasDelServicio.filter(r=>!esContratistaPuentesHoras(r));
-  if(puentesHorasOtroContratista.length) console.warn('Auditoría · Puentes por Horas: '+
+  if(puentesHorasOtroContratista.length) console.warn('Auditoría · Puentes Propia + Cedrela: '+
     puentesHorasOtroContratista.length+' fila(s) del servicio con un contratista distinto de '+
     INFRA_PUENTES_HORAS_CONTRATISTA+' ('+[...new Set(puentesHorasOtroContratista.map(r=>r.contr||'(vacío)'))].join(', ')+
     ') — quedan FUERA de esta sección.');
@@ -110,14 +123,19 @@ function construirAuditoriaInfraestructura(rows, presupuestoInfra){
   const auditoria_puentes_horas = {
     servicio: INFRA_PUENTES_HORAS_SERV,
     contratista: INFRA_PUENTES_HORAS_CONTRATISTA,
+    // Costo Labor + Costo Insumo de las OT confirmadas de este servicio, misma fórmula que las
+    // filas de Puentes por Unidad. Solo entran las del contratista (puentesHorasRows), igual que
+    // todo el resto de la sección.
+    costo: costoConfirmadoDe(r=>r.serv===INFRA_PUENTES_HORAS_SERV && esContratistaPuentesHoras(r)),
     estados: [
       puentesHorasPorEstado('Confirmado', r=>r.estado==='Confirmado'),
       puentesHorasPorEstado('En Ejecución', esEnEjecucion),
       puentesHorasPorEstado('Pendiente', esPendiente),
     ],
-    // Detalle por OT, solo para trazabilidad: permite ir del resumen a la orden que lo generó.
-    // Ningún render lo lee hoy (esta sección no tiene desplegable), igual que avance_inconsistencias
-    // o siembra_excluidas. Una entrada por OT ÚNICA, con sus horas ya sumadas.
+    // Detalle por OT: permite ir del resumen a la orden que lo generó. Una entrada por OT ÚNICA,
+    // con sus horas ya sumadas. Lo consume el desplegable de la tabla (puentesHorasDetalle en
+    // render.js), que filtra por estado con normEstadio — el mismo criterio con que se arman las
+    // filas de estados de acá arriba, así que el detalle y su fila nunca pueden discrepar.
     ots: [...new Set(puentesHorasRows.map(r=>r.ot))].map(id=>{
       const g = puentesHorasRows.filter(r=>r.ot===id);
       return {ot:id, estado:g[0].estado, fecha:g[0].fr, contratista:g[0].contr,

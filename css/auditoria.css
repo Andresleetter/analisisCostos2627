@@ -41,6 +41,51 @@ tr.ip-parcela.open td{background:#eef4ea}
    arrancar, no ejecución — van en el ámbar de aviso del dashboard (--y) para que se distingan de
    los Confirmados de un vistazo, sin parecer un error. Cuando valen 0 el render usa .ip-sin. */
 .pu-curso{color:#8a5b00;font-weight:700}
+/* Cero real: no hay ninguna OT en ese estado. No es un dato faltante (eso es .ip-sin, el guion),
+   así que se muestra el número — atenuado, para que no compita con las cifras que sí tienen
+   trabajo detrás. */
+.pu-cero{color:var(--muted);font-weight:600}
+
+/* Barra del % de avance de Puentes por Unidad. Reutiliza el gesto de .sopbar (Gastos) pero con su
+   propia clase porque acá convive con el número en la misma celda: la barra da la magnitud de un
+   vistazo y el número al lado sigue siendo el dato exacto. Color NEUTRO a propósito — el teal del
+   dashboard, sin tramos de color: cuánto avance es "poco" o "suficiente" a esta altura de la
+   campaña es una definición del negocio que nadie fijó, y un semáforo la inventaría. */
+.pu-av{display:flex;align-items:center;justify-content:flex-end;gap:9px}
+.pu-bar{flex:0 1 82px;min-width:44px;height:7px;background:#eef2ec;border-radius:var(--radius-bar);overflow:hidden}
+.pu-bar>i{display:block;height:100%;background:var(--teal);border-radius:var(--radius-bar)}
+.pu-av-n{flex:0 0 auto;min-width:46px;text-align:right}
+
+/* Fila de Total de Puentes por Unidad: cierra la tabla con la suma de sus dos filas. Mismo
+   tratamiento que la fila de total del Consumo de Combustible (línea superior marcada, sin borde
+   inferior, fondo apenas distinto), para que las dos se lean como el mismo elemento. */
+tr.pu-total td{border-top:2px solid var(--line);border-bottom:none;font-weight:800;
+  background:#f7faf5;padding-top:10px;padding-bottom:10px}
+
+/* Fila desplegable de Trabajo de Puentes Propia + Cedrela. Mismos tonos y mismo caret que los
+   otros desplegables del dashboard (.ip-parcela, .cu-fila): el gesto se lee igual en todos. */
+tr.pu-fila{cursor:pointer}
+tr.pu-fila:hover td{background:#f2f6ef}
+tr.pu-fila.open td{background:#eef4ea}
+
+/* Chip de estado de OT. Verde = confirmado (ejecución real), ámbar = en curso, gris = todavía no
+   arrancó. Es el mismo código de color que ya distingue las columnas En Ejecución / Pendientes de
+   Puentes por Unidad y los chips de vínculo de Combustible. */
+.au-est{display:inline-block;padding:2px 9px;border-radius:var(--radius-pill);font-size:10.5px;font-weight:700;white-space:nowrap}
+.est-conf{background:#e8f3dc;color:var(--u-ha)}
+.est-curso{background:#f8ecd5;color:#8a5b00}
+.est-pend{background:#f1efef;color:var(--muted)}
+
+/* Ítem del presupuesto sin ninguna OT que coincida: la fila entera atenuada. No es un error —
+   es un ítem todavía sin ejecución cargada, y el title de la fila lo explica. */
+tr.au-sin td{color:var(--muted)}
+
+/* Unidad y salvedad al lado de un número, en la tabla de Metros: el número manda y estas dos
+   quedan un escalón por debajo, sin desaparecer. "aprox." es una advertencia permanente (son OT
+   contadas, no metros medidos), así que va en el ámbar de aviso y no en gris. */
+.pu-ud{font-weight:400;color:var(--muted);font-size:11px}
+.pu-aprox{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;
+  color:#8a5b00;background:#fdf7e6;border-radius:var(--radius-pill);padding:1px 7px;margin-left:4px}
 
 /* ---- Seguimiento de Receta (Auditoría de Insumos por Parcela) ----
    La receta es una referencia de auditoría, no una nota: por eso ningún estado usa el rojo de error
