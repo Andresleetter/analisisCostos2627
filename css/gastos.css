@@ -76,6 +76,10 @@
 /* Cultivo (Servicios): valores cortos tipo "ARROZ" — mismo criterio que #gcampania, no necesita
    el min-width de 200px del resto de los selects para no empujar la barra a otra línea. */
 #gcultivo{min-width:150px}
+/* Combustible pasó de 2 a 3 selects (Mes / Tercero / Máquina). Con el min-width de 200px de
+   .gfilter los tres más la nota no entran en una fila de escritorio; se los deja crecer desde una
+   base menor, igual que se hizo con los 3 de Insumos. */
+#cmes, #cterc, #cmaq{flex:1 1 170px;min-width:150px}
 /* ---- Servicios · Detalle por Servicio desplegable ---- */
 /* Fila clicable que despliega las OT que componen ese servicio. Mismos tonos y mismo caret
    (.ip-caret) que el detalle de parcelas de la Auditoría y el Consumo de Combustible, para que el
@@ -105,7 +109,13 @@ tr.cu-fila.open td{background:#eef4ea}
 /* Las observaciones de OT son texto libre y hay una de 349 caracteres: se trunca visualmente y el
    texto completo queda en el title, sin recortar el dato ni desbordar la tabla. */
 .cu-uso{max-width:460px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-/* Chip que marca las filas cuyo texto sale de la observación de una OT vinculada (las demás son el
-   proveedor informado, o "Sin OT vinculada"). */
-.chip-ot{background:#dff0ec;color:var(--u-hrs);margin-left:6px}
+/* Chip del origen de la atribución del consumo. Son cuatro situaciones distintas y cada una tiene
+   su color: verde = la OT existe y se encontró; teal = el consumo se atribuye a un contratista real
+   (remisión por venta), sin OT; ámbar = el movimiento sí viene de una OT pero su registro no está
+   en el export (histórico), que es un aviso y no un error; gris = sin ningún dato adicional.
+   El texto sale de VINCULO_LABEL (config.js). */
+.chip-vinc-ot{background:#e8f3dc;color:var(--u-ha);margin-left:6px}
+.chip-vinc-contratista{background:#dff0ec;color:var(--u-hrs);margin-left:6px}
+.chip-vinc-ot_no_disponible{background:#fdf7e6;color:#8a5b00;margin-left:6px}
+.chip-vinc-labor_propia{background:#f1efef;color:var(--muted);margin-left:6px}
 @media(max-width:700px){.cu-uso{max-width:200px}}

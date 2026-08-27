@@ -73,14 +73,22 @@ function trabajosCamionGruaDeLinea(linea){
       unidad:String(keyOf(r,['unidadMedida','Unidad de medida'])||'').trim(),
       obs:String(keyOf(r,['observaciones','Observación','Observacion'])||'').trim(),
       // ---- Metadata para el cruce con Combustible (no interviene en ningun calculo) ----
-      // refAsiento = comprobante de stock que genero la linea ("2026 - STK - 10424"). Es la unica
-      // clave que vincula un movimiento de combustible de consultaInsumos con su OT: se compara
-      // contra consultaInsumos.referencia (ver construirIndiceOTPorAsiento mas abajo y
-      // js/data/combustible.js). Campo/cultivo se conservan por el mismo motivo: describir el
-      // destino real del gasoil en el detalle del modulo Combustible.
+      // ref = referencia propia de la ORDEN DE TRABAJO ("2026 - OT - 4410"). Es la clave con que
+      // se vincula un movimiento de combustible: se compara contra consultaInsumos.referenciaOrigen
+      // (ver construirIndiceOTPorReferencia mas abajo y js/data/combustible.js). Verificado contra
+      // el .xlsx real: viene cargada en las 2.228 filas, el numero que trae SIEMPRE coincide con
+      // ordenTrabajo, y ninguna referencia abarca mas de un numero de OT — es una clave 1:1.
+      ref:String(keyOf(r,['referencia','Referencia'])||'').trim(),
+      // refAsiento = comprobante de stock que genero la linea ("2026 - STK - 10424"). YA NO se usa
+      // para vincular Combustible: se comprobo contra el dato que ese numero NO es unico —
+      // consultaInsumos lo reutiliza entre el subsistema agricola y el ganadero (848 comprobantes
+      // compartidos por mas de un movimiento, 673 de ellos mezclando ambos), lo que producia
+      // vinculos falsos. Se conserva el campo porque es una columna real de la OT y sirve para
+      // rastrear el asiento, pero ninguna funcionalidad lo usa como clave.
       refAsiento:String(keyOf(r,['referenciaAsiento','Referencia Asiento'])||'').trim(),
       campo:String(keyOf(r,['campo','Campo'])||'').trim(),
       cultivo:String(keyOf(r,['cultivo','Cultivo'])||'').trim(),
+      campania:String(keyOf(r,['campania','Campaña','Campania'])||'').trim(),
     })).filter(r=>r.ot && r.ot!=='undefined' && r.ot!=='nan');
     // esPeso = LINEA DE LABOR medida en peso. Hoy son las dos familias de fletes del dato real:
     // Unidad de Medida "Dosis" (Servicio "Fletes") y "Kilos" (Servicio "Flete verde silo terceros
@@ -165,35 +173,52 @@ function trabajosCamionGruaDeLinea(linea){
         lines: g };
     });
   }
-  // ---- Indice referenciaAsiento -> linea de OT, para vincular los movimientos de combustible ----
+  // ---- Indice referencia de OT -> OT, para vincular los movimientos de combustible ----
   // Lo consume construirCombustible() (js/data/combustible.js): un movimiento de consultaInsumos
-  // trae `referencia` con el comprobante de stock que lo genero, y la linea de OT que lo origino
-  // trae ese mismo comprobante en `referenciaAsiento`. Se arma UNA sola vez, en la construccion del
+  // trae en `referenciaOrigen` la orden de trabajo que lo genero ("2026 - OT - 4410"), y esa es
+  // exactamente la `referencia` propia de la OT. Se arma UNA sola vez, en la construccion del
   // modelo, para que el cruce sea O(nOT + nMovimientos) y no O(nOT x nMovimientos).
+  //
+  // Reemplaza al viejo indice por referenciaAsiento, que se descarto con evidencia: el numero de
+  // comprobante de stock NO es unico entre el subsistema agricola y el ganadero, y colgaba
+  // movimientos de racion vacuna de OT agricolas sin relacion (109 falsos positivos en el dato de
+  // hoy). `referencia` en cambio es 1:1 — 2.228 de 2.228 filas la traen, su numero siempre es el
+  // ordenTrabajo y ninguna referencia abarca mas de una OT.
   //
   // Se construye sobre las filas de TODAS las campanias, no sobre las de CAMPANIA_ACTUAL: a
   // diferencia de consultaOT, consultaInsumos no se recorta por campania (ver loader.js), asi que
   // hay movimientos de combustible cuya OT pertenece a otra campania. Verificado en el dato real:
-  // de los 359 movimientos que cruzan, 23 apuntan a OT de 25/26 y 26 — recortando a 26/27 se
-  // perderian esos vinculos sin ninguna razon.
+  // de los 390 movimientos que cruzan, 23 apuntan a OT de 25/26 y 3 a Zafriña 26 — recortando a
+  // 26/27 se perderian esos vinculos sin ninguna razon.
   //
   // Comparacion EXACTA sobre el texto ya recortado (trim); sin fuzzy matching, sin tocar numeros
-  // ni identificadores. Las referencias vacias no entran al indice: no son una clave, son ausencia
-  // de referencia.
+  // ni identificadores. Las referencias vacias no entran al indice.
   //
-  // Regla determinista cuando varias lineas comparten el mismo referenciaAsiento: gana la primera
-  // linea CON observacion no vacia; si ninguna la tiene, la primera del archivo. Nunca se
-  // concatenan observaciones ni se devuelve mas de una linea por clave, para que un movimiento de
-  // combustible no pueda duplicarse por tener la OT varias lineas. En el dato real de hoy el caso
-  // no se presenta (cada referenciaAsiento aparece en una sola linea), pero la regla queda fija.
-  function construirIndiceOTPorAsiento(rowsIn){
+  // Devuelve UNA entrada por referencia: la OT resumida, no una linea suelta. Asi tener la OT
+  // varias lineas (servicio + labor + insumos) no puede duplicar un movimiento de combustible.
+  // Regla determinista para los campos que pueden variar entre lineas: gana la primera linea que
+  // traiga el dato no vacio, en el orden del archivo. Nunca se concatena ni se inventa nada.
+  function construirIndiceOTPorReferencia(rowsIn){
+    const porRef = new Map();
+    rowsIn.forEach(r=>{ const k = r.ref; if(!k) return;
+      if(!porRef.has(k)) porRef.set(k, []); porRef.get(k).push(r); });
     const idx = new Map();
-    rowsIn.forEach(r=>{
-      const k = r.refAsiento;
-      if(!k) return;
-      const previo = idx.get(k);
-      if(!previo){ idx.set(k, r); return; }
-      if(!previo.obs && r.obs) idx.set(k, r);
+    // primero(campo) = el primer valor no vacio entre las lineas de la OT.
+    const primero = (lineas, campo) => { for(const l of lineas){ const v = l[campo]; if(v) return v; } return ''; };
+    porRef.forEach((lineas, k)=>{
+      const r0 = lineas[0];
+      idx.set(k, {
+        ref: k, ot: r0.ot, campania: r0.campania, estado: r0.estado, fr: r0.fr,
+        serv: primero(lineas,'serv'), estadio: primero(lineas,'estadio'),
+        cultivo: primero(lineas,'cultivo'), campo: primero(lineas,'campo'), lote: primero(lineas,'lote'),
+        contr: primero(lineas,'contr'),
+        // personal = quien retiro el combustible. En las OT de gasoil el Contratista viene SIEMPRE
+        // vacio (verificado: 390 de 390) y quien queda registrado es este campo — el mismo criterio
+        // que ya usa el Consumo de Gasoil por Area de Servicios.
+        personal: primero(lineas,'personal'),
+        obs: primero(lineas,'obs'),
+        hr: lineas.map(l=>l.hr).filter(x=>x!=null).reduce((m,x)=>m==null||x>m?x:m, null),
+      });
     });
     return idx;
   }
@@ -255,9 +280,9 @@ function construirBaseOT(raw){
     totalPendientes=OTS.filter(esPendiente).length;
   const costo_total=CONF.reduce((s,o)=>s+o.imp,0);
   // Indice para el cruce con Combustible. Se normalizan TODAS las campanias (no solo la vigente,
-  // ver construirIndiceOTPorAsiento) reusando normalizarFilasOT — misma interpretacion de
+  // ver construirIndiceOTPorReferencia) reusando normalizarFilasOT — misma interpretacion de
   // consultaOT que el resto del modelo, sin una segunda implementacion en paralelo.
-  const indice_ot_asiento = construirIndiceOTPorAsiento(normalizarFilasOT(rawTodasCampanias));
-  return {rawTodasCampanias,campanias_ot,rows,HOY,OTS,CONF,indice_ot_asiento,
+  const indice_ot_referencia = construirIndiceOTPorReferencia(normalizarFilasOT(rawTodasCampanias));
+  return {rawTodasCampanias,campanias_ot,rows,HOY,OTS,CONF,indice_ot_referencia,
     total_ot,ot_conf,totalEnEjecucion,totalPendientes,costo_total};
 }

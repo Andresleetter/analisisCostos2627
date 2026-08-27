@@ -63,16 +63,115 @@ const OPERATIVAS = ['OPERATIVO','PARCELA ARROZ','PARCELA SOJA','PARCELA SORGO','
 // al inicio), separadas del Ingreso/Consumo porque no son un movimiento sino un saldo de partida.
 const TIPO_INSUMO_COMBUSTIBLE = 'COMBUSTIBLES';
 const MOV_EXISTENCIA_INICIAL = 'Existencia inicial';
-// Etiquetas de "Uso / Detalle" del módulo Combustible para los dos casos en que no hay una
-// observación de OT que describa el uso. Son dos situaciones DISTINTAS y no deben mezclarse:
-//  - USO_SIN_DETALLE: el movimiento sí se vinculó con una OT, pero esa OT no tiene observación
-//    cargada. El vínculo existe; falta el texto.
-//  - USO_SIN_OT: la referencia del comprobante no aparece en ninguna referenciaAsiento de
-//    consultaOT, así que no hay OT que consultar. Es lo que antes caía en el genérico
-//    "Labor Propia" (546 movimientos y 46.268 L en el dato de hoy).
-// Estos movimientos NUNCA se ocultan: siguen dentro de los totales de litros y de movimientos.
+// ---- Combustible: los CUATRO orígenes posibles del "Uso / Detalle" ----
+// Un movimiento de combustible se atribuye por niveles, y los cuatro resultados son situaciones
+// REALMENTE distintas que nunca deben mezclarse en una sola etiqueta:
+//
+//  1. VINCULO_OT ('ot')            La referenciaOrigen del movimiento encontró su OT en
+//                                  consultaOT.referencia. El uso es la observación real de esa OT
+//                                  (o USO_SIN_DETALLE si la OT no tiene observación cargada).
+//  2. VINCULO_CONTRATISTA          El movimiento no trae referenciaOrigen pero sí un contratista
+//     ('contratista')              informado: son las remisiones por venta de combustible a un
+//                                  tercero (Cedrela S.A, Agro Vial, …). El uso es su nombre real.
+//  3. VINCULO_OT_NO_DISPONIBLE     El movimiento SÍ trae su referenciaOrigen —se sabe de qué OT
+//     ('ot_no_disponible')         salió— pero esa OT no está en el export de consultaOT, que
+//                                  viene recortado por campaña. Verificado contra el dato: los
+//                                  546 casos de hoy son TODOS de la campaña 25/26. NO es "sin OT"
+//                                  ni "labor propia": la OT existió, falta su registro.
+//                                  El uso NO es un rótulo genérico: es la PARCELA que declara el
+//                                  propio movimiento (columna `cultivo` de consultaInsumos, ej.
+//                                  "LA TERESA Operativos OPERATIVO 25/26"), que dice dónde se usó
+//                                  el combustible sin depender de la OT. Está cargada en los 546.
+//                                  USO_OT_NO_DISPONIBLE queda solo como respaldo por si algún
+//                                  movimiento futuro llegara sin parcela.
+//  4. VINCULO_LABOR_PROPIA         Ni referenciaOrigen ni contratista. Hoy no ocurre en el dato
+//     ('labor_propia')             (0 movimientos), pero queda como último nivel explícito.
+//
+// Ninguno de estos movimientos se oculta jamás: los cuatro siguen dentro de los totales de litros
+// y de movimientos, y su suma es exactamente el consumo original.
+const VINCULO_OT = 'ot';
+const VINCULO_CONTRATISTA = 'contratista';
+const VINCULO_OT_NO_DISPONIBLE = 'ot_no_disponible';
+const VINCULO_LABOR_PROPIA = 'labor_propia';
+// Rótulo corto del origen, para el chip de la tabla.
+const VINCULO_LABEL = {
+  [VINCULO_OT]: 'OT vinculada',
+  [VINCULO_CONTRATISTA]: 'Solo contratista',
+  [VINCULO_OT_NO_DISPONIBLE]: 'OT no disponible',
+  [VINCULO_LABOR_PROPIA]: 'Labor Propia',
+};
+// Textos del "Uso / Detalle" cuando no hay una observación de OT que describa el trabajo.
 const USO_SIN_DETALLE = 'Sin detalle';
-const USO_SIN_OT = 'Sin OT vinculada';
+// Respaldo del nivel 3 cuando el movimiento tampoco trae parcela (hoy: 0 casos).
+const USO_OT_NO_DISPONIBLE = 'OT histórica no disponible';
+// ---- Maquinaria que consume el combustible ----
+// La observación de la OT nombra al final la máquina que cargó el gasoil ("Arreglo de camino -
+// Motoniveladora", "Corpida - Tr 14"). No es un campo propio: es texto libre, y la misma máquina
+// aparece escrita de muchas formas. Este catálogo es la ÚNICA fuente de esa equivalencia y alimenta
+// el filtro de Máquina del módulo Combustible.
+//
+// Cada entrada declara sus variantes REALES, relevadas una por una contra el .xlsx — no hay fuzzy
+// matching, ni coincidencia parcial, ni alias inventados: un texto que no coincida con ninguna
+// variante declarada no recibe máquina. Las variantes se comparan como palabra completa sobre el
+// texto normalizado (sin acentos, en minúsculas, con la puntuación y los guiones convertidos en
+// espacios), y se prueban de la más larga a la más corta para que "tr 07 ac" gane sobre "tr 07".
+//
+// IDENTIDAD DE LOS TRACTORES — agrupación POR NÚMERO DE FLOTA: el número de 1-2 dígitos que sigue a
+// "Tr"/"Tractor". Por eso "Tr 07 AC", "Tr 07", "Tr 07AC" y "Tr 7 John Deere" quedan bajo el mismo
+// Tractor 07, y "Tr 03"/"Tr 3J John Deere" bajo el mismo Tractor 03.
+//
+// OJO — esta agrupación está PENDIENTE DE DESAGREGAR: el usuario confirmó que un tractor de marca
+// (John Deere, New Holland) NO es necesariamente el mismo equipo que el de la flota "AC" aunque
+// compartan el número, y va a indicar cuáles separar. Mientras tanto se deja agrupado por número.
+//
+// El dato tiene con qué separarlos cuando llegue esa indicación: sobre las 125 menciones
+// "Tr <número>" de toda la hoja consultaOT, las 78 con cero a la izquierda ("Tr 01/02/03/04/07") no
+// nombran NINGUNA marca, y las 47 sin cero ("Tr 3", "Tr 3J", "Tr 7", "Tr 14") incluyen las 22 que sí
+// la nombran. Las dos formas nunca se cruzan, así que alcanza con mover las variantes con marca a su
+// propia entrada del catálogo.
+//
+// Los números de 4 dígitos NO son número de flota sino MODELO ("New Holland 7205", "John Deere
+// 6180", "John Deere 7515", "Case 230"): esas variantes van declaradas enteras y nunca se les
+// extrae el número, para no inventar un "tractor 7205".
+//
+// Verificado contra el dato: las 371 OT de combustible con observación identifican UNA máquina,
+// ninguna queda sin identificar y ninguna coincide con dos entradas a la vez.
+const COMBUSTIBLE_MAQUINAS = [
+  // --- Tractores con número de flota ---
+  {id:'tr-01', label:'Tractor 01', variantes:['tr 01 ac','tr 01ac','tr 01','tractor 01']},
+  {id:'tr-02', label:'Tractor 02', variantes:['tr 02 ac','tr 02ac','tr 02','tractor 02']},
+  {id:'tr-03', label:'Tractor 03', variantes:['tr 03 ac','tr 03ac','tr 03','tractor 03',
+     'tr 3j john deere 6180','tr 3j john deere','tr 3 john deere','tr 3 new holland 7260','tr 3j']},
+  {id:'tr-04', label:'Tractor 04', variantes:['tr 04 ac','tr 04ac','tr 04','tractor 04']},
+  {id:'tr-07', label:'Tractor 07', variantes:['tr 07 ac','tr 07ac','tr 07','tractor 07',
+     'tr 7 john deere 7515','tr 7 john deere']},
+  {id:'tr-14', label:'Tractor 14', variantes:['tr 14 john deere','tr 14','tractor 14']},
+  // --- Tractores identificados por marca, sin número de flota en el texto ---
+  {id:'tr-deutz',  label:'Tractor Deutz',  variantes:['tr deutz fahr','tr deutz','tractor deutz']},
+  {id:'tr-valtra', label:'Tractor Valtra', variantes:['tr valtra','tractor valtra']},
+  {id:'tr-case',   label:'Tractor Case 230', variantes:['tr case 230','tractor case 230','tr case']},
+  {id:'tr-nh7205', label:'Tractor New Holland 7205', variantes:['tr new holland 7205','tr 7205 new holland']},
+  // --- Maquinaria pesada y equipos fijos ---
+  {id:'motoniveladora', label:'Motoniveladora', variantes:['motoniveladora']},
+  {id:'generador', label:'Generador', variantes:['generador']},
+  {id:'sany', label:'Excavadora Sany Neumática', variantes:['sany neumatico','sany neumatica','neumatica sany','sany']},
+  // --- Vehículos (marca y/o chapa) ---
+  {id:'ford-ranger', label:'Ford Ranger', variantes:['ford ranger']},
+  {id:'d20', label:'Chevrolet D20 (AGP645)', variantes:['ford d20','chevrolet d20','d20 chevrolet','d20 agp645','d20','agp645']},
+  {id:'s10-uab800', label:'S10 UAB800', variantes:['s10 uab800','uab800 pc','uab800','s10 aub800','aub800']},
+  {id:'s10-aaoz829', label:'S10 AAOZ829', variantes:['s10 aaoz829','aaoz829']},
+  {id:'amarok', label:'Amarok', variantes:['amarok']},
+  {id:'hilux', label:'Toyota Hilux', variantes:['toyota hilux','hilux']},
+  {id:'scania', label:'Scania OCE825', variantes:['scania oce825','scania','oce825']},
+  {id:'blb594', label:'Chevrolet BLB594', variantes:['chevrolet blb594','blb594']},
+  {id:'hdx314', label:'Chevrolet HDX314', variantes:['chevrolet hdx314','hdx314']},
+  {id:'fad575', label:'FAD575', variantes:['fad575']},
+  {id:'aaug855', label:'AAUG855', variantes:['aaug855']},
+];
+// Movimientos sin observación de OT (los niveles Solo contratista y OT no disponible) o cuya
+// observación no nombra ninguna máquina del catálogo. No se les inventa una.
+const COMBUSTIBLE_MAQUINA_SIN_DATO = 'Sin máquina indicada';
+const USO_LABOR_PROPIA = 'Labor Propia';
 // Insumos excluidos por completo del módulo Insumos (a pedido del usuario) — no participan de
 // ningún filtro, KPI, tabla ni resumen visible; se separan en loader.js (separarInsumos()) antes
 // de que data.js construya nada, y se conservan aparte solo para trazabilidad (D.insumos_excluidos).
