@@ -1,0 +1,72 @@
+[
+  {
+    "especificacion": "Contrucion camino nuevo",
+    "cantidadPresupuestada": 0,
+    "unidadMedida": "",
+    "costo": 4.5,
+    "importeTotal": 0
+  },
+  {
+    "especificacion": "Contrucion puentes Labor Tercero",
+    "cantidadPresupuestada": 28,
+    "unidadMedida": "Unidades",
+    "costo": 642.85,
+    "importeTotal": 17999.8
+  },
+  {
+    "especificacion": "Contrucion puentes Labor Propia",
+    "cantidadPresupuestada": 14,
+    "unidadMedida": "Unidades",
+    "costo": 0,
+    "importeTotal": 0
+  },
+  {
+    "especificacion": "Desmonte para camino nuevo",
+    "cantidadPresupuestada": 0,
+    "unidadMedida": "",
+    "costo": 0.8,
+    "importeTotal": 0
+  },
+  {
+    "especificacion": "Compuertas",
+    "cantidadPresupuestada": 0,
+    "unidadMedida": "",
+    "costo": 380,
+    "importeTotal": 0
+  },
+  {
+    "especificacion": "Tubos",
+    "cantidadPresupuestada": 0,
+    "unidadMedida": "",
+    "costo": 0,
+    "importeTotal": 0
+  },
+  {
+    "especificacion": "Limpieza valo",
+    "cantidadPresupuestada": 19355,
+    "unidadMedida": "Metros",
+    "costo": 0.68,
+    "importeTotal": 13161.400000000001
+  },
+  {
+    "especificacion": "Reparacion de camino",
+    "cantidadPresupuestada": 2163,
+    "unidadMedida": "Metros",
+    "costo": 3.2,
+    "importeTotal": 6921.6
+  },
+  {
+    "especificacion": "Reparacion muro protecion",
+    "cantidadPresupuestada": 5814,
+    "unidadMedida": "Metros",
+    "costo": 3.21,
+    "importeTotal": 18662.94
+  },
+  {
+    "especificacion": "Contrucion taipon chico",
+    "cantidadPresupuestada": 0,
+    "unidadMedida": "",
+    "costo": 2.14,
+    "importeTotal": 0
+  }
+]

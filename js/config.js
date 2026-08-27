@@ -211,18 +211,23 @@ const RTK_LOTE_CANCELADO = 0.01;
 const LOTES_NO_PARCELA = ['SECADERO', 'FLETES', 'PARCELA'];
 
 // ---- AUDITORIA: Presupuesto de Infraestructura vs ejecucion real ----
-// Archivo aparte (subido al mismo repo), 1 sola hoja. Estructura fija verificada contra el .xlsx
-// real: fila 1 = titulo, fila 2 = vacia, fila 3 = encabezados, filas 4-13 = los 10 items de
-// presupuesto, fila 14 = fila de TOTAL. Filas 47-51 son calculos sueltos sin relacion a la tabla
-// de items (sin Especificacion ni Cta. Contable) — se excluyen del parseo.
-// Mismo criterio que SRC_XLSX: se descarga del propio sitio, con GitHub como respaldo.
-const INFRA_SRC_XLSX = SRC_DATA+"PRESUPUESTO%20ALISON%20INFRAESTRUTURA%2026-27.xlsx";
-const INFRA_SRC_XLSX_RESPALDO = "https://raw.githubusercontent.com/"+REPO+"/"+BRANCH+"/"+SRC_DATA+"PRESUPUESTO%20ALISON%20INFRAESTRUTURA%2026-27.xlsx";
-const INFRA_HOJA = "INFRAESTRUTURA 26-27";
-// Indices de columna (0-based) dentro de cada fila de item, leida con header:1 (array crudo).
-// OJO: la cantidad presupuestada real NO esta en la columna "Cant. De trabajo" (viene vacia en
-// las 10 filas) sino en "PRESUPUESTO Aprob" (col 4) — confirmado contra el archivo real.
-const INFRA_COL = {especificacion:2, cantidadPresupuestada:4, unidadMedida:5, costo:6, importeTotal:7};
+// Archivo JSON propio (data/presupuesto-infraestructura-26-27.json), NO el .xlsx original. El
+// presupuesto es una tabla chica y fija — 10 items que casi no cambian — asi que se paso a JSON:
+// el dashboard ya no descarga ni parsea un segundo .xlsx solo para leer 10 filas.
+//
+// El JSON se genero A PARTIR del .xlsx "PRESUPUESTO ALISON INFRAESTRUTURA 26-27.xlsx" (hoja
+// "INFRAESTRUTURA 26-27") con la misma logica que usaba el parseo anterior: filas 4-13 del Excel
+// (los 10 items reales; la fila 14 es el TOTAL y las filas 47-51 son calculos sueltos, ambas
+// quedaban fuera), tomando Especificacion (col C), PRESUPUESTO Aprob (col E, que es la cantidad
+// presupuestada real — la columna "Cant. De trabajo" viene vacia en las 10 filas), Unidad Medida
+// (col F), Costo (col G) e Importe Total sin IVA (col H), y pasando los numeros por num().
+// Los valores del JSON se verificaron identicos a los que producia el parseo del .xlsx.
+//
+// El .xlsx se deja en data/ como respaldo/origen del dato: ya NO se descarga ni se lee en runtime.
+// Para actualizar el presupuesto se edita este JSON (o se regenera desde el Excel actualizado).
+// Mismo criterio de descarga que SRC_XLSX: el propio sitio primero, GitHub como respaldo.
+const INFRA_SRC_JSON = SRC_DATA+"presupuesto-infraestructura-26-27.json";
+const INFRA_SRC_JSON_RESPALDO = "https://raw.githubusercontent.com/"+REPO+"/"+BRANCH+"/"+SRC_DATA+"presupuesto-infraestructura-26-27.json";
 // Cruce Especificacion (presupuesto) -> Servicio(s) reales de OT. Primer relevamiento (solo
 // Estadio="Infraestructura") encontraba 23 OT; una busqueda mas amplia por palabra clave en
 // Servicio (valo, muro, puente, camino, taipon...) SIN restringir por Estadio encontró muchas más
