@@ -936,7 +936,20 @@ function renderCombustible(){
       `<td class="tr mono">${tot?(r.litros/tot*100).toFixed(1):0}%</td></tr>`;
     if(abierta) html+=combDetalleUso(r);
     return html;
-  }).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px">Sin registros de combustible para el filtro seleccionado</td></tr>';
+  }).join('')+combFilaTotal(nMov, tot)
+   : '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px">Sin registros de combustible para el filtro seleccionado</td></tr>';
+}
+// Fila de total al pie del Consumo. Es la suma de lo que se está viendo, no un dato nuevo: con los
+// filtros en "Todas" coincide exactamente con el KPI de Consumo, y con un filtro activo (Mes,
+// Tercero o Máquina) es el único lugar donde se lee el total de esa selección — el KPI de arriba
+// sigue mostrando el consumo completo de la campaña, que es lo correcto para un KPI pero deja sin
+// respuesta "cuánto gastó esta máquina". Los valores llegan ya sumados desde renderCombustible;
+// acá no se recalcula nada.
+function combFilaTotal(nMov, litros){
+  return `<tr class="cu-total"><td>Total</td>`+
+    `<td class="tr mono">${nMov}</td>`+
+    `<td class="tr mono">${fmt2(litros)}</td>`+
+    `<td></td><td class="tr mono">100,0%</td></tr>`;
 }
 // Detalle de un Uso / Detalle: los movimientos individuales que lo componen. Las columnas cambian
 // según el origen de la atribución, para no mostrar columnas vacías ni —sobre todo— datos de OT
