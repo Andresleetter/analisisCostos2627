@@ -120,6 +120,16 @@ document.addEventListener('DOMContentLoaded', function(){
     ipParcelaAbierta = (ipParcelaAbierta===parcela) ? null : parcela;
     renderInsumosParcela();
   });
+  // Clic en una fila de "Trabajo de Puentes Propia + Cedrela": despliega las OT de ese estado.
+  // Delegado sobre el tbody, igual que los otros desplegables del dashboard. Solo las filas con al
+  // menos una OT llevan la clase .pu-fila, así que un estado en cero no responde al clic.
+  document.getElementById('audit-puentes-horas').addEventListener('click', function(e){
+    const fila = e.target.closest('tr.pu-fila');
+    if(!fila) return;
+    const estado = fila.dataset.estado;
+    auditPuentesHorasAbierto = (auditPuentesHorasAbierto===estado) ? null : estado;
+    renderAuditoria();
+  });
   // "Ver detalle" de las tarjetas de Posibles Problemas (Resumen Ejecutivo): delegado sobre el
   // contenedor #probs (fijo en el HTML) porque las tarjetas se regeneran en cada carga — así un
   // único listener sigue funcionando sin volver a atarse por tarjeta. Reutiliza show(), la misma

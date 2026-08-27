@@ -251,6 +251,11 @@ function renderCultivoDetalle(){
       </div></div>`;}).join('') + mapaCard;
 }
 
+// Estado del desplegable de "Trabajo de Puentes Propia + Cedrela": guarda el ESTADO abierto
+// ('Confirmado' | 'En Ejecución' | 'Pendiente'), no un índice de fila, porque la tabla se redibuja
+// entera en cada render — mismo patrón que ipParcelaAbierta y combUsoAbierto. null = todo plegado.
+let auditPuentesHorasAbierto = null;
+
 // ---- Auditoría: Presupuesto de Infraestructura vs ejecución real ----
 // D.auditoria_* ya viene cruzado (INFRA_MAP y constantes de puentes en config.js) entre
 // Especificación del presupuesto y Servicio real de OT — acá solo se renderiza, sin recalcular
@@ -263,21 +268,91 @@ function renderAuditoria(){
   // (puentesPorUnidad, js/data/auditoria.js): acá no se cuenta ni se divide nada. El % de avance
   // es el de las Confirmadas — las columnas En Ejecución y Pendientes son informativas y se
   // atenúan cuando valen 0, para que no compitan con el número que sí es ejecución real.
-  document.getElementById('audit-puentes').innerHTML = D.auditoria_puentes.map(p=>{
-    const enCurso = n => n ? `<span class="pu-curso">${n}</span>` : '<span class="ip-sin">—</span>';
-    return `<tr><td>${p.tipo}</td><td class="tr mono">${fmt2(p.presupuestado)}</td><td class="tr mono">${p.ejecutadas}</td>`+
-      `<td class="tr mono">${enCurso(p.enEjecucion)}</td><td class="tr mono">${enCurso(p.pendientes)}</td>`+
-      `<td class="tr mono">${p.avance!=null?fmt1(p.avance)+'%':'N/D'}</td></tr>`;
-  }).join('');
+  //
+  // La barra del % de avance es NEUTRA (el teal de .sopbar, el mismo de todo el dashboard) y no
+  // cambia de color por tramos: cuánto avance es "poco" o "suficiente" a esta altura de la campaña
+  // es una definición del negocio que nadie fijó, y pintar de rojo un 28% sería inventarla. La
+  // barra solo da la magnitud de un vistazo; el número al lado sigue siendo el dato.
+  // En Ejecución y Pendientes muestran SIEMPRE el número, incluido el 0. Acá un cero no es un dato
+  // faltante (para eso está el guion gris del resto del dashboard): es un conteo real de OT que dice
+  // "no hay ninguna en ese estado", que es información. Va atenuado para no competir con las cifras
+  // que sí tienen trabajo detrás, y en ámbar cuando hay OT en curso.
+  const puEnCurso = n => n ? `<span class="pu-curso">${n}</span>` : '<span class="pu-cero">0</span>';
+  // Son unidades de puente: 28 puentes, no "28,00". Se muestran sin decimales cuando el
+  // presupuesto es entero, y con ellos si alguna vez no lo fuera — nunca se redondea el dato.
+  // presupuestado===null = la fila no tiene presupuesto y la celda va VACÍA. No es 0 ni "—": un
+  // cero diría "se presupuestaron cero" y un guion, "no se pudo leer"; acá el .xlsx directamente
+  // no presupuesta ese concepto.
+  const puUnidades = n => n==null ? '' : (Number.isInteger(n) ? String(n) : fmt2(n));
+  // Costo: Costo Labor + Costo Insumo de las OT Confirmadas, calculado por el modelo — acá no se
+  // suma ninguna línea. Un 0,00 se muestra tal cual y NO como guion: no es un dato faltante sino lo
+  // que dice la hoja, y esconderlo detrás de un "—" taparía justamente el hallazgo (las OT de labor
+  // propia no traen costo cargado). Va atenuado y con un title que lo explica, para que nadie lo
+  // lea como "estos puentes salieron gratis".
+  const puCeldaCosto = c => c
+    ? `<td class="tr mono">US$ ${fmtUSD(c)}</td>`
+    : `<td class="tr mono"><span class="pu-cero" title="La hoja no trae costo cargado en estas OT: Costo Labor y Costo Insumo vienen en 0. No significa que el trabajo no haya tenido costo.">US$ 0,00</span></td>`;
+  const puCeldaAvance = a => a==null
+    ? '<td class="tr"><span class="ip-sin">N/D</span></td>'
+    : `<td><div class="pu-av"><span class="pu-bar"><i style="width:${Math.min(100,a)}%"></i></span>`+
+      `<span class="mono pu-av-n">${fmt1(a)}%</span></div></td>`;
+  const puFila = (p, cls) => `<tr${cls?` class="${cls}"`:''}${p.title?` title="${escAttr(p.title)}"`:''}>`+
+    `<td>${p.tipo}</td>`+
+    `<td class="tr mono">${puUnidades(p.presupuestado)}</td><td class="tr mono">${p.ejecutadas}</td>`+
+    `<td class="tr mono">${puEnCurso(p.enEjecucion)}</td><td class="tr mono">${puEnCurso(p.pendientes)}</td>`+
+    puCeldaCosto(p.costo) + puCeldaAvance(p.avance);
+  // Fila "Propia + Cedrela": el trabajo de puentes hecho con la retroexcavadora de Cedrela, que
+  // antes solo se veía en su propio panel. Cuenta OT ÚNICAS de ese servicio, igual que las otras
+  // dos filas, y por decisión del usuario SUMA al total de puentes hechos.
+  //
+  // Presupuestado va vacío: el .xlsx de infraestructura no presupuesta este concepto (sus 10 ítems
+  // están en Unidades o Metros, ninguno en horas). No es 0 ni "—" — un cero diría "se presupuestó
+  // cero" y un guion, "no se pudo leer"; acá el presupuesto directamente no existe. Sin presupuesto
+  // propio no hay divisor, así que su % de avance individual es N/D: nunca un porcentaje inventado.
+  //
+  // Las cifras se leen tal cual de D.auditoria_puentes_horas.estados, el mismo modelo que alimenta
+  // el panel de abajo: las dos vistas no pueden discrepar porque son el mismo dato.
+  const phNOT = est => (D.auditoria_puentes_horas.estados.find(x=>x.estado===est) || {nOT:0}).nOT;
+  const puCedrela = {
+    tipo: 'Propia + Cedrela', presupuestado: null,
+    title: 'Puentes trabajados con la retroexcavadora de '+D.auditoria_puentes_horas.contratista+'. '+
+           'El .xlsx de infraestructura no presupuesta este concepto, por eso no tiene presupuesto propio '+
+           'ni % de avance individual. El detalle por OT está en el panel "Trabajo de Puentes Propia + Cedrela".',
+    ejecutadas: phNOT('Confirmado'), enEjecucion: phNOT('En Ejecución'), pendientes: phNOT('Pendiente'),
+    avance: null, costo: D.auditoria_puentes_horas.costo,
+  };
+  // Fila de Total: suma las TRES filas visibles, Cedrela incluida. El % usa el mismo cociente que
+  // el modelo (confirmadas / presupuestadas) aplicado al total, no un promedio de porcentajes —
+  // promediar 28,6% y 78,6% daría 53,6%, que no significa nada.
+  //
+  // OJO con el denominador: el presupuesto de 42 unidades cubre Tercero y Propia, y Cedrela no
+  // aporta presupuesto propio (el .xlsx no lo presupuesta). Al sumar sus confirmadas al numerador,
+  // el % puede pasar de 100% si el trabajo con retro supera lo presupuestado — no es un error de
+  // cálculo sino lo que dice el dato, y por eso la barra se topa en 100% pero el número no se
+  // recorta.
+  const puTot = [...D.auditoria_puentes, puCedrela].reduce((t,p)=>({
+    tipo:'Total puentes', presupuestado:t.presupuestado+(p.presupuestado||0), ejecutadas:t.ejecutadas+p.ejecutadas,
+    enEjecucion:t.enEjecucion+p.enEjecucion, pendientes:t.pendientes+p.pendientes,
+    costo:Math.round((t.costo+p.costo)*100)/100, avance:null,
+  }), {presupuestado:0, ejecutadas:0, enEjecucion:0, pendientes:0, costo:0});
+  puTot.avance = puTot.presupuestado>0 ? Math.round(puTot.ejecutadas/puTot.presupuestado*1000)/10 : null;
+  document.getElementById('audit-puentes').innerHTML =
+    D.auditoria_puentes.map(p=>puFila(p)).join('') + puFila(puCedrela) + puFila(puTot, 'pu-total');
 
-  // Trabajo de Puentes por Horas: "Construccion de Puentes retro excavadora x Hs" del contratista
-  // Cedrela, separado por estado. Estas OT NO son puentes construidos y por eso no aparecen en la
-  // tabla de arriba. Las horas ya vienen sumadas por el modelo, con el marcador 0,01 de Albor
-  // descontado; cuando un estado tiene OT pero ninguna hora cargada se muestra "—" y se aclara
-  // cuántas OT están en esa situación, en vez de un 0,00 que se leería como "se trabajó cero".
+  // Trabajo de Puentes Propia + Cedrela: "Construccion de Puentes retro excavadora x Hs", horas de
+  // retroexcavadora del contratista Cedrela que apoyan la construcción de puentes de labor propia.
+  // OJO con el rótulo: esta tabla cuenta SOLO esas horas de Cedrela. Los puentes de labor propia
+  // como unidades construidas se cuentan arriba, en Puentes por Unidad, y no se repiten acá — una
+  // hora de retro no es un puente. El subtítulo lo dice explícitamente para que el título no se
+  // lea como "todo el trabajo propio de puentes".
+  //
+  // Las horas ya vienen sumadas por el modelo, con el marcador 0,01 de Albor descontado; cuando un
+  // estado tiene OT pero ninguna hora cargada se muestra "—" y se aclara cuántas OT están en esa
+  // situación, en vez de un 0,00 que se leería como "se trabajó cero".
   const ph = D.auditoria_puentes_horas;
   document.getElementById('audit-puentes-horas-sub').textContent =
-    ph.servicio+' · contratista '+ph.contratista+' · sin presupuesto de horas: no lleva % de avance';
+    'Horas de retroexcavadora de '+ph.contratista+' en apoyo a los puentes de labor propia · '+
+    ph.servicio+' · las unidades construidas se cuentan arriba, no acá · sin presupuesto de horas: no lleva % de avance';
   document.getElementById('audit-puentes-horas').innerHTML = ph.estados.map(e=>{
     // La aclaración va en la celda de Horas, que es la que muestra el guion: explica por qué no
     // hay horas justo donde se ve el hueco, en vez de dejarlo sin motivo.
@@ -285,7 +360,14 @@ function renderAuditoria(){
       ? ` <span class="ip-nota">${e.sinHorasCargadas} OT sin horas cargadas</span>` : '';
     const horas = e.nOT===0 ? '<span class="ip-sin">—</span>'
       : (e.horas>0 ? fmt2(e.horas)+' h'+nota : `<span class="ip-sin">—</span>${nota}`);
-    return `<tr><td>${e.estado}</td><td class="tr mono">${e.nOT}</td><td class="tr mono">${horas}</td></tr>`;
+    // Un estado sin ninguna OT no se puede desplegar: no hay nada que mostrar.
+    const abierta = auditPuentesHorasAbierto===e.estado && e.nOT>0;
+    const caret = e.nOT>0 ? `<span class="ip-caret">${abierta?'▾':'▸'}</span> ` : '<span class="ip-caret"></span> ';
+    let html = `<tr class="${e.nOT>0?'pu-fila':''}${abierta?' open':''}" data-estado="${escAttr(e.estado)}">`+
+      `<td>${caret}${chipEstadoPuentes(e.estado)}</td>`+
+      `<td class="tr mono">${e.nOT||'<span class="pu-cero">0</span>'}</td><td class="tr mono">${horas}</td></tr>`;
+    if(abierta) html += puentesHorasDetalle(e);
+    return html;
   }).join('');
 
   // Gastos: un único concepto, "Desalijo Karanda'y / Carandai" (AUDITORIA_GASTO_DESALIJO,
@@ -300,12 +382,53 @@ function renderAuditoria(){
       : `<tr><td>${g.trabajo}</td><td class="tr mono">0,00</td><td class="tr mono">0,00</td><td class="tr mono">US$ 0,00</td><td class="tr" style="color:var(--muted)">Sin ejecución registrada</td></tr>`
   ).join('');
 
+  // Ítems sin ninguna OT que matchee van atenuados y con un title que dice por qué: la fila no es
+  // un error, es un ítem del presupuesto todavía sin ejecución cargada (o cargada con otro nombre).
+  // Los huecos usan el guion gris del resto del dashboard en vez del "-" suelto que había antes.
+  const auGuion = '<span class="ip-sin">—</span>';
   document.getElementById('audit-items').innerHTML = D.auditoria_items.map(i=>
-    `<tr${i.tieneOT?'':' style="color:var(--muted)"'}><td>${i.especificacion}</td><td>${i.unidadMedida||'-'}</td><td class="tr mono">${i.cantidadPresupuestada?fmt2(i.cantidadPresupuestada):'-'}</td><td class="tr mono">${fmt2(i.horas)}</td><td class="tr mono">${i.otPropia}</td><td class="tr mono">${i.otTercero}</td></tr>`
+    `<tr class="${i.tieneOT?'':'au-sin'}"${i.tieneOT?'':' title="Ítem del presupuesto sin ninguna OT que coincida — todavía sin ejecución cargada, o cargada con otro nombre"'}>`+
+    `<td>${i.especificacion}</td><td>${i.unidadMedida||auGuion}</td>`+
+    `<td class="tr mono">${i.cantidadPresupuestada?fmt2(i.cantidadPresupuestada):auGuion}</td>`+
+    `<td class="tr mono">${i.horas?fmt2(i.horas):auGuion}</td>`+
+    `<td class="tr mono">${i.otPropia||auGuion}</td><td class="tr mono">${i.otTercero||auGuion}</td></tr>`
   ).join('');
+  // Metros: la columna de % Avance es N/D en TODAS las filas y lo va a seguir siendo mientras las
+  // OT no traigan metraje real. Antes cada fila repetía la frase entera ("N/D — sin metraje real en
+  // OT"), una columna de texto idéntico cuatro veces; ahora la explicación vive una sola vez en el
+  // subtítulo del panel y la celda muestra el N/D escueto. El rótulo "aprox." de la columna de
+  // avance SÍ se mantiene por fila: ahí no es repetición, es la advertencia de que ese número son
+  // OT contadas y no metros medidos.
   document.getElementById('audit-metros').innerHTML = D.auditoria_metros.length ? D.auditoria_metros.map(i=>
-    `<tr><td>${i.especificacion}</td><td class="tr mono">${fmt2(i.metrosPresupuestados)}</td><td class="tr mono">${i.otConfirmadas} OT confirmadas <span style="color:var(--muted);font-size:10.5px">(aprox., no metros reales)</span></td><td class="tr" style="color:var(--muted)">N/D — sin metraje real en OT</td></tr>`
+    `<tr><td>${i.especificacion}</td><td class="tr mono">${fmt2(i.metrosPresupuestados)}</td>`+
+    `<td class="tr mono">${i.otConfirmadas} <span class="pu-ud">OT confirmadas</span> <span class="pu-aprox" title="Aproximación: son OT contadas, no metros medidos">aprox.</span></td>`+
+    `<td class="tr"><span class="ip-sin">N/D</span></td></tr>`
   ).join('') : '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:16px">Sin ítems presupuestados en Metros</td></tr>';
+}
+// Chip de estado de OT, con el mismo vocabulario de color que ya usa el dashboard: verde =
+// ejecutado y confirmado, ámbar = en curso, gris = todavía no arrancó. Es el mismo criterio que
+// distingue las columnas En Ejecución / Pendientes de Puentes por Unidad, ahora también acá.
+function chipEstadoPuentes(estado){
+  const cls = estado==='Confirmado' ? 'est-conf' : estado==='En Ejecución' ? 'est-curso' : 'est-pend';
+  return `<span class="au-est ${cls}">${escHtml(estado)}</span>`;
+}
+// Detalle de un estado: las OT que lo componen, para poder ir del resumen a la orden concreta.
+// Sale de D.auditoria_puentes_horas.ots, que el modelo ya trae calculado (una entrada por OT única,
+// con sus horas sumadas y el marcador 0,01 descontado) — acá no se suma ni se filtra ninguna línea
+// del .xlsx. El estado se compara con normEstadio, exactamente el mismo criterio con el que el
+// modelo armó las filas, así que el detalle nunca puede mostrar más ni menos OT que su fila.
+// Tres columnas, las mismas de la tabla que lo contiene: Fecha · OT | Lote | Horas.
+function puentesHorasDetalle(e){
+  const ots = D.auditoria_puentes_horas.ots.filter(o=>normEstadio(o.estado)===normEstadio(e.estado));
+  let html = `<tr class="dethead"><td colspan="3">${escHtml(e.estado)} · ${ots.length} OT</td></tr>`;
+  html += `<tr class="detcols"><td>Fecha · OT</td><td>Lote</td><td class="tr">Horas</td></tr>`;
+  html += ots.map(o=>{
+    // horas===0 significa "todavía no se cargaron", no "se trabajó cero": guion, nunca 0,00 h.
+    const horas = o.horas>0 ? fmt2(o.horas)+' h' : '<span class="ip-sin">— sin cargar</span>';
+    return `<tr class="det"><td class="dl">${o.fecha?ipFecha(o.fecha):'<span class="ip-sin">—</span>'} · <b>OT ${escHtml(o.ot)}</b></td>`+
+      `<td>${escHtml(o.lote)||'<span class="ip-sin">—</span>'}</td><td class="tr mono">${horas}</td></tr>`;
+  }).join('');
+  return html;
 }
 
 // ================== AUDITORÍA · INSUMOS POR PARCELA ==================
