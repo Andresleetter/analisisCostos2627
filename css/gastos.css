@@ -120,6 +120,8 @@ tr.cu-fila.open td{background:#eef4ea}
 .chip-vinc-contratista{background:#dff0ec;color:var(--u-hrs);margin-left:6px}
 .chip-vinc-ot_no_disponible{background:#fdf7e6;color:#8a5b00;margin-left:6px}
 .chip-vinc-labor_propia{background:#f1efef;color:var(--muted);margin-left:6px}
+/* Columna Fecha del Consumo: ancho fijo para que no compita con el texto del uso. */
+.cu-fecha{white-space:nowrap;width:1%}
 /* Fila de total del Consumo: cierra la tabla con la suma de lo que se está viendo. Se separa con
    una línea superior más marcada y no reacciona al hover, para que no se confunda con una fila de
    datos clicable. */
