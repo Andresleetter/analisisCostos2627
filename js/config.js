@@ -338,16 +338,26 @@ const SERVICIOS_CAMION_GRUA = [
 // concepto puntual ("desalijo" + "karanda"/"caranda", tolerando variantes de ortografía) dentro
 // de Servicio/Observación de consultaOT.
 const AUDITORIA_GASTO_DESALIJO = "Desalijo Karanda'y / Carandai";
-// Cultivos que quedan FUERA de esta auditoria (a pedido del usuario). AVENA y COBERTURA son
-// cultivos de servicio —cobertura de suelo entre zafras—, no cultivos de renta: mezclarlos con
-// ARROZ/SOJA/SORGO/MAIZ ensucia la comparacion de consumo y de costo por hectarea. Es el mismo
-// criterio con el que ya se los retiro del Resumen Ejecutivo (ver CULTIVOS mas arriba).
-// Efecto lateral verificado contra el dato: son los UNICOS que hacian que un mismo lote apareciera
-// con dos cultivos en la misma campania (27 lotes: ARROZ+AVENA, MAIZ+COBERTURA, SORGO+COBERTURA).
-// Al excluirlos, cada lote queda con un solo cultivo por campania y "Lote" pasa a identificar la
-// parcela sin ambiguedad — por eso el modulo filtra y rotula por Lote, no por nombre de parcela.
-// Se comparan normalizados (normHdr) contra la Actividad de consultaOT.
-const AUDITORIA_INSUMOS_CULTIVOS_EXCLUIDOS = ['AVENA', 'COBERTURA'];
+// Actividades que quedan FUERA de esta auditoria (a pedido del usuario), todas por el mismo
+// motivo: no son cultivo de renta, asi que su gasto no entra en el presupuesto de insumos contra el
+// que se audita el modulo.
+//
+//  - AVENA y COBERTURA son cultivos de SERVICIO —cobertura de suelo entre zafras—. Mismo criterio
+//    con el que ya se los retiro del Resumen Ejecutivo (ver CULTIVOS mas arriba). Efecto lateral
+//    verificado contra el dato: son los UNICOS que hacian que un mismo lote apareciera con dos
+//    cultivos en la misma campania (27 lotes: ARROZ+AVENA, MAIZ+COBERTURA, SORGO+COBERTURA). Al
+//    excluirlos, cada lote queda con un solo cultivo por campania y "Lote" pasa a identificar la
+//    parcela sin ambiguedad — por eso el modulo filtra y rotula por Lote, no por nombre de parcela.
+//  - CUIDADOS DE PATIOS SILO y CUIDADOS DE PATIOS VIVIENDA no son cultivo de nada: es el
+//    mantenimiento del patio del silo y del de la vivienda. Son 4 lineas y US$ 350,65 en 26/27
+//    (herbicidas en los lotes "SILO BOLSAS" y "Patio vivienda Arrozal"). Efecto lateral
+//    verificado: son EXACTAMENTE las 4 aplicaciones sin hectareas reales del modulo, asi que al
+//    sacarlas desaparece tambien el aviso de cobertura de hectareas — es correcto, un patio no
+//    tiene superficie sembrada.
+//
+// Se comparan normalizados (normHdr) contra la Actividad de consultaOT, por igualdad EXACTA.
+const AUDITORIA_INSUMOS_CULTIVOS_EXCLUIDOS = ['AVENA', 'COBERTURA',
+  'CUIDADOS DE PATIOS SILO', 'CUIDADOS DE PATIOS VIVIENDA'];
 // ---- AUDITORIA DE INSUMOS POR PARCELA: seguimiento de receta ----
 // Version reducida del presupuesto de insumos de la campania (179 registros). Es la UNICA fuente de
 // las dosis recomendadas: los Excel de presupuesto no se leen, y este JSON no aporta costos ni

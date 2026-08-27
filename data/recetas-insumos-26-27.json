@@ -984,7 +984,7 @@
     "campania": "26/27",
     "cultivo": "SOJA",
     "grupo": "FERTILIZANTES",
-    "insumo": "Potasio 00.00.60 KCL",
+    "insumo": "Potasio KCL 00.00.60 ",
     "descripcion": "00.00.60",
     "dosisHa": 0.2,
     "unidad": "ton"
@@ -1357,6 +1357,15 @@
     "descripcion": "Glifosato DMA 60.8%",
     "dosisHa": 3,
     "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SORGO",
+    "grupo": "DESECACIÓN",
+    "insumo": "Spectro",
+    "descripcion": "Metsulfuron 60%",
+    "dosisHa": 0.005,
+    "unidad": "kg"
   },
   {
     "campania": "26/27",

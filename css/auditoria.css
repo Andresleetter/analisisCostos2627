@@ -19,10 +19,6 @@
 .ip-filter label{font-size:10.5px}
 .ip-filter select{min-width:0;flex:1 1 118px;font-size:12.5px;padding:7px 10px}
 
-/* Nota de fuente: qué hoja alimenta el módulo y con qué fórmulas. Discreta a propósito — es
-   contexto permanente, no un aviso; los avisos van en .ip-aviso, con color. */
-.ip-fuente{font-size:11.5px;color:var(--muted);line-height:1.5;margin:-6px 0 16px;padding:0 2px}
-
 /* Aviso de cobertura de hectáreas: informativo, no un error — por eso el tono ámbar del resto del
    dashboard (--y) y no el rojo de .errbanner, que señala un fallo. */
 .ip-aviso{background:#fdf7e6;border:1px solid var(--y);color:#6b5300;border-radius:var(--radius-sm);padding:10px 16px;font-size:12px;margin-bottom:16px;line-height:1.5}
@@ -98,11 +94,7 @@ tr.au-sin td{color:var(--muted)}
 .rc-chip .rc-l{font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.3px}
 .rc-con{border-color:#bcd6ae}   .rc-con   .rc-n{color:var(--u-ha)}
 .rc-sobre{border-color:#e0c08a} .rc-sobre .rc-n{color:#8a5b00}
-.rc-bajo{border-color:#a8cfe0}  .rc-bajo  .rc-n{color:#1c5f7a}
-.rc-segun{border-color:#bcd6ae} .rc-segun .rc-n{color:var(--u-ha)}
 .rc-sin{border-color:var(--line)}  .rc-sin  .rc-n{color:var(--muted)}
-.rc-unid{border-color:var(--line)} .rc-unid .rc-n{color:var(--muted)}
-.rc-pie{flex:1 1 100%;font-size:11px;color:var(--muted);padding-top:2px}
 .rc-nodisp{font-size:12px;color:#6b5300;background:#fdf7e6;border:1px solid var(--y);border-radius:var(--radius-sm);padding:10px 14px;line-height:1.5}
 
 /* Fila de encabezados del detalle: hacen falta ahora que el detalle tiene 7 columnas distintas
