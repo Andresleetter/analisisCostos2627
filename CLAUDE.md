@@ -83,6 +83,21 @@ Están explicadas en el README; acá va el resumen de lo que es fácil romper si
 - **Tolerancia de 3 días** en las alertas de atraso.
 - Datos faltantes se muestran como guion gris, **nunca como 0** — un cero se lee como "se midió y
   dio cero".
+- **Equivalencias de nombres (máquinas, contratistas, insumos): solo con confirmación explícita.**
+  `COMBUSTIBLE_MAQUINAS` (`config.js`) unifica variantes de escritura relevadas contra el `.xlsx`, no
+  alias deducidos. Unificar dos textos que *parecen* el mismo equipo ya salió mal una vez: se agrupó
+  `Tr 7 John Deere` con `Tr 07 AC` por compartir el número y son tractores distintos. Si no está
+  confirmado, van separados.
+
+## Trampas de layout que ya nos mordieron
+
+- **Una nota de ancho variable en una barra flex mueve los filtros.** `.fnote` usa `margin-left:auto`
+  y compite por el espacio con los `select`; si su texto cambia de largo con cada filtro, los
+  reacomoda en cada cambio. Combustible e Insumos ya no la llevan. Si hace falta contexto, va en el
+  subtítulo del panel, que no comparte fila con los controles.
+- **Al agregar una columna a una tabla, revisar el `colspan` de sus filas especiales**: estado vacío,
+  fila de total, `dethead` del desplegable y la cantidad de `<td>` de `detcols`/`det`. Se desalinean
+  en silencio, sin error de consola.
 
 ## Git
 

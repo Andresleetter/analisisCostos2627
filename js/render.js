@@ -902,16 +902,16 @@ function renderCombustible(){
   }); });
   // La tabla de Consumo se ordena CRONOLÓGICAMENTE, del movimiento más antiguo al más reciente.
   // Cada fila agrupa varios movimientos, así que se ancla en el más viejo de los suyos: ése es el
-  // que define su posición y el que se muestra en la columna Fecha. Cuando la fila abarca más de
-  // un día, el rango completo queda en el title de la celda. Empate de fecha: primero la de más
-  // litros, para que dos cargas del mismo día no queden en un orden arbitrario.
+  // que define su posición. La fecha NO se muestra como columna — se lee al desplegar la fila, que
+  // es donde está el movimiento concreto al que pertenece; fechaMin queda solo como criterio de
+  // orden. Empate de fecha: primero la de más litros, para que dos cargas del mismo día no queden
+  // en un orden arbitrario.
   // Los movimientos DENTRO del desplegable siguen de más reciente a más antiguo, sin cambios.
   const rowsC=Object.values(byUso)
     .map(o=>{
       const fechas=o.movs.map(m=>m.fecha).filter(Boolean);
       return {...o, litros:Math.round(o.litros*100)/100,
         fechaMin: fechas.length?new Date(Math.min.apply(null,fechas)):null,
-        fechaMax: fechas.length?new Date(Math.max.apply(null,fechas)):null,
         movs:o.movs.slice().sort((a,b)=>(b.fecha-a.fecha)||(b.litros-a.litros))};
     })
     .sort((a,b)=>{
@@ -939,15 +939,7 @@ function renderCombustible(){
     const chipVinc=`<span class="chip chip-vinc-${r.tipoVinculo}">${VINCULO_LABEL[r.tipoVinculo]||r.tipoVinculo}</span>`;
     // Observaciones largas (hay una de 349 caracteres en el dato real): la celda trunca con
     // ellipsis por CSS y el texto completo queda en el title. Nunca se recorta el dato en sí.
-    // Celda de Fecha: el día del movimiento más antiguo de la fila. Si abarca más de un día se
-    // marca con "…" y el rango completo va en el title — mostrar las dos fechas en la celda
-    // duplicaría el alto de todas las filas.
-    const variosDias = r.fechaMin && r.fechaMax && ipFecha(r.fechaMin)!==ipFecha(r.fechaMax);
-    const celdaFecha = r.fechaMin
-      ? `<td class="mono cu-fecha"${variosDias?` title="Del ${ipFecha(r.fechaMin)} al ${ipFecha(r.fechaMax)}"`:''}>${ipFecha(r.fechaMin)}${variosDias?' <span class="ip-sin">…</span>':''}</td>`
-      : `<td class="cu-fecha"><span class="ip-sin">—</span></td>`;
     let html=`<tr class="cu-fila${abierta?' open':''}" data-uso="${encodeURIComponent(clave)}">`+
-      celdaFecha+
       `<td class="cu-uso" title="${escAttr(r.uso)}"><span class="ip-caret">${abierta?'▾':'▸'}</span> `+
       `<b>${escHtml(r.uso)}</b> ${chipVinc}</td>`+
       `<td class="tr mono">${r.n}</td><td class="tr mono">${fmt2(r.litros)}</td>`+
@@ -956,7 +948,7 @@ function renderCombustible(){
     if(abierta) html+=combDetalleUso(r);
     return html;
   }).join('')+combFilaTotal(nMov, tot)
-   : '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:16px">Sin registros de combustible para el filtro seleccionado</td></tr>';
+   : '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px">Sin registros de combustible para el filtro seleccionado</td></tr>';
 }
 // Fila de total al pie del Consumo. Es la suma de lo que se está viendo, no un dato nuevo: con los
 // filtros en "Todas" coincide exactamente con el KPI de Consumo, y con un filtro activo (Mes,
@@ -965,7 +957,7 @@ function renderCombustible(){
 // respuesta "cuánto gastó esta máquina". Los valores llegan ya sumados desde renderCombustible;
 // acá no se recalcula nada.
 function combFilaTotal(nMov, litros){
-  return `<tr class="cu-total"><td></td><td>Total</td>`+
+  return `<tr class="cu-total"><td>Total</td>`+
     `<td class="tr mono">${nMov}</td>`+
     `<td class="tr mono">${fmt2(litros)}</td>`+
     `<td></td><td class="tr mono">100,0%</td></tr>`;
@@ -974,7 +966,7 @@ function combFilaTotal(nMov, litros){
 // según el origen de la atribución, para no mostrar columnas vacías ni —sobre todo— datos de OT
 // que no existen. Acá NO se resuelve ningún vínculo: todo llega decidido desde
 // js/data/combustible.js.
-//  - OT vinculada       : Fecha | OT | Estadio | Lote | Retiró | Litros. No se muestra "Labor"
+//  - OT vinculada       : Fecha · OT | Estadio | Lote | Retiró | Litros. No se muestra "Labor"
 //    porque en estas OT el campo Servicio viene SIEMPRE vacío — el Estadio es el dato que sí
 //    describe el trabajo. Tampoco Campo, que es siempre "LA TERESA". El Cultivo queda en el title
 //    del Lote (el texto ya incluye el lote: "LA TERESA 211 ARROZ 26/27"), y en su lugar se muestra
@@ -986,36 +978,35 @@ function combFilaTotal(nMov, litros){
 //    Servicio, Cultivo, Campo ni Lote porque para estos movimientos no existen.
 //  - Solo contratista / Labor Propia : Fecha | Comprobante | Tipo de comprobante | Campaña |
 //    Litros, que es todo lo que el movimiento trae.
-// La primera columna es SIEMPRE la fecha, para que quede alineada bajo la columna Fecha de la
-// tabla que contiene el detalle. Los movimientos van de más reciente a más antiguo, al revés que
-// la tabla principal: adentro de un mismo uso interesa primero lo último que pasó.
+// Los movimientos van de más reciente a más antiguo, al revés que la tabla principal: adentro de
+// un mismo uso interesa primero lo último que pasó. La fecha vive solo acá — la tabla principal no
+// tiene columna Fecha porque una fila que agrupa varios días no tiene una fecha que la represente.
 function combDetalleUso(g){
   const esOT = g.tipoVinculo===VINCULO_OT;
   const esOTNoDisp = g.tipoVinculo===VINCULO_OT_NO_DISPONIBLE;
-  const cols = esOT ? ['Fecha','OT','Estadio','Lote','Retiró','Litros']
-    : esOTNoDisp ? ['Fecha','Referencia de origen','OT','Campaña','','Litros']
-    : ['Fecha','Comprobante','Tipo de comprobante','Campaña','','Litros'];
+  const cols = esOT ? ['Fecha · OT','Estadio','Lote','Retiró','Litros']
+    : esOTNoDisp ? ['Fecha','Referencia de origen','OT','Campaña','Litros']
+    : ['Fecha','Comprobante','Tipo de comprobante','Campaña','Litros'];
   // La máquina es una propiedad del grupo (todos sus movimientos comparten la misma observación),
-  // así que va en la cabecera del detalle y no como una columna más.
+  // así que va en la cabecera del detalle y no como una sexta columna que no entraría en la tabla.
   const maqTxt = g.maquinaId ? ' · '+escHtml(g.maquina) : '';
-  let html=`<tr class="dethead"><td colspan="6">${escHtml(g.uso)} · ${VINCULO_LABEL[g.tipoVinculo]||''}${maqTxt} · ${fmtMovimientos(g.n)} · ${fmt2(g.litros)} L</td></tr>`;
-  html+=`<tr class="detcols">`+cols.map((c,i)=>`<td${i===5?' class="tr"':''}>${c}</td>`).join('')+`</tr>`;
+  let html=`<tr class="dethead"><td colspan="5">${escHtml(g.uso)} · ${VINCULO_LABEL[g.tipoVinculo]||''}${maqTxt} · ${fmtMovimientos(g.n)} · ${fmt2(g.litros)} L</td></tr>`;
+  html+=`<tr class="detcols">`+cols.map((c,i)=>`<td${i===4?' class="tr"':''}>${c}</td>`).join('')+`</tr>`;
   const guion='<span class="ip-sin">—</span>';
   html+=g.movs.map(m=>{
     const litros=`<td class="tr mono">${fmt2(m.litros)}</td>`;
-    const fecha=`<td class="dl mono">${ipFecha(m.fecha)}</td>`;
-    if(esOT) return `<tr class="det">${fecha}<td><b>OT ${escHtml(m.ot)}</b></td>`+
+    if(esOT) return `<tr class="det"><td class="dl">${ipFecha(m.fecha)} · <b>OT ${escHtml(m.ot)}</b></td>`+
       `<td>${escHtml(m.estadio)||guion}</td>`+
       `<td title="${escAttr(m.cultivo)}">${escHtml(m.lote)||guion}</td>`+
       `<td>${escHtml(m.personal)||guion}</td>${litros}</tr>`;
-    if(esOTNoDisp) return `<tr class="det">${fecha}`+
+    if(esOTNoDisp) return `<tr class="det"><td class="dl">${ipFecha(m.fecha)}</td>`+
       `<td class="mono">${escHtml(m.referenciaOrigen)||guion}</td>`+
       `<td><span class="ip-sin">No disponible</span></td>`+
-      `<td>${escHtml(m.campania)||guion}</td><td></td>${litros}</tr>`;
-    return `<tr class="det">${fecha}`+
+      `<td>${escHtml(m.campania)||guion}</td>${litros}</tr>`;
+    return `<tr class="det"><td class="dl">${ipFecha(m.fecha)}</td>`+
       `<td class="mono">${escHtml(m.referencia)||guion}</td>`+
       `<td>${escHtml(m.tipoComp)||guion}</td>`+
-      `<td>${escHtml(m.campania)||guion}</td><td></td>${litros}</tr>`;
+      `<td>${escHtml(m.campania)||guion}</td>${litros}</tr>`;
   }).join('');
   return html;
 }
