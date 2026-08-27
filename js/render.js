@@ -841,7 +841,6 @@ function renderCombustible(){
   const mesV=document.getElementById('cmes').value, mes=mesV==='ALL'?'ALL':parseInt(mesV);
   const tercV=document.getElementById('cterc').value;
   const maqV=document.getElementById('cmaq').value;
-  const selTxt=mesV==='ALL'?'Toda la campaña':document.getElementById('cmes').selectedOptions[0].text;
 
   // ---- KPI de balance: Ingreso vs Consumo del período (solo filtra por Mes, no por Tercero,
   // para comparar siempre el consumo TOTAL contra lo ingresado, sin importar qué tercero se mire
@@ -906,8 +905,6 @@ function renderCombustible(){
       movs:o.movs.slice().sort((a,b)=>(b.fecha-a.fecha)||(b.litros-a.litros))}))
     .sort((a,b)=>b.litros-a.litros);
   const tot=rowsC.reduce((s,r)=>s+r.litros,0);
-  const maqTxt=maqV==='ALL'?'':document.getElementById('cmaq').selectedOptions[0].text;
-  document.getElementById('cnote').textContent=selTxt+(tercV!=='ALL'?' · Tercero: '+tercV:'')+(maqV!=='ALL'?' · Máquina: '+maqTxt:'');
   // Control discreto de trazabilidad, en el subtítulo del panel: cómo se atribuyeron los
   // movimientos del período. No es un KPI nuevo, es una línea de texto. Solo se nombran los
   // niveles que realmente tienen movimientos, para no llenarla de ceros.
