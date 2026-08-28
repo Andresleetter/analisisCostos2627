@@ -116,58 +116,70 @@ const USO_OT_NO_DISPONIBLE = 'OT histórica no disponible';
 // texto normalizado (sin acentos, en minúsculas, con la puntuación y los guiones convertidos en
 // espacios), y se prueban de la más larga a la más corta para que "tr 07 ac" gane sobre "tr 07".
 //
-// IDENTIDAD DE LOS TRACTORES — agrupación POR NÚMERO DE FLOTA: el número de 1-2 dígitos que sigue a
-// "Tr"/"Tractor". Por eso "Tr 07 AC", "Tr 07", "Tr 07AC" y "Tr 7 John Deere" quedan bajo el mismo
-// Tractor 07, y "Tr 03"/"Tr 3J John Deere" bajo el mismo Tractor 03.
+// IDENTIDAD DE LOS TRACTORES — un tractor de marca es un EQUIPO DISTINTO del de la flota "AC",
+// aunque compartan el número. Lo confirmó el usuario y esta lista es la que él dictó, entrada por
+// entrada. Antes se agrupaba por número de flota ("Tr 7 John Deere" caía dentro de Tractor 07 y
+// "Tr 3J John Deere" dentro de Tractor 03); esa agrupación SE DESHIZO: hoy cada marca tiene su
+// propia entrada y nunca se mezcla con el tractor numerado del mismo dígito.
 //
-// OJO — esta agrupación está PENDIENTE DE DESAGREGAR: el usuario confirmó que un tractor de marca
-// (John Deere, New Holland) NO es necesariamente el mismo equipo que el de la flota "AC" aunque
-// compartan el número, y va a indicar cuáles separar. Mientras tanto se deja agrupado por número.
+// El dato soporta la separación sin ambigüedad: las formas con cero a la izquierda
+// ("Tr 01/02/03/04/07") nunca nombran una marca, y las formas sin cero ("Tr 7", "Tr 3J", "Tr 14")
+// son las únicas que la nombran. Las dos formas no se cruzan en ninguna observación real.
 //
-// El dato tiene con qué separarlos cuando llegue esa indicación: sobre las 125 menciones
-// "Tr <número>" de toda la hoja consultaOT, las 78 con cero a la izquierda ("Tr 01/02/03/04/07") no
-// nombran NINGUNA marca, y las 47 sin cero ("Tr 3", "Tr 3J", "Tr 7", "Tr 14") incluyen las 22 que sí
-// la nombran. Las dos formas nunca se cruzan, así que alcanza con mover las variantes con marca a su
-// propia entrada del catálogo.
+// El Tr 14 sigue el mismo criterio, a pedido del usuario: "Tr 14"/"Tractor 14" es un equipo y
+// "Tr 14 John Deere" es otro, cada uno con su entrada.
 //
-// Los números de 4 dígitos NO son número de flota sino MODELO ("New Holland 7205", "John Deere
-// 6180", "John Deere 7515", "Case 230"): esas variantes van declaradas enteras y nunca se les
-// extrae el número, para no inventar un "tractor 7205".
+// Los números de 4 dígitos NO son número de flota sino MODELO ("New Holland 7205", "New Holland
+// 7260", "John Deere 6180", "John Deere 7515", "Case 230"): esas variantes van declaradas enteras
+// y nunca se les extrae el número, para no inventar un "tractor 7205".
 //
-// Verificado contra el dato: las 371 OT de combustible con observación identifican UNA máquina,
-// ninguna queda sin identificar y ninguna coincide con dos entradas a la vez.
+// El ORDEN de la lista es el que dictó el usuario y es el que ve en el filtro de Máquina
+// (tractores → vehículos → maquinaria pesada): el desplegable respeta este orden, no el alfabético
+// ni el de litros (ver combustible_maquinas en js/data/combustible.js).
+//
+// Verificado contra el dato real (data/datosCampania2627.xlsx, 394 movimientos de combustible con
+// observación de OT): las 26 entradas cubren TODOS los movimientos, ninguno queda sin máquina y
+// ninguna observación coincide con dos entradas a la vez.
 const COMBUSTIBLE_MAQUINAS = [
-  // --- Tractores con número de flota ---
-  {id:'tr-01', label:'Tractor 01', variantes:['tr 01 ac','tr 01ac','tr 01','tractor 01']},
-  {id:'tr-02', label:'Tractor 02', variantes:['tr 02 ac','tr 02ac','tr 02','tractor 02']},
-  {id:'tr-03', label:'Tractor 03', variantes:['tr 03 ac','tr 03ac','tr 03','tractor 03',
-     'tr 3j john deere 6180','tr 3j john deere','tr 3 john deere','tr 3 new holland 7260','tr 3j']},
-  {id:'tr-04', label:'Tractor 04', variantes:['tr 04 ac','tr 04ac','tr 04','tractor 04']},
-  {id:'tr-07', label:'Tractor 07', variantes:['tr 07 ac','tr 07ac','tr 07','tractor 07',
-     'tr 7 john deere 7515','tr 7 john deere']},
-  {id:'tr-14', label:'Tractor 14', variantes:['tr 14 john deere','tr 14','tractor 14']},
-  // --- Tractores identificados por marca, sin número de flota en el texto ---
-  {id:'tr-deutz',  label:'Tractor Deutz',  variantes:['tr deutz fahr','tr deutz','tractor deutz']},
-  {id:'tr-valtra', label:'Tractor Valtra', variantes:['tr valtra','tractor valtra']},
-  {id:'tr-case',   label:'Tractor Case 230', variantes:['tr case 230','tractor case 230','tr case']},
-  {id:'tr-nh7205', label:'Tractor New Holland 7205', variantes:['tr new holland 7205','tr 7205 new holland']},
-  // --- Maquinaria pesada y equipos fijos ---
-  {id:'motoniveladora', label:'Motoniveladora', variantes:['motoniveladora']},
-  {id:'generador', label:'Generador', variantes:['generador']},
-  {id:'sany', label:'Excavadora Sany Neumática', variantes:['sany neumatico','sany neumatica','neumatica sany','sany']},
+  // --- Tractores de la flota, identificados por número (nunca nombran marca) ---
+  {id:'tr-01', label:'Tr 01', variantes:['tr 01 ac','tr 01ac','tr 01','tractor 01']},
+  {id:'tr-02', label:'Tr 02', variantes:['tr 02 ac','tr 02ac','tr 02','tractor 02']},
+  {id:'tr-03', label:'Tr 03', variantes:['tr 03 ac','tr 03ac','tr 03','tractor 03']},
+  {id:'tr-04', label:'Tr 04', variantes:['tr 04 ac','tr 04ac','tr 04','tractor 04']},
+  {id:'tr-07', label:'Tr 07', variantes:['tr 07 ac','tr 07ac','tr 07','tractor 07']},
+  {id:'tr-14', label:'Tr 14', variantes:['tr 14','tractor 14']},
+  // --- Tractores identificados por marca: equipos DISTINTOS de los de arriba ---
+  {id:'tr-valtra', label:'Tr Valtra', variantes:['tr valtra','tractor valtra']},
+  // "tr 7 john deere 7515" y "tr 14 john deere" son mas largas que "tr 07"/"tr 14", asi que ganan
+  // la coincidencia: el orden por longitud (ver COMBUSTIBLE_MAQUINA_VARIANTES) es lo que mantiene
+  // separado al tractor de marca del numerado, sin necesidad de ninguna regla especial.
+  {id:'tr-7-jd',  label:'Tr 7 John Deere',  variantes:['tr 7 john deere 7515','tr 7 john deere']},
+  {id:'tr-3j-jd', label:'Tr 3J John Deere', variantes:['tr 3j john deere 6180','tr 3j john deere',
+     'tr 3 john deere','tr 3j']},
+  {id:'tr-14-jd', label:'Tr 14 John Deere', variantes:['tr 14 john deere']},
+  {id:'tr-nh7205', label:'Tr New Holland 7205', variantes:['tr new holland 7205','tr 7205 new holland']},
+  {id:'tr-nh7260', label:'Tr New Holland 7260', variantes:['tr new holland 7260','tr 7260 new holland']},
+  {id:'tr-case',   label:'Tr Case 230', variantes:['tr case 230','tractor case 230','tr case']},
+  {id:'tr-deutz',  label:'Tr Deutz',  variantes:['tr deutz fahr','tr deutz','tractor deutz']},
   // --- Vehículos (marca y/o chapa) ---
   // La chapa AAUG855 es la del propio Ford Ranger (confirmado por el usuario): las observaciones
   // lo nombran unas veces por modelo y otras por chapa, y es un solo vehiculo.
-  {id:'ford-ranger', label:'Ford Ranger (AAUG855)', variantes:['ford ranger','aaug855']},
-  {id:'d20', label:'Chevrolet D20 (AGP645)', variantes:['ford d20','chevrolet d20','d20 chevrolet','d20 agp645','d20','agp645']},
+  {id:'ford-ranger', label:'Ford Ranger AAUG855', variantes:['ford ranger','aaug855']},
+  {id:'d20', label:'Chevrolet D20 AGP645', variantes:['ford d20','chevrolet d20','d20 chevrolet','d20 agp645','d20','agp645']},
   {id:'s10-uab800', label:'S10 UAB800', variantes:['s10 uab800','uab800 pc','uab800','s10 aub800','aub800']},
   {id:'s10-aaoz829', label:'S10 AAOZ829', variantes:['s10 aaoz829','aaoz829']},
   {id:'amarok', label:'Amarok', variantes:['amarok']},
-  {id:'hilux', label:'Toyota Hilux', variantes:['toyota hilux','hilux']},
   {id:'scania', label:'Scania OCE825', variantes:['scania oce825','scania','oce825']},
   {id:'blb594', label:'Chevrolet BLB594', variantes:['chevrolet blb594','blb594']},
-  {id:'hdx314', label:'Chevrolet HDX314', variantes:['chevrolet hdx314','hdx314']},
-  {id:'fad575', label:'FAD575', variantes:['fad575']},
+  // HDX314 es la chapa de la Hilux, no de una Chevrolet: el dato real siempre las nombra juntas
+  // ("Logistica Salario - Hilux HDX314"). Antes eran dos entradas distintas del catalogo y la
+  // chapa le ganaba al modelo, asi que estos movimientos se mostraban como "Chevrolet HDX314".
+  {id:'hilux', label:'Hilux HDX314', variantes:['hilux hdx314','chevrolet hdx314','toyota hilux','hdx314','hilux']},
+  {id:'fad575', label:'Chevrolet FAD575', variantes:['chevrolet fad575','fad575']},
+  // --- Maquinaria pesada y equipos fijos ---
+  {id:'motoniveladora', label:'Motoniveladora', variantes:['motoniveladora']},
+  {id:'sany', label:'Excavadora Sany Neumático', variantes:['sany neumatico','sany neumatica','neumatica sany','sany']},
+  {id:'generador', label:'Generador', variantes:['generador']},
 ];
 // Movimientos sin observación de OT (los niveles Solo contratista y OT no disponible) o cuya
 // observación no nombra ninguna máquina del catálogo. No se les inventa una.
