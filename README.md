@@ -245,7 +245,7 @@ Las columnas cambian según el nivel, para no mostrar datos que no existen:
 
 ### Filtro de Máquina
 
-La observación de la OT nombra el equipo que cargó el gasoil (`"Arreglo de camino - Motoniveladora"`, `"Corpida - Tr 14"`). No es un campo propio: es texto libre, y la misma máquina aparece escrita de muchas formas. `COMBUSTIBLE_MAQUINAS` (`config.js`) es la **única fuente** de esa equivalencia — 26 equipos con sus variantes reales, relevadas una por una contra el `.xlsx`.
+La observación de la OT nombra el equipo que cargó el gasoil (`"Arreglo de camino - Motoniveladora"`, `"Corpida - Tr 14"`). No es un campo propio: es texto libre, y la misma máquina aparece escrita de muchas formas. `COMBUSTIBLE_MAQUINAS` (`config.js`) es la **única fuente** de esa equivalencia — 25 equipos con sus variantes reales, relevadas una por una contra el `.xlsx`.
 
 **La lista de equipos y su orden los dictó el usuario**, y el desplegable de Máquina los muestra en ese mismo orden (tractores → vehículos → maquinaria pesada), no por litros ni alfabéticamente.
 
@@ -258,21 +258,21 @@ La observación de la OT nombra el equipo que cargó el gasoil (`"Arreglo de cam
 | Tr 03 | 3 | 96,20 | | S10 UAB800 | 24 | 850,10 |
 | Tr 04 | 24 | 1.829,52 | | S10 AAOZ829 | 19 | 1.121,39 |
 | Tr 07 | 36 | 2.138,95 | | Amarok | 3 | 213,78 |
-| Tr 14 | 29 | 1.318,09 | | Scania OCE825 | 1 | 22,10 |
+| Tr 14 | 34 | 1.550,33 | | Scania OCE825 | 1 | 22,10 |
 | Tr Valtra | 4 | 96,30 | | Chevrolet BLB594 | 1 | 85,00 |
 | Tr 7 John Deere | 11 | 562,43 | | Hilux HDX314 | 2 | 101,96 |
 | Tr 3J John Deere | 5 | 299,91 | | Chevrolet FAD575 | 2 | 130,00 |
-| Tr 14 John Deere | 5 | 232,24 | | Motoniveladora | 43 | 9.318,00 |
-| Tr New Holland 7205 | 2 | 71,00 | | Excavadora Sany Neumático | 55 | 3.753,33 |
-| Tr New Holland 7260 | 1 | 27,00 | | Generador | 20 | 3.193,44 |
-| Tr Case 230 | 7 | 412,07 | | | | |
+| Tr New Holland 7205 | 2 | 71,00 | | Motoniveladora | 43 | 9.318,00 |
+| Tr New Holland 7260 | 1 | 27,00 | | Excavadora Sany Neumático | 55 | 3.753,33 |
+| Tr Case 230 | 7 | 412,07 | | Generador | 20 | 3.193,44 |
 | Tr Deutz | 16 | 689,30 | | | | |
 
 **Reglas de la normalización** — sin fuzzy matching, sin coincidencia parcial, sin alias inventados:
 
 - La variante se busca como **palabra completa** sobre el texto normalizado (`normHdr` + puntuación y guiones convertidos en espacios). El guion hace falta porque el dato trae la máquina pegada a él (`"Desalijo Silo Bolsa -Tr 07 AC"`) y el punto porque termina en él (`"Abastecer generador."`).
 - Las variantes se prueban **de la más larga a la más corta**, para que `tr 07 ac` gane sobre `tr 07`.
-- **Identidad de los tractores: un tractor de marca es un equipo DISTINTO del numerado**, aunque compartan el dígito. `Tr 07` y `Tr 7 John Deere` son dos máquinas, igual que `Tr 03` y `Tr 3J John Deere`, y `Tr 14` y `Tr 14 John Deere`. Lo hace posible la regla anterior: `tr 7 john deere` es más larga que `tr 07`, así que gana la coincidencia sin necesidad de ninguna regla especial. El dato lo soporta sin ambigüedad: las formas **con cero a la izquierda** (`Tr 01/02/03/04/07`) **nunca nombran una marca**, y las formas **sin cero** (`Tr 7`, `Tr 3J`, `Tr 14`) son las únicas que la nombran — las dos formas no se cruzan en ninguna observación real.
+- **Identidad de los tractores: un tractor de marca es un equipo DISTINTO del numerado**, aunque compartan el dígito. `Tr 07` y `Tr 7 John Deere` son dos máquinas, igual que `Tr 03` y `Tr 3J John Deere`. Lo hace posible la regla anterior: `tr 7 john deere` es más larga que `tr 07`, así que gana la coincidencia sin necesidad de ninguna regla especial. El dato lo soporta sin ambigüedad: las formas **con cero a la izquierda** (`Tr 01/02/03/04/07`) **nunca nombran una marca**, y las formas **sin cero** (`Tr 7`, `Tr 3J`) son las únicas que la nombran — las dos formas no se cruzan en ninguna observación real.
+- **El `Tr 14` es la excepción**, a pedido del usuario: `Tr 14 John Deere` es el **mismo equipo** que `Tr 14`/`Tractor 14`, así que las tres formas van juntas en una sola entrada. Se separó en su momento y se volvió a unir — está así a propósito, no por omisión.
 - Los números de **4 dígitos no son flota sino modelo** (`New Holland 7205`, `New Holland 7260`, `John Deere 6180`, `John Deere 7515`, `Case 230`): esas variantes van declaradas enteras y no se les extrae el número, para no inventar un "tractor 7205".
 - **Un vehículo nombrado por chapa es el mismo que nombrado por modelo**, cuando el usuario lo confirma: `AAUG855` es el propio Ford Ranger, y `HDX314` es la chapa de la **Hilux** — el dato real siempre las nombra juntas (`"Logistica Salario - Hilux HDX314"`). `HDX314` era una entrada aparte rotulada "Chevrolet HDX314" y, al ser la variante más larga, le ganaba a `hilux`: esos movimientos se mostraban con la marca equivocada. La unificación **nunca** se deduce del dato: se hace solo con confirmación explícita.
 - El horómetro o el kilometraje entre paréntesis se ignoran: `Motoniveladora (17397.8 Hs)` y `Ford Ranger (92.635 km)` son la misma máquina que sin el paréntesis.

@@ -123,11 +123,12 @@ const USO_OT_NO_DISPONIBLE = 'OT histórica no disponible';
 // propia entrada y nunca se mezcla con el tractor numerado del mismo dígito.
 //
 // El dato soporta la separación sin ambigüedad: las formas con cero a la izquierda
-// ("Tr 01/02/03/04/07") nunca nombran una marca, y las formas sin cero ("Tr 7", "Tr 3J", "Tr 14")
-// son las únicas que la nombran. Las dos formas no se cruzan en ninguna observación real.
+// ("Tr 01/02/03/04/07") nunca nombran una marca, y las formas sin cero ("Tr 7", "Tr 3J") son las
+// únicas que la nombran. Las dos formas no se cruzan en ninguna observación real.
 //
-// El Tr 14 sigue el mismo criterio, a pedido del usuario: "Tr 14"/"Tractor 14" es un equipo y
-// "Tr 14 John Deere" es otro, cada uno con su entrada.
+// El Tr 14 NO se separa: el usuario confirmo que "Tr 14 John Deere" es el mismo equipo que
+// "Tr 14"/"Tractor 14", asi que las tres formas quedan en una sola entrada. Es una excepcion
+// explicita a la regla de arriba, no un olvido: se separo en su momento y se volvio a unir.
 //
 // Los números de 4 dígitos NO son número de flota sino MODELO ("New Holland 7205", "New Holland
 // 7260", "John Deere 6180", "John Deere 7515", "Case 230"): esas variantes van declaradas enteras
@@ -138,7 +139,7 @@ const USO_OT_NO_DISPONIBLE = 'OT histórica no disponible';
 // ni el de litros (ver combustible_maquinas en js/data/combustible.js).
 //
 // Verificado contra el dato real (data/datosCampania2627.xlsx, 394 movimientos de combustible con
-// observación de OT): las 26 entradas cubren TODOS los movimientos, ninguno queda sin máquina y
+// observación de OT): las 25 entradas cubren TODOS los movimientos, ninguno queda sin máquina y
 // ninguna observación coincide con dos entradas a la vez.
 const COMBUSTIBLE_MAQUINAS = [
   // --- Tractores de la flota, identificados por número (nunca nombran marca) ---
@@ -147,16 +148,17 @@ const COMBUSTIBLE_MAQUINAS = [
   {id:'tr-03', label:'Tr 03', variantes:['tr 03 ac','tr 03ac','tr 03','tractor 03']},
   {id:'tr-04', label:'Tr 04', variantes:['tr 04 ac','tr 04ac','tr 04','tractor 04']},
   {id:'tr-07', label:'Tr 07', variantes:['tr 07 ac','tr 07ac','tr 07','tractor 07']},
-  {id:'tr-14', label:'Tr 14', variantes:['tr 14','tractor 14']},
+  // El Tr 14 es la EXCEPCION a la regla de arriba, a pedido del usuario: "Tr 14 John Deere" es el
+  // mismo equipo que "Tr 14"/"Tractor 14", asi que las tres formas van juntas en esta entrada.
+  {id:'tr-14', label:'Tr 14', variantes:['tr 14 john deere','tr 14','tractor 14']},
   // --- Tractores identificados por marca: equipos DISTINTOS de los de arriba ---
   {id:'tr-valtra', label:'Tr Valtra', variantes:['tr valtra','tractor valtra']},
-  // "tr 7 john deere 7515" y "tr 14 john deere" son mas largas que "tr 07"/"tr 14", asi que ganan
+  // "tr 7 john deere 7515" y "tr 3j john deere" son mas largas que "tr 07"/"tr 03", asi que ganan
   // la coincidencia: el orden por longitud (ver COMBUSTIBLE_MAQUINA_VARIANTES) es lo que mantiene
   // separado al tractor de marca del numerado, sin necesidad de ninguna regla especial.
   {id:'tr-7-jd',  label:'Tr 7 John Deere',  variantes:['tr 7 john deere 7515','tr 7 john deere']},
   {id:'tr-3j-jd', label:'Tr 3J John Deere', variantes:['tr 3j john deere 6180','tr 3j john deere',
      'tr 3 john deere','tr 3j']},
-  {id:'tr-14-jd', label:'Tr 14 John Deere', variantes:['tr 14 john deere']},
   {id:'tr-nh7205', label:'Tr New Holland 7205', variantes:['tr new holland 7205','tr 7205 new holland']},
   {id:'tr-nh7260', label:'Tr New Holland 7260', variantes:['tr new holland 7260','tr 7260 new holland']},
   {id:'tr-case',   label:'Tr Case 230', variantes:['tr case 230','tractor case 230','tr case']},
