@@ -223,8 +223,9 @@ const LOTES_NO_PARCELA = ['SECADERO', 'FLETES', 'PARCELA'];
 // (col F), Costo (col G) e Importe Total sin IVA (col H), y pasando los numeros por num().
 // Los valores del JSON se verificaron identicos a los que producia el parseo del .xlsx.
 //
-// El .xlsx se deja en data/ como respaldo/origen del dato: ya NO se descarga ni se lee en runtime.
-// Para actualizar el presupuesto se edita este JSON (o se regenera desde el Excel actualizado).
+// Ese .xlsx ya NO esta en el repo: se quito una vez migrado el dato. El JSON es la unica fuente
+// del presupuesto de infraestructura, y para actualizarlo se lo edita directamente. El detalle de
+// filas/columnas queda documentado arriba por si alguna vez hay que regenerarlo desde un Excel nuevo.
 // Mismo criterio de descarga que SRC_XLSX: el propio sitio primero, GitHub como respaldo.
 const INFRA_SRC_JSON = SRC_DATA+"presupuesto-infraestructura-26-27.json";
 const INFRA_SRC_JSON_RESPALDO = "https://raw.githubusercontent.com/"+REPO+"/"+BRANCH+"/"+SRC_DATA+"presupuesto-infraestructura-26-27.json";
