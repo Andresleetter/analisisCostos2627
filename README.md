@@ -41,7 +41,7 @@ Si el archivo está abierto en Excel al momento de necesitar inspeccionarlo (ej.
 1. **Resumen Ejecutivo** — KPIs ejecutivos, Detalle de Etapas por Cultivo, estado de las OT, actividad operacional por mes, distribución del gasto en áreas no agrícolas y Posibles Problemas en la Campaña. Ver sección propia más abajo.
 2. **Servicios** *(antes "Resumen de Gastos" — se renombró el botón, sin tocar cálculos ni ids internos)* — gasto por servicio/estadio, consumo de gasoil por área, evolución del gasto.
    > **Los rótulos visibles de este módulo usan los nombres de la OT.** El panel se llama "Detalle por Servicio" (antes "Detalle por Labor") y sus columnas son **Servicio** y **Estadio** (antes "Labor" y "Etapa"), igual que los campos `servicio` y `estadio` de `consultaOT`. Es un cambio de rótulo: no se tocaron los ids (`glabor`, `gestadio`, `gld`, `gld-sub`), ni las claves internas (`r.labor`, `r.estadio`), ni un solo cálculo. La única cadena de datos que cambió es el marcador de las OT sin estadio cargado, `'(Sin etapa)'` → `'(Sin estadio)'` (`servicios.js`), que se muestra tal cual en el filtro y en la columna. "Detalle de Etapas por Cultivo" (Resumen Ejecutivo) **no** se renombró: es otro módulo y agrupa por las cuatro etapas de `ETAPA_ORDEN`, no por el estadio crudo de la OT.
-3. **Combustible** — Ingreso por proveedor y **Consumo por Uso / Detalle**, en orden cronológico, con cada movimiento atribuido por niveles (OT vinculada / Solo contratista / OT no disponible / Labor Propia) y filtros de Mes, Tercero y **Máquina**. KPI de Stock Inicial (dinámico) y Balance, con arrastre mes a mes.
+3. **Combustible** — Ingreso por proveedor y **Consumo por Uso / Detalle**, con cada movimiento atribuido por niveles (OT vinculada / Solo contratista / OT no disponible / Labor Propia) y filtros de Mes, Tercero y **Máquina**. KPI de Stock Inicial (dinámico) y Balance, con arrastre mes a mes.
 4. **Insumos** — Ingreso/Consumo de insumos no-combustible en **cantidad real** (nunca en dinero), con flujo de Stock dinámico y filtros dependientes Tipo de Insumo → Insumo. Ver sección propia más abajo.
 5. **Control de Hectáreas** — lotes con exceso de superficie vs. RTK, OT sin correspondencia en el plan.
 6. **Alertas Operacionales** — OT atrasadas, con filtro por Estado (Pendiente / En Ejecución / Todas) y color por fila según días de atraso.
@@ -284,9 +284,16 @@ Solo el nivel `ot` tiene observación, así que **elegir una máquina deja fuera
 
 ### Orden y presentación de la tabla de Consumo
 
-**Orden cronológico ascendente**, del movimiento más antiguo al más reciente — no por litros. Es como se lee la evolución del consumo de la campaña y, sobre todo, la cronología de una máquina cuando se usa ese filtro.
+**El orden depende del filtro de Máquina**, porque las dos vistas responden preguntas distintas:
 
-Cada fila agrupa varios movimientos, así que **se ancla en el más viejo de los suyos**: ése define su posición. Empate de fecha: primero la de más litros, para que dos cargas del mismo día no queden en un orden arbitrario.
+| Vista | Orden | Por qué |
+|---|---|---|
+| **Sin filtro de Máquina** (`Todas`) | **Por litros, de mayor a menor** | Es la vista general: lo que se busca es en qué se va el combustible, así que lo que más pesa va primero. Empate de litros: primero el más antiguo. |
+| **Con una máquina elegida** | **Cronológico ascendente**, del más antiguo al más reciente | Ahí no se lee un ranking sino la cronología de **ese** equipo. Empate de fecha: primero la de más litros. |
+
+Los filtros de **Mes y Tercero no cambian el orden** — solo el de Máquina.
+
+Cada fila agrupa varios movimientos, así que para el orden cronológico **se ancla en el más viejo de los suyos**: ése define su posición.
 
 **La tabla no tiene columna Fecha.** Una fila que agrupa movimientos de varios días no tiene una fecha que la represente, y una columna con la del primero se lee como si fuera la de todo el grupo. La fecha vive donde tiene sentido: **en el desplegable**, al lado del movimiento concreto al que pertenece. `fechaMin` queda solo como criterio de orden, sin llegar a la pantalla. Se probó la variante con columna (con el rango en el `title` cuando abarcaba varios días) y se descartó: sumaba una columna a las cinco que ya tenía la tabla para repetir un dato que el detalle ya daba mejor.
 
