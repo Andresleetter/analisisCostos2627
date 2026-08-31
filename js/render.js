@@ -997,13 +997,24 @@ function renderCombustible(){
       tipoVinculo:g.tipoVinculo,esOT:g.esOT,maquina:g.maquina,maquinaId:g.maquinaId,n:0,litros:0,movs:[]};
     const o=byUso[key]; o.n++; o.litros+=m.litros; o.movs.push(m);
   }); });
-  // La tabla de Consumo se ordena CRONOLÓGICAMENTE, del movimiento más antiguo al más reciente.
-  // Cada fila agrupa varios movimientos, así que se ancla en el más viejo de los suyos: ése es el
-  // que define su posición. La fecha NO se muestra como columna — se lee al desplegar la fila, que
-  // es donde está el movimiento concreto al que pertenece; fechaMin queda solo como criterio de
-  // orden. Empate de fecha: primero la de más litros, para que dos cargas del mismo día no queden
-  // en un orden arbitrario.
+  // El orden de la tabla de Consumo DEPENDE del filtro de Máquina, porque las dos vistas responden
+  // preguntas distintas (a pedido del usuario):
+  //
+  //  - SIN filtro de Máquina ("Todas") — la vista general: se ordena POR LITROS, de mayor a menor.
+  //    Acá lo que se busca es en qué se va el combustible, así que lo que más pesa va primero.
+  //    Empate de litros: primero el más antiguo, para que no quede en un orden arbitrario.
+  //
+  //  - CON una máquina elegida — se ordena CRONOLÓGICAMENTE, del movimiento más antiguo al más
+  //    reciente: lo que se lee ahí es la cronología de ESE equipo, no un ranking. Empate de fecha:
+  //    primero la de más litros.
+  //
+  // Cada fila agrupa varios movimientos, así que para el orden cronológico se ancla en el más viejo
+  // de los suyos: ése define su posición. La fecha NO se muestra como columna — se lee al desplegar
+  // la fila, que es donde está el movimiento concreto al que pertenece; fechaMin queda solo como
+  // criterio de orden.
+  // Los filtros de Mes y Tercero NO cambian el orden: solo el de Máquina.
   // Los movimientos DENTRO del desplegable siguen de más reciente a más antiguo, sin cambios.
+  const ordenCronologico = maqV!=='ALL';
   const rowsC=Object.values(byUso)
     .map(o=>{
       const fechas=o.movs.map(m=>m.fecha).filter(Boolean);
@@ -1013,7 +1024,8 @@ function renderCombustible(){
     })
     .sort((a,b)=>{
       const fa=a.fechaMin?a.fechaMin.getTime():Infinity, fb=b.fechaMin?b.fechaMin.getTime():Infinity;
-      return (fa-fb) || (b.litros-a.litros);
+      return ordenCronologico ? ((fa-fb) || (b.litros-a.litros))
+                              : ((b.litros-a.litros) || (fa-fb));
     });
   const tot=rowsC.reduce((s,r)=>s+r.litros,0);
   // Control discreto de trazabilidad, en el subtítulo del panel: cómo se atribuyeron los

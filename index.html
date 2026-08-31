@@ -168,8 +168,11 @@
          Propia), a partir del cruce consultaInsumos.referenciaOrigen = consultaOT.referencia. Todo
          se resuelve al construir el modelo, nunca al renderizar. Clic en una fila para ver sus
          movimientos; la última fila es el total de lo que se está viendo con los filtros activos.
-         Las filas están ordenadas cronológicamente, de la más antigua a la más reciente. La fecha
-         no es una columna: se lee al desplegar la fila, junto al movimiento al que pertenece. -->
+         El orden de las filas depende del filtro de Máquina: sin filtro van por litros, de mayor a
+         menor (la vista general responde "en qué se va el combustible"); con una máquina elegida van
+         cronológicamente, de la más antigua a la más reciente (ahí se lee la cronología de ese
+         equipo). La fecha no es una columna: se lee al desplegar la fila, junto al movimiento al
+         que pertenece. -->
     <div class="panel sub"><h3>Consumo <span id="comb-uso-sub"></span></h3>
       <div class="scroll"><table><thead><tr><th>Uso / Detalle</th><th class="tr">Movimientos</th><th class="tr">Consumo</th><th class="tr">Participación</th><th class="tr">%</th></tr></thead><tbody id="combbody"></tbody></table></div></div>
   </section>
