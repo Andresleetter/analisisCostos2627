@@ -146,7 +146,17 @@ function trabajosCamionGruaDeLinea(linea){
       const has=g.map(x=>x.hr).filter(x=>x!=null);
       return { ot:id, act:r0.act, lote:r0.lote, estadio:r0.estadio, serv:r0.serv, estado:r0.estado,
         ft:r0.ft, fr:r0.fr, tieneServ: r0.serv!=='' && r0.serv.toLowerCase()!=='nan',
-        contr:r0.contr, personal:r0.personal,
+        // contr = contratista de la OT. NO se toma de la primera linea (r0): en 277 OT de hoy la
+        // primera linea es un INSUMO, que trae el campo vacio, y el contratista real viene recien
+        // en la linea de LABOR — el trabajo terminaba rotulado 'No aplica'/'Sin contratista'
+        // (ej. Fumigacion Dron de Agricola JG, Fumigacion Imperator y Esparcidor de Solido de Agro
+        // Continental). Se prioriza la linea de labor (Labor Propia/Tercero), que es donde el dato
+        // corresponde, y si ninguna lo trae se usa la primera linea que tenga algo. Verificado
+        // contra el .xlsx: NINGUNA OT tiene dos contratistas distintos entre sus lineas, asi que la
+        // eleccion no es ambigua. Sigue quedando vacio cuando ninguna linea lo trae (Labor Propia).
+        contr:(g.find(x=>(x.tipo==='Labor Propia'||x.tipo==='Labor Tercero') && x.contr) ||
+               g.find(x=>x.contr) || r0).contr,
+        personal:r0.personal,
         ha: has.length?Math.max.apply(null,has):null,
         modalidad: modalidadLaborOT(g),
         horas: g.filter(x=>x.esHoras).reduce((s,x)=>s+x.ud,0),
