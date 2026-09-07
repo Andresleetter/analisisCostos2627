@@ -45,12 +45,12 @@ Si el archivo está abierto en Excel al momento de necesitar inspeccionarlo (ej.
 4. **Insumos** — Ingreso/Consumo de insumos no-combustible en **cantidad real** (nunca en dinero), con flujo de Stock dinámico y filtros dependientes Tipo de Insumo → Insumo. Ver sección propia más abajo.
 5. **Control de Hectáreas** — lotes con exceso de superficie vs. RTK, OT sin correspondencia en el plan.
 6. **Alertas Operacionales** — OT atrasadas, con filtro por Estado (Pendiente / En Ejecución / Todas) y color por fila según días de atraso.
-7. **Auditoría** — dos sub-módulos dentro de la misma pestaña, con navegación propia: **Infraestructura** (presupuesto vs. ejecución real) e **Insumos por Parcela** (qué insumo se aplicó en cada lote, cuánto por hectárea y con qué OT). Última pestaña de la barra. Ver sección propia más abajo.
+7. **Auditoría** — tres sub-módulos dentro de la misma pestaña, con navegación propia: **Infraestructura** (presupuesto vs. ejecución real), **Insumos por Parcela** (qué insumo se aplicó en cada lote, cuánto por hectárea y con qué OT) y **Siembra por Parcela** (cruce de las OT de siembra confirmadas contra el campo `hectareasSembradas` de la parcela, para detectar errores de carga). Última pestaña de la barra. Ver secciones propias más abajo.
 
 ## Contenido de cada carpeta
 
 - **`index.html`** — Markup semántico de la página (header, tabs, secciones por pestaña). No contiene estilos ni scripts inline; solo referencias a `css/` y `js/`. El orden de los botones `<button class="tab">` y de las `<section class="page">` debe coincidir 1 a 1 (`show(i, btn)` en `render.js` las empareja por posición, no por id) — mover una pestaña de lugar implica mover el botón **y** su sección juntos.
-- **`css/`** — Un archivo por bloque visual, cargados en `index.html` en este orden: `base.css` (reset, variables `:root`, tipografía global, `.wrap`), `overlay.css`, `header.css`, `tabs.css`, `panel.css`, `kpis.css`, `cultivos.css`, `problemas.css`, `tables.css`, `gastos.css` (Servicios + Combustible + Insumos comparten estos estilos: `.gfilter`, `.kpis`/`.gkpis`, tablas con `.sopbar`), `alertas.css` (incluye el color de fila por días de atraso), `auditoria.css` (sub-navegación de la pestaña Auditoría y el sub-módulo Insumos por Parcela), `footer.css`.
+- **`css/`** — Un archivo por bloque visual, cargados en `index.html` en este orden: `base.css` (reset, variables `:root`, tipografía global, `.wrap`), `overlay.css`, `header.css`, `tabs.css`, `panel.css`, `kpis.css`, `cultivos.css`, `problemas.css`, `tables.css`, `gastos.css` (Servicios + Combustible + Insumos comparten estos estilos: `.gfilter`, `.kpis`/`.gkpis`, tablas con `.sopbar`), `alertas.css` (incluye el color de fila por días de atraso), `auditoria.css` (sub-navegación de la pestaña Auditoría y los sub-módulos Insumos por Parcela y Siembra por Parcela), `footer.css`.
 - **`js/`** — Un módulo por responsabilidad, cargados en `index.html` en este orden (scripts clásicos con `defer`, sin módulos ES ni bundler):
   - `config.js` — constantes de la app: URLs de los tres archivos de `data/` (`SRC_DATA` + `SRC_XLSX` / `INFRA_SRC_XLSX` / `RECETAS_SRC_JSON`), nombres de hoja, catálogos de cultivos/etapas/operativas, `CAMPANIA_ACTUAL`, el mapeo manual `INFRA_MAP` (presupuesto ↔ Servicio de OT, ver sección Auditoría), y la variable de estado global `D`.
   - `utils.js` — funciones puras de formateo, parsing de números/fechas (incluye objetos `Date` nativos de SheetJS), normalización de texto, y `stockInicioDePeriodo()` — arrastre de stock mes a mes **genérico**, reutilizado tanto por Combustible como por Insumos (antes estaba escrito en línea solo para Combustible).
@@ -61,7 +61,7 @@ Si el archivo está abierto en Excel al momento de necesitar inspeccionarlo (ej.
     - `servicios.js` — módulo Servicios completo (`construirServicios()`: detalle por servicio, gasoil, filtros y totales) y el paquete equivalente por cada campaña presente en `consultaOT`.
     - `combustible.js` — consumo e ingresos de gasoil y stock inicial.
     - `insumos.js` — ingresos, consumos y flujo de stock por (Tipo, Insumo, Unidad).
-    - `auditoria.js` — los dos sub-módulos de la pestaña Auditoría: Infraestructura (presupuesto vs ejecución) e Insumos por Parcela.
+    - `auditoria.js` — los tres sub-módulos de la pestaña Auditoría: Infraestructura (presupuesto vs ejecución), Insumos por Parcela y Siembra por Parcela.
     - `recetas.js` — comparación de la dosis realmente aplicada por hectárea contra la receta de la campaña (`data/recetas-insumos-26-27.json`): normalización y conversión de unidades, índice de recetas, búsqueda conservadora y cálculo de desvío/estado. No lee ningún Excel.
     - `alertas.js` — OT Pendientes/En Ejecución y cuáles están atrasadas.
     - `resumen.js` — Gastos Operativos y todo `D.resumen` (KPIs, estados de OT, actividad mensual, posibles problemas). Se calcula último: reutiliza colecciones ya construidas por los demás dominios, nunca vuelve a recorrer las OT desde cero.
@@ -471,6 +471,57 @@ Los cinco alias por fórmula de la zafriña (`Abono 04-30-10 COFCO`, `Kalium`, `
 En la **zafriña 26** (33 insumos por lote): **20 con receta y 13 sin receta**. Lo que falta es la semilla —excluida a propósito— y seis productos que no figuran en el presupuesto de MAIZ con ninguna fórmula: `Eficiente 97 DF`, `BICARB ULTRA`, `Acefato Tafirel`, `Tiodicarb Tafirel`, `AZOXCY TOP` y `Tebuconazole SOMAX 43%`. Para comparar más hay que **agregar alias a mano**, nunca ampliar la coincidencia por parecido.
 
 **Si el JSON falla:** el dashboard carga igual, la dosis real, las cantidades y los costos se muestran igual, y el panel de seguimiento avisa que no está disponible.
+
+## Auditoría de Siembra por Parcela
+
+Tercer sub-módulo de la pestaña Auditoría (`js/data/auditoria.js` → `construirAuditoriaSiembra()`, `renderAuditoriaSiembra()` en `render.js`). Es una auditoría **de carga**, no un indicador de gestión: dice qué hay que corregir en Albor. **No alimenta el avance, ni los costos, ni ningún KPI del dashboard.**
+
+Cruza dos fuentes que declaran la misma superficie sembrada y que hoy no coinciden:
+
+| Columna | De dónde sale |
+|---|---|
+| **Plan** | `consultaCultivos.hectareas` — la superficie de la parcela. |
+| **Sembrado (OT)** | Las OT de siembra **confirmadas** de `consultaOT`. Misma fuente con que el Resumen Ejecutivo calcula el avance. |
+| **Declarado (parcela)** | `consultaCultivos.hectareasSembradas`. **Ningún otro archivo del dashboard lee este campo** — entra al modelo únicamente para esta auditoría. |
+
+### Qué OT cuentan como siembra
+
+Los mismos criterios que el avance del Resumen Ejecutivo, para no inventar un segundo número:
+
+- Estadio `Siembra`, **excluyendo** `SIEMBRA_SERVICIOS_NO_SIEMBRA` (tratamiento de semillas, que no es sembrar).
+- Modalidad `hectareas` (`modalidadLaborOT`): las labores medidas en Horas — hoy "Pasada retro excavadora x Hs" — aparecen en el estadio Siembra pero **no acreditan superficie**.
+- Solo **Confirmadas** para la superficie. Las OT de siembra abiertas se cuentan aparte y se muestran en la fila, porque son la otra explicación posible de una diferencia.
+
+La superficie sembrada del lote es el **máximo por labor**, capado al plan del lote. Dos OT de la *misma* labor sobre un lote son pasadas parciales y se suman entre sí; dos labores *distintas* son pasadas completas repetidas sobre la misma superficie y **nunca** se suman.
+
+### Por qué el campo de la parcela puede quedar mal
+
+Una parcela se siembra en dos pasadas cargadas como labores distintas ("Siembra" y "Siembra de arroz s/ implemento"). Son dos pasadas sobre la **misma** superficie, no dos superficies, pero `hectareasSembradas` las suma como si fueran nuevas y termina superando las hectáreas de la propia parcela — algo físicamente imposible. El avance del dashboard no cae en eso porque capa cada labor al plan del lote y promedia por estadio (ver `construirCultivos` en `js/data/cultivos.js`).
+
+La correlación es exacta contra el dato real: las 9 parcelas cuyo `hectareasSembradas` supera su propio plan son, una por una, las 9 que tienen dos labores de siembra. Ninguna otra parcela las tiene y ninguna otra tiene el problema.
+
+### Clave de unión: cultivo + lote, nunca el lote solo
+
+Verificado contra el `.xlsx`: **29 lotes de la 26/27 llevan dos cultivos a la vez** (el arroz y su cobertura de avena; maíz o sorgo sobre cobertura). Indexar por lote pisaba una parcela con la otra. Es la misma clave con que `construirPlanRTK` arma `RTK[cultivo][lote]`. Del lado de la OT el cultivo es el campo `actividad`.
+
+Se descartan además las filas de `consultaCultivos` con plan ≤ 0,01 ha: son marcadores de parcelas sin superficie propia (`PARCELA`, `SECADERO`), no lotes reales.
+
+> **Ojo con `normHdr`**: no separa el camelCase. La columna `hectareasSembradas` llega como `hectareassembradas`, todo junto — no `hectareas sembradas`.
+
+### Diagnósticos
+
+Se evalúan en este orden (`clasificarSiembra`); el orden importa porque "supera la parcela" es el único caso *imposible*, y por lo tanto un error de carga seguro y no una diferencia de criterio:
+
+| Diagnóstico | Significa |
+|---|---|
+| **Supera la parcela** | La parcela declara más hectáreas sembradas que las que tiene. Hay que corregirlo en Albor. |
+| **Sin OT de siembra** | La parcela declara siembra pero no existe ninguna OT de siembra para ese lote. |
+| **OT sin confirmar** | Hay OT de siembra abiertas: hasta que no se confirmen, su superficie no se puede acreditar. Se reporta aunque los dos números den 0, porque acá el 0 no es "coincide" sino "falta cerrar". |
+| **Falta cargar** | Las OT confirman siembra y la parcela sigue en cero. |
+| **Coincide** | Los dos números dan lo mismo (tolerancia 0,01 ha). |
+| **Difiere de la OT** | No coinciden. Puede ser siembra parcial ya cargada, o falta completarla. |
+
+Los chips de estado reutilizan `.rc-est` del Seguimiento de Receta para no inventar un vocabulario visual nuevo: ámbar = hay que corregir, azul = falta completar, verde = coincide, gris = todavía no hay con qué comparar.
 
 ## Reorganización general (histórico)
 

@@ -233,6 +233,7 @@
     <nav class="subtabs" id="audit-subnav">
       <button type="button" class="subtab active" data-audit="infra">Infraestructura</button>
       <button type="button" class="subtab" data-audit="insumos">Insumos por Parcela</button>
+      <button type="button" class="subtab" data-audit="siembra">Siembra por Parcela</button>
     </nav>
 
     <!-- SUB-MODULO 1: Presupuesto de Infraestructura vs Ejecucion (sin cambios) -->
@@ -293,6 +294,26 @@
         <div class="scroll"><table><thead><tr><th>Unidad de Medida</th><th class="tr">Insumos Distintos</th><th class="tr">Cantidad Utilizada</th><th class="tr">Costo Total</th></tr></thead><tbody id="ip-unidades"></tbody></table></div></div>
       <div class="panel hero-panel"><h3>Resumen por Lote</h3>
         <div class="scroll scroll-tall"><table class="ldt"><thead><tr><th>Lote</th><th>Cultivo</th><th class="tr">Hectáreas</th><th class="tr">Aplicaciones</th><th class="tr">Insumos Distintos</th><th class="tr">Costo Total</th><th class="tr" title="Costo total de insumos del lote dividido su superficie">Costo / ha del Lote</th></tr></thead><tbody id="ip-parcelas"></tbody></table></div></div>
+    </div>
+
+    <!-- SUB-MODULO 3: Siembra por Parcela. Es una auditoría de CARGA, no un indicador: cruza las OT
+         de siembra confirmadas contra el campo hectareasSembradas de consultaCultivos, que ningún
+         otro archivo del dashboard lee. Sirve para saber qué corregir en Albor; no alimenta el
+         avance, ni los costos, ni ningún KPI. Ver construirAuditoriaSiembra en js/data/auditoria.js. -->
+    <div class="audit-view" id="audit-view-siembra">
+      <div class="ip-aviso" id="sb-aviso"></div>
+      <div class="panel sub"><h3>Resumen</h3>
+        <div class="rc-resumen" id="sb-kpis"></div></div>
+      <div class="panel hero-panel"><h3>Siembra declarada en la parcela vs. OT confirmadas <span id="sb-sub"></span></h3>
+        <div class="scroll scroll-tall"><table class="ldt"><thead><tr>
+          <th>Lote</th><th>Cultivo</th>
+          <th class="tr" title="Hectáreas de la parcela según consultaCultivos">Plan</th>
+          <th class="tr" title="Pasada más completa de las OT de siembra confirmadas, capada al plan del lote">Sembrado (OT)</th>
+          <th class="tr" title="Campo hectareasSembradas de consultaCultivos">Declarado (parcela)</th>
+          <th class="tr">Diferencia</th>
+          <th>Labores de siembra</th>
+          <th>Diagnóstico</th>
+        </tr></thead><tbody id="sb-filas"></tbody></table></div></div>
     </div>
   </section>
 

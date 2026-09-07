@@ -298,3 +298,132 @@ function construirAuditoriaInsumosParcela(rawTodasCampanias){
   };
   return insumos_parcela;
 }
+
+// ================== AUDITORIA · SIEMBRA POR PARCELA ==================
+// Cruza dos fuentes que declaran la MISMA superficie sembrada y que hoy no coinciden:
+//   a) consultaOT  — las OT de siembra confirmadas y sus Has. Reales. Es la fuente que ya usa el
+//      avance del Resumen Ejecutivo (construirCultivos, js/data/cultivos.js).
+//   b) consultaCultivos.hectareasSembradas — un campo de la propia parcela. NINGUN otro archivo del
+//      dashboard lo lee: entra al modelo unicamente para esta auditoria.
+// El objetivo es senalar donde hay que corregir la carga en Albor, no cambiar ningun numero del
+// dashboard: este modulo no alimenta avance, costos ni KPI alguno.
+//
+// Por que el campo de la parcela puede quedar MAL: una parcela se siembra en dos pasadas cargadas
+// como labores distintas ("Siembra" y "Siembra de arroz s/ implemento"). Son dos pasadas sobre la
+// MISMA superficie, no dos superficies, pero hectareasSembradas las suma como si fueran nuevas y
+// termina superando las hectareas de la propia parcela — algo fisicamente imposible. El avance del
+// dashboard no cae en eso porque capa cada labor al plan del lote y promedia por estadio.
+//
+// Que se toma de cada OT (mismos criterios que el avance, para no inventar un segundo numero):
+//   - Estadio "Siembra", excluyendo SIEMBRA_SERVICIOS_NO_SIEMBRA (tratamiento de semillas, que no
+//     es sembrar).
+//   - modalidad 'hectareas': las labores medidas en Horas ("Pasada retro excavadora x Hs")
+//     aparecen en el estadio Siembra pero no acreditan superficie.
+//   - Solo Confirmadas para la superficie. Las OT de siembra que NO estan confirmadas se cuentan
+//     aparte y se avisan en la fila, porque son la otra explicacion posible de una diferencia.
+// La superficie sembrada del lote es el MAXIMO por labor (cada labor es una pasada completa sobre
+// el lote, nunca se suman entre si), capado al plan del lote.
+function construirAuditoriaSiembra(OTS, proyecciones){
+  // ---- Parcelas de consultaCultivos: plan y hectareas sembradas declaradas ----
+  // Mismo parseo y mismo filtro de campania que construirPlanRTK (cultivos.js): el lote y el
+  // cultivo salen del patron "LA TERESA {LOTE} {CULTIVO} {CAMPANIA}" del campo 'nombre'. Las filas
+  // que no calzan (parcelas operativas, ensayos) quedan fuera, igual que en el plan RTK.
+  // La clave es CULTIVO+LOTE, nunca el lote solo: verificado contra el .xlsx, 29 lotes de la 26/27
+  // llevan dos cultivos a la vez (el arroz y su cobertura de avena, o maiz/sorgo sobre cobertura),
+  // y indexar por lote pisaba una parcela con la otra. Es la misma clave con que construirPlanRTK
+  // arma RTK[cultivo][lote].
+  const clave = (cultivo,lote) => String(cultivo||'').toUpperCase()+'|'+normLote(lote);
+  const parcelas = {};
+  (proyecciones||[]).forEach(rowRaw=>{
+    const row={}; for(const k in rowRaw){ row[normHdr(k)]=rowRaw[k]; }
+    const m = String(row['nombre']||'').match(/^LA TERESA\s+(\S+)\s+([A-ZÁÉÍÓÚÑ]+)\s+(\d{2}\/\d{2})$/);
+    if(!m || m[3]!==CAMPANIA_ACTUAL) return;
+    const lote = normLote(m[1]), cultivo = m[2].toUpperCase();
+    // Las filas de 0,01 ha son marcadores de parcelas sin superficie propia (PARCELA, SECADERO), no
+    // lotes reales: se descartan para que no ensucien la auditoria con ceros.
+    const plan = num(row['hectareas']);
+    if(plan <= 0.01) return;
+    parcelas[clave(cultivo,lote)] = {lote, cultivo, plan,
+      // normHdr NO separa el camelCase de la columna: 'hectareasSembradas' llega como
+      // 'hectareassembradas', todo junto. Verificado contra el .xlsx real.
+      declaradas:num(row['hectareassembradas'])};
+  });
+
+  // ---- OT de siembra por lote ----
+  const esSiembra = o => normEstadio(o.estadio)==='siembra'
+    && !SIEMBRA_SERVICIOS_NO_SIEMBRA.some(p=>normHdr(o.serv).startsWith(p));
+  const porLote = {};
+  OTS.filter(esSiembra).forEach(o=>{
+    const k = clave(o.act, o.lote);
+    if(!porLote[k]) porLote[k] = {lote:normLote(o.lote), cultivo:String(o.act||'').toUpperCase(),
+      labores:{}, sinConfirmar:[]};
+    const g = porLote[k];
+    if(o.estado!=='Confirmado'){ g.sinConfirmar.push({ot:o.ot, serv:o.serv, estado:o.estado, ha:o.ha}); return; }
+    if(o.modalidad!=='hectareas' || o.ha==null) return;  // por horas o sin Has. Reales: no acredita superficie
+    const labor = o.serv || '(sin labor)';
+    // Dos OT de la MISMA labor sobre el mismo lote serian pasadas parciales: se suman entre si.
+    // Dos labores DISTINTAS son pasadas completas repetidas: nunca se suman (ver el max de abajo).
+    g.labores[labor] = (g.labores[labor]||0) + o.ha;
+  });
+
+  // ---- Cruce ----
+  const filas = Object.keys(parcelas).concat(Object.keys(porLote))
+    .filter((k,i,a)=>a.indexOf(k)===i)
+    .map(k=>{
+      const g = porLote[k] || {lote:'', cultivo:'', labores:{}, sinConfirmar:[]};
+      const p = parcelas[k] || {lote:g.lote, cultivo:g.cultivo, plan:0, declaradas:0};
+      const lote = p.lote;
+      const labores = Object.keys(g.labores).map(nombre=>({nombre, ha:g.labores[nombre]}))
+        .sort((a,b)=>b.ha-a.ha);
+      // Superficie sembrada segun las OT: la pasada mas completa, capada al plan del lote. Se capa
+      // porque una OT puede declarar mas Has. Reales que las que la parcela tiene planificadas, y
+      // ahi el excedente ya lo reporta el Control de Hectareas, no esta auditoria.
+      const sembradas = labores.length
+        ? Math.min(Math.max.apply(null, labores.map(l=>l.ha)), p.plan||Infinity)
+        : 0;
+      const dif = p.declaradas - sembradas;
+      return {lote, cultivo:p.cultivo, plan:p.plan, declaradas:p.declaradas, sembradas,
+        dif, labores, sinConfirmar:g.sinConfirmar,
+        // n_pasadas > 1 es la senal de la causa mas comun del desvio: la parcela se sembro en dos
+        // labores distintas y el campo de la parcela las sumo como superficie nueva.
+        n_pasadas: labores.length,
+        estado: clasificarSiembra(p, sembradas, labores, g.sinConfirmar)};
+    })
+    .filter(f=>f.declaradas>0 || f.sembradas>0 || f.sinConfirmar.length)
+    .sort((a,b)=>Math.abs(b.dif)-Math.abs(a.dif) || a.lote.localeCompare(b.lote,'es'));
+
+  const desvios = filas.filter(f=>f.estado!=='ok');
+  return {
+    filas,
+    // KPIs del encabezado. total_declaradas es la suma del campo de la parcela y total_sembradas la
+    // de las OT: la brecha entre ambos es, justamente, lo que hay que corregir.
+    n_parcelas: filas.length,
+    n_desvios: desvios.length,
+    total_declaradas: filas.reduce((s,f)=>s+f.declaradas,0),
+    total_sembradas: filas.reduce((s,f)=>s+f.sembradas,0),
+    total_plan: filas.reduce((s,f)=>s+f.plan,0),
+    // Desglose por tipo de problema, para el subtitulo del panel.
+    n_supera_plan: filas.filter(f=>f.estado==='supera_plan').length,
+    n_sin_cargar: filas.filter(f=>f.estado==='sin_cargar').length,
+    n_difiere: filas.filter(f=>f.estado==='difiere').length,
+    n_sin_confirmar: filas.filter(f=>f.estado==='sin_confirmar').length,
+    n_sin_ot: filas.filter(f=>f.estado==='sin_ot').length,
+  };
+}
+// Clasificacion del desvio de una parcela. El orden importa: "supera_plan" se evalua primero
+// porque es el unico caso IMPOSIBLE (mas sembrado que la superficie de la parcela) y por lo tanto
+// un error de carga seguro, no una diferencia de criterio.
+function clasificarSiembra(p, sembradas, labores, sinConfirmar){
+  // 1. IMPOSIBLE: la parcela declara mas superficie sembrada que la que tiene. Es error de carga
+  //    seguro, no una diferencia de criterio, asi que gana sobre cualquier otra clasificacion.
+  if(p.plan && p.declaradas > p.plan + 0.01) return 'supera_plan';
+  // 2. Sin ninguna OT de siembra, ni confirmada ni en curso, pero la parcela dice que se sembro.
+  if(!labores.length && !sinConfirmar.length && p.declaradas > 0.01) return 'sin_ot';
+  // 3. Hay OT de siembra pero ninguna confirmada: la superficie todavia no puede acreditarse. Se
+  //    reporta aunque los dos numeros den 0, porque el 0 aca no es "coincide" sino "falta cerrar".
+  if(!labores.length && sinConfirmar.length) return 'sin_confirmar';
+  // 4. La OT confirma superficie sembrada y la parcela sigue en cero.
+  if(sembradas > 0 && p.declaradas <= 0.01) return 'sin_cargar';
+  if(Math.abs(p.declaradas - sembradas) <= 0.01) return 'ok';
+  return 'difiere';
+}
