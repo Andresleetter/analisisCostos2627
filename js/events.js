@@ -130,6 +130,16 @@ document.addEventListener('DOMContentLoaded', function(){
     auditPuentesHorasAbierto = (auditPuentesHorasAbierto===estado) ? null : estado;
     renderAuditoria();
   });
+  // Clic en una fila de "Siembra por Parcela": despliega las OT de siembra de ese lote, agrupadas
+  // por labor. Mismo patron delegado que los demas desplegables. Solo las filas con alguna OT
+  // llevan .sb-fila, asi que una parcela sin OT no responde al clic.
+  document.getElementById('sb-filas').addEventListener('click', function(e){
+    const fila = e.target.closest('tr.sb-fila');
+    if(!fila) return;
+    const lote = fila.dataset.lote;
+    auditSiembraAbierta = (auditSiembraAbierta===lote) ? null : lote;
+    renderAuditoriaSiembra();
+  });
   // "Ver detalle" de las tarjetas de Posibles Problemas (Resumen Ejecutivo): delegado sobre el
   // contenedor #probs (fijo en el HTML) porque las tarjetas se regeneran en cada carga — así un
   // único listener sigue funcionando sin volver a atarse por tarjeta. Reutiliza show(), la misma

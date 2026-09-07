@@ -241,6 +241,10 @@ const LOTES_NO_PARCELA = ['SECADERO', 'FLETES', 'PARCELA'];
 // del presupuesto de infraestructura, y para actualizarlo se lo edita directamente. El detalle de
 // filas/columnas queda documentado arriba por si alguna vez hay que regenerarlo desde un Excel nuevo.
 // Mismo criterio de descarga que SRC_XLSX: el propio sitio primero, GitHub como respaldo.
+// Pantalla de Cultivos de Albor: es donde se cargan las hectareas sembradas de cada parcela, o sea
+// el campo que audita Siembra por Parcela. Se enlaza desde ese panel para que corregir un desvio
+// sea un clic. Es un link externo de solo navegacion: el dashboard NO consulta la API de Albor.
+const ALBOR_CULTIVOS_URL = 'https://prodato.alboragro.com/5/Cultivos';
 const INFRA_SRC_JSON = SRC_DATA+"presupuesto-infraestructura-26-27.json";
 const INFRA_SRC_JSON_RESPALDO = "https://raw.githubusercontent.com/"+REPO+"/"+BRANCH+"/"+SRC_DATA+"presupuesto-infraestructura-26-27.json";
 // Cruce Especificacion (presupuesto) -> Servicio(s) reales de OT. Primer relevamiento (solo
