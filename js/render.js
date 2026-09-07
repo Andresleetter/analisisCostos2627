@@ -427,14 +427,20 @@ function renderAuditoriaSiembra(){
 
   // El aviso explica de dónde sale cada columna y, sobre todo, que esta tabla NO mueve ningún
   // número del dashboard. Es lo primero que hay que saber antes de leer una diferencia.
+  // El acceso a Albor es la acción que sigue a leer esta tabla: va en su propia barra, arriba de
+  // todo, con el mismo botón de contorno que ya usa "Ver detalle" en Posibles Problemas. Antes era
+  // un link dentro del párrafo del aviso y quedaba invisible.
+  document.getElementById('sb-acciones').innerHTML =
+    '<a class="prob-link sb-albor" href="'+ALBOR_CULTIVOS_URL+'" target="_blank" rel="noopener noreferrer" '+
+    'title="Abre la pantalla de Cultivos de Albor, donde se cargan las hectáreas sembradas de cada parcela">'+
+    'Cargar hectáreas sembradas en Albor <span class="sb-ext">↗</span></a>'+
+    '<span class="sb-acciones-nota">Ahí se corrige lo que esta tabla señala</span>';
   document.getElementById('sb-aviso').innerHTML =
     '<b>Qué compara esta tabla.</b> «Sembrado (OT)» sale de las órdenes de trabajo de siembra '+
     '<b>confirmadas</b> — la misma fuente con que el Resumen Ejecutivo calcula el avance. '+
     '«Declarado (parcela)» es el campo <i>hectareasSembradas</i> de la parcela, que <b>ningún otro '+
     'módulo del dashboard usa</b>: entra únicamente acá, para poder detectar diferencias de carga. '+
-    'Corregir una fila de esta tabla se hace en Albor (<a href="'+ALBOR_CULTIVOS_URL+'" target="_blank" '+
-    'rel="noopener noreferrer">pantalla de Cultivos</a>, donde se cargan las hectáreas sembradas); '+
-    'nada de lo que se ve en el resto del dashboard depende de ella. '+
+    'Nada de lo que se ve en el resto del dashboard depende de ella. '+
     '<b>Clic en una fila</b> para ver las OT que la componen.';
 
   const chip = (n, label, cls) => `<div class="rc-chip ${cls}"><span class="rc-n">${n}</span><span class="rc-l">${label}</span></div>`;

@@ -144,3 +144,10 @@ tr.sb-fila.open td{background:#eef4ea}
 /* El rotulo "sembrado en 2 etapas" es una sola idea: no se parte en dos renglones ni se pega al
    final de la ultima labor — va en su propia linea, debajo de las labores que lo motivan. */
 #sb-filas .pu-aprox{display:inline-block;white-space:nowrap;margin-top:4px}
+
+/* Barra de acción de Siembra por Parcela. El botón reusa .prob-link (problemas.css) para no
+   inventar un estilo nuevo; acá solo se lo ubica y se le da el peso de un acceso principal. */
+.sb-acciones{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.sb-acciones .sb-albor{margin-top:0;text-decoration:none;font-size:12px;padding:7px 16px}
+.sb-acciones .sb-ext{font-weight:700;margin-left:2px}
+.sb-acciones-nota{font-size:11px;color:var(--muted)}

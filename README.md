@@ -586,7 +586,7 @@ Los chips de estado reutilizan `.rc-est` del Seguimiento de Receta para no inven
 
 **Clic en una fila** despliega las OT que la componen, agrupadas por labor: número de OT, fecha real, contratista y hectáreas. Las OT **sin confirmar** van en su propio bloque al final — no suman superficie, pero explican por qué una parcela puede figurar corta. Mismo patrón delegado (`auditSiembraAbierta`, listener sobre `#sb-filas`) que los demás desplegables del dashboard: una fila abierta a la vez. Una parcela sin ninguna OT (hoy, el lote 13) no lleva `.sb-fila` y no responde al clic, porque no hay nada que mostrar.
 
-El aviso del encabezado enlaza a `ALBOR_CULTIVOS_URL` (`config.js`) = `https://prodato.alboragro.com/5/Cultivos`, que es la pantalla donde se cargan las hectáreas sembradas — o sea, donde se corrige lo que esta tabla señala. Es un link externo de sola navegación: **el dashboard no consulta la API de Albor**.
+Arriba de todo, en su propia barra (`#sb-acciones`), hay un botón **"Cargar hectáreas sembradas en Albor ↗"** que abre `ALBOR_CULTIVOS_URL` (`config.js`) = `https://prodato.alboragro.com/5/Cultivos`, la pantalla donde se cargan las hectáreas sembradas — o sea, donde se corrige lo que esta tabla señala. Reusa el botón de contorno `.prob-link` de Posibles Problemas para no inventar un estilo nuevo. Empezó siendo un link dentro del párrafo del aviso y **quedaba invisible**; leer la tabla y ir a corregir es la secuencia natural, así que el acceso va antes del texto, no enterrado en él. Es un link externo de sola navegación: **el dashboard no consulta la API de Albor**.
 
 ## Reorganización general (histórico)
 
