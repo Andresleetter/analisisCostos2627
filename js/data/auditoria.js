@@ -374,7 +374,12 @@ function construirAuditoriaSiembra(OTS, proyecciones){
     // parcial, Has. Reales trae la superficie de LA PARCELA ENTERA mientras Unidades/Dosis trae lo
     // que esa OT realmente sembro. Ej. lote 203: la OT 4781 declara Has. Reales 85,75 (todo el
     // lote) pero Unidades/Dosis 1,77 — sembro 1,77 ha, no 85,75.
-    g.labores[labor] = (g.labores[labor]||0) + haSembradaDeOT(o);
+    const ha = haSembradaDeOT(o);
+    if(!g.labores[labor]) g.labores[labor] = {ha:0, ots:[]};
+    g.labores[labor].ha += ha;
+    // Las OT viajan con la labor para poder desplegarlas en la tabla: son la trazabilidad de la
+    // fila (que OT, de que fecha y de que contratista componen esa superficie).
+    g.labores[labor].ots.push({ot:o.ot, ha, fecha:o.fr, contratista:o.contr, estado:o.estado});
   });
 
   // ---- Cruce ----
@@ -384,7 +389,8 @@ function construirAuditoriaSiembra(OTS, proyecciones){
       const g = porLote[k] || {lote:'', cultivo:'', labores:{}, sinConfirmar:[]};
       const p = parcelas[k] || {lote:g.lote, cultivo:g.cultivo, plan:0, declaradas:0};
       const lote = p.lote;
-      const labores = Object.keys(g.labores).map(nombre=>({nombre, ha:g.labores[nombre]}))
+      const labores = Object.keys(g.labores).map(nombre=>({nombre, ha:g.labores[nombre].ha,
+          ots:g.labores[nombre].ots.slice().sort((x,y)=>y.ha-x.ha)}))
         .sort((a,b)=>b.ha-a.ha);
       // Superficie sembrada del lote = SUMA de todas las labores de siembra, capada al plan.
       // Se SUMAN, no se toma el maximo: verificado contra el .xlsx, cuando un lote tiene dos
@@ -402,6 +408,9 @@ function construirAuditoriaSiembra(OTS, proyecciones){
         // n_labores > 1 marca los lotes sembrados en dos etapas con labores distintas: es donde
         // aparece el desvio, porque el campo de la parcela suma una de las dos OT de mas.
         n_labores: labores.length,
+        // Total de OT de siembra confirmadas del lote — lo usa el render para decidir si la fila
+        // se puede desplegar.
+        n_ots: labores.reduce((t,l)=>t+l.ots.length, 0),
         estado: clasificarSiembra(p, sembradas, labores, g.sinConfirmar)};
     })
     .filter(f=>f.declaradas>0 || f.sembradas>0 || f.sinConfirmar.length)

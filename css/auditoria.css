@@ -131,3 +131,16 @@ tr.detcols td:first-child{padding-left:22px}
    .ip-aviso (que si avisa de un problema) manteniendo el mismo formato. */
 #sb-aviso{background:var(--card);border-color:var(--line);color:var(--muted)}
 #sb-aviso b{color:var(--ink)}
+
+/* Fila clicable de Siembra por Parcela: mismo tratamiento que tr.pu-fila. */
+tr.sb-fila{cursor:pointer}
+tr.sb-fila:hover td{background:#f2f6ef}
+tr.sb-fila.open td{background:#eef4ea}
+/* El detalle no hereda el vertical-align:top ni el ancho acotado de la columna de labores. */
+#sb-filas tr.det td,#sb-filas tr.dethead td,#sb-filas tr.detcols td{vertical-align:middle;max-width:none}
+/* El link a Albor dentro del aviso: visible sobre el fondo atenuado del recuadro. */
+#sb-aviso a{color:var(--teal);font-weight:700}
+
+/* El rotulo "sembrado en 2 etapas" es una sola idea: no se parte en dos renglones ni se pega al
+   final de la ultima labor — va en su propia linea, debajo de las labores que lo motivan. */
+#sb-filas .pu-aprox{display:inline-block;white-space:nowrap;margin-top:4px}

@@ -418,6 +418,9 @@ const SB_DIAG = {
   sin_confirmar: {label:'OT sin confirmar',    cls:'rc-e-sobre', ayuda:'Hay OT de siembra abiertas: hasta que no se confirmen, su superficie no se puede acreditar.'},
   sin_ot:        {label:'Sin OT de siembra',   cls:'rc-e-sin',   ayuda:'La parcela declara siembra pero no existe ninguna OT de siembra para ese lote.'},
 };
+// Lote desplegado en la tabla de Siembra por Parcela. Vive fuera del render para sobrevivir al
+// redibujado, mismo patron que combUsoAbierto / auditPuentesHorasAbierto. null = todo plegado.
+let auditSiembraAbierta = null;
 function renderAuditoriaSiembra(){
   const A = D.auditoria_siembra;
   const sinDato = '<span class="ip-sin">—</span>';
@@ -429,8 +432,10 @@ function renderAuditoriaSiembra(){
     '<b>confirmadas</b> — la misma fuente con que el Resumen Ejecutivo calcula el avance. '+
     '«Declarado (parcela)» es el campo <i>hectareasSembradas</i> de la parcela, que <b>ningún otro '+
     'módulo del dashboard usa</b>: entra únicamente acá, para poder detectar diferencias de carga. '+
-    'Corregir una fila de esta tabla se hace en Albor; nada de lo que se ve en el resto del '+
-    'dashboard depende de ella.';
+    'Corregir una fila de esta tabla se hace en Albor (<a href="'+ALBOR_CULTIVOS_URL+'" target="_blank" '+
+    'rel="noopener noreferrer">pantalla de Cultivos</a>, donde se cargan las hectáreas sembradas); '+
+    'nada de lo que se ve en el resto del dashboard depende de ella. '+
+    '<b>Clic en una fila</b> para ver las OT que la componen.';
 
   const chip = (n, label, cls) => `<div class="rc-chip ${cls}"><span class="rc-n">${n}</span><span class="rc-l">${label}</span></div>`;
   document.getElementById('sb-kpis').innerHTML =
@@ -456,17 +461,55 @@ function renderAuditoriaSiembra(){
           ? f.sinConfirmar.map(o=>`<span class="pu-curso">OT ${escHtml(o.ot)} · ${escHtml(o.estado)}</span>`).join('<br>')
           : sinDato);
     const aviso2 = f.n_labores > 1
-      ? ' <span class="pu-aprox" title="El lote se sembró en dos etapas con labores distintas: cada OT sembró una parte y entre las dos cubren el lote una sola vez">sembrado en 2 etapas</span>'
+      ? '<br><span class="pu-aprox" title="El lote se sembró en dos etapas con labores distintas: cada OT sembró una parte y entre las dos cubren el lote una sola vez">sembrado en 2 etapas</span>'
       : '';
     const difCls = Math.abs(f.dif) <= 0.01 ? 'ip-sin' : (f.dif > 0 ? 'rc-up' : 'rc-down');
-    return `<tr><td class="mono">${escHtml(f.lote)}</td><td>${escHtml(f.cultivo)||sinDato}</td>`+
+    // Solo se puede desplegar una fila que tenga OT confirmadas o alguna OT abierta: si no hay
+    // ninguna (ej. el lote 13, que declara siembra sin OT), no hay nada que mostrar y la fila no
+    // responde al clic.
+    const desplegable = f.n_ots > 0 || f.sinConfirmar.length > 0;
+    const abierta = desplegable && auditSiembraAbierta === f.lote;
+    const caret = desplegable ? `<span class="ip-caret">${abierta?'▾':'▸'}</span> ` : '<span class="ip-caret"></span> ';
+    let html = `<tr class="${desplegable?'sb-fila':''}${abierta?' open':''}" data-lote="${escAttr(f.lote)}">`+
+      `<td class="mono">${caret}${escHtml(f.lote)}</td><td>${escHtml(f.cultivo)||sinDato}</td>`+
       `<td class="tr mono">${f.plan?fmt2(f.plan):sinDato}</td>`+
       `<td class="tr mono">${f.sembradas?fmt2(f.sembradas):sinDato}</td>`+
       `<td class="tr mono">${f.declaradas?fmt2(f.declaradas):sinDato}</td>`+
       `<td class="tr mono ${difCls}">${Math.abs(f.dif)<=0.01?'0,00':(f.dif>0?'+':'')+fmt2(f.dif)}</td>`+
       `<td>${labores}${aviso2}</td>`+
       `<td><span class="rc-est ${d.cls}" title="${escHtml(d.ayuda)}">${d.label}</span></td></tr>`;
+    if(abierta) html += siembraDetalle(f);
+    return html;
   }).join('') : '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:16px">Todavía no hay siembra cargada en la campaña</td></tr>';
+}
+// Detalle desplegable de una parcela: las OT de siembra que componen la fila, agrupadas por labor.
+// Es la trazabilidad del número — qué OT, de qué fecha, de qué contratista y cuántas hectáreas.
+// Las OT sin confirmar van al final, en su propio bloque: no suman superficie pero explican por qué
+// una parcela puede figurar corta.
+function siembraDetalle(f){
+  const sinDato = '<span class="ip-sin">—</span>';
+  let html = '';
+  f.labores.forEach(l=>{
+    html += `<tr class="dethead"><td colspan="8">${escHtml(l.nombre.trim())} · ${l.ots.length} OT · ${fmt2(l.ha)} ha</td></tr>`;
+    html += `<tr class="detcols"><td>OT</td><td>Fecha real</td><td>Contratista</td><td class="tr">Hectáreas</td><td colspan="4"></td></tr>`;
+    html += l.ots.map(o=>
+      `<tr class="det"><td class="dl mono"><b>OT ${escHtml(o.ot)}</b></td>`+
+      `<td>${o.fecha?ipFecha(o.fecha):sinDato}</td>`+
+      `<td>${escHtml(o.contratista)||sinDato}</td>`+
+      `<td class="tr mono">${fmt2(o.ha)}</td><td colspan="4"></td></tr>`
+    ).join('');
+  });
+  if(f.sinConfirmar.length){
+    html += `<tr class="dethead"><td colspan="8">Sin confirmar · ${f.sinConfirmar.length} OT · no acreditan superficie</td></tr>`;
+    html += `<tr class="detcols"><td>OT</td><td>Servicio</td><td>Estado</td><td class="tr">Has. Reales</td><td colspan="4"></td></tr>`;
+    html += f.sinConfirmar.map(o=>
+      `<tr class="det"><td class="dl mono"><b>OT ${escHtml(o.ot)}</b></td>`+
+      `<td>${escHtml(o.serv)||sinDato}</td>`+
+      `<td>${chipEstadoPuentes(o.estado)}</td>`+
+      `<td class="tr mono">${o.ha?fmt2(o.ha):sinDato}</td><td colspan="4"></td></tr>`
+    ).join('');
+  }
+  return html;
 }
 // Chip de estado de OT, con el mismo vocabulario de color que ya usa el dashboard: verde =
 // ejecutado y confirmado, ámbar = en curso, gris = todavía no arrancó. Es el mismo criterio que

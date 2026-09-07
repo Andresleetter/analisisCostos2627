@@ -536,19 +536,26 @@ La correlación es exacta contra el dato real, en las dos direcciones:
 - Las 9 parcelas cuyo `hectareasSembradas` supera su plan son, una por una, las 9 que se sembraron en dos etapas. Ninguna otra parcela las tiene y ninguna otra tiene el problema.
 - En las 9, el **exceso** (`hectareasSembradas` − plan) coincide **al centésimo** con las `Unidades/Dosis` de la OT cuyo Servicio es **"Siembra"** (no "Siembra de arroz s/ implemento").
 
-| Lote | Plan | Declarado | Exceso | OT "Siembra" | OT "s/ implemento" |
-|---|--:|--:|--:|---|---|
-| 203 | 85,75 | 169,73 | +83,98 | **4608** (83,98 ha) | 4781 (1,77 ha) |
-| 204 | 78,18 | 151,51 | +73,33 | **4655** (73,33 ha) | 4777 (4,85 ha) |
-| 205A | 71,72 | 141,62 | +69,90 | **4684** (69,90 ha) | 4783 (1,82 ha) |
-| 154 | 29,27 | 52,81 | +23,54 | **4760** (23,54 ha) | 4780 (5,73 ha) |
-| 208 | 28,55 | 29,98 | +19,65 | **4775** (1,43 ha) | 4704 (8,90 ha) |
-| 211 | 32,80 | 45,82 | +15,01 | **4776** (13,02 ha) | 4729 (17,79 ha) |
-| 206 | 51,15 | 66,08 | +14,93 | **4670** (14,93 ha) | 4779 (36,22 ha) |
-| 216 | 19,95 | 33,83 | +13,88 | **4696** (13,88 ha) | 4778 (6,07 ha) |
-| 205D | 17,78 | 23,44 | +11,50 | **4689** (5,66 ha) | 4782 (6,28 ha) |
+El **exceso** de la tabla es `hectareasSembradas` − **plan** (no − sembrado): es lo que la parcela declara de más sobre su propia superficie.
+
+| Lote | Plan | Sembrado (OT) | Declarado | Exceso s/ plan | OT "Siembra" | OT "s/ implemento" | ¿Lote terminado? |
+|---|--:|--:|--:|--:|---|---|---|
+| 203 | 85,75 | 85,75 | 169,73 | +83,98 | **4608** (83,98 ha) | 4781 (1,77 ha) | sí |
+| 204 | 78,18 | 78,18 | 151,51 | +73,33 | **4655** (73,33 ha) | 4777 (4,85 ha) | sí |
+| 205A | 71,72 | 71,72 | 141,62 | +69,90 | **4684** (69,90 ha) | 4783 (1,82 ha) | sí |
+| 154 | 29,27 | 29,27 | 52,81 | +23,54 | **4760** (23,54 ha) | 4780 (5,73 ha) | sí |
+| 206 | 51,15 | 51,15 | 66,08 | +14,93 | **4670** (14,93 ha) | 4779 (36,22 ha) | sí |
+| 216 | 19,95 | 19,95 | 33,83 | +13,88 | **4696** (13,88 ha) | 4778 (6,07 ha) | sí |
+| 211 | 32,80 | 30,81 | 45,82 | +13,02 | **4776** (13,02 ha) | 4729 (17,79 ha) | **no**, faltan 1,99 ha |
+| 205D | 17,78 | 11,94 | 23,44 | +5,66 | **4689** (5,66 ha) | 4782 (6,28 ha) | **no**, faltan 5,84 ha |
+| 208 | 28,55 | 10,33 | 29,98 | +1,43 | **4775** (1,43 ha) | 4704 (8,90 ha) | **no**, faltan 18,22 ha |
 
 Las 18 OT son de Agro Continental S.A. y todas tienen fecha real 31/08/2026. Las nueve "s/ implemento" salvo dos (4704 y 4729) forman el bloque consecutivo **4775–4783**, una por lote, cargado de una sola vez.
+
+Las nueve se parten en dos grupos, y el segundo es peor:
+
+- **Seis lotes terminados** (203, 204, 205A, 154, 206, 216): las dos OT suman exactamente el plan, y la parcela declara *plan + la OT "Siembra"*. Es un error de suma limpio.
+- **Tres lotes sin terminar** (211, 205D, 208): declaran más que su propio plan **sin haber terminado de sembrar**. El caso extremo es el **208**, que lleva 10,33 de 28,55 ha sembradas (36 %) y declara 29,98 — casi el triple de lo real.
 
 El avance del Resumen Ejecutivo no cae en este problema porque capa cada labor al plan del lote y promedia por estadio (ver `construirCultivos` en `js/data/cultivos.js`).
 
@@ -574,6 +581,12 @@ Se evalúan en este orden (`clasificarSiembra`); el orden importa porque "supera
 | **Difiere de la OT** | No coinciden. Puede ser siembra parcial ya cargada, o falta completarla. |
 
 Los chips de estado reutilizan `.rc-est` del Seguimiento de Receta para no inventar un vocabulario visual nuevo: ámbar = hay que corregir, azul = falta completar, verde = coincide, gris = todavía no hay con qué comparar.
+
+### Detalle desplegable y link a Albor
+
+**Clic en una fila** despliega las OT que la componen, agrupadas por labor: número de OT, fecha real, contratista y hectáreas. Las OT **sin confirmar** van en su propio bloque al final — no suman superficie, pero explican por qué una parcela puede figurar corta. Mismo patrón delegado (`auditSiembraAbierta`, listener sobre `#sb-filas`) que los demás desplegables del dashboard: una fila abierta a la vez. Una parcela sin ninguna OT (hoy, el lote 13) no lleva `.sb-fila` y no responde al clic, porque no hay nada que mostrar.
+
+El aviso del encabezado enlaza a `ALBOR_CULTIVOS_URL` (`config.js`) = `https://prodato.alboragro.com/5/Cultivos`, que es la pantalla donde se cargan las hectáreas sembradas — o sea, donde se corrige lo que esta tabla señala. Es un link externo de sola navegación: **el dashboard no consulta la API de Albor**.
 
 ## Reorganización general (histórico)
 
