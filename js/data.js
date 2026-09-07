@@ -25,6 +25,9 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra, recetas){
   const {auditoria_items,auditoria_metros,auditoria_puentes,auditoria_puentes_horas,auditoria_gastos} =
     construirAuditoriaInfraestructura(rows, presupuestoInfra);
   const insumos_parcela = construirAuditoriaInsumosParcela(rawTodasCampanias);
+  // Auditoria de Siembra por Parcela: unica parte del modelo que lee
+  // consultaCultivos.hectareasSembradas. Solo compara y clasifica — no alimenta avance ni costos.
+  const auditoria_siembra = construirAuditoriaSiembra(OTS, proyecciones);
   // Indice de recetas (data/recetas-insumos-26-27.json). Se arma una sola vez y queda en memoria.
   // NO toca insumos_parcela: la comparacion con receta se resuelve por fila al renderizar, sobre la
   // dosis real que ya calcula ese modulo. Si el JSON no se pudo cargar queda un indice vacio y todo
@@ -64,6 +67,7 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra, recetas){
   return {total_ot,ot_conf,ot_ejec:totalEnEjecucion,ot_pend:totalPendientes,costo_total,cultivos,operativas,oper_costo,oper_part,
     exceso,sinrtk,cancelados,exc_kpi,alertas:otsVisibles,n_ot_atrasadas:totalAtrasadas,
     auditoria_items,auditoria_metros,auditoria_puentes,auditoria_puentes_horas,auditoria_gastos,
+    auditoria_siembra,
     gastos,gasoil_sec,meses,gasto_total,gasoil_total,gasoil_litros_total,gmes,glit,
     labores,estadios_labor,contratistas_labor,cultivos_labor,
     // Solo para el filtro de Campaña del modulo Servicios (ver render.js: serviciosActivos()).

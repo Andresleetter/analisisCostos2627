@@ -93,6 +93,8 @@ function renderAll(){
   // líneas de insumo de consultaOT (D.insumos_parcela), con la campaña vigente preseleccionada.
   inicializarFiltrosInsumosParcela();
   renderInsumosParcela();
+  // Sub-modulo "Siembra por Parcela": no tiene filtros ni estado propio, se dibuja una sola vez.
+  renderAuditoriaSiembra();
 }
 
 // ================== RESUMEN EJECUTIVO ==================
@@ -401,6 +403,70 @@ function renderAuditoria(){
     `<td class="tr mono">${i.otConfirmadas} <span class="pu-ud">OT confirmadas</span> <span class="pu-aprox" title="Aproximación: son OT contadas, no metros medidos">aprox.</span></td>`+
     `<td class="tr"><span class="ip-sin">N/D</span></td></tr>`
   ).join('') : '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:16px">Sin ítems presupuestados en Metros</td></tr>';
+}
+// ---- Auditoría · Siembra por Parcela ----
+// Tabla de CARGA, no de gestión: dice qué corregir en Albor. Todos los números salen ya
+// clasificados de construirAuditoriaSiembra (js/data/auditoria.js); acá no se calcula nada.
+// El diagnóstico usa los mismos chips de estado que el Seguimiento de Receta (.rc-est) para no
+// inventar un vocabulario visual nuevo: ámbar = hay que corregir, azul = falta completar,
+// verde = coincide, gris = todavía no hay con qué comparar.
+const SB_DIAG = {
+  ok:            {label:'Coincide',            cls:'rc-e-segun', ayuda:'La parcela declara la misma superficie que confirman las OT.'},
+  supera_plan:   {label:'Supera la parcela',   cls:'rc-e-sobre', ayuda:'La parcela declara MÁS hectáreas sembradas que las que tiene. Es imposible: hay que corregirlo en Albor.'},
+  sin_cargar:    {label:'Falta cargar',        cls:'rc-e-bajo',  ayuda:'Las OT confirman siembra pero la parcela sigue en cero.'},
+  difiere:       {label:'Difiere de la OT',    cls:'rc-e-bajo',  ayuda:'La parcela y las OT confirmadas no coinciden. Puede ser siembra parcial ya cargada, o falta completarla.'},
+  sin_confirmar: {label:'OT sin confirmar',    cls:'rc-e-sobre', ayuda:'Hay OT de siembra abiertas: hasta que no se confirmen, su superficie no se puede acreditar.'},
+  sin_ot:        {label:'Sin OT de siembra',   cls:'rc-e-sin',   ayuda:'La parcela declara siembra pero no existe ninguna OT de siembra para ese lote.'},
+};
+function renderAuditoriaSiembra(){
+  const A = D.auditoria_siembra;
+  const sinDato = '<span class="ip-sin">—</span>';
+
+  // El aviso explica de dónde sale cada columna y, sobre todo, que esta tabla NO mueve ningún
+  // número del dashboard. Es lo primero que hay que saber antes de leer una diferencia.
+  document.getElementById('sb-aviso').innerHTML =
+    '<b>Qué compara esta tabla.</b> «Sembrado (OT)» sale de las órdenes de trabajo de siembra '+
+    '<b>confirmadas</b> — la misma fuente con que el Resumen Ejecutivo calcula el avance. '+
+    '«Declarado (parcela)» es el campo <i>hectareasSembradas</i> de la parcela, que <b>ningún otro '+
+    'módulo del dashboard usa</b>: entra únicamente acá, para poder detectar diferencias de carga. '+
+    'Corregir una fila de esta tabla se hace en Albor; nada de lo que se ve en el resto del '+
+    'dashboard depende de ella.';
+
+  const chip = (n, label, cls) => `<div class="rc-chip ${cls}"><span class="rc-n">${n}</span><span class="rc-l">${label}</span></div>`;
+  document.getElementById('sb-kpis').innerHTML =
+    chip(A.n_parcelas, 'Parcelas auditadas', 'rc-sin') +
+    chip(A.n_parcelas - A.n_desvios, 'Coinciden', 'rc-con') +
+    chip(A.n_supera_plan, 'Superan la parcela', 'rc-sobre') +
+    chip(A.n_desvios - A.n_supera_plan, 'Otras diferencias', 'rc-sin');
+
+  // Subtítulo: los dos totales enfrentados. La brecha entre ambos es, en una sola cifra, todo lo
+  // que hay para corregir.
+  document.getElementById('sb-sub').textContent =
+    'Sembrado según OT ' + fmt2(A.total_sembradas) + ' ha · declarado en las parcelas ' +
+    fmt2(A.total_declaradas) + ' ha · sobre un plan de ' + fmt2(A.total_plan) + ' ha';
+
+  document.getElementById('sb-filas').innerHTML = A.filas.length ? A.filas.map(f=>{
+    const d = SB_DIAG[f.estado] || SB_DIAG.difiere;
+    // Las labores son la prueba visible de la causa más común: dos labores distintas sobre el mismo
+    // lote son dos PASADAS sobre la misma superficie, no dos superficies, y es justo lo que el campo
+    // de la parcela suele estar sumando de más.
+    const labores = f.labores.length
+      ? f.labores.map(l=>`${escHtml(l.nombre.trim())} <span class="pu-ud">${fmt2(l.ha)} ha</span>`).join('<br>')
+      : (f.sinConfirmar.length
+          ? f.sinConfirmar.map(o=>`<span class="pu-curso">OT ${escHtml(o.ot)} · ${escHtml(o.estado)}</span>`).join('<br>')
+          : sinDato);
+    const aviso2 = f.n_pasadas > 1
+      ? ' <span class="pu-aprox" title="Dos labores distintas sobre el mismo lote: son dos pasadas sobre la misma superficie, nunca dos superficies">2 pasadas</span>'
+      : '';
+    const difCls = Math.abs(f.dif) <= 0.01 ? 'ip-sin' : (f.dif > 0 ? 'rc-up' : 'rc-down');
+    return `<tr><td class="mono">${escHtml(f.lote)}</td><td>${escHtml(f.cultivo)||sinDato}</td>`+
+      `<td class="tr mono">${f.plan?fmt2(f.plan):sinDato}</td>`+
+      `<td class="tr mono">${f.sembradas?fmt2(f.sembradas):sinDato}</td>`+
+      `<td class="tr mono">${f.declaradas?fmt2(f.declaradas):sinDato}</td>`+
+      `<td class="tr mono ${difCls}">${Math.abs(f.dif)<=0.01?'0,00':(f.dif>0?'+':'')+fmt2(f.dif)}</td>`+
+      `<td>${labores}${aviso2}</td>`+
+      `<td><span class="rc-est ${d.cls}" title="${escHtml(d.ayuda)}">${d.label}</span></td></tr>`;
+  }).join('') : '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:16px">Todavía no hay siembra cargada en la campaña</td></tr>';
 }
 // Chip de estado de OT, con el mismo vocabulario de color que ya usa el dashboard: verde =
 // ejecutado y confirmado, ámbar = en curso, gris = todavía no arrancó. Es el mismo criterio que

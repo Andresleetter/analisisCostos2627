@@ -121,3 +121,13 @@ tr.detcols td:first-child{padding-left:22px}
    conformes— pero en un tono más apagado, para que se lea "aceptable" y no "exacto". */
 .rc-tol{border-color:#cfe0c4} .rc-tol .rc-n{color:#4a7a2a}
 .rc-e-tol{background:#eef5e6;color:#4a7a2a}
+
+/* ---- Auditoria - Siembra por Parcela ---- */
+/* La columna de labores puede traer dos renglones (dos pasadas sobre el mismo lote): se le da aire
+   vertical y se limita el ancho para que no empuje al resto de la tabla. */
+#sb-filas td{vertical-align:top}
+#sb-filas td:nth-child(7){max-width:270px;line-height:1.55;font-size:11.5px}
+/* El aviso del encabezado es explicativo permanente, no una alerta: se atenua respecto de
+   .ip-aviso (que si avisa de un problema) manteniendo el mismo formato. */
+#sb-aviso{background:var(--card);border-color:var(--line);color:var(--muted)}
+#sb-aviso b{color:var(--ink)}
