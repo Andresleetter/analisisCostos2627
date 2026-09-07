@@ -523,13 +523,34 @@ Los mismos criterios que el avance del Resumen Ejecutivo, para no inventar un se
 - Modalidad `hectareas` (`modalidadLaborOT`): las labores medidas en Horas — hoy "Pasada retro excavadora x Hs" — aparecen en el estadio Siembra pero **no acreditan superficie**.
 - Solo **Confirmadas** para la superficie. Las OT de siembra abiertas se cuentan aparte y se muestran en la fila, porque son la otra explicación posible de una diferencia.
 
-La superficie sembrada del lote es el **máximo por labor**, capado al plan del lote. Dos OT de la *misma* labor sobre un lote son pasadas parciales y se suman entre sí; dos labores *distintas* son pasadas completas repetidas sobre la misma superficie y **nunca** se suman.
+> **La superficie sale de `Unidades/Dosis`, NO de `Has. Reales`.** Es la diferencia entre medir bien y medir mal. En una siembra parcial, `Has. Reales` trae la superficie de **la parcela entera** mientras `Unidades/Dosis` trae lo que esa OT realmente sembró. Ejemplo real, lote 203: la OT 4781 declara `Has. Reales` 85,75 (todo el lote) pero `Unidades/Dosis` 1,77 — sembró 1,77 ha, no 85,75. Usar `Has. Reales` daba 5 falsos positivos.
 
-### Por qué el campo de la parcela puede quedar mal
+La superficie sembrada del lote es la **suma de todas las labores de siembra**, capada al plan. Se suman, no se toma el máximo: cuando un lote tiene dos labores de siembra son dos siembras **parciales y complementarias**, no dos pasadas sobre la misma superficie. Verificado contra el `.xlsx`: en las 28 parcelas sembradas la suma de `Unidades/Dosis` **no supera el plan en ninguna**, y en los lotes terminados da exactamente el plan (lote 203: 83,98 + 1,77 = 85,75).
 
-Una parcela se siembra en dos pasadas cargadas como labores distintas ("Siembra" y "Siembra de arroz s/ implemento"). Son dos pasadas sobre la **misma** superficie, no dos superficies, pero `hectareasSembradas` las suma como si fueran nuevas y termina superando las hectáreas de la propia parcela — algo físicamente imposible. El avance del dashboard no cae en eso porque capa cada labor al plan del lote y promedia por estadio (ver `construirCultivos` en `js/data/cultivos.js`).
+### Por qué el campo de la parcela queda mal
 
-La correlación es exacta contra el dato real: las 9 parcelas cuyo `hectareasSembradas` supera su propio plan son, una por una, las 9 que tienen dos labores de siembra. Ninguna otra parcela las tiene y ninguna otra tiene el problema.
+Cuando un lote se siembra en dos etapas con labores distintas ("Siembra" y "Siembra de arroz s/ implemento"), `hectareasSembradas` cuenta el lote completo **y encima le suma las hectáreas de una de las dos OT**, con lo que supera las hectáreas de la propia parcela — algo físicamente imposible.
+
+La correlación es exacta contra el dato real, en las dos direcciones:
+
+- Las 9 parcelas cuyo `hectareasSembradas` supera su plan son, una por una, las 9 que se sembraron en dos etapas. Ninguna otra parcela las tiene y ninguna otra tiene el problema.
+- En las 9, el **exceso** (`hectareasSembradas` − plan) coincide **al centésimo** con las `Unidades/Dosis` de la OT cuyo Servicio es **"Siembra"** (no "Siembra de arroz s/ implemento").
+
+| Lote | Plan | Declarado | Exceso | OT "Siembra" | OT "s/ implemento" |
+|---|--:|--:|--:|---|---|
+| 203 | 85,75 | 169,73 | +83,98 | **4608** (83,98 ha) | 4781 (1,77 ha) |
+| 204 | 78,18 | 151,51 | +73,33 | **4655** (73,33 ha) | 4777 (4,85 ha) |
+| 205A | 71,72 | 141,62 | +69,90 | **4684** (69,90 ha) | 4783 (1,82 ha) |
+| 154 | 29,27 | 52,81 | +23,54 | **4760** (23,54 ha) | 4780 (5,73 ha) |
+| 208 | 28,55 | 29,98 | +19,65 | **4775** (1,43 ha) | 4704 (8,90 ha) |
+| 211 | 32,80 | 45,82 | +15,01 | **4776** (13,02 ha) | 4729 (17,79 ha) |
+| 206 | 51,15 | 66,08 | +14,93 | **4670** (14,93 ha) | 4779 (36,22 ha) |
+| 216 | 19,95 | 33,83 | +13,88 | **4696** (13,88 ha) | 4778 (6,07 ha) |
+| 205D | 17,78 | 23,44 | +11,50 | **4689** (5,66 ha) | 4782 (6,28 ha) |
+
+Las 18 OT son de Agro Continental S.A. y todas tienen fecha real 31/08/2026. Las nueve "s/ implemento" salvo dos (4704 y 4729) forman el bloque consecutivo **4775–4783**, una por lote, cargado de una sola vez.
+
+El avance del Resumen Ejecutivo no cae en este problema porque capa cada labor al plan del lote y promedia por estadio (ver `construirCultivos` en `js/data/cultivos.js`).
 
 ### Clave de unión: cultivo + lote, nunca el lote solo
 
