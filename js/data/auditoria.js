@@ -323,6 +323,14 @@ function construirAuditoriaInsumosParcela(rawTodasCampanias){
 //     aparte y se avisan en la fila, porque son la otra explicacion posible de una diferencia.
 // La superficie sembrada del lote es el MAXIMO por labor (cada labor es una pasada completa sobre
 // el lote, nunca se suman entre si), capado al plan del lote.
+// Hectareas que una OT sembro realmente: la suma de Unidades/Dosis de sus lineas de LABOR.
+// Deliberadamente NO usa o.ha (Has. Reales): ese campo trae la superficie de la parcela completa
+// aunque la OT haya sembrado solo una parte, y en las siembras parciales sobreestima.
+function haSembradaDeOT(o){
+  return (o.lines||[])
+    .filter(l=>l.tipo==='Labor Propia'||l.tipo==='Labor Tercero')
+    .reduce((s,l)=>s+(l.ud||0), 0);
+}
 function construirAuditoriaSiembra(OTS, proyecciones){
   // ---- Parcelas de consultaCultivos: plan y hectareas sembradas declaradas ----
   // Mismo parseo y mismo filtro de campania que construirPlanRTK (cultivos.js): el lote y el
@@ -361,9 +369,12 @@ function construirAuditoriaSiembra(OTS, proyecciones){
     if(o.estado!=='Confirmado'){ g.sinConfirmar.push({ot:o.ot, serv:o.serv, estado:o.estado, ha:o.ha}); return; }
     if(o.modalidad!=='hectareas' || o.ha==null) return;  // por horas o sin Has. Reales: no acredita superficie
     const labor = o.serv || '(sin labor)';
-    // Dos OT de la MISMA labor sobre el mismo lote serian pasadas parciales: se suman entre si.
-    // Dos labores DISTINTAS son pasadas completas repetidas: nunca se suman (ver el max de abajo).
-    g.labores[labor] = (g.labores[labor]||0) + o.ha;
+    // Superficie sembrada por esta OT = Unidades/Dosis de sus lineas de labor, NO Has. Reales.
+    // Verificado contra el .xlsx y es la diferencia entre medir bien y medir mal: en una siembra
+    // parcial, Has. Reales trae la superficie de LA PARCELA ENTERA mientras Unidades/Dosis trae lo
+    // que esa OT realmente sembro. Ej. lote 203: la OT 4781 declara Has. Reales 85,75 (todo el
+    // lote) pero Unidades/Dosis 1,77 — sembro 1,77 ha, no 85,75.
+    g.labores[labor] = (g.labores[labor]||0) + haSembradaDeOT(o);
   });
 
   // ---- Cruce ----
@@ -375,18 +386,22 @@ function construirAuditoriaSiembra(OTS, proyecciones){
       const lote = p.lote;
       const labores = Object.keys(g.labores).map(nombre=>({nombre, ha:g.labores[nombre]}))
         .sort((a,b)=>b.ha-a.ha);
-      // Superficie sembrada segun las OT: la pasada mas completa, capada al plan del lote. Se capa
-      // porque una OT puede declarar mas Has. Reales que las que la parcela tiene planificadas, y
-      // ahi el excedente ya lo reporta el Control de Hectareas, no esta auditoria.
+      // Superficie sembrada del lote = SUMA de todas las labores de siembra, capada al plan.
+      // Se SUMAN, no se toma el maximo: verificado contra el .xlsx, cuando un lote tiene dos
+      // labores de siembra ("Siembra" y "Siembra de arroz s/ implemento") NO son dos pasadas sobre
+      // la misma superficie sino dos siembras PARCIALES y complementarias — en las 28 parcelas
+      // sembradas de hoy la suma de Unidades/Dosis no supera el plan en NINGUNA, y en los lotes
+      // completos da exactamente el plan (ej. 203: 83,98 + 1,77 = 85,75). Se capa igual por si el
+      // dato cambia; ese excedente ya lo reporta el Control de Hectareas, no esta auditoria.
       const sembradas = labores.length
-        ? Math.min(Math.max.apply(null, labores.map(l=>l.ha)), p.plan||Infinity)
+        ? Math.min(labores.reduce((t,l)=>t+l.ha,0), p.plan||Infinity)
         : 0;
       const dif = p.declaradas - sembradas;
       return {lote, cultivo:p.cultivo, plan:p.plan, declaradas:p.declaradas, sembradas,
         dif, labores, sinConfirmar:g.sinConfirmar,
-        // n_pasadas > 1 es la senal de la causa mas comun del desvio: la parcela se sembro en dos
-        // labores distintas y el campo de la parcela las sumo como superficie nueva.
-        n_pasadas: labores.length,
+        // n_labores > 1 marca los lotes sembrados en dos etapas con labores distintas: es donde
+        // aparece el desvio, porque el campo de la parcela suma una de las dos OT de mas.
+        n_labores: labores.length,
         estado: clasificarSiembra(p, sembradas, labores, g.sinConfirmar)};
     })
     .filter(f=>f.declaradas>0 || f.sembradas>0 || f.sinConfirmar.length)

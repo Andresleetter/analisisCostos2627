@@ -447,16 +447,16 @@ function renderAuditoriaSiembra(){
 
   document.getElementById('sb-filas').innerHTML = A.filas.length ? A.filas.map(f=>{
     const d = SB_DIAG[f.estado] || SB_DIAG.difiere;
-    // Las labores son la prueba visible de la causa más común: dos labores distintas sobre el mismo
-    // lote son dos PASADAS sobre la misma superficie, no dos superficies, y es justo lo que el campo
-    // de la parcela suele estar sumando de más.
+    // Las labores son la prueba visible de la causa: cuando un lote se sembró en dos etapas con
+    // labores distintas, cada OT sembró una PARTE y entre las dos cubren el lote una sola vez — pero
+    // el campo de la parcela cuenta el lote completo y encima le suma una de las dos OT.
     const labores = f.labores.length
       ? f.labores.map(l=>`${escHtml(l.nombre.trim())} <span class="pu-ud">${fmt2(l.ha)} ha</span>`).join('<br>')
       : (f.sinConfirmar.length
           ? f.sinConfirmar.map(o=>`<span class="pu-curso">OT ${escHtml(o.ot)} · ${escHtml(o.estado)}</span>`).join('<br>')
           : sinDato);
-    const aviso2 = f.n_pasadas > 1
-      ? ' <span class="pu-aprox" title="Dos labores distintas sobre el mismo lote: son dos pasadas sobre la misma superficie, nunca dos superficies">2 pasadas</span>'
+    const aviso2 = f.n_labores > 1
+      ? ' <span class="pu-aprox" title="El lote se sembró en dos etapas con labores distintas: cada OT sembró una parte y entre las dos cubren el lote una sola vez">sembrado en 2 etapas</span>'
       : '';
     const difCls = Math.abs(f.dif) <= 0.01 ? 'ip-sin' : (f.dif > 0 ? 'rc-up' : 'rc-down');
     return `<tr><td class="mono">${escHtml(f.lote)}</td><td>${escHtml(f.cultivo)||sinDato}</td>`+
