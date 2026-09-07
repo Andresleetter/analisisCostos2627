@@ -78,12 +78,43 @@ Si el archivo está abierto en Excel al momento de necesitar inspeccionarlo (ej.
 `config.js` define `const CAMPANIA_ACTUAL = '26/27'`.
 
 **Se aplica a:**
-1. **`consultaOT`** (`data.js`) — filtra por el campo `campania` exacto. Afecta a **todo** lo que depende de las OT: KPIs, Detalle de Etapas por Cultivo, Control de Hectáreas, Alertas, Posibles Problemas, Servicios, y Auditoría (todo se construye a partir de `OTS`/`rows`).
+1. **`consultaOT`** (`data.js`) — filtra por el campo `campania` exacto. Afecta a casi todo lo que depende de las OT: KPIs de OT, Detalle de Etapas por Cultivo, Control de Hectáreas, Alertas, Posibles Problemas, Servicios y Auditoría (todo se construye a partir de `OTS`/`rows`). **Única excepción: el KPI "Costo Ejecutado"** del Resumen Ejecutivo, que consolida todas las campañas — ver más abajo.
 2. **`consultaCultivos`** (plan RTK, `data.js`) — esta hoja no trae una columna de texto `campania` propia, pero el campo `nombre` (ej. `"LA TERESA 201 ARROZ 26/27"`) siempre termina en el sufijo de campaña; se extrae con una regex y se descarta toda fila cuyo sufijo no coincida con `CAMPANIA_ACTUAL`. Filas sin sufijo reconocible (formato histórico) pasan sin filtrar, ya que no hay forma de determinar su campaña.
 
 **NO se aplica a `consultaInsumos`** (ni Combustible ni el módulo Insumos): esta hoja se procesa **completa**, sin recortar por campaña ni por fecha — es una decisión explícita (antes se filtraba y se sacó a pedido), documentada en `loader.js` y `data.js`. Si el año que viene aparecen movimientos de más de una campaña mezclados ahí, van a entrar todos.
 
 `consultaOT` puede traer varias campañas mezcladas en la práctica (la fuente a veces incluye la campaña anterior completa) — sin este filtro, todos los KPIs quedarían inflados. `data.js` loguea en consola cuántas filas se descartaron por campaña en cada carga (tanto de `consultaOT` como de `consultaCultivos`).
+
+### La única excepción: el KPI "Costo Ejecutado"
+
+`costo_total_consolidado` (`construirServiciosPorCampania`, `js/data/servicios.js`) suma el importe de las OT confirmadas de **todas** las campañas de `consultaOT`, y es lo que muestra la tarjeta **Costo Ejecutado** del Resumen Ejecutivo (`resumen.js` → `kpis.costoEjecutado`). Fue un pedido explícito: ampliar **solo los costos de labores**. `OT Confirmadas` y `OT Atrasadas`, en la misma fila de tarjetas, siguen siendo de `CAMPANIA_ACTUAL`.
+
+Con el dato de la campaña 26/27 en curso:
+
+| Campaña | Costo ejecutado | |
+|---|--:|--:|
+| **26/27** (vigente) | 924.842,18 | 95,2 % |
+| 25/26 | 23.563,71 | 2,4 % |
+| 26 | 22.626,21 | 2,3 % |
+| 25 | 383,24 | 0,0 % |
+| **Total del KPI** | **971.415,34** | |
+
+El desglose está calculado y disponible en el modelo (`kpis.costoPorCampania`) pero **hoy no se muestra en ninguna parte**: `render.js` no lo lee.
+
+### Por qué el avance de cultivos NO puede incluir otras campañas
+
+Es una pregunta que ya surgió, así que queda documentada para no volver a investigarla.
+
+**`consultaCultivos` trae únicamente la campaña vigente.** Verificado contra el `.xlsx`: las 277 filas terminan en el sufijo `26/27`, ninguna en otro. El avance es *hectáreas ejecutadas ÷ hectáreas planificadas*, y el plan RTK es el denominador — sin plan de las campañas anteriores no hay porcentaje que calcular para ellas.
+
+Y sumar sus OT al avance de la campaña vigente **no movería el número**. De las 111 OT de otras campañas, solo 19 llegan a un cultivo de `CULTIVOS` y a una etapa de `ETAPA_ORDEN` (las 59 de ARROZ *Secadero* quedan fuera porque Secadero no es una etapa del ciclo; el resto son MAIZ ZAFRIÑA, AVENA, OPERATIVO o PARCELA). Esas 19 caen sobre lotes que **no existen en el plan 26/27**:
+
+- **MAIZ**, 14 OT de la campaña 26, todas sobre el lote `.23C`. El maíz 26/27 son los lotes 69, 70, 71A, 72A y 73A.
+- **SORGO**, 5 OT de la 25/26, sobre 111, 113B y 113C. El sorgo 26/27 son 48, 49, 50, 51, 87, 98, 28D…
+
+`equivalenteLoteEstadio` capa cada labor con `Math.min(ejecutadasReales, planificadas)` y `planificadas = RTK[cultivo][lote] || 0`, que para esos lotes vale **0**: aportarían 0,00 ha. Lo único que cambiaría son los contadores `OT Confirmadas / Totales` de cada etapa, que salen de `sub` y no se capan — es decir, mostraría más OT con el mismo avance, que es peor que no mostrarlas.
+
+**Para que esto sea posible** hace falta que `consultaCultivos` traiga las parcelas de las otras campañas. Con ese dato, el camino correcto es un selector de campaña en el Detalle de Etapas por Cultivo (igual al que ya tiene Servicios), donde cada campaña se mide contra su propio plan — nunca una suma de todas contra el plan de la vigente.
 
 ## Resumen Ejecutivo
 
