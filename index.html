@@ -301,6 +301,10 @@
          otro archivo del dashboard lee. Sirve para saber qué corregir en Albor; no alimenta el
          avance, ni los costos, ni ningún KPI. Ver construirAuditoriaSiembra en js/data/auditoria.js. -->
     <div class="audit-view" id="audit-view-siembra">
+      <!-- Acceso directo a la pantalla de Albor donde se cargan las hectáreas sembradas: es la
+           acción que sigue a leer esta tabla, así que va arriba y visible, no enterrada en el
+           texto del aviso. El href sale de ALBOR_CULTIVOS_URL (config.js), fuente única. -->
+      <div class="sb-acciones" id="sb-acciones"></div>
       <div class="ip-aviso" id="sb-aviso"></div>
       <div class="panel sub"><h3>Resumen</h3>
         <div class="rc-resumen" id="sb-kpis"></div></div>
