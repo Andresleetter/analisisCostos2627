@@ -202,6 +202,8 @@ En la tabla se muestra `1 trabajo` / `N trabajos` (singular y plural), sin chip 
 
 ## Combustible
 
+Las transferencias internas entre depósitos se excluyen de ingresos y consumos antes de agrupar los movimientos. Sus dos patas representan un traslado con saldo neto cero para el stock consolidado; contarlas en valor absoluto inflaba el consumo y reducía el balance. La exclusión aplica también al detalle, los filtros y el arrastre mensual. Los registros originales permanecen en el Excel.
+
 - **Stock Inicial dinámico**: sale de `consultaInsumos`, filas con `tipoInsumo="COMBUSTIBLES"` y `tipoMovimiento="Existencia inicial"` (fechadas al 1/1). `data.js` suma estas filas **con signo** (no en valor absoluto — las filas individuales vienen con signo mixto, la suma neta es la que da el stock real de arranque) en `D.stock_inicial_combustible`.
 - **Balance** = Stock Inicial + Ingreso − Consumo, acumulado mes a mes. El Stock Inicial de un mes puntual se calcula con `stockInicioDePeriodo()` (`utils.js`, genérica): stock base + todo lo ingresado/consumido en los meses **anteriores** — así el balance de cada mes sigue naturalmente al del anterior en vez de recalcularse desde cero.
 - `unidades` en `consultaInsumos` viene con signo (negativo=egreso, positivo=ingreso); se normaliza a valor absoluto al separar Ingreso/Consumo en `loader.js`.

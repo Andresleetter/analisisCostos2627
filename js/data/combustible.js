@@ -62,7 +62,11 @@ function construirCombustible(combustibleRaw, existenciaInicial, indiceOTReferen
     // contra el dato real: en los 390 movimientos que si tienen OT coincide con consultaOT.cultivo
     // en 390 de 390 (100%), asi que describe la misma parcela que registraria la orden.
     parcela: String(row['parcela']||'').trim(),
-  })).filter(r=> (!r.insumo || r.insumo.toUpperCase()==='GASOIL') && r.fecha);
+  })).filter(r=> (!r.insumo || r.insumo.toUpperCase()==='GASOIL') && r.fecha)
+    // Las transferencias internas trasladan stock entre depósitos: no son compra ni consumo.
+    // Se excluyen antes de agrupar para que tampoco inflen el detalle ni el arrastre mensual.
+    // El loader entrega cantidades absolutas, por lo que sumar sus dos patas duplicaría litros.
+    .filter(r=> !normHdr(r.tipoComp).startsWith('transferencia'));
   const esIngreso = r => normEstadio(r.tipoComp).indexOf('ingreso')>-1;
 
   // ---- Vinculo con la Orden de Trabajo, y "Uso / Detalle" del combustible ----
