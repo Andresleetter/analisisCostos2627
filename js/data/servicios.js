@@ -22,10 +22,14 @@ function cultivoDeOT(o){
 // (ordenes.js), asi que una OT con tres lineas de insumo y una de servicio entra UNA sola vez.
 // Ningun valor se recalcula aca: ha / horas / kg / n_insumos / trabajos y los tres importes se
 // copian tal cual los dejo el modelo.
+// La superficie sale de o.ha_trab (dosis de la linea de labor), NO de o.ha (Has. Reales): en una
+// OT que trabajo solo parte de la parcela, Has. Reales reporta la parcela entera. Ver ordenes.js.
+// acumularGrupoServicio suma el campo 'ha' de ESTOS objetos, asi que la suma del grupo hereda
+// ha_trab sin tocarla: no hay que cambiarla ahi tambien.
 function resumenOTServicio(o){
   const cult=cultivoDeOT(o);
   return {ot:o.ot, fr:o.fr, cultivo:cult.label, cultivoKey:cult.key, lote:o.lote,
-    ha:o.ha, horas:o.horas, kg:o.kg, n_insumos:o.n_insumos, trabajos:o.trabajos,
+    ha:haTrabajada(o), horas:o.horas, kg:o.kg, n_insumos:o.n_insumos, trabajos:o.trabajos,
     propia:o.propia, tercero:o.tercero, insumos:o.insumos};
 }
 // Orden del desplegable: fecha ascendente y, a igual fecha, numero de OT ascendente. Nunca el
