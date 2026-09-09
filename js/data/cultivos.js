@@ -53,7 +53,15 @@ function construirPlanRTK(proyecciones){
 // Avance de campo por cultivo y etapa. Devuelve tambien las dos colecciones de trazabilidad que
 // el avance deja de lado (OT sin Has. Reales validas, y trabajos del estadio Siembra que no son
 // sembrar) — se exponen en D pero ningun render las lee.
-function construirCultivos(OTS, RTK, RTK_TOT){
+function construirCultivos(OTS, RTK, RTK_TOT, rawTodasCampanias=[]){
+  // La siembra de Zafriña26 se integra al avance de Maíz, a pedido del usuario.
+  // Comparte el plan de Maíz 26/27: la separación de zafra es solo operativa.
+  // No amplía las OT de costos, alertas ni Control de Hectáreas.
+  const filasZafrina = rawTodasCampanias.filter(r=>campaniaDeFila(r)==='26' &&
+    ['maiz','maiz zafrina'].includes(normHdr(r.actividad)) && normEstadio(r.estadio)==='siembra');
+  const otsZafrina = agruparOTS(normalizarFilasOT(filasZafrina)).map(o=>({...o,
+    act:'MAIZ', lote:'Zafriña26 / '+o.lote, planCompartidoZafrina:true}));
+  OTS = OTS.concat(otsZafrina);
   // ---- CULTIVOS: avance de campo ----
   // Estructura de avance EXCLUSIVA del Resumen Ejecutivo — no toca land/exceso/sinrtk (Control de
   // Hectareas, mas abajo) ni gastos/dmap (Servicios). Antes se acreditaba la superficie RTK
@@ -127,7 +135,7 @@ function construirCultivos(OTS, RTK, RTK_TOT){
       if(!porLoteEstadioLabor[lote]) porLoteEstadioLabor[lote]={};
       if(!porLoteEstadioLabor[lote][estadio]) porLoteEstadioLabor[lote][estadio]={};
       const est=porLoteEstadioLabor[lote][estadio];
-      if(!est[laborKey]) est[laborKey]={planificadas,ejecutadasReales:0};
+      if(!est[laborKey]) est[laborKey]={planificadas,ejecutadasReales:0,planCompartidoZafrina:!!o.planCompartidoZafrina};
       // Superficie ejecutada = ha_trab (la dosis de la linea de labor), no o.ha (Has. Reales):
       // en una OT que trabajo solo parte de la parcela, Has. Reales reporta la parcela ENTERA y
       // el avance quedaba sobreestimado — OT 4781, lote 203: Has. Reales 85,75 contra 1,77 de
@@ -179,17 +187,20 @@ function construirCultivos(OTS, RTK, RTK_TOT){
     function equivalenteLoteEstadio(lote, estadio){
       const labores=(porLoteEstadioLabor[lote]&&porLoteEstadioLabor[lote][estadio])||null;
       if(!labores) return 0;
-      const valores=Object.values(labores).map(l=>Math.min(l.ejecutadasReales,l.planificadas));
+      const valores=Object.values(labores).map(l=>l.planCompartidoZafrina ? l.ejecutadasReales : Math.min(l.ejecutadasReales,l.planificadas));
       return valores.reduce((a,b)=>a+b,0)/valores.length;
     }
     const etapas=ETAPA_ORDEN.filter(k=>etMap[k]).map(k=>{
       const e=etMap[k];
+      const incluyeZafrina=confOT.some(o=>o.planCompartidoZafrina && normEstadio(o.estadio)===k && o.modalidad==='hectareas' && o.ha!=null);
       let ha_e=0; e.lotes.forEach(l=>{ ha_e+=equivalenteLoteEstadio(l,k); });
       // Excepcion PARCELA (solo Preparacion de Suelo, ver ha_parcela mas arriba): se suma su
       // ejecucion y el TOTAL de la etapa se capa a las hectareas planificadas del cultivo, para que
       // no pueda pasar del 100%. Sin plan (ha_plan=0) no hay contra qué capar y el avance ya sale
       // null, asi que se suma sin tope.
       if(k===K_PREP && ha_parcela>0) ha_e = ha_plan>0 ? Math.min(ha_e+ha_parcela, ha_plan) : ha_e+ha_parcela;
+      // La siembra registrada en otra zafra usa el mismo plan total, sin duplicarlo.
+      if(incluyeZafrina && ha_plan>0) ha_e=Math.min(ha_e,ha_plan);
       ha_e=Math.round(ha_e*100)/100;
       const av_e = ha_plan>0 ? Math.round(ha_e/ha_plan*1000)/10 : null;
       // OT de ESTE estadio puntual (cualquier Estado, no solo Confirmado) — para que "OT
@@ -197,7 +208,7 @@ function construirCultivos(OTS, RTK, RTK_TOT){
       // "ha_plan" se repite tal cual (mismo valor que el cultivo): el plan RTK no tiene desglose
       // por estadio, así que la referencia planificada es siempre la meta de toda la campaña.
       const subEtapa = sub.filter(o=>normEstadio(o.estadio)===k);
-      return {nombre:e.nombre, ha_ejec:ha_e, avance:av_e, n_lotes:e.lotes.size, ha_plan,
+      return {nombre:e.nombre, ha_ejec:ha_e, avance:av_e, n_lotes:e.lotes.size, ha_plan, incluyeZafrina,
         otConfirmadas: subEtapa.filter(o=>o.estado==='Confirmado').length, otTotales: subEtapa.length};
     });
     const etapa_actual = etapas.length? etapas[etapas.length-1].nombre : null;
@@ -207,7 +218,8 @@ function construirCultivos(OTS, RTK, RTK_TOT){
     const ha_ejec = etapas.length ? etapas[etapas.length-1].ha_ejec : 0;
     let av; if(ha_plan>0) av=Math.round(ha_ejec/ha_plan*1000)/10; else { const t=conf+ejec+pend; av=t?Math.round(conf/t*1000)/10:0; }
 
-    return {nombre:c,ha_plan:Math.round(ha_plan*100)/100,ha_ejec,avance:av,tiene_rtk:ha_plan>0,conf,ejec,pend,costo,col:color(av),etapas,etapa_actual};
+    const incluyeZafrina=etapas.some(e=>e.incluyeZafrina);
+    return {nombre:c,ha_plan:Math.round(ha_plan*100)/100,ha_ejec,avance:av,tiene_rtk:ha_plan>0,conf,ejec,pend,costo,col:color(av),etapas,etapa_actual,incluyeZafrina};
   }).filter(Boolean).sort((a,b)=>(b.ha_plan-a.ha_plan)||(b.costo-a.costo));
   if(avanceInconsistencias.length) console.warn('Avance de campo: '+avanceInconsistencias.length+' OT por hectareas sin Has. Reales valido (excluidas del avance, ver D.avance_inconsistencias).');
   if(siembraExcluidas.length) console.log('Avance de campo: '+siembraExcluidas.length+' OT del estadio Siembra excluidas del avance por no ser siembra ('+[...new Set(siembraExcluidas.map(x=>x.servicio))].join(', ')+') — ver D.siembra_excluidas.');

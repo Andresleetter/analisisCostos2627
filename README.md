@@ -83,6 +83,8 @@ Si el archivo está abierto en Excel al momento de necesitar inspeccionarlo (ej.
 
 **NO se aplica a `consultaInsumos`** (ni Combustible ni el módulo Insumos): esta hoja se procesa **completa**, sin recortar por campaña ni por fecha — es una decisión explícita (antes se filtraba y se sacó a pedido), documentada en `loader.js` y `data.js`. Si el año que viene aparecen movimientos de más de una campaña mezclados ahí, van a entrar todos.
 
+La tarjeta de avance de Maíz integra la siembra de las actividades `MAIZ` y `MAIZ ZAFRIÑA` de la campaña `26` (Zafriña26). El usuario confirmó que comparte el plan de Maíz 26/27 y que la separación de zafra es operativa. La siembra se suma contra ese único plan, con tope en la superficie total planificada, sin agregar otra meta. Los lotes se mantienen separados por campaña para agrupar las labores. Los indicadores y problemas de la campaña mantienen su base original.
+
 `consultaOT` puede traer varias campañas mezcladas en la práctica (la fuente a veces incluye la campaña anterior completa) — sin este filtro, todos los KPIs quedarían inflados. `data.js` loguea en consola cuántas filas se descartaron por campaña en cada carga (tanto de `consultaOT` como de `consultaCultivos`).
 
 ### La única excepción: el KPI "Costo Ejecutado"
