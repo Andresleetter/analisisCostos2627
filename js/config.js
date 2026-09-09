@@ -482,6 +482,24 @@ const RECETAS_INSUMO_ALIAS = [
   {insumo:'Urea 46-00-00', receta:'Urea'},
 ];
 
+// ---- Labores que son LA MISMA labor cargada con dos nombres distintos ----
+// Clave y valor van normalizados con normHdr. Solo lo usa el avance de cultivos (cultivos.js), para
+// decidir que dos OT del mismo lote son la MISMA labor y por lo tanto se suman entre si, en vez de
+// ser dos pasadas sobre la misma superficie que se promedian (ver equivalenteLoteEstadio).
+// Hoy tiene un unico caso, y esta verificado contra el dato, no supuesto por parecido de nombre:
+//   "Siembra" (US$ 55,00/ha) y "Siembra de arroz s/ implemento" (US$ 45,00/ha) son la misma siembra
+//   con dos tarifas — los mismos 10 US$/ha de diferencia que cuesta el implemento, mismo contratista
+//   (Agro Continental). No son dos pasadas: en 9 lotes de arroz cada servicio cubrio un PEDAZO del
+//   lote y la suma de los dos da EXACTAMENTE el plan del lote (203: 83,98 + 1,77 = 85,75 = plan;
+//   204: 73,33 + 4,85 = 78,18 = plan; 205A, 154 y 216 igual). Ademas hay 5 lotes (200, 201, 202A,
+//   202B, 210B) sembrados UNICAMENTE con "s/ implemento": tratarlos como labores distintas dejaba
+//   la siembra de esos lotes fuera de la cuenta.
+// Con esta equivalencia el avance de Siembra da 952,59 ha, el mismo numero que la Auditoria de
+// Siembra — antes daba 1.019,77 y los dos modulos se contradecian.
+const LABORES_EQUIVALENTES = {
+  'siembra de arroz s/ implemento': 'siembra',
+};
+
 const INFRA_MAP = {
   'Contrucion camino nuevo': [
     'Construccion de Camino retro excavadora x Hs',

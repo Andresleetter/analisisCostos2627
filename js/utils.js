@@ -18,6 +18,15 @@ function fmtMovimientos(n){
   if(!n) return 'Sin movimientos';
   return n===1 ? '1 movimiento' : n+' movimientos';
 }
+// Superficie que una OT trabajo, para TODO lo que mide hectareas ejecutadas: el avance de
+// cultivos, el Control de Hectareas y el Trabajo Ejecutado de Servicios. Es o.ha_trab — la suma de
+// Unidades/Dosis de las lineas de labor, ver ordenes.js — y NO o.ha (Has. Reales), que trae la
+// superficie de la parcela completa aunque la OT haya trabajado solo una parte.
+// Es tambien la superficie que se FACTURA: el importe de la labor es ud * pu (ordenes.js), asi que
+// un control de costos tiene que mirar la dosis y no Has. Reales.
+// El segundo termino es solo defensa: ha_trab ya cae a Has. Reales cuando la OT no tiene ninguna
+// linea de labor, asi que hoy vale null exactamente cuando o.ha vale null.
+function haTrabajada(o){ return (o && o.ha_trab!=null) ? o.ha_trab : (o ? o.ha : null); }
 function normLote(x){ let s=String(x==null?'':x).trim().replace(/^\.+/,'').trim().toUpperCase(); s=s.replace(/^0+(?=\d)/,''); return s; }
 function pdate(v){ if(!v) return null;
   // SheetJS (lectura del .xlsx con cellDates:true) entrega las celdas de fecha como Date nativos.

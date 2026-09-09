@@ -116,13 +116,25 @@ function construirCultivos(OTS, RTK, RTK_TOT){
       if(o.modalidad!=='hectareas') return; // por horas u otra unidad: no aporta ha al avance
       if(o.ha==null){ avanceInconsistencias.push({ot:o.ot,cultivo:c,lote:o.lote,estadio:o.estadio,motivo:'OT por hectareas sin Has. Reales'}); return; }
       const lote=normLote(o.lote), estadio=normEstadio(o.estadio);
-      const laborKey=normHdr(o.serv)||'(sin labor)';
+      // La labor se normaliza y ademas se resuelve por LABORES_EQUIVALENTES (config.js): dos
+      // nombres distintos que son la misma labor entran al MISMO grupo y por lo tanto se suman
+      // entre si. Sin eso, la siembra con implemento y la siembra sin implemento del mismo lote
+      // quedaban como dos labores y se promediaban — que es lo correcto para Disco 1 + Disco 2
+      // (dos pasadas sobre la misma superficie) pero no para dos PEDAZOS del mismo lote.
+      let laborKey=normHdr(o.serv)||'(sin labor)';
+      if(LABORES_EQUIVALENTES[laborKey]) laborKey=LABORES_EQUIVALENTES[laborKey];
       const planificadas=(RTK[c]&&RTK[c][lote])||0;
       if(!porLoteEstadioLabor[lote]) porLoteEstadioLabor[lote]={};
       if(!porLoteEstadioLabor[lote][estadio]) porLoteEstadioLabor[lote][estadio]={};
       const est=porLoteEstadioLabor[lote][estadio];
       if(!est[laborKey]) est[laborKey]={planificadas,ejecutadasReales:0};
-      est[laborKey].ejecutadasReales+=o.ha;
+      // Superficie ejecutada = ha_trab (la dosis de la linea de labor), no o.ha (Has. Reales):
+      // en una OT que trabajo solo parte de la parcela, Has. Reales reporta la parcela ENTERA y
+      // el avance quedaba sobreestimado — OT 4781, lote 203: Has. Reales 85,75 contra 1,77 de
+      // superficie real. Ver el campo ha_trab en ordenes.js.
+      // El guardia de arriba sigue mirando o.ha: ha_trab cae a Has. Reales cuando la OT no tiene
+      // linea de labor, asi que si o.ha es null, ha_trab tambien lo es.
+      est[laborKey].ejecutadasReales+=haTrabajada(o);
     });
     // ---- Actividades "PARCELA <cultivo>" -> Preparacion de Suelo de ESE cultivo ----
     // En consultaOT existen actividades propias tipo "PARCELA ARROZ" / "PARCELA SOJA" / "PARCELA
@@ -151,7 +163,7 @@ function construirCultivos(OTS, RTK, RTK_TOT){
       if(o.modalidad!=='hectareas') return;
       if(o.ha==null){ avanceInconsistencias.push({ot:o.ot,cultivo:c,lote:o.lote,estadio:o.estadio,motivo:'OT de PARCELA por hectareas sin Has. Reales'}); return; }
       const laborKey=normHdr(o.serv)||'(sin labor)';
-      parcelaPorLabor[laborKey]=(parcelaPorLabor[laborKey]||0)+o.ha;
+      parcelaPorLabor[laborKey]=(parcelaPorLabor[laborKey]||0)+haTrabajada(o);
     });
     // Promedio entre labores, nunca suma: dos labores distintas sobre la parcela son dos pasadas
     // sobre la misma superficie, mismo criterio que equivalenteLoteEstadio usa para los lotes.
@@ -207,7 +219,13 @@ function construirCultivos(OTS, RTK, RTK_TOT){
 function construirControlHectareas(OTS, RTK){
   // ---- CONTROL DE HECTÁREAS ----
   const RTK_CROPS=['ARROZ','SOJA','SORGO','MAIZ'];
-  const land=OTS.filter(o=>!(o.lines.every(l=>l.esHoras)) && RTK_CROPS.includes(o.act.toUpperCase()) && o.ha!=null && !LOTES_NO_PARCELA.includes(normLote(o.lote)));
+  // Solo OT Confirmadas: una OT Pendiente o En Ejecucion no ejecuto superficie todavia, asi que no
+  // puede haber excedido nada. Antes entraban todos los estados.
+  // La superficie sale de Unidades/Dosis (haTrabajada, ver utils.js) y no de Has. Reales: es la
+  // superficie que se trabajo y se facturo — el importe de la labor es unidadesDosis * precio.
+  const land=OTS.filter(o=>o.estado==='Confirmado' && !(o.lines.every(l=>l.esHoras))
+    && RTK_CROPS.includes(o.act.toUpperCase()) && haTrabajada(o)!=null
+    && !LOTES_NO_PARCELA.includes(normLote(o.lote)));
   const exceso=[], sinrtk=[], cancelados=[];
   RTK_CROPS.forEach(c=>{
     const byLote={};
@@ -220,17 +238,23 @@ function construirControlHectareas(OTS, RTK){
     const lotes=new Set([...Object.keys(byLote), ...(RTK[c]?Object.keys(RTK[c]).filter(k=>!LOTES_NO_PARCELA.includes(k)):[])]);
     for(const k of lotes){
       const g=byLote[k], ha_rtk=RTK[c]?RTK[c][k]:undefined;
-      if(ha_rtk==null){ g.forEach(o=>sinrtk.push({ot:o.ot,cult:c,lote:o.lote,act:o.estadio||'-',serv:o.serv||'-',ha:o.ha,estado:o.estado})); continue; }
+      if(ha_rtk==null){ g.forEach(o=>sinrtk.push({ot:o.ot,cult:c,lote:o.lote,act:o.estadio||'-',serv:o.serv||'-',ha:haTrabajada(o),estado:o.estado})); continue; }
       if(Math.abs(ha_rtk-RTK_LOTE_CANCELADO)<0.001){
-        const dets=(g||[]).slice().sort((a,b)=>b.ha-a.ha).map(o=>({ot:o.ot,act:o.estadio||'-',serv:o.serv||'-',estado:o.estado}));
+        const dets=(g||[]).slice().sort((a,b)=>haTrabajada(b)-haTrabajada(a)).map(o=>({ot:o.ot,act:o.estadio||'-',serv:o.serv||'-',estado:o.estado}));
         cancelados.push({cult:c,lote:g?g[0].lote:k,n_ot:dets.length,dets});
         continue;
       }
       if(!g) continue;
-      const ha_ot=Math.max.apply(null,g.map(o=>o.ha));
+      // Superficie con que el lote entra al control: la trabajada/facturada, no Has. Reales.
+      // Con Has. Reales el lote 207 figuraba con 11,89 ha de exceso que nunca se facturaron (la
+      // OT 4219 traia Has. Reales 38,50 sobre un lote de 26,61 pero cobro 26,79), y al mismo
+      // tiempo se perdian 7 lotes donde SI se facturo de mas: en ellos Has. Reales coincide
+      // exacto con el plan y la dosis lo supera (ej. Fumigacion Dron en .32B: 11,92 ha cobradas
+      // sobre 9,70 de lote).
+      const ha_ot=Math.max.apply(null,g.map(o=>haTrabajada(o)));
       const diff=Math.round((ha_ot-ha_rtk)*100)/100;
       if(diff>0.5){
-        const dets=g.slice().sort((a,b)=>b.ha-a.ha).map(o=>({ot:o.ot,act:o.estadio||'-',serv:o.serv||'-',ha:o.ha,estado:o.estado,over:o.ha>ha_rtk+0.01}));
+        const dets=g.slice().sort((a,b)=>haTrabajada(b)-haTrabajada(a)).map(o=>({ot:o.ot,act:o.estadio||'-',serv:o.serv||'-',ha:haTrabajada(o),estado:o.estado,over:haTrabajada(o)>ha_rtk+0.01}));
         exceso.push({cult:c,lote:g[0].lote,ha_rtk:Math.round(ha_rtk*100)/100,ha_ot:Math.round(ha_ot*100)/100,diff,pdiff:Math.round(diff/ha_rtk*1000)/10,n_ot:dets.length,dets});
       }
     }

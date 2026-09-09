@@ -158,6 +158,30 @@ function trabajosCamionGruaDeLinea(linea){
                g.find(x=>x.contr) || r0).contr,
         personal:r0.personal,
         ha: has.length?Math.max.apply(null,has):null,
+        // ha_trab = superficie que la OT trabajo de verdad. Es la suma de Unidades/Dosis de sus
+        // lineas de LABOR, con las MISMAS reglas de unidad que ya usa modalidadLaborOT: quedan
+        // afuera las lineas por Horas (esHoras) y por peso (esPeso), que son otra magnitud. No se
+        // agrega ningun criterio de unidad nuevo — en particular NO se filtra por unidadMedida
+        // "Hectarea", porque la linea de labor por hectareas casi siempre la trae vacia (382 de las
+        // 633 OT confirmadas) y a veces trae "Litros" o "Unidades"; verificado contra el dato: en
+        // TODOS esos casos la dosis de la linea de labor es la superficie (ratio dosis/Has. Reales
+        // 0,99-1,01 por servicio, Litros incluido).
+        // NO reemplaza a `ha` (Has. Reales), que sigue alimentando el avance de cultivos, el Control
+        // de Hectareas y la Auditoria de Siembra. Lo consume UNICAMENTE el Trabajo Ejecutado de
+        // Servicios (resumenOTServicio, servicios.js).
+        // Por que hace falta. Has. Reales trae la superficie de la PARCELA COMPLETA aunque la OT
+        // haya trabajado solo una parte — OT 4781, lote 203: Has. Reales 85,75 contra 1,77 de dosis
+        // — y ademas es un max() por OT, asi que una OT con labores en dos lotes distintos reportaba
+        // solo el mayor: la OT 4958 hace 2° Plaina en .43 (22,76) y 1° Plaina en .41 (40,56) y
+        // declaraba 22,76 en vez de 63,32.
+        // Sin ninguna linea de labor se cae a Has. Reales, que es lo unico que hay. Hoy no ocurre en
+        // ninguna OT de modalidad hectareas, pero deja el caso cubierto.
+        ha_trab: (function(){
+          const sup = g.filter(x=>(x.tipo==='Labor Propia'||x.tipo==='Labor Tercero')
+                                  && !x.esHoras && !x.esPeso);
+          return sup.length ? Math.round(sup.reduce((s,x)=>s+x.ud,0)*100)/100
+                            : (has.length?Math.max.apply(null,has):null);
+        })(),
         modalidad: modalidadLaborOT(g),
         horas: g.filter(x=>x.esHoras).reduce((s,x)=>s+x.ud,0),
         // kg = peso ejecutado de los trabajos medidos por peso (fletes en Dosis o Kilos): suma de
