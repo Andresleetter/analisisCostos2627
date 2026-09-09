@@ -249,7 +249,7 @@ function renderCultivoDetalle(){
       ${c.etapa_actual?`<div class="cc-stage">Etapa actual: <b>${c.etapa_actual}</b></div>`:'<div class="cc-stage cc-stage-muted">Sin actividad confirmada aún</div>'}
       <div class="cc-etapas">${etapasHtml}</div>
       <div class="cc-ha">
-        <div><span>Ha planificadas</span><b>${plan}</b></div>
+        <div><span>${c.incluyeZafrina?'Plan 26/27 · incluye Zafriña26':'Ha planificadas'}</span><b>${plan}</b></div>
       </div></div>`;}).join('') + mapaCard;
 }
 

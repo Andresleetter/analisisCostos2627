@@ -18,7 +18,9 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra, recetas){
     total_ot,ot_conf,totalEnEjecucion,totalPendientes,costo_total} = construirBaseOT(raw);
 
   // ---- Dominios que solo dependen de la base ----
-  const {cultivos,avanceInconsistencias,siembraExcluidas} = construirCultivos(OTS, RTK, RTK_TOT);
+  const {cultivos} = construirCultivos(OTS, RTK, RTK_TOT);
+  // Vista integrada solicitada; los indicadores de campaña conservan su base 26/27.
+  const avanceIntegrado = construirCultivos(OTS, RTK, RTK_TOT, rawTodasCampanias);
   const {exceso,sinrtk,cancelados,exc_kpi} = construirControlHectareas(OTS, RTK);
   const {otsVisibles,otsAtrasadas,totalAtrasadas,TOLERANCIA_ATRASO_DIAS} = construirAlertas(OTS);
   const {operativas,oper_costo,oper_part} = construirOperativas(OTS, costo_total);
@@ -64,7 +66,7 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra, recetas){
     otsAtrasadas,totalAtrasadas,total_ot,ot_conf,costo_total,costo_total_consolidado,
     costo_por_campania,oper_costo,oper_part,TOLERANCIA_ATRASO_DIAS});
 
-  return {total_ot,ot_conf,ot_ejec:totalEnEjecucion,ot_pend:totalPendientes,costo_total,cultivos,operativas,oper_costo,oper_part,
+  return {total_ot,ot_conf,ot_ejec:totalEnEjecucion,ot_pend:totalPendientes,costo_total,cultivos:avanceIntegrado.cultivos,operativas,oper_costo,oper_part,
     exceso,sinrtk,cancelados,exc_kpi,alertas:otsVisibles,n_ot_atrasadas:totalAtrasadas,
     auditoria_items,auditoria_metros,auditoria_puentes,auditoria_puentes_horas,auditoria_gastos,
     auditoria_siembra,
@@ -92,10 +94,10 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra, recetas){
     insumos_excluidos:insumosExcluidosRaw||[],
     // OT de trabajo por hectareas (avance del Resumen Ejecutivo) sin Has. Reales válido — quedan
     // fuera del cálculo de avance; se conservan acá solo para trazabilidad/depuración.
-    avance_inconsistencias:avanceInconsistencias,
+    avance_inconsistencias:avanceIntegrado.avanceInconsistencias,
     // OT del estadio Siembra que no acreditan avance de siembra (tratamiento de semillas). Solo
     // para trazabilidad: ningun render las lee, y sus costos siguen contando en el resto.
-    siembra_excluidas:siembraExcluidas,
+    siembra_excluidas:avanceIntegrado.siembraExcluidas,
     resumen,
     fecha_datos:HOY};
 }
