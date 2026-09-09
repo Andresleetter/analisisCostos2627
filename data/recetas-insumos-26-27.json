@@ -120,7 +120,7 @@
     "campania": "26/27",
     "cultivo": "ARROZ",
     "grupo": "FERTILIZANTES",
-    "insumo": "Abono 04.30.10 +4,5S",
+    "insumo": "Abono 04-30-10 +4.5S",
     "descripcion": "04.30.10",
     "dosisHa": 0.23,
     "unidad": "ton"
@@ -129,7 +129,7 @@
     "campania": "26/27",
     "cultivo": "ARROZ",
     "grupo": "FERTILIZANTES",
-    "insumo": "Abono 11.52.00 COFCO",
+    "insumo": "Abono 11-52-00 COFCO",
     "descripcion": "11.52.00",
     "dosisHa": 0.14,
     "unidad": "ton"
@@ -138,7 +138,7 @@
     "campania": "26/27",
     "cultivo": "ARROZ",
     "grupo": "FERTILIZANTES",
-    "insumo": "Fertilizante COFCO 07-40-00",
+    "insumo": "Fertilizante 07.40.00",
     "descripcion": "07.40.00",
     "dosisHa": 0.19,
     "unidad": "ton"
@@ -219,7 +219,7 @@
     "campania": "26/27",
     "cultivo": "ARROZ",
     "grupo": "HERBICIDAS PUNTO DE AGUJA",
-    "insumo": "Conductor Clomazone",
+    "insumo": "Conductor Clomazone 48%",
     "descripcion": "Clomazone 48%",
     "dosisHa": 0.5,
     "unidad": "L"
@@ -462,7 +462,7 @@
     "campania": "26/27",
     "cultivo": "ARROZ",
     "grupo": "SEMILLAS",
-    "insumo": "Senilla de Arroz V.424RI 26/27",
+    "insumo": "Semilla de Arroz V. 424RI 26/27",
     "descripcion": "424RI",
     "dosisHa": 85,
     "unidad": "kg"
@@ -1371,7 +1371,7 @@
     "campania": "26/27",
     "cultivo": "SORGO",
     "grupo": "FERTILIZANTES",
-    "insumo": "Abomo 04.30.10 +4,5s",
+    "insumo": "Abono 04.30.10 +4,5s",
     "descripcion": "04.30.10",
     "dosisHa": 0.15,
     "unidad": "ton"
