@@ -1057,10 +1057,15 @@ function renderCombustible(){
   // ---- KPI de balance: Ingreso vs Consumo del período (solo filtra por Mes, no por Tercero,
   // para comparar siempre el consumo TOTAL contra lo ingresado, sin importar qué tercero se mire
   // abajo en el detalle) ----
-  let ingresoMes=D.combustible_ingresos, consumoMes=D.combustible;
-  if(mes!=='ALL'){ ingresoMes=ingresoMes.filter(r=>r.mesnum===mes); consumoMes=consumoMes.filter(r=>r.mesnum===mes); }
+  let ingresoMes=D.combustible_ingresos, consumoMes=D.combustible, transfMes=D.combustible_transferencias;
+  if(mes!=='ALL'){ ingresoMes=ingresoMes.filter(r=>r.mesnum===mes); consumoMes=consumoMes.filter(r=>r.mesnum===mes);
+    transfMes=transfMes.filter(r=>r.mesnum===mes); }
   const totIngresoMes=ingresoMes.reduce((s,r)=>s+r.litros,0);
   const totConsumoMes=consumoMes.reduce((s,r)=>s+r.litros,0);
+  // Transferencias del periodo, ya NETEADAS con signo en el modelo (ver js/data/combustible.js).
+  // No son ni Ingreso ni Consumo, asi que no tienen KPI propio: entran solo en el Balance, que es
+  // donde mueven stock. Con un par completo valen 0 y el Balance queda exactamente igual que antes.
+  const totTransfMes=transfMes.reduce((s,r)=>s+r.litros,0);
 
   // Stock Inicial del período: para "Toda la Campaña" es el stock de arranque de la campaña
   // (D.stock_inicial_combustible, calculado en buildData desde las filas "Existencia inicial"
@@ -1068,16 +1073,22 @@ function renderCombustible(){
   // anterior (stock inicial + todo lo ingresado/consumido en los meses previos). Así el Balance
   // de cada mes sigue naturalmente al del mes anterior en vez de recalcular desde cero.
   // stockInicioDePeriodo() es generica (ver utils.js) — la reutiliza tambien Insumos.
+  // Las transferencias viajan por el lado del Ingreso del arrastre porque ya traen su signo: un par
+  // completo aporta 0 y una pata suelta aporta su signo real, sin necesidad de un tercer parametro.
   const stockInicioPeriodo = stockInicioDePeriodo(mes, D.stock_inicial_combustible,
-    D.combustible_ingresos.map(r=>({mesnum:r.mesnum,cantidad:r.litros})),
+    D.combustible_ingresos.concat(D.combustible_transferencias).map(r=>({mesnum:r.mesnum,cantidad:r.litros})),
     D.combustible.map(r=>({mesnum:r.mesnum,cantidad:r.litros})));
-  const balance=stockInicioPeriodo+totIngresoMes-totConsumoMes;
+  const balance=stockInicioPeriodo+totIngresoMes-totConsumoMes+totTransfMes;
+  // El pie del Balance solo menciona las transferencias cuando el neto NO es cero, o sea cuando hay
+  // una pata sin su contraparte. Mientras cada traslado tenga su vuelta, dice lo mismo de siempre.
+  const pieBalance = (balance>=0?'Queda stock disponible':'Stock consumido en exceso')+
+    (totTransfMes ? ' · incluye '+fmt2(totTransfMes)+' L netos de transferencias' : '');
   const balCol=balance>=0?'g':'r';
   document.getElementById('comb-balance').innerHTML=
     `<div class="kpi"><div class="k-lab">Stock Inicial</div><div class="k-val c-g">${fmt2(stockInicioPeriodo)}<small> L</small></div></div>`+
     `<div class="kpi"><div class="k-lab">Ingreso</div><div class="k-val c-g">${fmt2(totIngresoMes)}<small> L</small></div></div>`+
     `<div class="kpi"><div class="k-lab">Consumo</div><div class="k-val c-o">${fmt2(totConsumoMes)}<small> L</small></div></div>`+
-    `<div class="kpi"><div class="k-lab">Balance</div><div class="k-val c-${balCol}">${fmt2(balance)}<small> L</small></div><div class="k-foot">${balance>=0?'Queda stock disponible':'Stock consumido en exceso'}</div></div>`;
+    `<div class="kpi"><div class="k-lab">Balance</div><div class="k-val c-${balCol}">${fmt2(balance)}<small> L</small></div><div class="k-foot">${pieBalance}</div></div>`;
 
   // ---- Ingresos de Combustible (arriba): solo respeta el filtro de Mes ----
   const byIng={};
