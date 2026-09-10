@@ -154,6 +154,13 @@ function separarInsumos(rows){
       // la unica clave con que Combustible busca la OT (ver construirCombustible).
       'Referencia Origen': r.referenciaOrigen,
       'Unidades': Math.abs(num(r.unidades)),
+      // Unidades Netas = la MISMA cantidad, pero CON su signo original. Se AGREGA sin tocar
+      // 'Unidades': todo el modulo Combustible sigue trabajando con el valor absoluto (los egresos
+      // vienen en negativo y se muestran en positivo). El signo hace falta en un unico caso, las
+      // Transferencias de Mercaderia, que traen las DOS patas del mismo comprobante — la que sale
+      // del deposito de origen y la que entra al de destino — y solo se anulan si se suman con
+      // signo. Ver el neteo en construirCombustible (js/data/combustible.js).
+      'Unidades Netas': num(r.unidades),
       'Tercero': r.proveedor || '',
       'Insumo': r.nombre,
       'Descripción Tipo de Comprobante': r.tipoMovimiento,

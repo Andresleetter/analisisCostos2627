@@ -53,6 +53,9 @@ function construirCombustible(combustibleRaw, existenciaInicial, indiceOTReferen
     // Son dos campos distintos y los dos se conservan; ninguno reemplaza al otro.
     referenciaOrigen: String(row['referencia origen']||'').trim(),
     unidades: num(row['unidades']),
+    // Misma cantidad con el signo original (ver separarInsumos en loader.js). Solo la usan las
+    // Transferencias de Mercaderia, las unicas filas donde el sentido del movimiento importa.
+    unidadesNetas: num(row['unidades netas']),
     tercero: String(row['tercero']||'').trim(),
     insumo: String(row['insumo']||'').trim(),
     tipoComp: String(row['descripcion tipo de comprobante']||'').trim(),
@@ -62,11 +65,23 @@ function construirCombustible(combustibleRaw, existenciaInicial, indiceOTReferen
     // contra el dato real: en los 390 movimientos que si tienen OT coincide con consultaOT.cultivo
     // en 390 de 390 (100%), asi que describe la misma parcela que registraria la orden.
     parcela: String(row['parcela']||'').trim(),
-  })).filter(r=> (!r.insumo || r.insumo.toUpperCase()==='GASOIL') && r.fecha)
-    // Las transferencias internas trasladan stock entre depósitos: no son compra ni consumo.
-    // Se excluyen antes de agrupar para que tampoco inflen el detalle ni el arrastre mensual.
-    // El loader entrega cantidades absolutas, por lo que sumar sus dos patas duplicaría litros.
-    .filter(r=> !normHdr(r.tipoComp).startsWith('transferencia'));
+  })).filter(r=> (!r.insumo || r.insumo.toUpperCase()==='GASOIL') && r.fecha);
+
+  // ---- Transferencias de Mercaderia: se NETEAN con signo, no se descartan ----
+  // Una transferencia traslada stock entre depositos (ej. "Prestamo a Seagro S.A.", que mueve el
+  // gasoil de SURTIDOR CENTRAL a INSUMOS EN DEPOSITOS DE TERCEROS) y trae sus DOS patas en el mismo
+  // comprobante: la que sale del origen en negativo y la que entra al destino en positivo. No es
+  // compra ni consumo, asi que queda fuera de Ingreso y de Consumo — pero SI del Balance, porque
+  // mueve stock.
+  // Se les devuelve el signo original (unidadesNetas) en lugar de descartarlas: el deposito de un
+  // tercero SIGUE siendo stock nuestro, asi que un par completo suma cero y no mueve ningun numero,
+  // pero si alguna vez llegara una pata sin la otra —un traslado que se va y no vuelve— el faltante
+  // aparece solo en el Balance en vez de desaparecer sin dejar rastro.
+  // Sumarlas en valor absoluto, que es lo que hacia el modulo originalmente, contaba las dos patas
+  // como salidas y duplicaba litros: con el dato de hoy inflaba el Consumo en 12.000 L, se comia el
+  // 75% del Balance y atribuia ese consumo inexistente a "Labor Propia".
+  const esTransferencia = r => normHdr(r.tipoComp).startsWith('transferencia');
+  combRows.filter(esTransferencia).forEach(r=>{ r.unidades = r.unidadesNetas; });
   const esIngreso = r => normEstadio(r.tipoComp).indexOf('ingreso')>-1;
 
   // ---- Vinculo con la Orden de Trabajo, y "Uso / Detalle" del combustible ----
@@ -160,8 +175,14 @@ function construirCombustible(combustibleRaw, existenciaInicial, indiceOTReferen
     });
     return Object.values(map).map(c=>({...c,litros:Math.round(c.litros*100)/100})).sort((a,b)=>b.litros-a.litros);
   }
-  const combustible = agruparComb(combRows.filter(r=>!esIngreso(r)));
-  const combustible_ingresos = agruparComb(combRows.filter(r=>esIngreso(r)));
+  const combustible = agruparComb(combRows.filter(r=>!esIngreso(r) && !esTransferencia(r)));
+  const combustible_ingresos = agruparComb(combRows.filter(r=>esIngreso(r) && !esTransferencia(r)));
+  // Coleccion propia, con la misma forma que Consumo e Ingresos (Mes + Tercero) pero con los litros
+  // NETOS. Hoy da 0,00 en 8 movimientos: 2 prestamos (Seagro 2.000 L, El Fogon 1.000 L) y sus 2
+  // devoluciones. render.js la suma al Balance y al arrastre mensual; nunca la muestra como consumo.
+  const combustible_transferencias = agruparComb(combRows.filter(esTransferencia));
+  const combustible_transferencias_neto = Math.round(combustible_transferencias.reduce((s,c)=>s+c.litros,0)*100)/100;
+  const combustible_transferencias_n = combustible_transferencias.reduce((s,c)=>s+c.n,0);
   const combustible_meses=[...new Set(combustible.map(c=>c.mesnum))].sort((a,b)=>a-b).map(m=>({k:m,lbl:MES[m]}));
   const combustible_terceros=[...new Set(combustible.map(c=>c.quien))].sort((a,b)=>a.localeCompare(b,'es'));
   const combustible_litros_total = Math.round(combustible.reduce((s,c)=>s+c.litros,0)*100)/100;
@@ -219,7 +240,7 @@ function construirCombustible(combustibleRaw, existenciaInicial, indiceOTReferen
       movs:c.movs.slice().sort((a,b)=> (b.fecha-a.fecha) || (b.litros-a.litros))}))
       .sort((a,b)=>b.litros-a.litros);
   }
-  const combustible_uso = agruparPorUso(combRows.filter(r=>!esIngreso(r)));
+  const combustible_uso = agruparPorUso(combRows.filter(r=>!esIngreso(r) && !esTransferencia(r)));
   // Maquinas realmente presentes en el consumo, en el orden del catalogo (no alfabetico: el catalogo
   // ya agrupa tractores / maquinaria pesada / vehiculos). Solo se ofrecen las que tienen movimientos:
   // el filtro nunca muestra una opcion que dejaria la tabla vacia.
@@ -247,5 +268,6 @@ function construirCombustible(combustibleRaw, existenciaInicial, indiceOTReferen
     combustible_litros_total,combustible_n_total,
     combustible_ingresos_litros_total,combustible_ingresos_n_total,
     combustible_uso,combustible_maquinas,
+    combustible_transferencias,combustible_transferencias_neto,combustible_transferencias_n,
     combustible_existencia_inicial,stock_inicial_combustible};
 }
