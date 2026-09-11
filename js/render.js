@@ -9,7 +9,18 @@ function renderAll(){
   // cuándo se modificó el ARCHIVO en sí. Formato 24 horas, sin segundos: DD/MM/YYYY · HH:mm.
   const fa=D.excel_actualizado;
   const faTxt=('0'+fa.getDate()).slice(-2)+'/'+('0'+(fa.getMonth()+1)).slice(-2)+'/'+fa.getFullYear()+' · '+('0'+fa.getHours()).slice(-2)+':'+('0'+fa.getMinutes()).slice(-2);
-  document.getElementById('t-date').textContent=faTxt;
+  // La chapita pasa a ambar cuando el .xlsx tiene mas de 24 horas. No es decoracion: el 11/09/2026
+  // una carga real trajo el archivo del 03/09 por un cache intermedio (ver el sello anti-cache en
+  // loader.js) y la fecha, que estaba a la vista, paso desapercibida justamente porque se veia igual
+  // que siempre. El umbral son 24 h porque el Excel se actualiza todos los dias habiles; un fin de
+  // semana largo puede encenderla sin que haya ningun problema, y por eso avisa en vez de alarmar.
+  const t_date=document.getElementById('t-date');
+  t_date.textContent=faTxt;
+  const horasDato=(Date.now()-fa.getTime())/3600000;
+  t_date.classList.toggle('vieja', horasDato>24);
+  t_date.title = horasDato>24
+    ? 'El archivo de datos tiene '+Math.floor(horasDato/24)+' dia(s) de antiguedad. Recargue la pagina; si sigue igual, es un cache intermedio.'
+    : 'Ultima modificacion del archivo de datos';
   document.getElementById('b-exc').textContent=D.exc_kpi.n;
   document.getElementById('b-al').textContent=D.n_ot_atrasadas;
   // TAB1: Resumen Ejecutivo (una función chica por bloque, ver detalle de cada una más abajo).
