@@ -331,6 +331,14 @@
   <img src="img/mapa_siembra_2627.jpeg" alt="Mapa de siembra de la Campaña 26/27 (ampliado)">
 </div>
 
+<!-- Aviso de datos nuevos. Lo muestra vigilarDatosNuevos() (js/loader.js) cuando, al volver a esta
+     pestaña, el .xlsx que sirve el sitio ya no es el que está cargado en pantalla. Arranca oculto,
+     aparece UNA sola vez por sesión y al hacer clic recarga la página. Va fuera de .wrap porque es
+     position:fixed sobre toda la pantalla, mismo criterio que #overlay y #mapa-lightbox. -->
+<button type="button" class="aviso-datos" id="aviso-datos" hidden>
+  Hay datos nuevos<span class="aviso-datos-cta">Actualizar</span>
+</button>
+
 <script src="vendor/xlsx.full.min.js" defer></script>
 <script src="js/config.js" defer></script>
 <script src="js/utils.js" defer></script>

@@ -4,6 +4,36 @@ function showError(msg){ const ov=document.getElementById('overlay'); ov.classLi
   document.getElementById('ov-msg').textContent=String(msg||'Error de red al descargar el archivo remoto.')+' Verifique la conexión o que la URL esté disponible.';
   document.getElementById('ov-retry').style.display='inline-block'; }
 
+// ---- Sello anti-cache de la descarga ----
+// Se le agrega a la URL de TODOS los archivos de datos (los .xlsx y los .json, fuente principal y
+// respaldo) para que ningun cache intermedio pueda devolver una copia vieja.
+//
+// Por que no alcanza con {cache:'no-store'}: esa opcion le habla al cache DEL NAVEGADOR. El
+// 11/09/2026 a las 11:24 una carga real pidio data/datosCampania2627.xlsx al propio sitio, recibio
+// HTTP 200 sin pasar por el respaldo de GitHub, y el cuerpo que llego fue el archivo del 03/09:
+// 2.849 filas de consultaOT y 15.942 de consultaInsumos, cuando el desplegado tenia 3.290 y 16.751.
+// El dashboard quedo mostrando datos de 8 dias antes calculados con el codigo del dia — OT
+// confirmadas 1275 de 1520, Siembra de ARROZ en 0,00 ha y 245 atrasadas. curl a esa misma URL desde
+// la misma maquina traia el archivo correcto, asi que la copia vieja estaba en el navegador o en un
+// proxy, no en Cloudflare (que responde max-age=0, must-revalidate con ETag).
+//
+// Una URL que nunca se repite no puede coincidir con ninguna entrada cacheada. El sello se calcula
+// UNA sola vez por carga de pagina, asi los tres archivos viajan con el mismo valor y se ve de un
+// vistazo en la pestana Network que son de la misma carga. No se toca el nombre del archivo en el
+// repo ni la forma de servirlo: es solo la query de la peticion.
+var SELLO_DESCARGA = String(Date.now());
+function conSello(url){ return url + (url.indexOf('?')>-1 ? '&' : '?') + 'v=' + SELLO_DESCARGA; }
+
+// ---- Identidad del .xlsx cargado, para detectar despues si el servidor ya tiene otro ----
+// Sale de las cabeceras de la respuesta, no del contenido: ETag primero (Cloudflare lo manda y es
+// del contenido, asi que cambia exactamente cuando cambia el archivo), y si no estuviera se cae a
+// Last-Modified y por ultimo al tamano. Si no hay ninguna de las tres, queda null y la vigilancia
+// simplemente no se activa — nunca se inventa una identidad ni se avisa por las dudas.
+function identidadRespuesta(resp){
+  return resp.headers.get('ETag') || resp.headers.get('Last-Modified') || resp.headers.get('Content-Length') || null;
+}
+var IDENTIDAD_XLSX = null;
+
 // Descarga y parsea un .xlsx. `url` es la fuente normal (ruta relativa: el propio sitio, servido
 // por Cloudflare — ver SRC_XLSX en config.js) y `urlRespaldo` es el plan B contra GitHub, que se
 // intenta UNA sola vez si la primera falla. Cubre dos casos reales: que el sitio no pueda servir el
@@ -13,10 +43,15 @@ function showError(msg){ const ov=document.getElementById('overlay'); ov.classLi
 // está pensado para servir tráfico de usuarios.
 function descargarXLSX(nombre, url){
   console.log('Iniciando carga:', url);
-  return fetch(url, {cache:'no-store'})
+  return fetch(conSello(url), {cache:'no-store'})
     .then(function(resp){
       console.log('HTTP Status:', resp.status, '('+nombre+')');
       if(!resp.ok) throw new Error('HTTP '+resp.status+' '+(resp.statusText||'')+' al descargar '+nombre);
+      // Se guarda la identidad de ESTA respuesta, la que realmente se esta por parsear. Si entro el
+      // respaldo de GitHub, la identidad guardada es la de GitHub y la comparacion posterior contra
+      // el sitio podria dar distinto sin que el archivo haya cambiado; por eso vigilarDatosNuevos()
+      // solo se activa cuando la descarga salio por la fuente principal (ver loadData).
+      IDENTIDAD_XLSX = identidadRespuesta(resp);
       return resp.arrayBuffer();
     })
     .then(function(buf){
@@ -48,7 +83,7 @@ function cargarXLSX(nombre, url, urlRespaldo){
 // cargador se usa para datos sin los cuales el dashboard no puede armarse.
 function descargarJSON(nombre, url){
   console.log('Iniciando carga:', url);
-  return fetch(url, {cache:'no-store'}).then(function(resp){
+  return fetch(conSello(url), {cache:'no-store'}).then(function(resp){
     console.log('HTTP Status:', resp.status, '('+nombre+')');
     if(!resp.ok) throw new Error('HTTP '+resp.status+' '+(resp.statusText||'')+' al descargar '+nombre);
     return resp.json();
@@ -75,7 +110,7 @@ function cargarJSON(nombre, url, urlRespaldo){
 function cargarRecetas(url, urlRespaldo){
   var pedir = function(u){
     console.log('Iniciando carga:', u);
-    return fetch(u, {cache:'no-store'}).then(function(resp){
+    return fetch(conSello(u), {cache:'no-store'}).then(function(resp){
       console.log('HTTP Status:', resp.status, '(recetas de insumos)');
       if(!resp.ok) throw new Error('HTTP '+resp.status+' al descargar las recetas de insumos');
       return resp.json();
@@ -100,6 +135,43 @@ function cargarRecetas(url, urlRespaldo){
         '— la Auditoría de Insumos por Parcela funciona igual, sin el seguimiento de receta.');
       return null;
     });
+}
+
+// ---- Vigilancia: avisar cuando el sitio ya tiene un .xlsx distinto del que se esta mirando ----
+// El dashboard se deja abierto durante horas y el Excel se actualiza varias veces por dia, asi que
+// la pantalla envejece sin que nada lo indique. Al volver a la pestaña se hace UN pedido HEAD
+// (cabeceras solamente, no baja los 2,6 MB) y se compara la identidad contra la del archivo que se
+// cargo. Si cambio, aparece el aviso; al hacer clic, se recarga.
+//
+// Reglas deliberadas:
+//  - Solo al VOLVER a la pestaña (visibilitychange/focus), nunca por temporizador: si el usuario no
+//    esta mirando, no hay nada que avisarle y no tiene sentido pedir nada.
+//  - Una sola vez por sesion: una vez que se aviso, no se vuelve a chequear. El aviso no parpadea ni
+//    se repite en cada cambio de pestaña.
+//  - Si el pedido falla (sin conexion, el sitio no responde, o el HEAD no trae cabeceras utiles) no
+//    se avisa NADA. Un error de red no es un dato nuevo.
+//  - Nunca recarga por su cuenta: quien decide es el usuario. Una recarga automatica podria pisar un
+//    filtro puesto a mano o un detalle abierto.
+function vigilarDatosNuevos(){
+  var aviso = document.getElementById('aviso-datos');
+  if(!aviso || !IDENTIDAD_XLSX) return;
+  var pidiendo = false, avisado = false;
+  aviso.addEventListener('click', function(){ location.reload(); });
+  function chequear(){
+    if(pidiendo || avisado || document.hidden) return;
+    pidiendo = true;
+    fetch(conSello(SRC_XLSX), {method:'HEAD', cache:'no-store'}).then(function(resp){
+      pidiendo = false;
+      if(!resp.ok) return;
+      var id = identidadRespuesta(resp);
+      if(!id || id === IDENTIDAD_XLSX) return;
+      avisado = true;
+      aviso.hidden = false;
+      console.log('Hay un datosCampania2627.xlsx nuevo en el sitio (identidad '+IDENTIDAD_XLSX+' -> '+id+').');
+    }, function(){ pidiendo = false; });
+  }
+  document.addEventListener('visibilitychange', function(){ if(!document.hidden) chequear(); });
+  window.addEventListener('focus', chequear);
 }
 
 // Fecha/hora de última modificación real del .xlsx (metadata de Office, docProps/core.xml —
@@ -245,6 +317,7 @@ function loadData(){
       renderAll();
       ov.style.display='none'; document.getElementById('app').style.display='block';
       console.log('Dashboard renderizado correctamente.');
+      vigilarDatosNuevos();
     })
     .catch(function(err){
       console.error('Error de carga (detalle técnico):', err);

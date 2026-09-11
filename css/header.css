@@ -13,6 +13,24 @@
    queda oculto (display:none) y este contenedor solo envuelve la fecha, sin cambiar su posición. */
 .header-right{display:flex;align-items:center;gap:10px;flex-shrink:0}
 .top .t-date{font-size:11.5px;background:var(--green-xl);color:#2e5010;padding:5px 14px;border-radius:var(--radius-pill);font-weight:700;white-space:nowrap}
+/* Datos de mas de 24 h (ver renderAll en render.js): mismo ambar que el resto del panel (--y), en
+   version clara de fondo para no competir con los KPI. Solo cambia el color: ni el tamano ni la
+   posicion se mueven, asi el encabezado no salta cuando se enciende. */
+.top .t-date.vieja{background:#fdf1cf;color:#7a5600;cursor:help}
+/* Aviso flotante de datos nuevos (ver vigilarDatosNuevos en js/loader.js). Vive acá, junto a
+   .t-date, porque las dos cosas informan lo mismo: si lo que se está mirando sigue vigente.
+   Abajo a la derecha para no tapar ningún KPI ni el encabezado, y con z-index por debajo de
+   #overlay (1000) y de #mapa-lightbox: si alguno de esos está abierto, manda el de ellos.
+   [hidden] explícito porque display:flex le ganaría al hidden nativo. */
+.aviso-datos{position:fixed;right:20px;bottom:20px;z-index:900;display:flex;align-items:center;gap:10px;
+  background:var(--teal);color:#fff;border:0;border-radius:var(--radius-pill);padding:11px 16px;
+  font-family:var(--font-sans);font-size:12.5px;font-weight:700;cursor:pointer;
+  box-shadow:0 4px 14px rgba(0,0,0,.22)}
+.aviso-datos[hidden]{display:none}
+.aviso-datos:hover{background:#17554a}
+.aviso-datos:focus-visible{outline:2px solid var(--green-l);outline-offset:2px}
+.aviso-datos-cta{background:rgba(255,255,255,.18);border-radius:var(--radius-pill);padding:3px 10px;font-weight:800}
+@media (max-width:560px){ .aviso-datos{left:16px;right:16px;bottom:16px;justify-content:center} }
 /* Botón de menú móvil: oculto en escritorio/tablet horizontal, .tabs sigue siendo la barra visible.
    display:flex se activa en el media query de tabs.css (junto con el resto del comportamiento del
    menú), no se repite acá. */
