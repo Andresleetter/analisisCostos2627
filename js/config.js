@@ -55,7 +55,10 @@ const ETAPA_LABEL = {'preparacion de suelo':'Preparación de Suelo','siembra':'S
 // nombre, tiene que contar sola, no quedar en 0% en silencio.
 // Solo aplica al Estadio Siembra: el mismo servicio en otro estadio no se toca.
 const SIEMBRA_SERVICIOS_NO_SIEMBRA = ['tratamiento de semilla'];
-const OPERATIVAS = ['OPERATIVO','PARCELA ARROZ','PARCELA SOJA','PARCELA SORGO','CUIDADOS DE PATIOS VIVIENDA','CUIDADOS DE PATIOS SILO','A RECUPERAR RH','MANTENIMIENTO DE BOMBAS'];
+// 'PARCELA MAIZ' se agrego el 14/09/2026: es el mismo tipo de trabajo que las otras tres PARCELA y
+// faltaba en la lista, asi que su unica OT (4351, Desecacion imperator, US$ 82,89) no figuraba en
+// Gastos Operativos ni en ninguna otra seccion.
+const OPERATIVAS = ['OPERATIVO','PARCELA ARROZ','PARCELA SOJA','PARCELA SORGO','PARCELA MAIZ','CUIDADOS DE PATIOS VIVIENDA','CUIDADOS DE PATIOS SILO','A RECUPERAR RH','MANTENIMIENTO DE BOMBAS'];
 // Discriminadores dentro de consultaInsumos (que trae TODOS los insumos, no solo combustible):
 // tipoInsumo = "COMBUSTIBLES" separa las filas de combustible del resto (fertilizantes,
 // agroquímicos, repuestos, etc. — quedan en insumos_pendiente_modulo para un módulo futuro).
