@@ -293,17 +293,42 @@ function poblarFiltroAvanceDetallado(){
   sel.value=orden.indexOf(previo)>-1?previo:(orden[0]||'');
 }
 
+// Lotes donde esta misma labor se cargó más de una vez Y entre todas superan el plan del lote: la
+// labor se rehizo sobre superficie ya trabajada. Terminar un lote en dos tandas no se reporta — da
+// clavado contra el plan y sería ruido. Va arriba de la tabla para no tener que buscar las OT
+// salteadas entre las demás: la tabla va por fecha y las del mismo lote quedan dispersas.
+function avRepetidas(reps){
+  if(!reps || !reps.length) return '';
+  return `<div class="av-rep">`+
+    `<div class="av-rep-tit">Cargada más de una vez y entre todas superan el lote · ${reps.length} lote(s)`+
+    ` <span class="ip-sin">— sus superficies se suman entre sí, así que el total pasa el plan del lote</span></div>`+
+    reps.map(r=>`<div class="av-rep-lote"><b>Lote ${escHtml(r.lote)}</b> · ${r.n_ot} OT · `+
+      `suman <b>${fmt2(r.ha)}</b> ha<span class="ip-sin"> · plan del lote ${fmt2(r.plan)} ha</span>`+
+      ` <span class="av-rep-exc">+${fmt2(r.exceso)}</span><br>`+
+      `<span class="av-rep-ots">`+r.ots.map(o=>
+        `OT <b>${escHtml(o.ot)}</b> ${o.fr?ipFecha(o.fr):'—'} · ${fmt2(o.ha)} ha`).join('　+　')+
+      `</span></div>`).join('')+
+  `</div>`;
+}
+
 // Tabla de OT de una labor: exactamente las cinco columnas del pedido. Cultivo, Estadio y Labor no
-// se repiten acá porque ya los fijan el selector y el bloque desde el que se abrió.
-function avTablaOTs(ots){
+// se repiten acá porque ya los fijan el selector y el bloque desde el que se abrió. Las OT que
+// comparten labor y lote con otra llevan una marca en la columna Lote, para ubicarlas también acá.
+function avTablaOTs(ots, reps){
   const guion='<span class="ip-sin">—</span>';
-  return `<div class="scroll"><table><thead><tr><th>OT</th><th>Fecha</th><th>Lote</th>`+
+  return avRepetidas(reps)+
+    `<div class="scroll"><table><thead><tr><th>OT</th><th>Fecha</th><th>Lote</th>`+
     `<th class="tr">Trabajo Ejecutado</th><th class="tr">Costo Total</th></tr></thead><tbody>`+
-    ots.map(o=>`<tr><td class="dl mono"><b>OT ${escHtml(o.ot)}</b></td>`+
+    ots.map(o=>{
+      const rep = o.rep_supera
+        ? ` <span class="tag tag-rep" title="Esta labor está cargada ${o.n_ot_lote} veces en este lote y entre todas superan su plan.">${o.n_ot_lote} OT · pasan el lote</span>`
+        : '';
+      return `<tr class="${o.rep_supera?'av-ot-rep':''}"><td class="dl mono"><b>OT ${escHtml(o.ot)}</b></td>`+
       `<td>${o.fr?ipFecha(o.fr):guion}</td>`+
-      `<td class="mono">${escHtml(o.lote)||guion}</td>`+
+      `<td class="mono">${escHtml(o.lote)||guion}${rep}</td>`+
       `<td class="tr mono">${o.cant==null?guion:fmtCantidadUnidad(o.cant,o.unidad)}</td>`+
-      `<td class="tr mono col-tot">US$ ${fmtUSD(o.costo)}</td></tr>`).join('')+
+      `<td class="tr mono col-tot">US$ ${fmtUSD(o.costo)}</td></tr>`;
+    }).join('')+
     `</tbody></table></div>`;
 }
 
@@ -318,20 +343,21 @@ function avDivisorTxt(divisores){
   return 'promediada entre '+divisores[0]+' y '+divisores[divisores.length-1]+' labores según el lote';
 }
 
-// Los tres pasos de la cuenta, a la vista: hectáreas trabajadas → capadas al plan de su lote →
+// Los tres pasos de la cuenta, a la vista: hectáreas trabajadas → las que entran al promedio →
 // promediadas con las demás labores de ese lote. Sin este renglón solo se veía la primera y la
 // última cifra, y el salto entre las dos no se podía seguir a mano.
+// La diferencia entre el primer y el segundo número existe porque cada lote entra capado a su plan
+// RTK, pero acá NO se desglosa cuánto se recortó ni en qué lotes: ese análisis es el de Control de
+// Hectáreas y repetirlo acá sería tener el mismo dato en dos lugares. Esta vista solo necesita
+// decir con qué superficie se construyó el aporte.
 function avCadenaHa(l){
-  const recorte = Math.round((l.ha_ejec-l.ha_computada)*100)/100;
-  const paso2 = recorte>0
-    ? `<b>${fmt2(l.ha_computada)}</b> ha tras el tope del lote <span class="av-recorte" title="Superficie que excede el plan RTK de su lote y por eso no acredita avance">(−${fmt2(recorte)})</span>`
-    : `<b>${fmt2(l.ha_computada)}</b> ha tras el tope del lote <span class="ip-sin" title="Ninguna de sus hectáreas excede el plan de su lote">(sin recorte)</span>`;
-  return `<div class="av-lab-cadena">${fmt2(l.ha_ejec)} ha ejecutadas → ${paso2}`+
+  return `<div class="av-lab-cadena">${fmt2(l.ha_ejec)} ha ejecutadas`+
+    ` → <b title="Cada lote entra capado a su plan RTK: esta es la superficie que efectivamente se promedia con las demás labores del lote.">${fmt2(l.ha_computada)}</b> ha que entran al promedio`+
     ` → <b>${fmt2(l.aporte_ha)}</b> ha de aporte <span class="ip-sin">· ${escHtml(avDivisorTxt(l.divisores))}</span></div>`;
 }
 
 // Fila de una labor (resumen plegado + detalle desplegado). `clave` identifica el desplegable.
-function avFilaLabor(clave, nombre, nombres, etiquetaAporte, meta, ots, cadena){
+function avFilaLabor(clave, nombre, nombres, etiquetaAporte, meta, ots, cadena, reps){
   const abierta = avLaborAbierta===clave;
   const alias = nombres.length>1
     ? ` <span class="ip-sin" title="El modelo trata estos nombres como una misma labor (LABORES_EQUIVALENTES)">· unifica ${nombres.map(escHtml).join(' + ')}</span>`
@@ -343,7 +369,7 @@ function avFilaLabor(clave, nombre, nombres, etiquetaAporte, meta, ots, cadena){
       `<div class="av-lab-meta">${meta}</div>`+
       (cadena||'')+
     `</div>`+
-    (abierta?`<div class="av-lab-det">${avTablaOTs(ots)}</div>`:'')+
+    (abierta?`<div class="av-lab-det">${avTablaOTs(ots, reps)}</div>`:'')+
   `</div>`;
 }
 
@@ -372,8 +398,11 @@ function renderAvanceDetalladoCultivo(){
       `Aporte <b class="c-${col}">${l.aporte_pct==null?'—':fmt1(l.aporte_pct)+'%'}</b>`,
       // El qué y el cuánto quedan en esta línea; el cómo se llega del trabajo real al aporte va en
       // el renglón de abajo (avCadenaHa), porque son tres cifras encadenadas y no tres datos sueltos.
-      `<b>${l.n_ot}</b> OT · <b>${l.n_lotes}</b> lote(s) · <b>US$ ${fmtUSD(l.costo)}</b>`,
-      l.ots, avCadenaHa(l))).join('')
+      `<b>${l.n_ot}</b> OT · <b>${l.n_lotes}</b> lote(s) · <b>US$ ${fmtUSD(l.costo)}</b>`+
+        // Se avisa en la fila plegada, para no tener que abrir labor por labor buscando dónde se
+        // cargó la misma labor dos veces sobre el mismo lote.
+        (l.repetidas.length ? ` · <span class="av-rep-aviso" title="Lotes donde esta labor está cargada más de una vez y entre todas superan el plan del lote. Al abrir el detalle se listan sus OT.">${l.repetidas.length} lote(s) donde la repetición pasa el lote</span>` : ''),
+      l.ots, avCadenaHa(l), l.repetidas)).join('')
       : '<div class="av-est-vacio">Ninguna labor acredita superficie en esta etapa.</div>';
     // La suma de los aportes se muestra al lado del % de la etapa: es la comprobación de que el
     // desglose explica ese número y no otro. Coincide siempre — el reparto se hace sobre el total ya

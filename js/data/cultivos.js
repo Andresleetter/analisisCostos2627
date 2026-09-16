@@ -48,14 +48,18 @@ const UNIDAD_TRABAJO_MODALIDAD={horas:'hrs',peso:'kg',camion_grua:'trabajos'};
 // calculo del avance ya hacia, nombrados para poder mostrarlos.
 const MOTIVO_SIN_APORTE={horas:'Trabajo medido en horas',peso:'Trabajo medido en peso',
   camion_grua:'Camión + grúa'};
-function otsDeLabor(ots){
-  const filas=ots.map(o=>{
+// Recibe entradas {o, n_ot_lote, rep_supera}: la OT ya agrupada, cuantas OT de esa misma labor hay
+// en su lote (1 = unica) y si entre todas superan el plan del lote. Solo se marca cuando lo superan
+// (ver desglosarEstadio). Las labores que no acreditan superficie pasan n_ot_lote en 1.
+function otsDeLabor(entradas){
+  const filas=entradas.map(({o, n_ot_lote, rep_supera})=>{
     const unidad=UNIDAD_TRABAJO_MODALIDAD[o.modalidad]||'ha';
     const cant=unidad==='hrs'?o.horas:(unidad==='kg'?o.kg:(unidad==='trabajos'?o.trabajos:haTrabajada(o)));
     // El lote va normalizado (normLote) porque es la MISMA clave con la que el avance agrupo esa
     // OT: en el .xlsx el mismo lote aparece como "200" y como ".34E", y mostrarlo crudo haria que
     // la OT pareciera de otro lote que el que se capo contra el plan.
-    return {ot:o.ot, fr:o.fr, lote:normLote(o.lote), cant, unidad, costo:o.imp};
+    return {ot:o.ot, fr:o.fr, lote:normLote(o.lote), cant, unidad, costo:o.imp,
+      n_ot_lote:n_ot_lote||1, rep_supera:!!rep_supera};
   });
   // Mismo orden que el desplegable de Servicios: fecha ascendente y, a igual fecha, numero de OT.
   return ordenarOTsServicio(filas);
@@ -279,7 +283,7 @@ function construirCultivos(OTS, RTK, RTK_TOT, rawTodasCampanias=[]){
           const d=labores[lk];
           const valor=d.planCompartidoZafrina ? d.ejecutadasReales : Math.min(d.ejecutadasReales,d.planificadas);
           if(!porLabor[lk]) porLabor[lk]={clave:lk,nombres:new Set(),peso:0,ha_ejec:0,ha_computada:0,
-            lotes:new Set(),divisores:new Set(),ots:[]};
+            lotes:new Set(),divisores:new Set(),repetidas:[],ots:[]};
           const a=porLabor[lk];
           a.peso+=valor/n;                  // el mismo sumando que promedia equivalenteLoteEstadio
           a.ha_ejec+=d.ejecutadasReales;    // superficie cruda: la que cierra con el detalle de OT
@@ -287,7 +291,31 @@ function construirCultivos(OTS, RTK, RTK_TOT, rawTodasCampanias=[]){
           a.lotes.add(l);
           a.divisores.add(n);               // cuantas labores promedia cada lote (el divisor)
           d.nombres.forEach(x=>a.nombres.add(x));
-          d.ots.forEach(o=>a.ots.push(o));
+          // Misma labor cargada mas de una vez en el MISMO lote. Es el unico caso en que dos OT se
+          // SUMAN entre si (labores distintas se promedian, ver equivalenteLoteEstadio), asi que es
+          // donde conviene poder mirar de cerca: puede ser el lote terminado en dos tandas —
+          // 67,47 + 20,48 = 87,95, el plan exacto del lote 137 — o la labor rehecha entera sobre el
+          // mismo lote — 30,21 + 30,35 sobre un plan de 30,35 en el 78B.
+          //
+          // Solo se reporta el SEGUNDO caso: cuando la suma pasa el plan del lote. Terminar un lote
+          // en dos tandas es normal y cierra clavado contra el plan, asi que marcarlo seria ruido.
+          // Que la suma lo supere, en cambio, dice que la labor se rehizo sobre superficie ya
+          // trabajada. Control de Hectareas no lo detecta: ahi el lote entra con el MAXIMO de sus
+          // OT, no con la suma, asi que dos cargas de 24,22 ha sobre un lote de 24,22 le dan exceso
+          // cero. Es un caso que hoy no se ve en ninguna otra parte del dashboard.
+          //
+          // Queda afuera lo que no tiene plan contra el cual compararse: la siembra de Zafriña26
+          // (comparte el plan de Maiz, ver planCompartidoZafrina), los lotes sin plan RTK y los
+          // dados de baja (RTK_LOTE_CANCELADO), donde cualquier superficie lo superaria.
+          const hayPlan = !d.planCompartidoZafrina && d.planificadas>0
+            && Math.abs(d.planificadas-RTK_LOTE_CANCELADO)>=0.001;
+          const repSuperaLote = d.ots.length>1 && hayPlan
+            && d.ejecutadasReales > d.planificadas+0.01;
+          if(repSuperaLote) a.repetidas.push({lote:l, n_ot:d.ots.length,
+            ha:Math.round(d.ejecutadasReales*100)/100, plan:Math.round(d.planificadas*100)/100,
+            exceso:Math.round((d.ejecutadasReales-d.planificadas)*100)/100,
+            ots:d.ots.map(o=>({ot:o.ot, fr:o.fr, ha:haTrabajada(o)}))});
+          d.ots.forEach(o=>a.ots.push({o, n_ot_lote:d.ots.length, rep_supera:repSuperaLote}));
         });
       });
       // Orden estable, independiente del orden de las filas del Excel: primero la labor que mas
@@ -319,7 +347,10 @@ function construirCultivos(OTS, RTK, RTK_TOT, rawTodasCampanias=[]){
         // la labor toca lotes con distinta cantidad de labores y no hay un divisor unico.
         divisores:[...a.divisores].sort((x,y)=>x-y),
         n_ot:a.ots.length,
-        costo:a.ots.reduce((s,o)=>s+o.imp,0),
+        costo:a.ots.reduce((s,e)=>s+e.o.imp,0),
+        // Lotes donde esta labor se cargo mas de una vez Y entre todas superan el plan del lote.
+        // Ordenados por el exceso, de mayor a menor: primero el caso mas grave.
+        repetidas:a.repetidas.sort((x,y)=>(y.exceso-x.exceso)||x.lote.localeCompare(y.lote,'es')),
         ots:otsDeLabor(a.ots),
       }));
     }
@@ -338,7 +369,7 @@ function construirCultivos(OTS, RTK, RTK_TOT, rawTodasCampanias=[]){
         const a=porLabor[lk];
         a.nombres.add(String(x.o.serv||'').trim()||'(sin labor)');
         a.motivos.add(x.motivo);
-        a.ots.push(x.o);
+        a.ots.push({o:x.o, n_ot_lote:1, rep_supera:false});   // no acredita superficie: no se suma con ninguna otra
       });
       return Object.values(porLabor).map(a=>({
         clave:a.clave,
@@ -346,7 +377,7 @@ function construirCultivos(OTS, RTK, RTK_TOT, rawTodasCampanias=[]){
         nombres:[...a.nombres].sort((x,y)=>x.localeCompare(y,'es')),
         motivos:[...a.motivos].sort((x,y)=>x.localeCompare(y,'es')),
         n_ot:a.ots.length,
-        costo:a.ots.reduce((s,o)=>s+o.imp,0),
+        costo:a.ots.reduce((s,e)=>s+e.o.imp,0),
         ots:otsDeLabor(a.ots),
       })).sort((a,b)=>(b.n_ot-a.n_ot)||a.nombre.localeCompare(b.nombre,'es'));
     }

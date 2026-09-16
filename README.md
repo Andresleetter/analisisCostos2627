@@ -165,15 +165,23 @@ y cada labor ya tiene ahí su propio sumando, `min(...)/n_labores`. `desglosarEs
 **Los tres pasos de la cuenta van a la vista, encadenados.** No alcanza con la superficie trabajada y el aporte final: entre las dos hay dos reglas que mueven el número y sin mostrarlas el salto no se puede seguir a mano.
 
 ```
-2.472,80 ha ejecutadas → 2.400,00 ha tras el tope del lote (−72,80) → 1.069,08 ha de aporte
-                                                      · promediada entre 1 y 6 labores según el lote
+2.472,80 ha ejecutadas → 2.400,00 ha que entran al promedio → 1.069,08 ha de aporte
+                                                  · promediada entre 1 y 6 labores según el lote
 ```
 
 1. **`ha_ejec`** — suma cruda de `ha_trab` de sus OT. Es la que cierra con el desplegable de OT.
-2. **`ha_computada`** — cada lote capado a su plan RTK (`min(ejecutadas, plan del lote)`). El recorte se muestra explícito en rojo, o "(sin recorte)" cuando ninguna hectárea excede el plan. En SORGO, *Fumigacion Imperator* pasa de 486,72 a 316,63 ha por este paso.
+2. **`ha_computada`** — cada lote capado a su plan RTK (`min(ejecutadas, plan del lote)`): la superficie que efectivamente se promedia. **Acá no se desglosa cuánto se recortó ni en qué lotes** — ese análisis es el de Control de Hectáreas y repetirlo sería tener el mismo dato en dos lugares. Esta vista solo dice con qué superficie se construyó el aporte.
 3. **`aporte_ha`** — dividido por la cantidad de labores de ese lote. El divisor se rotula: una labor puede tocar lotes con distinta cantidad de labores, así que el modelo guarda todos los divisores que aplicaron (`divisores`) y se muestra el valor exacto cuando hay uno solo ("promediada entre las 3 labores del lote") o el rango cuando hay varios. `divisores = [1]` significa que era la única labor de cada lote y no se promedió nada.
 
 La fila principal queda con el qué y el cuánto (`N OT · N lote(s) · US$`), y la cadena en su propio renglón debajo.
+
+**La misma labor cargada más de una vez en el mismo lote.** Es el único caso en que dos OT se **suman** entre sí — labores distintas se promedian, ver arriba — así que es donde conviene mirar de cerca. Al abrir una labor, arriba de la tabla se listan esos lotes con sus OT nombradas una por una.
+
+Se reporta **solo cuando la suma supera el plan del lote**. Terminar un lote en dos tandas es normal y cierra clavado contra el plan (la 1° Plaina del lote 137: `67,47 + 20,48 = 87,95`, exacto), así que marcarlo sería ruido. Que la suma lo supere, en cambio, dice que la labor se rehizo sobre superficie ya trabajada — el caso más claro es SORGO · Fumigacion Imperator, con **8 lotes fumigados enteros dos veces**, en abril y de nuevo en julio.
+
+**Control de Hectáreas no detecta esto**, y por eso vive acá: allá el lote entra con el **máximo** de sus OT (`ha_ot = Math.max(...)`), no con la suma, así que dos cargas de 24,22 ha sobre un lote de 24,22 le dan exceso cero. Es el 2° Disco del lote 214, invisible en cualquier otra parte del dashboard. Hoy son 13 lotes / 26 OT en toda la campaña.
+
+Quedan fuera los casos sin plan contra el cual compararse: la siembra de Zafriña26 (comparte el plan de Maíz), los lotes sin plan RTK y los dados de baja (`RTK_LOTE_CANCELADO`), donde cualquier superficie lo superaría.
 
 **El costo es información adicional y no pondera nada.** Sale de `o.imp` (el importe total de la OT: Labor Propia + Labor Tercero + Insumos), y el costo de la labor es la suma del de sus OT. El aporte al estadio viene exclusivamente de la ejecución física.
 

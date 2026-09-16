@@ -38,7 +38,6 @@
    renglón y con las flechas a la vista: es una cadena, no tres cifras sueltas. */
 .av-lab-cadena{grid-column:1/-1;font-size:10.5px;color:var(--muted);margin-top:2px}
 .av-lab-cadena b{color:var(--teal);font-weight:700}
-.av-recorte{color:var(--r);font-weight:700}
 .av-lab-det{padding:2px 0 10px}
 .av-lab-det table{font-size:10.5px}
 
@@ -60,3 +59,20 @@
   .av-lab-ap{text-align:left}
   .av-est-head{flex-direction:column;align-items:flex-start;gap:2px}
 }
+
+/* Misma labor cargada más de una vez en el mismo lote: el único caso en que dos OT se suman entre
+   sí (labores distintas se promedian). Se listan arriba del detalle porque la tabla va por fecha y
+   las OT del mismo lote quedan salteadas entre las demás. */
+.av-rep{border:1px solid var(--line);border-left:3px solid var(--o);border-radius:var(--radius-sm);
+  background:#fdfaf4;padding:8px 10px;margin:4px 0 9px}
+.av-rep-tit{font-size:9.5px;text-transform:uppercase;letter-spacing:.3px;color:var(--ink);font-weight:800;margin-bottom:5px}
+.av-rep-tit .ip-sin{text-transform:none;letter-spacing:0;font-weight:500}
+.av-rep-lote{font-size:10.5px;color:var(--muted);padding:3px 0;border-top:1px dashed var(--line)}
+.av-rep-lote:first-of-type{border-top:0}
+.av-rep-lote b{color:var(--ink)}
+.av-rep-ots{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--teal)}
+.av-rep-ots b{color:var(--teal);font-weight:800}
+.av-rep-aviso{color:var(--o);font-weight:700}
+.av-ot-rep td{background:#fdfaf4}
+.tag-rep{background:var(--o)}
+.av-rep-exc{color:var(--r);font-weight:800}
