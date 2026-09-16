@@ -48,7 +48,7 @@ assets estáticos), con `raw.githubusercontent.com` solo como respaldo. Ver READ
 | `auditoria.js` | Infraestructura + Insumos por Parcela — Puentes por Unidad amplía los estados (Confirmado/En Ejecución/Pendiente) **solo acá**, sin tocar `CONF`; el avance sigue siendo solo Confirmados |
 | `recetas.js` | Dosis real vs receta: unidades, índice, búsqueda y desvío |
 | `alertas.js` | OT pendientes/atrasadas |
-| `resumen.js` | Gastos Operativos y `D.resumen` |
+| `resumen.js` | Gastos Operativos, `D.resumen` y `D.resumen_campanias` — `construirResumenPorCampania()` arma un paquete completo del Resumen Ejecutivo por cada campaña de `consultaOT`, mismo patrón que `construirServiciosPorCampania` (la vigente se reusa, no se recalcula) |
 
 Reglas al tocar esto:
 
@@ -74,6 +74,12 @@ se movió ninguna fórmula. Reconstruilo en el scratchpad cuando haga falta.
 Están explicadas en el README; acá va el resumen de lo que es fácil romper sin darse cuenta:
 
 - **`CAMPANIA_ACTUAL` NO se aplica a `consultaInsumos`.** Solo a `consultaOT` y a `consultaCultivos`.
+- **El filtro de Campaña del Resumen Ejecutivo es SOLO de ese módulo.** `campaniaResumenActiva`
+  (`render.js`) lo comparten el Resumen Ejecutivo y la vista Avance Detallado, y nada más: Servicios,
+  Combustible, Insumos, Control de Hectáreas, Alertas Operativas y Auditoría siguen leyendo las
+  colecciones recortadas a `CAMPANIA_ACTUAL` y no deben reaccionar nunca a ese selector. Si agregás
+  un bloque al Resumen, leelo de `paqueteResumen()` y no de `D.*` — un `D.costo_total` suelto deja el
+  número de 26/27 a la vista con otra campaña elegida. `CAMPANIA_ACTUAL` **no** se reemplaza.
 - **Importes = `Unidades/Dosis × Precio Unitario`**, en todo el dashboard. No usar las columnas de
   costo ya calculadas de la hoja: difieren por redondeos y tener dos costos conviviendo es peor.
 - **Solo OT Confirmadas** en cualquier importe.

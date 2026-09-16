@@ -213,6 +213,13 @@ const CAMPANIA_ACTUAL = '26/27';
 // asi el filtro nunca deja de mostrar una campania presente en consultaOT.
 const CAMPANIA_LABEL = {'25':'Zafriña25','26':'Zafriña26'};
 const CAMPANIA_ORDEN = ['25/26','26/27','25','26'];
+// Orden del filtro de Campaña del RESUMEN EJECUTIVO (y de la vista Avance Detallado, que comparte
+// su estado). Es una lista aparte de CAMPANIA_ORDEN a proposito: ese orden es el del modulo
+// Servicios y arranca en 25/26, mientras que el Resumen tiene que abrir siempre en la campania
+// vigente. Mismo criterio en todo lo demas — el value es la clave real de consultaOT y
+// CAMPANIA_LABEL solo cambia el texto visible; una campania que no figure acá se agrega al final,
+// asi el selector nunca deja de mostrar una campania presente en el dato.
+const RESUMEN_CAMPANIA_ORDEN = ['26/27','25/26','26','25'];
 // Marcador de "lote cancelado" en consultaCultivos: en vez de borrar la fila, el plan RTK carga
 // 0.01 ha para lotes que se dieron de baja (a pedido del usuario). Sin este marcador, esos lotes
 // aparecerían en "Lotes con Exceso de Superficie" con una diferencia enorme (toda ha ejecutada

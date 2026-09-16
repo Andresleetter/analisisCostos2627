@@ -18,9 +18,13 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra, recetas){
     total_ot,ot_conf,totalEnEjecucion,totalPendientes,costo_total} = construirBaseOT(raw);
 
   // ---- Dominios que solo dependen de la base ----
-  const {cultivos} = construirCultivos(OTS, RTK, RTK_TOT);
-  // Vista integrada solicitada; los indicadores de campaña conservan su base 26/27.
-  const avanceIntegrado = construirCultivos(OTS, RTK, RTK_TOT, rawTodasCampanias);
+  // Avance de campo de la campania vigente, con SUS propias OT y nada mas. Ya no se le pasa
+  // rawTodasCampanias: la siembra de Zafriña26 (campania '26') se integraba al avance de Maiz 26/27
+  // cuando el Resumen Ejecutivo no podia mostrar otra campania, y era la unica forma de verla. Desde
+  // que el Resumen tiene su propio selector, Zafriña26 tiene su propia vista y plegarla en 26/27
+  // hacia que el maiz figurara sembrado en una campania en la que todavia no se sembro: las dos
+  // unicas OT de siembra de maiz (1836 y 1837) son de campania '26', no hay ninguna de 26/27.
+  const {cultivos,avanceInconsistencias,siembraExcluidas} = construirCultivos(OTS, RTK, RTK_TOT);
   const {exceso,sinrtk,cancelados,exc_kpi} = construirControlHectareas(OTS, RTK);
   const {otsVisibles,otsAtrasadas,totalAtrasadas,TOLERANCIA_ATRASO_DIAS} = construirAlertas(OTS);
   const {operativas,oper_costo,oper_part} = construirOperativas(OTS, costo_total);
@@ -67,7 +71,20 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra, recetas){
     otsAtrasadas,totalAtrasadas,total_ot,ot_conf,costo_total,costo_total_consolidado,
     costo_por_campania,oper_costo,oper_part,TOLERANCIA_ATRASO_DIAS});
 
-  return {total_ot,ot_conf,ot_ejec:totalEnEjecucion,ot_pend:totalPendientes,costo_total,cultivos:avanceIntegrado.cultivos,operativas,oper_costo,oper_part,
+  // ---- Resumen Ejecutivo por campaña ----
+  // El Resumen Ejecutivo y la vista Avance Detallado tienen su propio selector de Campaña,
+  // independiente del resto del dashboard (ver construirResumenPorCampania en resumen.js). Se arma
+  // un paquete completo por cada campania de consultaOT para que cambiar el selector sea elegir uno
+  // ya calculado, sin releer el Excel ni recalcular en render.js.
+  // La campania vigente NO se recalcula: se le pasa lo que ya se armo arriba (cultivos, operativas,
+  // resumen), asi que no hay dos caminos posibles para los numeros de 26/27.
+  // Ningun otro modulo lee estos paquetes.
+  const resumen_campanias = construirResumenPorCampania(rawTodasCampanias, campanias_ot, RTK, RTK_TOT,
+    servicios_campanias,
+    {campania:CAMPANIA_ACTUAL, total_ot, ot_conf, costo_total,
+     cultivos, operativas, oper_costo, oper_part, resumen});
+
+  return {total_ot,ot_conf,ot_ejec:totalEnEjecucion,ot_pend:totalPendientes,costo_total,cultivos,operativas,oper_costo,oper_part,
     exceso,sinrtk,cancelados,exc_kpi,alertas:otsVisibles,n_ot_atrasadas:totalAtrasadas,
     auditoria_items,auditoria_metros,auditoria_puentes,auditoria_puentes_horas,auditoria_gastos,
     auditoria_siembra,
@@ -75,7 +92,9 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra, recetas){
     labores,estadios_labor,contratistas_labor,cultivos_labor,
     // Solo para el filtro de Campaña del modulo Servicios (ver render.js: serviciosActivos()).
     campanias_ot,servicios_campanias,campania_actual:CAMPANIA_ACTUAL,
-    // Costo ejecutado consolidado de todas las campanias + su desglose (KPI del Resumen Ejecutivo).
+    // Costo ejecutado consolidado de todas las campanias + su desglose. Ya NO alimenta el KPI
+    // "Costo Ejecutado" del Resumen Ejecutivo (que ahora muestra el de la campania seleccionada):
+    // se conserva calculado y expuesto para cualquier consumidor que necesite el total.
     costo_total_consolidado,costo_por_campania,
     combustible,combustible_litros_total,combustible_n_total,combustible_meses,combustible_terceros,
     combustible_ingresos,combustible_ingresos_litros_total,combustible_ingresos_n_total,
@@ -96,11 +115,15 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra, recetas){
     insumos_excluidos:insumosExcluidosRaw||[],
     // OT de trabajo por hectareas (avance del Resumen Ejecutivo) sin Has. Reales válido — quedan
     // fuera del cálculo de avance; se conservan acá solo para trazabilidad/depuración.
-    avance_inconsistencias:avanceIntegrado.avanceInconsistencias,
+    avance_inconsistencias:avanceInconsistencias,
     // OT del estadio Siembra que no acreditan avance de siembra (tratamiento de semillas). Solo
     // para trazabilidad: ningun render las lee, y sus costos siguen contando en el resto.
-    siembra_excluidas:avanceIntegrado.siembraExcluidas,
+    siembra_excluidas:siembraExcluidas,
     resumen,
+    // Paquetes del Resumen Ejecutivo por campaña (selector propio de esa pestaña y de la vista
+    // Avance Detallado). `resumen` de arriba sigue siendo el de CAMPANIA_ACTUAL y es exactamente el
+    // mismo objeto que resumen_campanias[CAMPANIA_ACTUAL].resumen.
+    resumen_campanias,
     fecha_datos:HOY};
 }
 

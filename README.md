@@ -120,6 +120,31 @@ Y sumar sus OT al avance de la campaña vigente **no movería el número**. De l
 
 ## Resumen Ejecutivo
 
+### Filtro de Campaña (exclusivo de este módulo)
+
+Arriba de los KPIs hay un selector de **Campaña** que controla **todo** el Resumen Ejecutivo y la vista **Avance Detallado** que cuelga de él: KPIs, costos, Detalle de Etapas por Cultivo, Estado de las OT, Actividad Mensual, Gastos Operativos y Posibles Problemas. Abre siempre en `26/27` y no recuerda la última elección entre cargas.
+
+**No es un filtro global.** Servicios (que tiene su propio selector de campaña), Combustible, Insumos, Control de Hectáreas, Alertas Operativas y Auditoría **no reaccionan** a este selector: siguen leyendo `D.exceso` / `D.alertas` / `D.gastos` / etc., recortados a `CAMPANIA_ACTUAL`. Verificado con el arnés: de las 69 claves de `buildData()` la única que cambió al introducir el filtro es `resumen` (por el KPI de costo, ver abajo), y se agregó `resumen_campanias`.
+
+Los dos selectores —el del Resumen y el del Avance Detallado— comparten un único estado, `campaniaResumenActiva` (`render.js`): cambiar cualquiera mueve el otro y vuelve a dibujar las dos vistas.
+
+**Cómo está armado.** `construirResumenPorCampania()` (`js/data/resumen.js`) arma un paquete completo por cada campaña de `consultaOT`, con el mismo patrón que `construirServiciosPorCampania`: la campaña vigente **no se recalcula** —se le pasa lo que `buildData()` ya armó— y las demás se derivan con las **mismas** funciones (`normalizarFilasOT` → `agruparOTS` → `construirCultivos`/`construirOperativas`/`construirControlHectareas`/`construirAlertas`/`construirResumen`). Cambiar el selector es elegir un paquete ya calculado: no se relee el Excel ni se recalcula nada en `render.js`.
+
+El paquete incluye su **propio** Control de Hectáreas y sus **propias** alertas porque las reglas de Posibles Problemas los necesitan; los que consumen esos módulos (`D.exceso`, `D.alertas`) quedan intactos. Ojo con la distinción: *Posibles Problemas* del Resumen sí cambia con la campaña, *Alertas Operativas* (módulo propio) no.
+
+**El KPI "Costo Ejecutado" cambió de definición.** Antes era `costo_total_consolidado` (la suma de **todas** las campañas de `consultaOT`); ahora es el costo de las OT confirmadas **de la campaña seleccionada**, la misma que produce OT Confirmadas y OT Atrasadas. Con el selector en 25/26 el número anterior habría seguido siendo el de todas juntas. En 26/27 eso baja el KPI de **US$ 1.243.408,33 a US$ 1.196.253,29**; `costo_total_consolidado` y `costo_por_campania` se siguen calculando y exponiendo en `D` para quien los necesite.
+
+**`consultaCultivos` es el padrón físico común.** Sus 277 filas son todas 26/27 (verificado contra el dato), así que el mismo objeto `RTK`/`RTK_TOT` se reutiliza para todas las campañas — no se copia ni se duplica superficie: las hectáreas planificadas por cultivo son idénticas en las cuatro campañas y el total sigue siendo 4.671,25 ha.
+
+**Consecuencia real para campañas anteriores:** los lotes que trabajó 25/26 **no existen** en el padrón 26/27 (SORGO usó 113B, 113C y 111; ARROZ solo "SECADERO ARROZ"), así que su avance da 0 % aunque tenga OT y costo. No es un error de cálculo: es el tope contra el plan del lote aplicado sobre un lote sin plan. El propio dashboard lo explica — con 25/26 seleccionado aparece el problema *"OT sin correspondencia en el plan RTK: 64 OT"*. Para mostrar un avance histórico real haría falta el padrón RTK de esa campaña, que el Excel hoy no trae.
+
+**La siembra de Zafriña26 ya no se pliega a Maíz 26/27.** Esa integración se agregó cuando el Resumen Ejecutivo solo podía mostrar 26/27 y era la única forma de ver esa siembra. Con el selector de campaña dejó de corresponder: hacía que el maíz figurara sembrado al 26,3 % en una campaña en la que **todavía no se sembró** — las dos únicas OT de siembra de maíz (1836 y 1837) son de campaña `26`, no hay ninguna de 26/27. Ahora cada campaña se calcula con sus propias OT y ninguna hereda ni presta OT a otra.
+
+Efecto: MAIZ 26/27 pasa a mostrar Preparación de Suelo 100 % y Cuidados 100 %, sin etapa Siembra ("Sin actividad registrada en OT confirmadas"). El avance a nivel cultivo no cambia (sale del estadio más avanzado, Cuidados). ARROZ, SORGO y SOJA quedan idénticos.
+
+Esa siembra sigue visible en la campaña Zafriña26 con sus OT, fechas y costos, pero con **0 ha de avance**: sus lotes (.23C, .23D) no están en el plan RTK de MAIZ (69, 70, 71A, 72A, 73A, SECADERO, PARCELA), así que el tope contra el plan del lote los deja en cero. El mecanismo de plegado sigue en `construirCultivos` (parámetro `rawTodasCampanias`, hoy sin ningún llamador que lo use) por si la regla vuelve a pedirse.
+
+
 Vista gerencial: `D.resumen` (`js/data/resumen.js`, calculado una sola vez dentro de `buildData()`) alimenta todos los componentes; `render.js` solo pinta, no recalcula.
 
 **El tratamiento de semillas no cuenta como avance de siembra.** El avance por etapa sale del campo `Estadio` de la OT, pero dentro de `Estadio = "Siembra"` se cargan trabajos que no son sembrar: hoy, tratamiento de semillas (se hace **antes** de sembrar y **sobre la semilla**, no sobre el lote). Verificado contra el dato real: en la campaña 26/27 ese estadio contiene *únicamente* "Tratamiento de semillas" (7 OT) y "Tratamiento de semilla arroz tractor x Hs" (1 OT), así que todo el avance de siembra que se mostraba venía de ahí — ARROZ figuraba con Siembra al 4,9% (188,48 ha) sin haber sembrado nada.
