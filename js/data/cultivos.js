@@ -278,10 +278,14 @@ function construirCultivos(OTS, RTK, RTK_TOT, rawTodasCampanias=[]){
         claves.forEach(lk=>{
           const d=labores[lk];
           const valor=d.planCompartidoZafrina ? d.ejecutadasReales : Math.min(d.ejecutadasReales,d.planificadas);
-          if(!porLabor[lk]) porLabor[lk]={clave:lk,nombres:new Set(),peso:0,ha_ejec:0,ots:[]};
+          if(!porLabor[lk]) porLabor[lk]={clave:lk,nombres:new Set(),peso:0,ha_ejec:0,ha_computada:0,
+            lotes:new Set(),divisores:new Set(),ots:[]};
           const a=porLabor[lk];
           a.peso+=valor/n;                  // el mismo sumando que promedia equivalenteLoteEstadio
           a.ha_ejec+=d.ejecutadasReales;    // superficie cruda: la que cierra con el detalle de OT
+          a.ha_computada+=valor;            // ya capada al plan del lote, ANTES de promediar
+          a.lotes.add(l);
+          a.divisores.add(n);               // cuantas labores promedia cada lote (el divisor)
           d.nombres.forEach(x=>a.nombres.add(x));
           d.ots.forEach(o=>a.ots.push(o));
         });
@@ -301,7 +305,19 @@ function construirCultivos(OTS, RTK, RTK_TOT, rawTodasCampanias=[]){
         nombres:a.nombres,
         aporte_pct:decimas ? decimas[i]/10 : null,   // puntos del % del estadio que pone esta labor
         aporte_ha:centesimas[i]/100,                 // las ha de e.ha_ejec que pone esta labor
-        ha_ejec:Math.round(a.ha_ejec*100)/100,       // ha trabajadas, sin capar ni promediar
+        // Los tres pasos de la cuenta, para que el aporte se pueda seguir a mano:
+        //   ha_ejec      ha trabajadas segun las OT, sin capar ni promediar (cierra con el detalle)
+        //   -> tope contra el plan de cada lote
+        //   ha_computada ha que entran al promedio del lote
+        //   -> dividido por la cantidad de labores de ese lote (lotes / divisores)
+        //   aporte_ha    lo que esta labor pone en el total del estadio
+        ha_ejec:Math.round(a.ha_ejec*100)/100,
+        ha_computada:Math.round(a.ha_computada*100)/100,
+        n_lotes:a.lotes.size,
+        // Divisores distintos que aplicaron: un solo valor = todos sus lotes promedian esa misma
+        // cantidad de labores y el paso se puede mostrar como una division exacta. Varios valores =
+        // la labor toca lotes con distinta cantidad de labores y no hay un divisor unico.
+        divisores:[...a.divisores].sort((x,y)=>x-y),
         n_ot:a.ots.length,
         costo:a.ots.reduce((s,o)=>s+o.imp,0),
         ots:otsDeLabor(a.ots),

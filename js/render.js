@@ -307,8 +307,31 @@ function avTablaOTs(ots){
     `</tbody></table></div>`;
 }
 
+// Cuántas labores promedia el lote — el divisor del último paso. Una labor puede tocar lotes con
+// distinta cantidad de labores, así que el modelo guarda todos los divisores que aplicaron: uno
+// solo se puede mostrar como una división exacta, varios se muestran como rango.
+function avDivisorTxt(divisores){
+  if(!divisores || !divisores.length) return '';
+  if(divisores.length===1) return divisores[0]===1
+    ? 'única labor del lote, no se promedia'
+    : 'promediada entre las '+divisores[0]+' labores del lote';
+  return 'promediada entre '+divisores[0]+' y '+divisores[divisores.length-1]+' labores según el lote';
+}
+
+// Los tres pasos de la cuenta, a la vista: hectáreas trabajadas → capadas al plan de su lote →
+// promediadas con las demás labores de ese lote. Sin este renglón solo se veía la primera y la
+// última cifra, y el salto entre las dos no se podía seguir a mano.
+function avCadenaHa(l){
+  const recorte = Math.round((l.ha_ejec-l.ha_computada)*100)/100;
+  const paso2 = recorte>0
+    ? `<b>${fmt2(l.ha_computada)}</b> ha tras el tope del lote <span class="av-recorte" title="Superficie que excede el plan RTK de su lote y por eso no acredita avance">(−${fmt2(recorte)})</span>`
+    : `<b>${fmt2(l.ha_computada)}</b> ha tras el tope del lote <span class="ip-sin" title="Ninguna de sus hectáreas excede el plan de su lote">(sin recorte)</span>`;
+  return `<div class="av-lab-cadena">${fmt2(l.ha_ejec)} ha ejecutadas → ${paso2}`+
+    ` → <b>${fmt2(l.aporte_ha)}</b> ha de aporte <span class="ip-sin">· ${escHtml(avDivisorTxt(l.divisores))}</span></div>`;
+}
+
 // Fila de una labor (resumen plegado + detalle desplegado). `clave` identifica el desplegable.
-function avFilaLabor(clave, nombre, nombres, etiquetaAporte, meta, ots){
+function avFilaLabor(clave, nombre, nombres, etiquetaAporte, meta, ots, cadena){
   const abierta = avLaborAbierta===clave;
   const alias = nombres.length>1
     ? ` <span class="ip-sin" title="El modelo trata estos nombres como una misma labor (LABORES_EQUIVALENTES)">· unifica ${nombres.map(escHtml).join(' + ')}</span>`
@@ -318,6 +341,7 @@ function avFilaLabor(clave, nombre, nombres, etiquetaAporte, meta, ots){
       `<div class="av-lab-nom"><span class="ip-caret">${abierta?'▾':'▸'}</span>${escHtml(nombre)}${alias}</div>`+
       `<div class="av-lab-ap">${etiquetaAporte}</div>`+
       `<div class="av-lab-meta">${meta}</div>`+
+      (cadena||'')+
     `</div>`+
     (abierta?`<div class="av-lab-det">${avTablaOTs(ots)}</div>`:'')+
   `</div>`;
@@ -346,11 +370,10 @@ function renderAvanceDetalladoCultivo(){
     const labores = e.labores.length ? e.labores.map(l=>avFilaLabor(
       nomEtapa+'|'+l.clave, l.nombre, l.nombres,
       `Aporte <b class="c-${col}">${l.aporte_pct==null?'—':fmt1(l.aporte_pct)+'%'}</b>`,
-      // Dos superficies distintas y por eso las dos rotuladas: "ejecutadas" es la suma cruda de las
-      // OT del desplegable, y "aporta" es lo que de esa superficie entra en el avance después del
-      // tope contra el plan del lote y del promedio entre labores del lote. Ver cultivos.js.
-      `<b>${l.n_ot}</b> OT · <b>${fmt2(l.ha_ejec)}</b> ha ejecutadas · aporta <b>${fmt2(l.aporte_ha)}</b> ha · <b>US$ ${fmtUSD(l.costo)}</b>`,
-      l.ots)).join('')
+      // El qué y el cuánto quedan en esta línea; el cómo se llega del trabajo real al aporte va en
+      // el renglón de abajo (avCadenaHa), porque son tres cifras encadenadas y no tres datos sueltos.
+      `<b>${l.n_ot}</b> OT · <b>${l.n_lotes}</b> lote(s) · <b>US$ ${fmtUSD(l.costo)}</b>`,
+      l.ots, avCadenaHa(l))).join('')
       : '<div class="av-est-vacio">Ninguna labor acredita superficie en esta etapa.</div>';
     // La suma de los aportes se muestra al lado del % de la etapa: es la comprobación de que el
     // desglose explica ese número y no otro. Coincide siempre — el reparto se hace sobre el total ya
