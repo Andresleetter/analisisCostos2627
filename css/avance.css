@@ -1,0 +1,57 @@
+/* Vista "Avance Detallado por Cultivo" — desglose del avance del Resumen Ejecutivo en sus labores.
+   Reutiliza los tokens de base.css y las clases .panel / .bar / .bar-fill / .scroll / .ip-caret /
+   .ip-sin / .prob-link que ya usa el resto del dashboard; acá solo vive lo propio de esta vista. */
+
+/* Cabecera: "Volver" a la izquierda y el selector de Cultivo a la derecha. En móvil se apilan y el
+   botón de volver queda arriba, siempre visible sin scroll horizontal. */
+.av-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.av-volver{font-size:11.5px}
+.av-filtro{margin-bottom:0}
+
+/* El subtítulo de este panel es largo (explica de dónde sale el %) y .panel h3 es un flex sin wrap:
+   sin esto se desbordaba del panel en escritorio y estrujaba el título a una columna en móvil. */
+.av-panel h3{flex-wrap:wrap;gap:2px 12px;align-items:baseline}
+.av-panel h3 span{flex:1 1 240px;min-width:0;text-align:right;line-height:1.35}
+
+.av-est{border:1px solid var(--line);border-radius:var(--radius-md);padding:13px 14px;background:#fcfdfb;margin-bottom:12px}
+.av-est-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:7px}
+.av-est-nom{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.3px;color:var(--ink)}
+.av-est-val{font-size:16px;font-weight:800;white-space:nowrap}
+.av-est-ha{font-size:10.5px;font-weight:700;color:var(--muted)}
+.av-est-bar{margin-bottom:11px}
+.av-est-vacio{font-size:11px;color:var(--muted);font-style:italic}
+
+/* Fila de labor: nombre + aporte arriba, métricas debajo. Toda la fila abre/cierra el detalle. */
+.av-labor{border-top:1px solid var(--line);cursor:pointer}
+.av-labor:first-child{border-top:0}
+.av-labor:hover .av-lab-head{background:#f2f6ef}
+.av-labor.open .av-lab-head{background:#eef4ea}
+.av-lab-head{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;padding:7px 8px;border-radius:7px}
+.av-lab-nom{font-size:11.5px;font-weight:700;color:var(--ink);min-width:0;overflow-wrap:anywhere}
+/* "Aporte" se rotula siempre: el número son los puntos que esta labor pone en el total del estadio,
+   no el avance independiente de la labor. Sin el rótulo se lee como lo segundo. */
+.av-lab-ap{font-size:11.5px;color:var(--muted);white-space:nowrap;text-align:right}
+.av-lab-ap b{font-size:13px;font-weight:800}
+.av-lab-meta{grid-column:1/-1;font-size:10.5px;color:var(--muted)}
+.av-lab-meta b{color:var(--ink);font-weight:700}
+.av-lab-det{padding:2px 0 10px}
+.av-lab-det table{font-size:10.5px}
+
+/* Total de aportes: la comprobación a la vista de que el desglose explica el % del estadio. */
+.av-total{border-top:1px dashed var(--line);margin-top:6px;padding-top:7px;font-size:10.5px;color:var(--muted);text-align:right}
+.av-total b{color:var(--teal);font-weight:800}
+
+/* Labores confirmadas que no acreditan superficie (horas, tratamiento de semillas, sin Has.
+   Reales). Van aparte y atenuadas: no suman al porcentaje y no deben confundirse con las que sí. */
+.av-sinap{margin-top:10px;border-top:1px solid var(--line);padding-top:9px}
+.av-sinap-tit{font-size:9.5px;text-transform:uppercase;letter-spacing:.3px;color:var(--muted);font-weight:700;margin-bottom:5px}
+.av-sinap .av-lab-nom{font-weight:600;color:var(--muted)}
+.av-sinap .av-lab-ap{font-size:10.5px}
+.av-motivo{font-style:italic}
+
+@media(max-width:620px){
+  .av-head{flex-direction:column;align-items:stretch}
+  .av-lab-head{grid-template-columns:minmax(0,1fr)}
+  .av-lab-ap{text-align:left}
+  .av-est-head{flex-direction:column;align-items:flex-start;gap:2px}
+}
