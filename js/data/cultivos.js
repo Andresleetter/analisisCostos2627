@@ -2,6 +2,58 @@
 // Todo lo que compara la ejecucion contra el plan RTK de consultaCultivos: el plan en si, el
 // avance de campo por cultivo y etapa (Resumen Ejecutivo) y el Control de Hectareas.
 
+// Clave con que se agrupan las labores del avance. Normaliza el texto del servicio (para que
+// mayusculas/tildes/espacios no dupliquen el grupo) y ademas lo resuelve por LABORES_EQUIVALENTES
+// (config.js): dos nombres distintos que son la misma labor entran al MISMO grupo. Es la unica
+// definicion de "labor" del avance — la usan tanto el calculo como su desglose.
+function claveLaborAvance(serv){
+  const k = normHdr(serv) || '(sin labor)';
+  return LABORES_EQUIVALENTES[k] || k;
+}
+
+// Las OT que componen una labor del desglose, en la forma que necesita su desplegable. Son las OT
+// YA agrupadas por agruparOTS() (ordenes.js), asi que una OT con tres lineas de insumo y una de
+// labor entra UNA sola vez. Ningun valor se recalcula: la superficie es haTrabajada(o) — la misma
+// que usa el avance y el Trabajo Ejecutado de Servicios — y el costo es o.imp, el importe total de
+// la OT (Labor Propia + Labor Tercero + Insumos) tal cual lo dejo el modelo.
+// La unidad sale de la modalidad de la OT con el mismo criterio que unidadTrabajo en servicios.js:
+// las labores que aportan avance son todas de modalidad hectareas, pero las que no aportan se
+// muestran en su propia unidad (horas, kilos, trabajos) y nunca convertidas a hectareas.
+const UNIDAD_TRABAJO_MODALIDAD={horas:'hrs',peso:'kg',camion_grua:'trabajos'};
+// Por que una OT confirmada de una etapa del ciclo no acredita superficie. Son los descartes que el
+// calculo del avance ya hacia, nombrados para poder mostrarlos.
+const MOTIVO_SIN_APORTE={horas:'Trabajo medido en horas',peso:'Trabajo medido en peso',
+  camion_grua:'Camión + grúa'};
+function otsDeLabor(ots){
+  const filas=ots.map(o=>{
+    const unidad=UNIDAD_TRABAJO_MODALIDAD[o.modalidad]||'ha';
+    const cant=unidad==='hrs'?o.horas:(unidad==='kg'?o.kg:(unidad==='trabajos'?o.trabajos:haTrabajada(o)));
+    // El lote va normalizado (normLote) porque es la MISMA clave con la que el avance agrupo esa
+    // OT: en el .xlsx el mismo lote aparece como "200" y como ".34E", y mostrarlo crudo haria que
+    // la OT pareciera de otro lote que el que se capo contra el plan.
+    return {ot:o.ot, fr:o.fr, lote:normLote(o.lote), cant, unidad, costo:o.imp};
+  });
+  // Mismo orden que el desplegable de Servicios: fecha ascendente y, a igual fecha, numero de OT.
+  return ordenarOTsServicio(filas);
+}
+
+// Reparte `totalUnidades` (un entero: decimas de punto porcentual o centesimas de hectarea) entre
+// las partes, en proporcion a sus pesos y con redondeo de mayor resto. La suma de las partes
+// redondeadas da EXACTAMENTE el total. Hace falta porque el desglose tiene que explicar el numero
+// que dice explicar: cuatro labores redondeadas cada una por su cuenta pueden sumar 89,9% contra un
+// estadio que muestra 90,0%, y esa diferencia de representacion se lee como un error de negocio.
+function repartirMayorResto(pesos, totalUnidades){
+  const n = pesos.length;
+  if(!n) return [];
+  const suma = pesos.reduce((a,b)=>a+b,0);
+  const crudos = pesos.map(p => suma>0 ? p/suma*totalUnidades : totalUnidades/n);
+  const base = crudos.map(x=>Math.floor(x));
+  let resto = totalUnidades - base.reduce((a,b)=>a+b,0);
+  const orden = crudos.map((x,i)=>({i,frac:x-Math.floor(x)})).sort((a,b)=>(b.frac-a.frac)||(a.i-b.i));
+  for(let j=0; resto>0 && j<n*2; j++, resto--) base[orden[j%n].i]++;
+  return base;
+}
+
 // Construye el plan RTK (hectareas planificadas por cultivo y lote) desde consultaCultivos.
 function construirPlanRTK(proyecciones){
   // ---- PLAN RTK desde consultaCultivos ----
@@ -108,8 +160,17 @@ function construirCultivos(OTS, RTK, RTK_TOT, rawTodasCampanias=[]){
     // no son sembrar (tratamiento de semillas). Se aplica aca, sobre confOT, para que valga a la vez
     // para los lotes que cuentan como iniciados (etMap) y para las hectareas (porLoteEstadioLabor):
     // si no, un lote con la semilla tratada figuraba con la etapa Siembra empezada.
-    const confOT = sub.filter(o=>o.estado==='Confirmado' && ETAPA_ORDEN.includes(normEstadio(o.estadio))
-      && esAvanceDeSiembraValido(o));
+    const confEtapa = sub.filter(o=>o.estado==='Confirmado' && ETAPA_ORDEN.includes(normEstadio(o.estadio)));
+    const confOT = confEtapa.filter(o=>esAvanceDeSiembraValido(o));
+    // OT confirmadas de un estadio del ciclo que NO acreditan superficie, con el motivo por el que
+    // quedaron afuera. No es una regla nueva ni un filtro nuevo: son exactamente los mismos descartes
+    // que el calculo del avance ya hacia (tratamiento de semillas, modalidad distinta de hectareas,
+    // sin Has. Reales), que hasta ahora se perdian en silencio. Solo alimentan el desglose del
+    // Avance Detallado, donde figuran aparte y con aporte 0 — nunca entran en ninguna suma.
+    const sinAporte=[];
+    const conAporte=new Set(confOT);
+    confEtapa.forEach(o=>{ if(!conAporte.has(o))
+      sinAporte.push({o,motivo:'Tratamiento de semillas: no acredita siembra'}); });
     const etMap={};
     confOT.forEach(o=>{
       const key=normEstadio(o.estadio);
@@ -121,21 +182,25 @@ function construirCultivos(OTS, RTK, RTK_TOT, rawTodasCampanias=[]){
     // Confirmadas, de un estadio reconocido y de modalidad "hectareas" (ver modalidadLaborOT).
     const porLoteEstadioLabor={};
     confOT.forEach(o=>{
-      if(o.modalidad!=='hectareas') return; // por horas u otra unidad: no aporta ha al avance
-      if(o.ha==null){ avanceInconsistencias.push({ot:o.ot,cultivo:c,lote:o.lote,estadio:o.estadio,motivo:'OT por hectareas sin Has. Reales'}); return; }
+      if(o.modalidad!=='hectareas'){ // por horas u otra unidad: no aporta ha al avance
+        sinAporte.push({o,motivo:MOTIVO_SIN_APORTE[o.modalidad]||'Sin línea de labor identificable'}); return; }
+      if(o.ha==null){ avanceInconsistencias.push({ot:o.ot,cultivo:c,lote:o.lote,estadio:o.estadio,motivo:'OT por hectareas sin Has. Reales'});
+        sinAporte.push({o,motivo:'OT por hectáreas sin Has. Reales'}); return; }
       const lote=normLote(o.lote), estadio=normEstadio(o.estadio);
       // La labor se normaliza y ademas se resuelve por LABORES_EQUIVALENTES (config.js): dos
       // nombres distintos que son la misma labor entran al MISMO grupo y por lo tanto se suman
       // entre si. Sin eso, la siembra con implemento y la siembra sin implemento del mismo lote
       // quedaban como dos labores y se promediaban — que es lo correcto para Disco 1 + Disco 2
       // (dos pasadas sobre la misma superficie) pero no para dos PEDAZOS del mismo lote.
-      let laborKey=normHdr(o.serv)||'(sin labor)';
-      if(LABORES_EQUIVALENTES[laborKey]) laborKey=LABORES_EQUIVALENTES[laborKey];
+      const laborKey=claveLaborAvance(o.serv);
       const planificadas=(RTK[c]&&RTK[c][lote])||0;
       if(!porLoteEstadioLabor[lote]) porLoteEstadioLabor[lote]={};
       if(!porLoteEstadioLabor[lote][estadio]) porLoteEstadioLabor[lote][estadio]={};
       const est=porLoteEstadioLabor[lote][estadio];
-      if(!est[laborKey]) est[laborKey]={planificadas,ejecutadasReales:0,planCompartidoZafrina:!!o.planCompartidoZafrina};
+      // `nombres` y `ots` son trazabilidad para el desglose (Avance Detallado) y no participan de
+      // ningun calculo: equivalenteLoteEstadio solo mira ejecutadasReales/planificadas.
+      if(!est[laborKey]) est[laborKey]={planificadas,ejecutadasReales:0,planCompartidoZafrina:!!o.planCompartidoZafrina,
+        nombres:new Set(),ots:[]};
       // Superficie ejecutada = ha_trab (la dosis de la linea de labor), no o.ha (Has. Reales):
       // en una OT que trabajo solo parte de la parcela, Has. Reales reporta la parcela ENTERA y
       // el avance quedaba sobreestimado — OT 4781, lote 203: Has. Reales 85,75 contra 1,77 de
@@ -143,6 +208,8 @@ function construirCultivos(OTS, RTK, RTK_TOT, rawTodasCampanias=[]){
       // El guardia de arriba sigue mirando o.ha: ha_trab cae a Has. Reales cuando la OT no tiene
       // linea de labor, asi que si o.ha es null, ha_trab tambien lo es.
       est[laborKey].ejecutadasReales+=haTrabajada(o);
+      est[laborKey].nombres.add(String(o.serv||'').trim()||'(sin labor)');
+      est[laborKey].ots.push(o);
     });
     // ---- Actividades "PARCELA <cultivo>" ----
     // NO aportan al avance de ninguna etapa. Son trabajos operativos sobre la parcela, aparte del
@@ -166,6 +233,83 @@ function construirCultivos(OTS, RTK, RTK_TOT, rawTodasCampanias=[]){
       const valores=Object.values(labores).map(l=>l.planCompartidoZafrina ? l.ejecutadasReales : Math.min(l.ejecutadasReales,l.planificadas));
       return valores.reduce((a,b)=>a+b,0)/valores.length;
     }
+
+    // ---- Desglose del avance de un estadio en sus labores (vista "Avance Detallado") ----
+    // NO es un segundo calculo de avance: es la MISMA cuenta de arriba, leida termino a termino.
+    // equivalenteLoteEstadio promedia las labores de cada lote, asi que el total del estadio es
+    //   ha_ejec(estadio) = Σ_lotes  Σ_labores  min(ejecutadas, plan del lote) / n_labores(lote)
+    // y cada labor ya tiene ahi su propio sumando, min(...)/n_labores. Agrupando esos sumandos por
+    // labor a traves de los lotes sale cuanto aporta cada una, sin ninguna ponderacion inventada y
+    // con la garantia de que la suma de los aportes ES el total del estadio, por construccion.
+    // Lo que NO vive en la labor son los dos ajustes finales del estadio (el tope de Zafriña y el
+    // redondeo a 2 decimales): se trasladan al desglose repartiendo el total ya ajustado en
+    // proporcion a los sumandos, de modo que Σ aportes cierre exacto contra lo que muestra la
+    // pantalla. El costo no interviene en nada de esto: el aporte es solo ejecucion fisica.
+    function desglosarEstadio(k, lotes, ha_e, av_e){
+      const porLabor={};
+      lotes.forEach(l=>{
+        const labores=(porLoteEstadioLabor[l]&&porLoteEstadioLabor[l][k])||null;
+        if(!labores) return;
+        const claves=Object.keys(labores), n=claves.length;
+        claves.forEach(lk=>{
+          const d=labores[lk];
+          const valor=d.planCompartidoZafrina ? d.ejecutadasReales : Math.min(d.ejecutadasReales,d.planificadas);
+          if(!porLabor[lk]) porLabor[lk]={clave:lk,nombres:new Set(),peso:0,ha_ejec:0,ots:[]};
+          const a=porLabor[lk];
+          a.peso+=valor/n;                  // el mismo sumando que promedia equivalenteLoteEstadio
+          a.ha_ejec+=d.ejecutadasReales;    // superficie cruda: la que cierra con el detalle de OT
+          d.nombres.forEach(x=>a.nombres.add(x));
+          d.ots.forEach(o=>a.ots.push(o));
+        });
+      });
+      // Orden estable, independiente del orden de las filas del Excel: primero la labor que mas
+      // aporta al estadio y, a igual aporte, alfabetico.
+      const arr=Object.values(porLabor).map(a=>({...a,nombres:[...a.nombres].sort((x,y)=>x.localeCompare(y,'es'))}))
+        .sort((a,b)=>(b.peso-a.peso)||a.nombres[0].localeCompare(b.nombres[0],'es'));
+      const pesos=arr.map(a=>a.peso);
+      const centesimas=repartirMayorResto(pesos, Math.round(ha_e*100));
+      const decimas=av_e==null ? null : repartirMayorResto(pesos, Math.round(av_e*10));
+      return arr.map((a,i)=>({
+        clave:a.clave,
+        nombre:a.nombres[0],
+        // Mas de un nombre = la labor la unifico LABORES_EQUIVALENTES; se conservan todos para poder
+        // mostrar de donde salio el grupo.
+        nombres:a.nombres,
+        aporte_pct:decimas ? decimas[i]/10 : null,   // puntos del % del estadio que pone esta labor
+        aporte_ha:centesimas[i]/100,                 // las ha de e.ha_ejec que pone esta labor
+        ha_ejec:Math.round(a.ha_ejec*100)/100,       // ha trabajadas, sin capar ni promediar
+        n_ot:a.ots.length,
+        costo:a.ots.reduce((s,o)=>s+o.imp,0),
+        ots:otsDeLabor(a.ots),
+      }));
+    }
+    // Labores del estadio que NO acreditan superficie, agrupadas con la MISMA clave que las que si
+    // aportan (una labor con una parte por hectareas y otra por horas cae en las dos listas, cada
+    // OT en la que le corresponde y sin duplicarse). Aporte 0 por definicion, nunca se suman.
+    // Solo se arma para los estadios que estan en `etapas`, que son los mismos que muestra el
+    // Resumen Ejecutivo. Un estadio cuya UNICA actividad confirmada no acreditara nada (por ejemplo
+    // solo tratamiento de semillas) no aparece en ninguna de las dos vistas; hoy no ocurre — las 47
+    // OT de tratamiento de semillas son de ARROZ, que ademas tiene siembra real.
+    function sinAporteEstadio(k){
+      const porLabor={};
+      sinAporte.filter(x=>normEstadio(x.o.estadio)===k).forEach(x=>{
+        const lk=claveLaborAvance(x.o.serv);
+        if(!porLabor[lk]) porLabor[lk]={clave:lk,nombres:new Set(),motivos:new Set(),ots:[]};
+        const a=porLabor[lk];
+        a.nombres.add(String(x.o.serv||'').trim()||'(sin labor)');
+        a.motivos.add(x.motivo);
+        a.ots.push(x.o);
+      });
+      return Object.values(porLabor).map(a=>({
+        clave:a.clave,
+        nombre:[...a.nombres].sort((x,y)=>x.localeCompare(y,'es'))[0],
+        nombres:[...a.nombres].sort((x,y)=>x.localeCompare(y,'es')),
+        motivos:[...a.motivos].sort((x,y)=>x.localeCompare(y,'es')),
+        n_ot:a.ots.length,
+        costo:a.ots.reduce((s,o)=>s+o.imp,0),
+        ots:otsDeLabor(a.ots),
+      })).sort((a,b)=>(b.n_ot-a.n_ot)||a.nombre.localeCompare(b.nombre,'es'));
+    }
     const etapas=ETAPA_ORDEN.filter(k=>etMap[k]).map(k=>{
       const e=etMap[k];
       const incluyeZafrina=confOT.some(o=>o.planCompartidoZafrina && normEstadio(o.estadio)===k && o.modalidad==='hectareas' && o.ha!=null);
@@ -179,8 +323,13 @@ function construirCultivos(OTS, RTK, RTK_TOT, rawTodasCampanias=[]){
       // "ha_plan" se repite tal cual (mismo valor que el cultivo): el plan RTK no tiene desglose
       // por estadio, así que la referencia planificada es siempre la meta de toda la campaña.
       const subEtapa = sub.filter(o=>normEstadio(o.estadio)===k);
+      // "labores" es la descomposicion de ESTE mismo avance (ver desglosarEstadio): la suma de sus
+      // aportes da ha_ejec y avance, no una segunda cuenta. "labores_sin_aporte" son las labores
+      // confirmadas del estadio que no acreditan superficie, para que ninguna OT desaparezca sin
+      // explicacion. Las dos son solo trazabilidad: ningun indicador existente las lee.
       return {nombre:e.nombre, ha_ejec:ha_e, avance:av_e, n_lotes:e.lotes.size, ha_plan, incluyeZafrina,
-        otConfirmadas: subEtapa.filter(o=>o.estado==='Confirmado').length, otTotales: subEtapa.length};
+        otConfirmadas: subEtapa.filter(o=>o.estado==='Confirmado').length, otTotales: subEtapa.length,
+        labores: desglosarEstadio(k, e.lotes, ha_e, av_e), labores_sin_aporte: sinAporteEstadio(k)};
     });
     const etapa_actual = etapas.length? etapas[etapas.length-1].nombre : null;
     // ha_ejec/avance a nivel cultivo = los del estadio actual (el mas avanzado de la secuencia

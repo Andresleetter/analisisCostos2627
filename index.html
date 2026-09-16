@@ -12,6 +12,7 @@
 <link rel="stylesheet" href="css/panel.css">
 <link rel="stylesheet" href="css/kpis.css">
 <link rel="stylesheet" href="css/cultivos.css">
+<link rel="stylesheet" href="css/avance.css">
 <link rel="stylesheet" href="css/problemas.css">
 <link rel="stylesheet" href="css/resumen.css">
 <link rel="stylesheet" href="css/mapa.css">
@@ -69,7 +70,12 @@
          aparte (ver README.md). No hay markup fijo acá para la imagen: se pierde cada vez que
          render.js reescribe #cults, por eso el listener de events.js está delegado sobre #cults
          (elemento estable), no atado directo a la imagen. -->
-    <div class="panel"><h3>Detalle de Etapas por Cultivo</h3>
+    <div class="panel"><h3>Detalle de Etapas por Cultivo
+      <!-- Única puerta de entrada a la vista "Avance Detallado" (más abajo): esa vista explica de
+           dónde sale el porcentaje de cada etapa de este mismo bloque, así que el acceso va acá y no
+           como una pestaña más del menú. Reutiliza .prob-link, el mismo botón-píldora de "Ver
+           detalle" de Posibles Problemas. -->
+      <button type="button" class="prob-link" id="ver-avance-detallado">Ver desglose detallado →</button></h3>
       <div class="cults" id="cults"></div></div>
 
     <!-- 3. Ejecución operacional -->
@@ -319,6 +325,23 @@
           <th>Diagnóstico</th>
         </tr></thead><tbody id="sb-filas"></tbody></table></div></div>
     </div>
+  </section>
+
+  <!-- VISTA DE DETALLE: Avance Detallado por Cultivo. Es una .page más (así la muestra y la oculta
+       el mismo mecanismo que a los módulos), pero NO tiene botón .tab propio: se entra con "Ver
+       desglose detallado" desde el Resumen Ejecutivo y se sale con "Volver al Resumen Ejecutivo".
+       Va ÚLTIMA a propósito: events.js indexa las .tab contra las .page por posición, así que una
+       .page intercalada correría los índices de todos los módulos que vienen después.
+       Un solo Cultivo a la vez, elegido en el selector — no hay una vista por cultivo. -->
+  <section class="page" id="page-avance-detallado">
+    <div class="av-head">
+      <button type="button" class="prob-link av-volver" id="av-volver">← Volver al Resumen Ejecutivo</button>
+      <div class="gfilter av-filtro">
+        <label for="avcultivo">Cultivo</label>
+        <select id="avcultivo"></select>
+      </div>
+    </div>
+    <div id="av-cuerpo"></div>
   </section>
 
   <footer class="foot" id="foot"></footer>

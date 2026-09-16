@@ -31,6 +31,11 @@ function renderAll(){
   // Problemas) — a pedido del usuario, no se movió al reforzar su contenido.
   renderResumenKPIs();
   renderCultivoDetalle();
+  // Vista "Avance Detallado" (se entra desde el bloque de arriba, ver index.html): se puebla su
+  // selector de Cultivo y se deja dibujada con la carga nueva. Es una .page oculta hasta que el
+  // usuario entre; dibujarla acá evita que quede con el cultivo/los datos de la carga anterior.
+  poblarFiltroAvanceDetallado();
+  renderAvanceDetalladoCultivo();
   renderEstadosOT();
   renderActividadMensual();
   renderGastosOperativos();
@@ -262,6 +267,133 @@ function renderCultivoDetalle(){
       <div class="cc-ha">
         <div><span>${c.incluyeZafrina?'Plan 26/27 · incluye Zafriña26':'Ha planificadas'}</span><b>${plan}</b></div>
       </div></div>`;}).join('') + mapaCard;
+}
+
+// ================== AVANCE DETALLADO POR CULTIVO ==================
+// Explica de dónde sale el porcentaje que muestra "Detalle de Etapas por Cultivo": para cada etapa,
+// cuánto pone cada labor y con qué OT. NO calcula nada — el desglose ya viene armado en
+// c.etapas[].labores (desglosarEstadio, js/data/cultivos.js), donde la suma de los aportes es el
+// avance de la etapa por construcción. Acá no se lee consultaOT ni se recalcula ninguna hectárea.
+//
+// La labor abierta se guarda en una variable de módulo (no en el DOM) porque el cuerpo se redibuja
+// entero en cada clic — mismo patrón que ipParcelaAbierta / combUsoAbierto / servFilaAbierta. La
+// clave es "estadio|labor" para que dos etapas con la misma labor no se abran juntas. Una sola a la
+// vez: abrir otra cierra la anterior, y cambiar de cultivo las cierra todas.
+let avLaborAbierta = null;
+
+// Opciones del selector de Cultivo: salen de D.cultivos (el MISMO modelo que el Resumen Ejecutivo),
+// en el orden de negocio de CULTIVOS (config.js: ARROZ, SOJA, SORGO, MAIZ) y con cualquier otro
+// cultivo que llegara a aparecer en el dato al final, alfabético. Nunca se inventa un cultivo.
+function poblarFiltroAvanceDetallado(){
+  const sel=document.getElementById('avcultivo'), previo=sel.value;
+  const nombres=D.cultivos.map(c=>c.nombre);
+  const orden=CULTIVOS.filter(n=>nombres.includes(n))
+    .concat(nombres.filter(n=>!CULTIVOS.includes(n)).sort((a,b)=>a.localeCompare(b,'es')));
+  sel.innerHTML=orden.map(n=>`<option value="${escAttr(n)}">${escHtml(n)}</option>`).join('');
+  sel.value=orden.indexOf(previo)>-1?previo:(orden[0]||'');
+}
+
+// Tabla de OT de una labor: exactamente las cinco columnas del pedido. Cultivo, Estadio y Labor no
+// se repiten acá porque ya los fijan el selector y el bloque desde el que se abrió.
+function avTablaOTs(ots){
+  const guion='<span class="ip-sin">—</span>';
+  return `<div class="scroll"><table><thead><tr><th>OT</th><th>Fecha</th><th>Lote</th>`+
+    `<th class="tr">Trabajo Ejecutado</th><th class="tr">Costo Total</th></tr></thead><tbody>`+
+    ots.map(o=>`<tr><td class="dl mono"><b>OT ${escHtml(o.ot)}</b></td>`+
+      `<td>${o.fr?ipFecha(o.fr):guion}</td>`+
+      `<td class="mono">${escHtml(o.lote)||guion}</td>`+
+      `<td class="tr mono">${o.cant==null?guion:fmtCantidadUnidad(o.cant,o.unidad)}</td>`+
+      `<td class="tr mono col-tot">US$ ${fmtUSD(o.costo)}</td></tr>`).join('')+
+    `</tbody></table></div>`;
+}
+
+// Fila de una labor (resumen plegado + detalle desplegado). `clave` identifica el desplegable.
+function avFilaLabor(clave, nombre, nombres, etiquetaAporte, meta, ots){
+  const abierta = avLaborAbierta===clave;
+  const alias = nombres.length>1
+    ? ` <span class="ip-sin" title="El modelo trata estos nombres como una misma labor (LABORES_EQUIVALENTES)">· unifica ${nombres.map(escHtml).join(' + ')}</span>`
+    : '';
+  return `<div class="av-labor${abierta?' open':''}" data-labor="${encodeURIComponent(clave)}">`+
+    `<div class="av-lab-head">`+
+      `<div class="av-lab-nom"><span class="ip-caret">${abierta?'▾':'▸'}</span>${escHtml(nombre)}${alias}</div>`+
+      `<div class="av-lab-ap">${etiquetaAporte}</div>`+
+      `<div class="av-lab-meta">${meta}</div>`+
+    `</div>`+
+    (abierta?`<div class="av-lab-det">${avTablaOTs(ots)}</div>`:'')+
+  `</div>`;
+}
+
+function renderAvanceDetalladoCultivo(){
+  const cont=document.getElementById('av-cuerpo');
+  const nombre=document.getElementById('avcultivo').value;
+  const c=D.cultivos.find(x=>x.nombre===nombre);
+  if(!c){ cont.innerHTML='<div class="panel"><div class="av-est-vacio">Sin datos para el cultivo seleccionado.</div></div>'; return; }
+  const porEtapa={}; c.etapas.forEach(e=>{ porEtapa[e.nombre]=e; });
+  // Se recorren SIEMPRE las cuatro etapas del ciclo, en el orden agronómico de ETAPA_ORDEN, para que
+  // el cultivo se lea completo; las que no tienen actividad confirmada se muestran como tales. Las
+  // que sí la tienen usan el objeto etapa tal cual: mismo % y mismas ha que el Resumen Ejecutivo.
+  const etapas=ETAPA_ORDEN.map(k=>({nombre:ETAPA_LABEL[k], e:porEtapa[ETAPA_LABEL[k]]||null}));
+  const plan=c.tiene_rtk?fmt2(c.ha_plan)+' ha planificadas':'sin plan RTK';
+  const sub=c.incluyeZafrina?plan+' · plan 26/27, incluye Zafriña26':plan;
+
+  const bloques=etapas.map(({nombre:nomEtapa,e})=>{
+    if(!e) return `<div class="av-est"><div class="av-est-head"><div class="av-est-nom">${escHtml(nomEtapa)}</div>`+
+      `<div class="av-est-val c-gris">—</div></div>`+
+      `<div class="av-est-vacio">Sin actividad registrada en OT confirmadas.</div></div>`;
+    const col = e.avance==null ? 'o' : color(e.avance);
+    const av = e.avance!=null ? fmt1(e.avance)+'%' : e.n_lotes+' lotes';
+    const w = e.avance!=null ? Math.min(e.avance,100) : 0;
+    const labores = e.labores.length ? e.labores.map(l=>avFilaLabor(
+      nomEtapa+'|'+l.clave, l.nombre, l.nombres,
+      `Aporte <b class="c-${col}">${l.aporte_pct==null?'—':fmt1(l.aporte_pct)+'%'}</b>`,
+      // Dos superficies distintas y por eso las dos rotuladas: "ejecutadas" es la suma cruda de las
+      // OT del desplegable, y "aporta" es lo que de esa superficie entra en el avance después del
+      // tope contra el plan del lote y del promedio entre labores del lote. Ver cultivos.js.
+      `<b>${l.n_ot}</b> OT · <b>${fmt2(l.ha_ejec)}</b> ha ejecutadas · aporta <b>${fmt2(l.aporte_ha)}</b> ha · <b>US$ ${fmtUSD(l.costo)}</b>`,
+      l.ots)).join('')
+      : '<div class="av-est-vacio">Ninguna labor acredita superficie en esta etapa.</div>';
+    // La suma de los aportes se muestra al lado del % de la etapa: es la comprobación de que el
+    // desglose explica ese número y no otro. Coincide siempre — el reparto se hace sobre el total ya
+    // redondeado de la etapa (repartirMayorResto, cultivos.js), no redondeando cada labor aparte.
+    const total = e.labores.length && e.avance!=null
+      ? `<div class="av-total">Total aportes: <b>${fmt1(e.labores.reduce((s,l)=>s+l.aporte_pct,0))}%</b> · ${fmt2(e.labores.reduce((s,l)=>s+l.aporte_ha,0))} ha</div>` : '';
+    const sinAp = e.labores_sin_aporte.length ? `<div class="av-sinap">`+
+      `<div class="av-sinap-tit">No aportan al avance · ${e.labores_sin_aporte.length} labor(es) · `+
+      `${e.labores_sin_aporte.reduce((s,l)=>s+l.n_ot,0)} OT · US$ ${fmtUSD(e.labores_sin_aporte.reduce((s,l)=>s+l.costo,0))}</div>`+
+      e.labores_sin_aporte.map(l=>avFilaLabor(
+        nomEtapa+'|sin|'+l.clave, l.nombre, l.nombres,
+        'Aporte <b>0%</b>',
+        `<b>${l.n_ot}</b> OT · <b>US$ ${fmtUSD(l.costo)}</b> · <span class="av-motivo">${l.motivos.map(escHtml).join(' · ')}</span>`,
+        l.ots)).join('')+`</div>` : '';
+    return `<div class="av-est">`+
+      `<div class="av-est-head"><div class="av-est-nom">${escHtml(nomEtapa)}</div>`+
+      `<div class="av-est-val c-${col}">${av} <span class="av-est-ha">· ${fmt2(e.ha_ejec)} ha de ${fmt2(e.ha_plan)}</span></div></div>`+
+      `<div class="bar av-est-bar"><div class="bar-fill f-${col}" style="width:${w}%"></div></div>`+
+      labores+total+sinAp+`</div>`;
+  }).join('');
+
+  cont.innerHTML=`<div class="panel av-panel"><h3>${escHtml(c.nombre)} · Avance Detallado por Etapa `+
+    `<span>${sub} · el % de cada etapa es el mismo del Resumen Ejecutivo, descompuesto en las labores que lo forman</span></h3>`+
+    bloques+`</div>`;
+}
+
+// Navegación de la vista de detalle. No usa show(): esa función marca activo un botón .tab y esta
+// vista no tiene pestaña propia. Mientras se la mira, la pestaña activa sigue siendo la del Resumen
+// Ejecutivo — que es de donde se entró y a donde devuelve "Volver".
+function abrirAvanceDetallado(cultivo){
+  avLaborAbierta=null;
+  const sel=document.getElementById('avcultivo');
+  if(cultivo && [...sel.options].some(o=>o.value===cultivo)) sel.value=cultivo;
+  renderAvanceDetalladoCultivo();
+  const destino=document.getElementById('page-avance-detallado');
+  document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p===destino));
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+// Vuelve al Resumen Ejecutivo reutilizando show() (índice 0), el mismo cambio de página que los
+// botones .tab: deja la pestaña marcada como corresponde y no toca ningún filtro de los módulos.
+function volverAResumen(){
+  const tabs=document.querySelectorAll('.tab');
+  show(0, tabs[0]);
 }
 
 // Estado del desplegable de "Trabajo de Puentes Propia + Cedrela": guarda el ESTADO abierto

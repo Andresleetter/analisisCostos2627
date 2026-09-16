@@ -41,7 +41,7 @@ assets estáticos), con `raw.githubusercontent.com` solo como respaldo. Ver READ
 | Archivo | Dominio |
 |---|---|
 | `ordenes.js` | Base de `consultaOT` — todo lo demás depende de sus colecciones |
-| `cultivos.js` | Plan RTK, avance por cultivo/etapa, Control de Hectáreas |
+| `cultivos.js` | Plan RTK, avance por cultivo/etapa, Control de Hectáreas — `desglosarEstadio()` descompone el avance de la etapa en el aporte de cada labor (vista Avance Detallado): es la misma cuenta de `equivalenteLoteEstadio` leída término a término, **no** una segunda fórmula |
 | `servicios.js` | Módulo Servicios y el paquete por campaña — `unidadTrabajo` elige entre ha / hrs / kg / ins / trabajos; `acumularGrupoServicio()` es la única suma de una fila y `filtrarServiciosPorCultivo()` la reusa para el filtro de Cultivo |
 | `combustible.js` | Gasoil — cruza cada movimiento con su OT (`referenciaOrigen` = `consultaOT.referencia`; `referenciaAsiento` quedó descartado por no ser único) y lo atribuye por niveles: OT vinculada / Solo contratista / OT no disponible / Labor Propia |
 | `insumos.js` | Módulo Insumos |
@@ -83,6 +83,11 @@ Están explicadas en el README; acá va el resumen de lo que es fácil romper si
 - **Tolerancia de 3 días** en las alertas de atraso.
 - Datos faltantes se muestran como guion gris, **nunca como 0** — un cero se lee como "se midió y
   dio cero".
+- **El desglose por labor del Avance Detallado tiene que sumar el % del estadio.** Si tocás
+  `desglosarEstadio()` o `repartirMayorResto()`, verificá que `Σ aportes == avance` en los cuatro
+  cultivos: el valor de la vista es explicar el número del Resumen Ejecutivo, y si deja de cerrar no
+  explica nada. El reparto se hace sobre el total ya redondeado de la etapa, no redondeando cada
+  labor por separado.
 - **Equivalencias de nombres (máquinas, contratistas, insumos): solo con confirmación explícita.**
   `COMBUSTIBLE_MAQUINAS` (`config.js`) unifica variantes de escritura relevadas contra el `.xlsx`, no
   alias deducidos. Unificar dos textos que *parecen* el mismo equipo ya salió mal una vez: se agrupó

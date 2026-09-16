@@ -77,6 +77,34 @@ document.addEventListener('DOMContentLoaded', function(){
     servFilaAbierta = (servFilaAbierta===clave) ? null : clave;
     renderLaborDetalle();
   });
+  // ---- Avance Detallado por Cultivo ----
+  // Entrada y salida de la vista. No es un módulo del menú: se entra desde "Detalle de Etapas por
+  // Cultivo" (Resumen Ejecutivo) y se vuelve al Resumen, que queda como pestaña activa mientras
+  // tanto. Los dos botones son markup fijo del HTML, así que van con listener directo.
+  document.getElementById('ver-avance-detallado').addEventListener('click', function(){
+    // Sin cultivo: abre con el primero disponible (ARROZ si existe, por el orden de CULTIVOS).
+    abrirAvanceDetallado();
+    cerrarMenuModulos();
+  });
+  document.getElementById('av-volver').addEventListener('click', volverAResumen);
+  // Cambiar de cultivo cierra cualquier labor abierta: el desplegable pertenece al cultivo que se
+  // estaba mirando, y dejarlo abierto mostraría otra labor con el mismo nombre en otro cultivo.
+  document.getElementById('avcultivo').addEventListener('change', function(){
+    avLaborAbierta = null;
+    renderAvanceDetalladoCultivo();
+  });
+  // Abrir/cerrar una labor. Delegado sobre #av-cuerpo (fijo en el HTML) porque el cuerpo se redibuja
+  // entero en cada clic — un solo listener para todas las labores de las cuatro etapas, y ninguno
+  // por OT. Una sola labor abierta a la vez. Los clics dentro del detalle ya desplegado (tabla de
+  // OT, scroll horizontal) no lo cierran.
+  document.getElementById('av-cuerpo').addEventListener('click', function(e){
+    if(e.target.closest('.av-lab-det')) return;
+    const fila = e.target.closest('.av-labor');
+    if(!fila) return;
+    const clave = decodeURIComponent(fila.dataset.labor);
+    avLaborAbierta = (avLaborAbierta===clave) ? null : clave;
+    renderAvanceDetalladoCultivo();
+  });
   document.getElementById('cmes').addEventListener('change', renderCombustible);
   document.getElementById('cterc').addEventListener('change', renderCombustible);
   // Máquina: mismo alcance que Mes y Tercero — filtra por movimiento y vuelve a dibujar la tabla
