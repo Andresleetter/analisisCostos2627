@@ -60,6 +60,20 @@
   <!-- TAB 1: Resumen Ejecutivo -->
   <section class="page active">
 
+    <!-- Filtro de Campaña del Resumen Ejecutivo. Es EXCLUSIVO de esta pestaña y de la vista
+         "Avance Detallado" que cuelga de ella (comparten el mismo estado, campaniaResumenActiva en
+         render.js): cambia TODO el contexto del Resumen — KPIs, costos, etapas por cultivo, gastos
+         operativos y posibles problemas — eligiendo un paquete ya calculado de D.resumen_campanias.
+         NO es un filtro global: Servicios (que tiene el suyo propio), Combustible, Insumos, Control
+         de Hectáreas, Alertas Operativas y Auditoría no reaccionan a este selector. Arranca siempre
+         en la campaña vigente, nunca recuerda la última elección.
+         No lleva .fnote: su texto cambiaría de largo con cada campaña y reacomodaría el select en
+         cada cambio (ver CLAUDE.md). El contexto de la campaña va en el pie de los KPIs. -->
+    <div class="gfilter">
+      <label for="rescampania">Campaña</label>
+      <select id="rescampania"></select>
+    </div>
+
     <!-- 1. Estado general de la campaña -->
     <div class="kpis kpis-exec" id="exec-kpis"></div>
 
@@ -336,7 +350,12 @@
   <section class="page" id="page-avance-detallado">
     <div class="av-head">
       <button type="button" class="prob-link av-volver" id="av-volver">← Volver al Resumen Ejecutivo</button>
+      <!-- Campaña comparte estado con el selector del Resumen Ejecutivo (campaniaResumenActiva):
+           cambiarla acá y volver deja el Resumen en esa misma campaña, y viceversa. Cultivo es
+           propio de esta vista. -->
       <div class="gfilter av-filtro">
+        <label for="avcampania">Campaña</label>
+        <select id="avcampania"></select>
         <label for="avcultivo">Cultivo</label>
         <select id="avcultivo"></select>
       </div>

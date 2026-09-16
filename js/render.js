@@ -29,17 +29,13 @@ function renderAll(){
   // README.md). "Gastos Operativos" ocupa la MISMA posición que tenía el viejo panel
   // "Distribución del Gasto: Áreas No Agrícolas" (después de Actividad Mensual, antes de Posibles
   // Problemas) — a pedido del usuario, no se movió al reforzar su contenido.
-  renderResumenKPIs();
-  renderCultivoDetalle();
-  // Vista "Avance Detallado" (se entra desde el bloque de arriba, ver index.html): se puebla su
-  // selector de Cultivo y se deja dibujada con la carga nueva. Es una .page oculta hasta que el
-  // usuario entre; dibujarla acá evita que quede con el cultivo/los datos de la carga anterior.
-  poblarFiltroAvanceDetallado();
-  renderAvanceDetalladoCultivo();
-  renderEstadosOT();
-  renderActividadMensual();
-  renderGastosOperativos();
-  renderProblemasResumen();
+  // Filtro de Campaña propio del Resumen: se puebla con las campañas presentes en el dato y se
+  // deja en la vigente. renderResumenModulo() dibuja los cinco bloques del Resumen MÁS la vista
+  // "Avance Detallado" (una .page oculta hasta que el usuario entre; dibujarla acá evita que quede
+  // con los datos de la carga anterior). Es la misma función que corre al cambiar de campaña, así
+  // que la carga inicial y el cambio de filtro no pueden desincronizarse.
+  poblarFiltrosCampaniaResumen();
+  renderResumenModulo();
   // TAB3 control ha
   document.getElementById('ha-kpis').innerHTML=
     `<div class="kpi"><div class="k-lab">Lotes con Exceso</div><div class="k-val c-r">${D.exc_kpi.n}</div><div class="k-foot">Superficie ejecutada &gt; planificada</div></div>`+
@@ -114,9 +110,65 @@ function renderAll(){
 }
 
 // ================== RESUMEN EJECUTIVO ==================
-// D.resumen.* ya viene calculado en buildData() (data.js) — acá solo se renderiza, sin recalcular
-// nada. Una función chica por bloque visual (KPIs, avance general, avance por cultivo, estado de
-// OT, actividad mensual, distribución del gasto, problemas), en el orden pedido por el usuario.
+// Todo lo que pinta esta pestaña ya viene calculado en buildData() (data.js) — acá solo se
+// renderiza, sin recalcular nada. Una función chica por bloque visual (KPIs, avance por cultivo,
+// estado de OT, actividad mensual, gastos operativos, problemas), en el orden pedido por el usuario.
+//
+// ---- Filtro de Campaña, EXCLUSIVO de este módulo ----
+// El Resumen Ejecutivo y la vista "Avance Detallado" comparten un único estado de campaña. No es
+// un filtro global: Servicios tiene el suyo propio, y Combustible, Insumos, Control de Hectáreas,
+// Alertas Operativas y Auditoría no lo miran — siguen leyendo D.exceso/D.alertas/D.gastos, que
+// están recortados a CAMPANIA_ACTUAL y no cambian nunca por este selector.
+// Arranca siempre en la campaña vigente: no se recuerda la última elección entre cargas.
+let campaniaResumenActiva = CAMPANIA_ACTUAL;
+// El paquete de la campaña activa (D.resumen_campanias, ver construirResumenPorCampania en
+// resumen.js). Es la ÚNICA puerta por la que el Resumen lee sus datos: si una campaña no tuviera
+// paquete se cae a la vigente en vez de romper el render.
+function paqueteResumen(){
+  return (D.resumen_campanias && D.resumen_campanias[campaniaResumenActiva])
+    || D.resumen_campanias[CAMPANIA_ACTUAL];
+}
+// Opciones de los dos selectores de Campaña (Resumen y Avance Detallado). Salen de las campañas
+// realmente presentes en consultaOT (D.campanias_ot), en el orden de RESUMEN_CAMPANIA_ORDEN y con
+// las que no figuren ahí al final. El value es SIEMPRE la clave real del dato ('26/27', '26');
+// CAMPANIA_LABEL solo cambia el texto visible, igual criterio que Servicios y Auditoría.
+function poblarFiltrosCampaniaResumen(){
+  const disp=(D.campanias_ot||[]).filter(c=>D.resumen_campanias && D.resumen_campanias[c]);
+  const orden=[...RESUMEN_CAMPANIA_ORDEN.filter(c=>disp.includes(c)),
+    ...disp.filter(c=>!RESUMEN_CAMPANIA_ORDEN.includes(c))];
+  if(orden.indexOf(campaniaResumenActiva)<0) campaniaResumenActiva = orden[0] || CAMPANIA_ACTUAL;
+  const html=orden.map(c=>`<option value="${escAttr(c)}">${escHtml(CAMPANIA_LABEL[c]||c)}</option>`).join('');
+  ['rescampania','avcampania'].forEach(id=>{
+    const sel=document.getElementById(id);
+    sel.innerHTML=html;
+    sel.value=campaniaResumenActiva;
+  });
+}
+// Cambio de campaña. Vuelve a dibujar SOLO el Resumen Ejecutivo y el Avance Detallado; no dispara
+// ningún render de Servicios, Combustible, Insumos, Auditoría ni Alertas.
+function cambiarCampaniaResumen(valor){
+  if(!D.resumen_campanias || !D.resumen_campanias[valor]) return;
+  campaniaResumenActiva = valor;
+  document.getElementById('rescampania').value = valor;
+  document.getElementById('avcampania').value = valor;
+  // La labor abierta pertenece a la campaña que se estaba mirando: con otra campaña esa misma
+  // labor tiene otras OT, así que se pliega todo, igual que al cambiar de cultivo.
+  avLaborAbierta = null;
+  renderResumenModulo();
+}
+// Re-dibuja el módulo completo: los cinco bloques del Resumen Ejecutivo más la vista de detalle.
+// El selector de Cultivo del Avance Detallado se repuebla porque los cultivos con datos pueden
+// cambiar de una campaña a otra.
+function renderResumenModulo(){
+  renderResumenKPIs();
+  renderCultivoDetalle();
+  renderEstadosOT();
+  renderActividadMensual();
+  renderGastosOperativos();
+  renderProblemasResumen();
+  poblarFiltroAvanceDetallado();
+  renderAvanceDetalladoCultivo();
+}
 
 function kpiCard(lab,val,foot,col){
   return `<div class="kpi kpi-acc kpi-${col}"><div class="k-lab">${lab}</div><div class="k-val">${val}</div><div class="k-foot">${foot}</div></div>`;
@@ -127,23 +179,28 @@ function kpiCard(lab,val,foot,col){
 // del usuario — esa información vive ahora en "Detalle de Etapas por Cultivo" (por cultivo y por
 // estadio, ver renderCultivoDetalle()), no como un total general de campaña.
 function renderResumenKPIs(){
-  const k=D.resumen.kpis;
+  const P=paqueteResumen(), k=P.resumen.kpis;
   const atrasCol = k.otAtrasadas>0 ? (k.otAtrasadas>10?'r':'o') : 'g';
+  // La campaña se nombra en el pie de cada KPI, no al lado del selector: así el rótulo puede
+  // cambiar de largo sin reacomodar los controles (ver CLAUDE.md, trampas de layout).
+  const camp=CAMPANIA_LABEL[campaniaResumenActiva]||campaniaResumenActiva;
   document.getElementById('exec-kpis').innerHTML=[
-    kpiCard('OT Confirmadas', k.otConfirmadas, 'de '+D.total_ot+' totales', 'g'),
+    kpiCard('OT Confirmadas', k.otConfirmadas, 'de '+P.total_ot+' totales · campaña '+escHtml(camp), 'g'),
     kpiCard('OT Atrasadas', k.otAtrasadas, 'Pendiente/En Ejecución vencidas', atrasCol),
-    // Consolida todas las campañas de consultaOT (ver costo_total_consolidado en data.js).
-    kpiCard('Costo Ejecutado', 'US$ '+fmtUSD(k.costoEjecutado), 'Solo OT confirmadas', 'gris'),
+    // Solo las OT confirmadas de la campaña seleccionada. El consolidado de todas las campañas
+    // (D.costo_total_consolidado) se sigue calculando pero ya no alimenta este KPI: mezclaba
+    // campañas dentro de una vista que representa una sola.
+    kpiCard('Costo Ejecutado', 'US$ '+fmtUSD(k.costoEjecutado), 'Solo OT confirmadas · campaña '+escHtml(camp), 'gris'),
   ].join('');
 }
 
 // ---- 2. Ejecución operacional: estado de las OT (barra apilada + leyenda), categorías reales
-// (ver D.resumen.estadosOT en data.js — "Otros" solo aparece si hay algún estado real distinto de
+// (ver resumen.estadosOT del paquete de campaña — "Otros" solo aparece si hay algún estado real distinto de
 // los 3 conocidos, con el detalle de cuáles). ----
 function renderEstadosOT(){
-  const list=D.resumen.estadosOT;
+  const P=paqueteResumen(), list=P.resumen.estadosOT;
   const cont=document.getElementById('resumen-estados-ot');
-  document.getElementById('resumen-ot-sub').textContent=D.total_ot+' OT totales';
+  document.getElementById('resumen-ot-sub').textContent=P.total_ot+' OT totales';
   if(!list.length){ cont.innerHTML='<div class="resumen-empty">Sin OT registradas.</div>'; return; }
   const ESTADO_COL={'Confirmado':'g','En Ejecución':'y','Pendiente':'o','Otros':'gris'};
   const bar=list.map(e=>`<div class="estbar-seg f-${ESTADO_COL[e.estado]||'gris'}" style="width:${e.pct}%" title="${e.estado}: ${e.n} (${e.pct}%)"></div>`).join('');
@@ -153,7 +210,7 @@ function renderEstadosOT(){
 
 // ---- 3b. Ejecución operacional: actividad por mes (OT confirmadas, Fecha Real) ----
 function renderActividadMensual(){
-  const list=D.resumen.actividadMensual;
+  const list=paqueteResumen().resumen.actividadMensual;
   const cont=document.getElementById('resumen-actividad-mensual');
   if(!list.length){ cont.innerHTML='<div class="resumen-empty">Sin fechas válidas para graficar actividad mensual.</div>'; return; }
   const max=Math.max(1,...list.map(m=>m.otConfirmadas));
@@ -166,13 +223,13 @@ function renderActividadMensual(){
 
 // ---- 4. Gastos Operativos: tarjeta con el total + una fila por categoría (nombre, barra,
 // importe, %, OT y botón "Ver detalle" — sin tabla aparte, para no repetir la misma información
-// dos veces). Reutiliza D.operativas/D.oper_costo/D.oper_part tal cual vienen calculados en
+// dos veces). Reutiliza operativas/oper_costo/oper_part del paquete de campaña, tal cual vienen calculados en
 // data.js (única fuente de verdad) — acá solo se renderiza, nunca se recalcula un importe.
 // `o.partOperativo` (% sobre el TOTAL OPERATIVO) es la base pedida para esta sección, distinta de
 // `o.part` (% sobre el costo total de toda la campaña, que no se usa acá). El detalle expandible
 // de cada categoría cuelga debajo de su propia fila (.opex-detail), nunca en un panel separado. ----
 function renderGastosOperativos(){
-  const list=D.operativas, total=D.oper_costo;
+  const P=paqueteResumen(), list=P.operativas, total=P.oper_costo;
   const totalCont=document.getElementById('opex-total');
   const rowsCont=document.getElementById('opex-rows');
   const subCont=document.getElementById('opex-sub');
@@ -184,8 +241,11 @@ function renderGastosOperativos(){
     rowsCont.innerHTML='<div class="resumen-empty">Sin gastos operativos registrados</div>';
     return;
   }
-  subCont.textContent=list.length+' categoría(s) · '+fmt1(D.oper_part)+'% del costo ejecutado de la campaña · ordenado por importe';
-  totalCont.innerHTML=`<div class="ot-lab">Total Gastos Operativos</div><div class="ot-val">US$ ${fmtUSD(total)}</div><div class="ot-foot">US$ ${fmtUSD(D.costo_total)} de costo total ejecutado en la campaña</div>`;
+  subCont.textContent=list.length+' categoría(s) · '+fmt1(P.oper_part)+'% del costo ejecutado de la campaña · ordenado por importe';
+  // El costo de referencia es el de la campaña seleccionada (P.costo_total), no D.costo_total: ese
+  // es siempre el de CAMPANIA_ACTUAL y dejaba el pie mostrando el total de 26/27 con el selector en
+  // otra campaña, junto a un porcentaje que sí era de la campaña elegida.
+  totalCont.innerHTML=`<div class="ot-lab">Total Gastos Operativos</div><div class="ot-val">US$ ${fmtUSD(total)}</div><div class="ot-foot">US$ ${fmtUSD(P.costo_total)} de costo total ejecutado en la campaña</div>`;
   const max=Math.max(1,...list.map(o=>o.costo));
   rowsCont.innerHTML=list.map(o=>{
     const detalleHtml = o.detalle.length ? o.detalle.map(d=>
@@ -209,7 +269,7 @@ function renderGastosOperativos(){
 // en data.js). "Ver detalle" usa data-tab + delegación de evento en events.js (reutiliza show(),
 // nunca onclick inline). Sin problemas => estado positivo explícito, nunca la sección vacía. ----
 function renderProblemasResumen(){
-  const list=D.resumen.problemas;
+  const list=paqueteResumen().resumen.problemas;
   document.getElementById('prob-n').textContent=list.length;
   document.getElementById('b-prob').textContent=list.length;
   const cont=document.getElementById('probs');
@@ -240,7 +300,7 @@ function renderCultivoDetalle(){
     <div class="cc-name">Mapa de Siembra</div>
     <img id="mapa-siembra-img" class="mapa-siembra-thumb" src="img/mapa_siembra_2627.jpeg"
       alt="Mapa de siembra de la Campaña 26/27" tabindex="0" role="button" aria-label="Ampliar mapa de siembra"></div>`;
-  document.getElementById('cults').innerHTML=D.cultivos.map(c=>{
+  document.getElementById('cults').innerHTML=paqueteResumen().cultivos.map(c=>{
     const plan=c.tiene_rtk?fmt2(c.ha_plan)+' ha':'s/ RTK';
     // Cada etapa muestra su avance y, al lado, las hectáreas ejecutadas de ESA etapa. Las ha salen
     // de e.ha_ejec — la ejecución equivalente que ya calcula data.js (equivalenteLoteEstadio: cada
@@ -281,12 +341,12 @@ function renderCultivoDetalle(){
 // vez: abrir otra cierra la anterior, y cambiar de cultivo las cierra todas.
 let avLaborAbierta = null;
 
-// Opciones del selector de Cultivo: salen de D.cultivos (el MISMO modelo que el Resumen Ejecutivo),
+// Opciones del selector de Cultivo: salen de los cultivos de la campaña activa (el MISMO modelo que el Resumen Ejecutivo),
 // en el orden de negocio de CULTIVOS (config.js: ARROZ, SOJA, SORGO, MAIZ) y con cualquier otro
 // cultivo que llegara a aparecer en el dato al final, alfabético. Nunca se inventa un cultivo.
 function poblarFiltroAvanceDetallado(){
   const sel=document.getElementById('avcultivo'), previo=sel.value;
-  const nombres=D.cultivos.map(c=>c.nombre);
+  const nombres=paqueteResumen().cultivos.map(c=>c.nombre);
   const orden=CULTIVOS.filter(n=>nombres.includes(n))
     .concat(nombres.filter(n=>!CULTIVOS.includes(n)).sort((a,b)=>a.localeCompare(b,'es')));
   sel.innerHTML=orden.map(n=>`<option value="${escAttr(n)}">${escHtml(n)}</option>`).join('');
@@ -376,7 +436,7 @@ function avFilaLabor(clave, nombre, nombres, etiquetaAporte, meta, ots, cadena, 
 function renderAvanceDetalladoCultivo(){
   const cont=document.getElementById('av-cuerpo');
   const nombre=document.getElementById('avcultivo').value;
-  const c=D.cultivos.find(x=>x.nombre===nombre);
+  const c=paqueteResumen().cultivos.find(x=>x.nombre===nombre);
   if(!c){ cont.innerHTML='<div class="panel"><div class="av-est-vacio">Sin datos para el cultivo seleccionado.</div></div>'; return; }
   const porEtapa={}; c.etapas.forEach(e=>{ porEtapa[e.nombre]=e; });
   // Se recorren SIEMPRE las cuatro etapas del ciclo, en el orden agronómico de ETAPA_ORDEN, para que

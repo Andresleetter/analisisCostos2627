@@ -77,6 +77,17 @@ document.addEventListener('DOMContentLoaded', function(){
     servFilaAbierta = (servFilaAbierta===clave) ? null : clave;
     renderLaborDetalle();
   });
+  // ---- Filtro de Campaña del Resumen Ejecutivo ----
+  // Los dos selectores (el del Resumen y el de la vista Avance Detallado) comparten un único
+  // estado, campaniaResumenActiva, así que cambiar cualquiera de los dos mueve el otro y vuelve a
+  // dibujar las dos vistas. Este cambio NO dispara ningún render de Servicios, Combustible,
+  // Insumos, Auditoría ni Alertas: esos módulos tienen su propio filtro o no dependen de campaña.
+  ['rescampania','avcampania'].forEach(function(id){
+    document.getElementById(id).addEventListener('change', function(){
+      cambiarCampaniaResumen(this.value);
+    });
+  });
+
   // ---- Avance Detallado por Cultivo ----
   // Entrada y salida de la vista. No es un módulo del menú: se entra desde "Detalle de Etapas por
   // Cultivo" (Resumen Ejecutivo) y se vuelve al Resumen, que queda como pestaña activa mientras

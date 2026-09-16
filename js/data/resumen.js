@@ -215,12 +215,14 @@ function construirResumen(ctx){
     // Gasto: Áreas No Agrícolas").
     kpis:{
       otAtrasadas:totalAtrasadas, otConfirmadas:ot_conf,
-      // Costo Ejecutado = consolidado de TODAS las campanias de consultaOT (ver
-      // costo_total_consolidado), no solo la vigente. Misma definicion de siempre (importe de las OT
-      // confirmadas), ampliada al resto de las campanias. Es el unico KPI de esta fila que sale de
-      // la consolidacion: otConfirmadas/otAtrasadas siguen siendo de CAMPANIA_ACTUAL, igual que
-      // antes, porque el pedido fue ampliar solo los costos de labores.
-      costoEjecutado:costo_total_consolidado,
+      // Costo Ejecutado = importe de las OT confirmadas DE ESTA campania, la misma que produjo
+      // otConfirmadas y otAtrasadas. Antes salia de costo_total_consolidado (la suma de todas las
+      // campanias de consultaOT), pero desde que el Resumen Ejecutivo tiene su propio selector de
+      // Campaña ese numero mezclaba campanias dentro de una vista que representa una sola: con el
+      // selector en 25/26 el costo seguia siendo el de todas juntas. costo_total_consolidado y
+      // costo_por_campania se siguen calculando y exponiendo en D para quien los necesite; este KPI
+      // ya no los usa. costoPorCampania queda acá como contexto del desglose, sin sumarse.
+      costoEjecutado:costo_total,
       costoPorCampania:costo_por_campania,
     },
     estadosOT:resumen_estadosOT,
@@ -228,4 +230,55 @@ function construirResumen(ctx){
     problemas:RP,
   };
   return resumen;
+}
+
+// ================== RESUMEN EJECUTIVO POR CAMPAÑA ==================
+// El Resumen Ejecutivo (y la vista Avance Detallado que cuelga de el) tienen su propio selector de
+// Campaña, independiente del resto del dashboard. Aca se arma UN paquete completo por cada campania
+// presente en consultaOT, con todo lo que esas dos vistas leen, para que cambiar el selector sea
+// elegir un paquete ya calculado y no recalcular nada en render.js.
+//
+// Mismo patron que construirServiciosPorCampania (servicios.js): la campania vigente NO se
+// recalcula — se le pasa el paquete que buildData() ya armo con las colecciones de siempre, asi que
+// 26/27 da exactamente los mismos numeros que antes. Las demas campanias se derivan con las MISMAS
+// funciones (normalizarFilasOT -> agruparOTS -> construirCultivos/construirOperativas/...), nunca
+// con una segunda implementacion en paralelo.
+//
+// Alcance: estos paquetes los leen SOLO el Resumen Ejecutivo y el Avance Detallado. Servicios,
+// Combustible, Insumos, Control de Hectareas, Alertas Operativas y Auditoria siguen consumiendo
+// D.exceso / D.alertas / D.gastos / etc., recortados a CAMPANIA_ACTUAL, sin ninguna modificacion.
+// Por eso el paquete incluye su PROPIO control de hectareas y sus PROPIAS alertas: los necesitan las
+// reglas de Posibles Problemas, y calcularlos aca evita tocar los que consumen esos modulos.
+function construirPaqueteResumen(campania, OTS, RTK, RTK_TOT, SERV){
+  const CONF = OTS.filter(o=>o.estado==='Confirmado');
+  const total_ot = OTS.length, ot_conf = CONF.length;
+  const costo_total = CONF.reduce((s,o)=>s+o.imp,0);
+  // Padron fisico comun: consultaCultivos trae un solo juego de lotes (verificado contra el dato,
+  // sus 277 filas son todas 26/27) y se reutiliza tal cual para todas las campanias. No se duplica
+  // superficie: es el MISMO objeto RTK/RTK_TOT que ya construyo buildData(), no una copia por
+  // campania. Una campania sin OT sobre un lote simplemente da 0 ha ejecutadas ahi.
+  const {cultivos} = construirCultivos(OTS, RTK, RTK_TOT);
+  const {exceso,sinrtk,exc_kpi} = construirControlHectareas(OTS, RTK);
+  const {otsAtrasadas,totalAtrasadas,TOLERANCIA_ATRASO_DIAS} = construirAlertas(OTS);
+  const {operativas,oper_costo,oper_part} = construirOperativas(OTS, costo_total);
+  const resumen = construirResumen({OTS,CONF,cultivos,operativas,gastos:SERV?SERV.gastos:[],
+    exceso,sinrtk,exc_kpi,otsAtrasadas,totalAtrasadas,total_ot,ot_conf,costo_total,
+    oper_costo,oper_part,TOLERANCIA_ATRASO_DIAS});
+  return {campania,total_ot,ot_conf,costo_total,cultivos,operativas,oper_costo,oper_part,resumen};
+}
+
+// Un paquete por campania. `vigente` es el de CAMPANIA_ACTUAL, ya armado por buildData() con las
+// colecciones de siempre — se reusa tal cual, no se recalcula.
+function construirResumenPorCampania(rawTodasCampanias, campanias_ot, RTK, RTK_TOT,
+    servicios_campanias, vigente){
+  const resumen_campanias = {};
+  resumen_campanias[CAMPANIA_ACTUAL] = vigente;
+  campanias_ot.forEach(c=>{
+    if(c===CAMPANIA_ACTUAL) return;
+    const OTS_c = agruparOTS(normalizarFilasOT(rawTodasCampanias.filter(row=>campaniaDeFila(row)===c)));
+    // Cada campania se calcula con SUS propias OT y nada mas. Ninguna hereda ni presta OT a otra:
+    // la siembra de Zafriña26 se ve en Zafriña26 y no en 26/27 (ver data.js).
+    resumen_campanias[c] = construirPaqueteResumen(c, OTS_c, RTK, RTK_TOT, servicios_campanias[c]);
+  });
+  return resumen_campanias;
 }

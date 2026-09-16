@@ -134,9 +134,19 @@ function construirPlanRTK(proyecciones){
 // el avance deja de lado (OT sin Has. Reales validas, y trabajos del estadio Siembra que no son
 // sembrar) — se exponen en D pero ningun render las lee.
 function construirCultivos(OTS, RTK, RTK_TOT, rawTodasCampanias=[]){
-  // La siembra de Zafriña26 se integra al avance de Maíz, a pedido del usuario.
-  // Comparte el plan de Maíz 26/27: la separación de zafra es solo operativa.
-  // No amplía las OT de costos, alertas ni Control de Hectáreas.
+  // ---- Integracion de la siembra de Zafriña26 al avance de Maiz ----
+  // HOY NADIE LA ACTIVA: ningun llamador pasa rawTodasCampanias, asi que filasZafrina queda vacio y
+  // este bloque no hace nada. Se conserva el mecanismo (y `planCompartidoZafrina`, que lo acompaña
+  // mas abajo) porque la regla puede volver a pedirse, pero por defecto NO se aplica.
+  //
+  // Por que se desactivo: se agrego cuando el Resumen Ejecutivo solo podia mostrar 26/27 y era la
+  // unica forma de ver esa siembra. Desde que el Resumen tiene su propio selector de Campaña,
+  // Zafriña26 tiene su propia vista, y plegarla en 26/27 hacia que el maiz figurara sembrado al
+  // 26,3% en una campania en la que todavia no se sembro: las dos unicas OT de siembra de maiz
+  // (1836 y 1837) son de campania '26'. Ver data.js.
+  //
+  // Cuando estaba activa: compartia el plan de Maiz 26/27 (la separacion de zafra es solo
+  // operativa) y no ampliaba las OT de costos, alertas ni Control de Hectareas.
   const filasZafrina = rawTodasCampanias.filter(r=>campaniaDeFila(r)==='26' &&
     ['maiz','maiz zafrina'].includes(normHdr(r.actividad)) && normEstadio(r.estadio)==='siembra');
   const otsZafrina = agruparOTS(normalizarFilasOT(filasZafrina)).map(o=>({...o,
