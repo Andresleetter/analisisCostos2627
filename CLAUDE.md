@@ -77,6 +77,12 @@ Están explicadas en el README; acá va el resumen de lo que es fácil romper si
 - **Importes = `Unidades/Dosis × Precio Unitario`**, en todo el dashboard. No usar las columnas de
   costo ya calculadas de la hoja: difieren por redondeos y tener dos costos conviviendo es peor.
 - **Solo OT Confirmadas** en cualquier importe.
+- **El `Estadio` vacío de una OT se completa con el servicio de su línea de labor, nunca se corrige
+  uno cargado.** `estadioAvance()` (`cultivos.js`) cae a `o.estadioServicio` (columna
+  `Tipo de Insumo/Servicio`) **solo si `estadio` viene vacío** — hoy eso es la OT 4339 y nada más.
+  Las dos columnas discrepan en 377 de 1.228 líneas de labor: si el respaldo pisara el estadio
+  cargado, entrarían al avance agronómico OT de secadero, infraestructura y operativos. Vale solo
+  para el avance; el campo `estadio` de la OT no se toca y el resto de los módulos no lo ve.
 - **Nunca sumar unidades de medida distintas** (litros + kilos no es una cantidad válida).
 - **`Has. Reales = 0,01` es un marcador, no una superficie** (fletes, aplicación con mochila).
   Dividir por ese valor produce números absurdos.

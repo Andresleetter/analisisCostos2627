@@ -89,6 +89,12 @@ function trabajosCamionGruaDeLinea(linea){
       campo:String(keyOf(r,['campo','Campo'])||'').trim(),
       cultivo:String(keyOf(r,['cultivo','Cultivo'])||'').trim(),
       campania:String(keyOf(r,['campania','Campaña','Campania'])||'').trim(),
+      // "Tipo de Insumo/Servicio". En una linea de INSUMO trae el tipo de insumo (HERBICIDAS,
+      // SEMILLAS, COMBUSTIBLES...) y en una linea de LABOR trae el estadio del servicio
+      // (PREPARACION DE SUELO, CUIDADOS...). Por eso NO es un sinonimo de la columna Estadio y no
+      // se usa en ningun calculo: es solo el respaldo del Estadio vacio del avance de cultivos,
+      // leido unicamente de la linea de labor (ver estadioAvance en cultivos.js).
+      tis:String(keyOf(r,['tipoInsumoServicio','Tipo de Insumo/Servicio'])||'').trim(),
     })).filter(r=>r.ot && r.ot!=='undefined' && r.ot!=='nan');
     // esPeso = LINEA DE LABOR medida en peso. Hoy son las dos familias de fletes del dato real:
     // Unidad de Medida "Dosis" (Servicio "Fletes") y "Kilos" (Servicio "Flete verde silo terceros
@@ -157,6 +163,14 @@ function trabajosCamionGruaDeLinea(linea){
         contr:(g.find(x=>(x.tipo==='Labor Propia'||x.tipo==='Labor Tercero') && x.contr) ||
                g.find(x=>x.contr) || r0).contr,
         personal:r0.personal,
+        // Estadio declarado por el SERVICIO de la linea de labor (columna Tipo de Insumo/Servicio).
+        // Se guarda aparte y NUNCA reemplaza a `estadio`: solo lo consulta el avance de cultivos
+        // cuando la OT no trae ningun Estadio cargado (ver estadioAvance en cultivos.js). Se lee de
+        // la linea de labor porque en las de insumo esa columna trae el tipo de insumo, no un
+        // estadio — verificado contra el .xlsx: de 1.228 lineas de labor con los dos campos
+        // cargados, las que discrepan lo hacen porque Albor clasifica el servicio distinto, asi que
+        // este campo solo sirve para completar un vacio, no para corregir un estadio existente.
+        estadioServicio:(g.find(x=>(x.tipo==='Labor Propia'||x.tipo==='Labor Tercero') && x.tis)||{}).tis||'',
         ha: has.length?Math.max.apply(null,has):null,
         // ha_trab = superficie que la OT trabajo de verdad. Es la suma de Unidades/Dosis de sus
         // lineas de LABOR, con las MISMAS reglas de unidad que ya usa modalidadLaborOT: quedan
