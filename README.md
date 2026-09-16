@@ -162,7 +162,18 @@ y cada labor ya tiene ahí su propio sumando, `min(...)/n_labores`. `desglosarEs
 
 **Ninguna regla de avance cambió.** La vista lee `c.etapas[].labores` y `c.etapas[].labores_sin_aporte`, que `construirCultivos` arma con los mismos datos que ya usaba; `render.js` solo pinta. Verificado con el arnés de regresión de CLAUDE.md: el volcado completo de `buildData()`, quitando esas dos claves nuevas, da **16.761.796 bytes idénticos** en las 69 claves.
 
-**Dos superficies por labor, las dos rotuladas.** "ha ejecutadas" es la suma cruda de `ha_trab` de sus OT —la que cierra con el desplegable— y "aporta N ha" es lo que de esa superficie entra realmente en el avance, después del tope contra el plan del lote y del promedio entre labores del lote. Son distintas siempre que haya tope o más de una labor en el lote, y por eso no se muestra una sola.
+**Los tres pasos de la cuenta van a la vista, encadenados.** No alcanza con la superficie trabajada y el aporte final: entre las dos hay dos reglas que mueven el número y sin mostrarlas el salto no se puede seguir a mano.
+
+```
+2.472,80 ha ejecutadas → 2.400,00 ha tras el tope del lote (−72,80) → 1.069,08 ha de aporte
+                                                      · promediada entre 1 y 6 labores según el lote
+```
+
+1. **`ha_ejec`** — suma cruda de `ha_trab` de sus OT. Es la que cierra con el desplegable de OT.
+2. **`ha_computada`** — cada lote capado a su plan RTK (`min(ejecutadas, plan del lote)`). El recorte se muestra explícito en rojo, o "(sin recorte)" cuando ninguna hectárea excede el plan. En SORGO, *Fumigacion Imperator* pasa de 486,72 a 316,63 ha por este paso.
+3. **`aporte_ha`** — dividido por la cantidad de labores de ese lote. El divisor se rotula: una labor puede tocar lotes con distinta cantidad de labores, así que el modelo guarda todos los divisores que aplicaron (`divisores`) y se muestra el valor exacto cuando hay uno solo ("promediada entre las 3 labores del lote") o el rango cuando hay varios. `divisores = [1]` significa que era la única labor de cada lote y no se promedió nada.
+
+La fila principal queda con el qué y el cuánto (`N OT · N lote(s) · US$`), y la cadena en su propio renglón debajo.
 
 **El costo es información adicional y no pondera nada.** Sale de `o.imp` (el importe total de la OT: Labor Propia + Labor Tercero + Insumos), y el costo de la labor es la suma del de sus OT. El aporte al estadio viene exclusivamente de la ejecución física.
 

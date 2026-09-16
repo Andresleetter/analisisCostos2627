@@ -34,6 +34,11 @@
 .av-lab-ap b{font-size:13px;font-weight:800}
 .av-lab-meta{grid-column:1/-1;font-size:10.5px;color:var(--muted)}
 .av-lab-meta b{color:var(--ink);font-weight:700}
+/* Los tres pasos de la cuenta (trabajado → capado al plan del lote → promediado). Va en su propio
+   renglón y con las flechas a la vista: es una cadena, no tres cifras sueltas. */
+.av-lab-cadena{grid-column:1/-1;font-size:10.5px;color:var(--muted);margin-top:2px}
+.av-lab-cadena b{color:var(--teal);font-weight:700}
+.av-recorte{color:var(--r);font-weight:700}
 .av-lab-det{padding:2px 0 10px}
 .av-lab-det table{font-size:10.5px}
 
