@@ -2,6 +2,30 @@
 // Todo lo que compara la ejecucion contra el plan RTK de consultaCultivos: el plan en si, el
 // avance de campo por cultivo y etapa (Resumen Ejecutivo) y el Control de Hectareas.
 
+// Estadio con el que una OT entra al avance de campo. Es SIEMPRE la columna Estadio de la OT; solo
+// cuando esa columna viene VACIA se cae al estadio que declara el servicio de su linea de labor
+// (Tipo de Insumo/Servicio, `estadioServicio` en ordenes.js).
+//
+// Por que hace falta: la OT 4339 (ARROZ, lote 137, "1° Plaina", 20,48 ha, Confirmada) no tiene
+// Estadio cargado en Albor, asi que desaparecia por completo del avance — no sumaba a Preparacion
+// de Suelo ni figuraba en ningun lado. Su linea de labor si dice PREPARACION DE SUELO.
+//
+// Por que solo cuando esta VACIA, y nunca como correccion: las dos columnas no son sinonimos. De
+// las 1.228 lineas de labor 26/27 que traen las dos, 377 discrepan — "Tractor x Hs bomba lata" esta
+// en el Estadio Secadero y su servicio dice CUIDADOS, "Corte de camino" esta en Operativo y dice
+// CUIDADOS. Si el respaldo pisara el Estadio cargado, 37 OT de secadero, infraestructura y trabajos
+// operativos entrarian al avance agronomico, que es exactamente lo contrario de lo que se quiere.
+// Con la regla acotada a "vacio", hoy entra UNA sola OT confirmada, la 4339: es la unica de toda la
+// campania sin Estadio en ninguna de sus lineas y con estado Confirmado.
+//
+// Vale solo para el avance de cultivos. El campo `estadio` de la OT no se toca, asi que Servicios,
+// Combustible, Insumos, Auditoria, Alertas y Control de Hectareas siguen viendo exactamente lo que
+// veian: para ellos esta OT sigue sin estadio.
+function estadioAvance(o){
+  const propio = String((o&&o.estadio)||'').trim();
+  return normEstadio(propio || (o&&o.estadioServicio) || '');
+}
+
 // Clave con que se agrupan las labores del avance. Normaliza el texto del servicio (para que
 // mayusculas/tildes/espacios no dupliquen el grupo) y ademas lo resuelve por LABORES_EQUIVALENTES
 // (config.js): dos nombres distintos que son la misma labor entran al MISMO grupo. Es la unica
@@ -131,7 +155,7 @@ function construirCultivos(OTS, RTK, RTK_TOT, rawTodasCampanias=[]){
   // exactamente igual, solo dejan de acreditar superficie sembrada.
   const siembraExcluidas=[];
   function esAvanceDeSiembraValido(o){
-    if(normEstadio(o.estadio)!=='siembra') return true;   // otros estadios no se tocan
+    if(estadioAvance(o)!=='siembra') return true;   // otros estadios no se tocan
     const serv=normHdr(o.serv);
     if(!SIEMBRA_SERVICIOS_NO_SIEMBRA.some(p=>serv.startsWith(p))) return true;
     siembraExcluidas.push({ot:o.ot,lote:o.lote,servicio:o.serv});
@@ -160,7 +184,7 @@ function construirCultivos(OTS, RTK, RTK_TOT, rawTodasCampanias=[]){
     // no son sembrar (tratamiento de semillas). Se aplica aca, sobre confOT, para que valga a la vez
     // para los lotes que cuentan como iniciados (etMap) y para las hectareas (porLoteEstadioLabor):
     // si no, un lote con la semilla tratada figuraba con la etapa Siembra empezada.
-    const confEtapa = sub.filter(o=>o.estado==='Confirmado' && ETAPA_ORDEN.includes(normEstadio(o.estadio)));
+    const confEtapa = sub.filter(o=>o.estado==='Confirmado' && ETAPA_ORDEN.includes(estadioAvance(o)));
     const confOT = confEtapa.filter(o=>esAvanceDeSiembraValido(o));
     // OT confirmadas de un estadio del ciclo que NO acreditan superficie, con el motivo por el que
     // quedaron afuera. No es una regla nueva ni un filtro nuevo: son exactamente los mismos descartes
@@ -173,7 +197,7 @@ function construirCultivos(OTS, RTK, RTK_TOT, rawTodasCampanias=[]){
       sinAporte.push({o,motivo:'Tratamiento de semillas: no acredita siembra'}); });
     const etMap={};
     confOT.forEach(o=>{
-      const key=normEstadio(o.estadio);
+      const key=estadioAvance(o);
       if(!etMap[key]) etMap[key]={nombre:ETAPA_LABEL[key],lotes:new Set()};
       etMap[key].lotes.add(normLote(o.lote));
     });
@@ -186,7 +210,7 @@ function construirCultivos(OTS, RTK, RTK_TOT, rawTodasCampanias=[]){
         sinAporte.push({o,motivo:MOTIVO_SIN_APORTE[o.modalidad]||'Sin línea de labor identificable'}); return; }
       if(o.ha==null){ avanceInconsistencias.push({ot:o.ot,cultivo:c,lote:o.lote,estadio:o.estadio,motivo:'OT por hectareas sin Has. Reales'});
         sinAporte.push({o,motivo:'OT por hectáreas sin Has. Reales'}); return; }
-      const lote=normLote(o.lote), estadio=normEstadio(o.estadio);
+      const lote=normLote(o.lote), estadio=estadioAvance(o);
       // La labor se normaliza y ademas se resuelve por LABORES_EQUIVALENTES (config.js): dos
       // nombres distintos que son la misma labor entran al MISMO grupo y por lo tanto se suman
       // entre si. Sin eso, la siembra con implemento y la siembra sin implemento del mismo lote
@@ -292,7 +316,7 @@ function construirCultivos(OTS, RTK, RTK_TOT, rawTodasCampanias=[]){
     // OT de tratamiento de semillas son de ARROZ, que ademas tiene siembra real.
     function sinAporteEstadio(k){
       const porLabor={};
-      sinAporte.filter(x=>normEstadio(x.o.estadio)===k).forEach(x=>{
+      sinAporte.filter(x=>estadioAvance(x.o)===k).forEach(x=>{
         const lk=claveLaborAvance(x.o.serv);
         if(!porLabor[lk]) porLabor[lk]={clave:lk,nombres:new Set(),motivos:new Set(),ots:[]};
         const a=porLabor[lk];
@@ -312,7 +336,7 @@ function construirCultivos(OTS, RTK, RTK_TOT, rawTodasCampanias=[]){
     }
     const etapas=ETAPA_ORDEN.filter(k=>etMap[k]).map(k=>{
       const e=etMap[k];
-      const incluyeZafrina=confOT.some(o=>o.planCompartidoZafrina && normEstadio(o.estadio)===k && o.modalidad==='hectareas' && o.ha!=null);
+      const incluyeZafrina=confOT.some(o=>o.planCompartidoZafrina && estadioAvance(o)===k && o.modalidad==='hectareas' && o.ha!=null);
       let ha_e=0; e.lotes.forEach(l=>{ ha_e+=equivalenteLoteEstadio(l,k); });
       // La siembra registrada en otra zafra usa el mismo plan total, sin duplicarlo.
       if(incluyeZafrina && ha_plan>0) ha_e=Math.min(ha_e,ha_plan);
@@ -322,7 +346,7 @@ function construirCultivos(OTS, RTK, RTK_TOT, rawTodasCampanias=[]){
       // Confirmadas/Totales" del Detalle de Etapas por Cultivo nunca mezcle OT de otro estadio.
       // "ha_plan" se repite tal cual (mismo valor que el cultivo): el plan RTK no tiene desglose
       // por estadio, así que la referencia planificada es siempre la meta de toda la campaña.
-      const subEtapa = sub.filter(o=>normEstadio(o.estadio)===k);
+      const subEtapa = sub.filter(o=>estadioAvance(o)===k);
       // "labores" es la descomposicion de ESTE mismo avance (ver desglosarEstadio): la suma de sus
       // aportes da ha_ejec y avance, no una segunda cuenta. "labores_sin_aporte" son las labores
       // confirmadas del estadio que no acreditan superficie, para que ninguna OT desaparezca sin
