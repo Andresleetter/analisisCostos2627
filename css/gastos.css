@@ -102,6 +102,17 @@ tr.sv-det>td{background:#f7faf5;padding:10px 12px}
    se repite acá para las dos columnas numéricas de la cabecera interna. */
 .sv-ots th.tr{text-align:right}
 .sv-ots tr:last-child td{border-bottom:none}
+/* ---- Servicios · fila de Total al pie del Detalle por Servicio ---- */
+/* Se despega del cuerpo con una línea superior más marcada y fondo propio, para que se lea como
+   cierre de la tabla y no como una fila más. No es clicable (no tiene .sv-fila), así que tampoco
+   lleva cursor ni hover. */
+tr.sv-total>td{background:#eef4ea;border-top:2px solid var(--green);border-bottom:none;
+  font-weight:800;padding-top:10px;padding-bottom:10px}
+.sv-tot-n{display:block;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;
+  letter-spacing:.3px;margin-top:2px}
+/* Separador entre unidades cuando el total mezcla ha / hrs / kg: no son sumables entre sí. */
+.sv-tot-sep{color:var(--muted);font-weight:400;margin:0 6px}
+
 /* ---- Combustible · Consumo por Uso / Detalle ---- */
 /* Fila clicable que despliega los movimientos del uso. Mismos tonos y mismo caret (.ip-caret) que
    el detalle de parcelas de la Auditoría, para que el gesto se lea igual en los dos módulos. */
