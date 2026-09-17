@@ -1,16 +1,26 @@
-/* ================== MAPA DE SIEMBRA (Resumen Ejecutivo) ================== */
-/* Vive como una tarjeta más dentro de .cults (cultivos.css) — ver renderCultivoDetalle() en
-   render.js. En escritorio (auto-fit) ocupa las columnas vacías de la última fila junto a las
-   últimas tarjetas de cultivo, sin agrandar el bloque; en móvil (.cults pasa a 2 columnas fijas,
-   ver cultivos.css) se fuerza a ocupar el ancho completo, debajo de todas las tarjetas de
-   cultivo, para que nunca quede a medias en una fila junto a una sola tarjeta. */
+/* ================== MAPAS: SIEMBRA Y ZONAS (Resumen Ejecutivo) ================== */
+/* Viven como dos tarjetas más dentro de .cults (cultivos.css) — ver renderCultivoDetalle() en
+   render.js. Cada una ocupa 2 columnas de la grilla auto-fit, y la PRIMERA arranca en la columna 1
+   (.mapa-card-inicio, puesta por render.js) para que el par empiece siempre una fila nueva: sin
+   eso, según cuántas columnas entren, el primer mapa podía quedar completando la fila de los
+   cultivos y el segundo caer solo en la fila siguiente — justo lo contrario de tenerlos uno al
+   lado del otro. No se usa :first-of-type: todos los hijos de .cults son <div>, así que ese
+   selector apunta a la primera tarjeta de cultivo y nunca a un mapa. Las dos imágenes comparten
+   resolución (1525x941), así que las dos tarjetas miden exactamente igual.
+
+   Por debajo de 1100px se fuerzan a ancho completo y apiladas: ahí ya no entran 4 columnas de
+   230px, y medio mapa por fila no se lee. Ese umbral reemplaza al de 900px que tenía el mapa
+   cuando era uno solo. */
 .mapa-card{cursor:zoom-in;display:flex;flex-direction:column;grid-column:span 2}
+/* 1/span 2, no grid-column-start solo: el shorthand de arriba deja el END en `auto`, asi que
+   fijar unicamente el start dejaba esta tarjeta de UNA columna y la otra de dos. */
+.mapa-card-inicio{grid-column:1/span 2}
 /* width:100%/height:auto (a pedido del usuario) — nunca recorta el mapa (título, leyenda y
    escala son parte de la misma imagen), solo lo escala al ancho de la tarjeta. Sin object-fit,
    sin min-height ni alto fijo: la proporción real de la imagen decide el alto renderizado. */
-.mapa-siembra-thumb{width:100%;height:auto;display:block;border-radius:8px}
-.mapa-siembra-thumb:focus-visible{outline:2px solid var(--green);outline-offset:2px}
-@media(max-width:900px){.mapa-card{grid-column:1/-1}}
+.mapa-thumb{width:100%;height:auto;display:block;border-radius:8px}
+.mapa-thumb:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+@media(max-width:1100px){.mapa-card,.mapa-card-inicio{grid-column:1/-1}}
 
 /* ---- Vista ampliada al tocar la imagen ---- */
 .mapa-lightbox{display:none;position:fixed;inset:0;background:rgba(10,20,10,.85);z-index:60;

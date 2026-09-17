@@ -288,18 +288,27 @@ function renderProblemasResumen(){
 }
 
 // ---- Detalle de Etapas por Cultivo: primer bloque analítico tras los KPIs (Preparación de
-// Suelo, Siembra, Cuidados, Cosecha por cada cultivo). El Mapa de Siembra (imagen estática, sin
-// datos calculados) se agrega como UNA tarjeta más al final del mismo innerHTML — así queda en la
-// misma cuadrícula .cults (cultivos.css) y ocupa las columnas vacías de la última fila en
-// escritorio, sin agrandar el bloque; en móvil (grid de 2 columnas) pasa a ocupar el ancho
-// completo debajo de todas las tarjetas de cultivo (.mapa-card, ver media query en mapa.css). El
-// clic/Enter/Espacio que la abre ampliada está delegado sobre #cults en events.js, nunca atado
-// directo a la imagen, porque este innerHTML (y por lo tanto el <img>) se reescribe entero acá. ----
+// Suelo, Siembra, Cuidados, Cosecha por cada cultivo). Los MAPAS (imágenes estáticas, sin datos
+// calculados) se agregan como DOS tarjetas más al final del mismo innerHTML — así quedan en la
+// misma cuadrícula .cults (cultivos.css), una al lado de la otra en su propia fila; en pantallas
+// angostas pasan a ocupar el ancho completo, apiladas debajo de las tarjetas de cultivo
+// (.mapa-card, ver mapa.css). El clic/Enter/Espacio que las abre ampliadas está delegado sobre
+// #cults en events.js, nunca atado directo a una imagen, porque este innerHTML (y por lo tanto los
+// <img>) se reescribe entero acá.
+//
+// Son dos vistas del MISMO campo y comparten resolución (1525x941), así que las dos tarjetas miden
+// igual: Siembra pinta cada lote del color de su cultivo y Zonas lo pinta del color de su zona de
+// manejo (Cambuchi, Catalina, Duarte, Chime Cue…). Cada mapa lleva su propia fecha impresa dentro
+// de la imagen — no se derivan del .xlsx ni se actualizan solos. ----
+const MAPAS = [
+  {src:'img/mapa_siembra_2627.jpeg', titulo:'Mapa de Siembra', que:'de siembra por cultivo'},
+  {src:'img/mapa_siembra_zona.jpeg', titulo:'Mapa de Zonas',   que:'de zonas de manejo'},
+];
 function renderCultivoDetalle(){
-  const mapaCard = `<div class="cult-card mapa-card">
-    <div class="cc-name">Mapa de Siembra</div>
-    <img id="mapa-siembra-img" class="mapa-siembra-thumb" src="img/mapa_siembra_2627.jpeg"
-      alt="Mapa de siembra de la Campaña 26/27" tabindex="0" role="button" aria-label="Ampliar mapa de siembra"></div>`;
+  const mapaCards = MAPAS.map((m,i)=>`<div class="cult-card mapa-card${i===0?' mapa-card-inicio':''}">
+    <div class="cc-name">${m.titulo}</div>
+    <img class="mapa-thumb" src="${m.src}" data-mapa-alt="Mapa ${m.que} de la Campaña 26/27 (ampliado)"
+      alt="Mapa ${m.que} de la Campaña 26/27" tabindex="0" role="button" aria-label="Ampliar ${m.titulo.toLowerCase()}"></div>`).join('');
   document.getElementById('cults').innerHTML=paqueteResumen().cultivos.map(c=>{
     const plan=c.tiene_rtk?fmt2(c.ha_plan)+' ha':'s/ RTK';
     // Cada etapa muestra su avance y, al lado, las hectáreas ejecutadas de ESA etapa. Las ha salen
@@ -326,7 +335,7 @@ function renderCultivoDetalle(){
       <div class="cc-etapas">${etapasHtml}</div>
       <div class="cc-ha">
         <div><span>${c.incluyeZafrina?'Plan 26/27 · incluye Zafriña26':'Ha planificadas'}</span><b>${plan}</b></div>
-      </div></div>`;}).join('') + mapaCard;
+      </div></div>`;}).join('') + mapaCards;
 }
 
 // ================== AVANCE DETALLADO POR CULTIVO ==================

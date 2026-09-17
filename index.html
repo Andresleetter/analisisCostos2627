@@ -366,11 +366,13 @@
   <footer class="foot" id="foot"></footer>
 </div>
 
-<!-- Vista ampliada del Mapa de Siembra (Resumen Ejecutivo) — oculta por defecto (.open la
-     muestra, ver events.js/mapa.css). Fuera de .wrap porque es position:fixed sobre toda la
-     pantalla, igual criterio que #overlay/#menu-backdrop. -->
-<div class="mapa-lightbox" id="mapa-lightbox" role="dialog" aria-modal="true" aria-label="Mapa de siembra ampliado">
-  <img src="img/mapa_siembra_2627.jpeg" alt="Mapa de siembra de la Campaña 26/27 (ampliado)">
+<!-- Vista ampliada de los mapas (Resumen Ejecutivo) — oculta por defecto (.open la muestra, ver
+     events.js/mapa.css). Fuera de .wrap porque es position:fixed sobre toda la pantalla, igual
+     criterio que #overlay/#menu-backdrop. Es UNO solo para los dos mapas: el src y el alt se
+     copian de la imagen que se tocó (abrirMapaLightbox, events.js), por eso el <img> arranca
+     vacío — nunca se ve así, el contenedor está oculto hasta que se abre. -->
+<div class="mapa-lightbox" id="mapa-lightbox" role="dialog" aria-modal="true" aria-label="Mapa ampliado">
+  <img id="mapa-lightbox-img" alt="">
 </div>
 
 <!-- Aviso de datos nuevos. Lo muestra vigilarDatosNuevos() (js/loader.js) cuando, al volver a esta
