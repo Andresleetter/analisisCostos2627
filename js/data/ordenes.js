@@ -148,7 +148,24 @@ function trabajosCamionGruaDeLinea(linea){
     const otMap={};
     rowsIn.forEach(r=>{ (otMap[r.ot]=otMap[r.ot]||[]).push(r); });
     return Object.keys(otMap).map(id=>{
-      const g=otMap[id], r0=g[0];
+      const todas=otMap[id], r0=todas[0];
+      // Una OT puede traer sus lineas en ESTADOS DISTINTOS: Albor confirma por linea, no por orden.
+      // El estado de la OT sigue siendo el de su primera linea (r0), pero sus magnitudes ejecutadas
+      // — importe, superficie trabajada, horas, kilos — se calculan UNICAMENTE con las lineas que
+      // estan en ese mismo estado. Antes se sumaban todas, asi que una OT medio confirmada
+      // arrastraba al costo ejecutado y al avance trabajo que todavia no se habia hecho.
+      //
+      // Caso real que lo motivo (17/09/2026): la OT 4958 hace 2° Plaina en el lote .43 (22,76 ha,
+      // US$ 751,08, Confirmado) y 1° Plaina en el .41 (40,56 ha, US$ 1.338,48, PENDIENTE — dosis
+      // reales 0, sin Has. Reales, facturada NO). Como la primera linea es la confirmada, la OT
+      // entera contaba como ejecutada: el costo ejecutado daba 1.196.370,93 en vez de
+      // 1.195.032,45 y la Preparacion de Suelo de ARROZ 90,2% en vez de 90,1%, porque una
+      // 1° Plaina no hecha entraba al promedio del lote .41 como labor cumplida.
+      //
+      // Es la UNICA OT mixta del dato de hoy (1 de 1.987, contando las 4 campanias) y ninguna linea
+      // viene sin estado, asi que para todas las demas `g` es identica a `todas` y nada cambia.
+      // r0 pertenece siempre a `g` por construccion: el estado de la OT se define desde r0.
+      const g=todas.filter(x=>x.estado===r0.estado);
       const has=g.map(x=>x.hr).filter(x=>x!=null);
       return { ot:id, act:r0.act, lote:r0.lote, estadio:r0.estadio, serv:r0.serv, estado:r0.estado,
         ft:r0.ft, fr:r0.fr, tieneServ: r0.serv!=='' && r0.serv.toLowerCase()!=='nan',
@@ -218,7 +235,10 @@ function trabajosCamionGruaDeLinea(linea){
         propia: g.filter(x=>x.tipo==='Labor Propia').reduce((s,x)=>s+x.imp,0),
         tercero: g.filter(x=>x.tipo==='Labor Tercero').reduce((s,x)=>s+x.imp,0),
         insumos: g.filter(x=>x.tipo==='Insumo').reduce((s,x)=>s+x.imp,0),
-        lines: g };
+        // lines = lineas de la OT EN EL ESTADO DE LA OT (ver arriba). Es lo que consumen Servicios,
+        // la Auditoria de Siembra y el avance de cultivos, y por eso tambien tiene que quedar
+        // limpio de lineas en otro estado. lines_todas conserva el grupo completo para rastreo.
+        lines: g, lines_todas: todas };
     });
   }
   // ---- Indice referencia de OT -> OT, para vincular los movimientos de combustible ----
