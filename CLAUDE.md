@@ -40,7 +40,7 @@ assets estáticos), con `raw.githubusercontent.com` solo como respaldo. Ver READ
 
 | Archivo | Dominio |
 |---|---|
-| `ordenes.js` | Base de `consultaOT` — todo lo demás depende de sus colecciones |
+| `ordenes.js` | Base de `consultaOT` — todo lo demás depende de sus colecciones; `agruparOTS()` arma cada OT **solo con las líneas que están en el estado de la OT** (Albor confirma por línea: una OT medio confirmada no debe aportar lo pendiente) |
 | `cultivos.js` | Plan RTK, avance por cultivo/etapa, Control de Hectáreas — `desglosarEstadio()` descompone el avance de la etapa en el aporte de cada labor (vista Avance Detallado): es la misma cuenta de `equivalenteLoteEstadio` leída término a término, **no** una segunda fórmula |
 | `servicios.js` | Módulo Servicios y el paquete por campaña — `unidadTrabajo` elige entre ha / hrs / kg / ins / trabajos; `acumularGrupoServicio()` es la única suma de una fila y `filtrarServiciosPorCultivo()` la reusa para el filtro de Cultivo |
 | `combustible.js` | Gasoil — cruza cada movimiento con su OT (`referenciaOrigen` = `consultaOT.referencia`; `referenciaAsiento` quedó descartado por no ser único) y lo atribuye por niveles: OT vinculada / Solo contratista / OT no disponible / Labor Propia |

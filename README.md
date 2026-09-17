@@ -78,7 +78,7 @@ Si el archivo está abierto en Excel al momento de necesitar inspeccionarlo (ej.
 `config.js` define `const CAMPANIA_ACTUAL = '26/27'`.
 
 **Se aplica a:**
-1. **`consultaOT`** (`data.js`) — filtra por el campo `campania` exacto. Afecta a casi todo lo que depende de las OT: KPIs de OT, Detalle de Etapas por Cultivo, Control de Hectáreas, Alertas, Posibles Problemas, Servicios y Auditoría (todo se construye a partir de `OTS`/`rows`). **Única excepción: el KPI "Costo Ejecutado"** del Resumen Ejecutivo, que consolida todas las campañas — ver más abajo.
+1. **`consultaOT`** (`data.js`) — filtra por el campo `campania` exacto. Afecta a casi todo lo que depende de las OT: KPIs de OT, Detalle de Etapas por Cultivo, Control de Hectáreas, Alertas, Posibles Problemas, Servicios y Auditoría (todo se construye a partir de `OTS`/`rows`). Todas estas colecciones se arman sobre las OT ya agrupadas por `agruparOTS()`, que además descarta las líneas que no están en el estado de su OT — ver "Agrupación por OT" más abajo.
 2. **`consultaCultivos`** (plan RTK, `data.js`) — esta hoja no trae una columna de texto `campania` propia, pero el campo `nombre` (ej. `"LA TERESA 201 ARROZ 26/27"`) siempre termina en el sufijo de campaña; se extrae con una regex y se descarta toda fila cuyo sufijo no coincida con `CAMPANIA_ACTUAL`. Filas sin sufijo reconocible (formato histórico) pasan sin filtrar, ya que no hay forma de determinar su campaña.
 
 **NO se aplica a `consultaInsumos`** (ni Combustible ni el módulo Insumos): esta hoja se procesa **completa**, sin recortar por campaña ni por fecha — es una decisión explícita (antes se filtraba y se sacó a pedido), documentada en `loader.js` y `data.js`. Si el año que viene aparecen movimientos de más de una campaña mezclados ahí, van a entrar todos.
@@ -87,21 +87,21 @@ La tarjeta de avance de Maíz integra la siembra de las actividades `MAIZ` y `MA
 
 `consultaOT` puede traer varias campañas mezcladas en la práctica (la fuente a veces incluye la campaña anterior completa) — sin este filtro, todos los KPIs quedarían inflados. `data.js` loguea en consola cuántas filas se descartaron por campaña en cada carga (tanto de `consultaOT` como de `consultaCultivos`).
 
-### La única excepción: el KPI "Costo Ejecutado"
+### El costo consolidado de todas las campañas
 
-`costo_total_consolidado` (`construirServiciosPorCampania`, `js/data/servicios.js`) suma el importe de las OT confirmadas de **todas** las campañas de `consultaOT`, y es lo que muestra la tarjeta **Costo Ejecutado** del Resumen Ejecutivo (`resumen.js` → `kpis.costoEjecutado`). Fue un pedido explícito: ampliar **solo los costos de labores**. `OT Confirmadas` y `OT Atrasadas`, en la misma fila de tarjetas, siguen siendo de `CAMPANIA_ACTUAL`.
+`costo_total_consolidado` (`construirServiciosPorCampania`, `js/data/servicios.js`) suma el importe de las OT confirmadas de **todas** las campañas de `consultaOT`. Durante un tiempo fue lo que mostraba la tarjeta **Costo Ejecutado** del Resumen Ejecutivo; **ya no**. Desde que ese módulo tiene su propio selector de Campaña, la tarjeta muestra el costo de la campaña **seleccionada**, la misma que produce `OT Confirmadas` y `OT Atrasadas` a su lado (ver "Filtro de Campaña" más abajo). `costo_total_consolidado` y `costo_por_campania` se siguen calculando y exponiendo en `D` para quien los necesite, pero hoy **no se muestran en ninguna parte**: `render.js` no los lee.
 
 Con el dato de la campaña 26/27 en curso:
 
 | Campaña | Costo ejecutado | |
 |---|--:|--:|
-| **26/27** (vigente) | 924.842,18 | 95,2 % |
-| 25/26 | 23.563,71 | 2,4 % |
-| 26 | 22.626,21 | 2,3 % |
+| **26/27** (vigente) | 1.195.032,45 | 96,2 % |
+| 25/26 | 24.568,61 | 2,0 % |
+| 26 | 22.279,29 | 1,8 % |
 | 25 | 383,24 | 0,0 % |
-| **Total del KPI** | **971.415,34** | |
+| **Consolidado** | **1.242.263,58** | |
 
-El desglose está calculado y disponible en el modelo (`kpis.costoPorCampania`) pero **hoy no se muestra en ninguna parte**: `render.js` no lo lee.
+La tarjeta muestra la primera fila, no el total.
 
 ### Por qué el avance de cultivos NO puede incluir otras campañas
 
@@ -117,6 +117,40 @@ Y sumar sus OT al avance de la campaña vigente **no movería el número**. De l
 `equivalenteLoteEstadio` capa cada labor con `Math.min(ejecutadasReales, planificadas)` y `planificadas = RTK[cultivo][lote] || 0`, que para esos lotes vale **0**: aportarían 0,00 ha. Lo único que cambiaría son los contadores `OT Confirmadas / Totales` de cada etapa, que salen de `sub` y no se capan — es decir, mostraría más OT con el mismo avance, que es peor que no mostrarlas.
 
 **Para que esto sea posible** hace falta que `consultaCultivos` traiga las parcelas de las otras campañas. Con ese dato, el camino correcto es un selector de campaña en el Detalle de Etapas por Cultivo (igual al que ya tiene Servicios), donde cada campaña se mide contra su propio plan — nunca una suma de todas contra el plan de la vigente.
+
+## Agrupación por OT (`agruparOTS`)
+
+Una orden de trabajo son **varias filas** de `consultaOT`: el servicio, una o más líneas de labor y las de insumos. `agruparOTS()` (`js/data/ordenes.js`) las junta por número de OT y de ahí salen el importe (`imp`), la superficie trabajada (`ha_trab`), las horas, los kilos y el reparto Labor Propia / Labor Tercero / Insumos.
+
+### Una OT puede tener sus líneas en estados distintos
+
+Albor confirma **por línea**, no por orden. El estado de la OT sigue siendo el de su primera línea (`r0.estado`), pero sus magnitudes ejecutadas se calculan **únicamente con las líneas que están en ese mismo estado**:
+
+```js
+const todas = otMap[id], r0 = todas[0];
+const g = todas.filter(x => x.estado === r0.estado);
+```
+
+Antes se sumaban todas, y una OT confirmada a medias arrastraba al costo ejecutado y al avance trabajo que todavía no se había hecho.
+
+**El caso que lo destapó (17/09/2026).** La OT 4958 hace dos labores en dos lotes:
+
+| Línea | Servicio | Lote | Estado | ha | US$ |
+|---|---|---|--:|--:|--:|
+| 117242 | 2° Plaina | .43 | Confirmado | 22,76 | 751,08 |
+| 117243 | 1° Plaina | .41 | **Pendiente** | 40,56 | **1.338,48** |
+
+La línea pendiente trae `dosisReales = 0`, `Has. Reales` vacío y `facturada = NO`: no se hizo. Pero como la primera línea es la confirmada, la OT entera contaba como ejecutada. Tres síntomas, todos del mismo origen:
+
+- **Costo ejecutado** US$ 1.196.370,93 en vez de **1.195.032,45** — la diferencia es exactamente esos 1.338,48. Lo detectó el usuario sumando las OT confirmadas en el Excel.
+- **Preparación de Suelo de ARROZ** 3.509,49 ha (90,2 %) en vez de **3.502,73 ha (90,1 %)**: una 1° Plaina no hecha entraba al promedio del lote .41 como labor cumplida.
+- **Servicios** atribuía las 40,56 ha y los 1.338,48 al grupo **2° Plaina**, porque el servicio de la OT también sale de la primera línea.
+
+**Alcance.** Es la **única** OT mixta del dato: 1 de 1.987 contando las cuatro campañas, y ninguna línea viene sin estado. Para las otras 1.986 el filtro no descarta nada y `g` es idéntica al grupo completo. Verificado con el arnés comparando el modelo entero antes y después: de las **70 claves de `buildData()` solo se mueven 9**, todas por esta OT (`costo_total`, `costo_total_consolidado`, `gasto_total`, `costo_por_campania`, `cultivos`, `gastos`, `resumen`, `resumen_campanias`, `servicios_campanias`); en `gastos` cambia **1 de 213** entradas. Los conteos de OT (1.562 confirmadas, 160 en ejecución, 126 pendientes, 185 atrasadas), las alertas, el combustible, los insumos y las dos auditorías quedan idénticos.
+
+**`lines` también queda filtrado.** Es lo que consumen Servicios (`servicios.js`), la Auditoría de Siembra (`haSembradaDeOT`) y el avance de cultivos, así que tiene que estar limpio por el mismo motivo. `lines_todas` conserva el grupo completo para rastreo; hoy no lo consume nadie.
+
+> **Lo que esto no hace.** La parte pendiente de una OT mixta no se cuenta en ningún lado: la OT aporta su parte confirmada y nada más, y sigue figurando como una sola OT confirmada en los contadores. Es deliberado — el arreglo de fondo es en Albor, dejando la OT en un solo estado.
 
 ## Resumen Ejecutivo
 
