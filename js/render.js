@@ -1670,7 +1670,7 @@ function renderLaborDetalle(){
   // corresponde a un filtro anterior.
   if(servFilaAbierta && !labs.some(l=>claveFilaServicio(l)===servFilaAbierta)) servFilaAbierta=null;
   document.getElementById('gld-sub').textContent=labs.length+' combinación(es) servicio/estadio/contratista · ordenado por costo total · clic en una fila para ver sus OT';
-  document.getElementById('gld').innerHTML= labs.length ? labs.map(l=>{
+  document.getElementById('gld').innerHTML= (labs.length ? labs.map(l=>{
     // "Trabajo Ejecutado": una sola columna con la cantidad ejecutada en la unidad propia de ese
     // trabajo (l.unidadTrabajo, ver dmap en js/data/servicios.js). Nunca se convierte ni se suma
     // entre unidades. El formato de la celda lo resuelve celdaTrabajoEjecutado(), la misma función
@@ -1691,7 +1691,54 @@ function renderLaborDetalle(){
     let html=`<tr class="sv-fila${abierta?' open':''}" data-fila="${encodeURIComponent(clave)}"><td><span class="lname">${l.labor}</span> ${chip}</td><td><span class="chip chip-etapa">${l.estadio}</span></td><td class="tr mono"><span class="ip-caret">${abierta?'▾':'▸'}</span> ${l.n}</td><td class="tr mono">${ejec}</td><td class="tr mono col-terc">US$ ${fmtUSD(l.terc)}</td><td class="col-contratista" title="${contratistaTxt}">${contratistaTxt}</td><td class="tr mono col-ins">US$ ${fmtUSD(l.ins)}</td><td class="tr mono col-tot">US$ ${fmtUSD(l.tot)}</td></tr>`;
     if(abierta) html+=svDetalleOTs(l, sinEjec);
     return html;
-  }).join('') : '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:16px">Sin registros para el filtro seleccionado</td></tr>';
+  }).join('') : '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:16px">Sin registros para el filtro seleccionado</td></tr>')
+    + filaTotalServicios(labs);
+}
+
+// ---- Fila de Total al pie del Detalle por Servicio ----
+// Se agregó porque con un filtro puesto (ej. Servicio = 1° Disco) la tabla queda en dos o tres
+// filas y sumarlas a mano —o con calculadora— era el único modo de ver cuánto costó ese servicio.
+//
+// Aparece solo con MÁS DE UNA fila: con una sola repetiría la misma cifra dos veces, que es ruido.
+// No lleva data-fila, así que el clic delegado de #gld (events.js, busca .sv-fila) no la toma y no
+// se despliega.
+//
+// Qué se puede sumar y qué no:
+//  · OT Conf., Labor Tercero, Insumos y Costo Total se suman directo. Las OT no se duplican entre
+//    filas — cada OT pertenece a un único grupo labor+estadio+contratista+unidad (ver el comentario
+//    de agrupación más arriba), así que sumar `n` no cuenta ninguna dos veces.
+//  · Trabajo Ejecutado NO se puede sumar entre unidades distintas: 1.717 ha y 320 hrs no hacen
+//    2.037 de nada. Se acumula por unidad y se muestran las que haya, separadas por punto medio —
+//    con el filtro del ejemplo (todo en ha) sale un único número, que es el caso normal. Los
+//    servicios sin trabajo medible (SERVICIOS_SIN_TRABAJO_EJECUTADO, celda "—") quedan afuera del
+//    acumulado: su superficie no describe ningún trabajo.
+//  · Contratista no es sumable: con uno solo se repite su nombre, con varios se dice cuántos.
+function filaTotalServicios(labs){
+  if(labs.length < 2) return '';
+  const CANT = {hrs:'horas', kg:'kg', ins:'ins_lineas', trabajos:'trabajos'};
+  const t = {n:0, terc:0, ins:0, tot:0};
+  const porUnidad = {};
+  const contratistas = new Set();
+  labs.forEach(l=>{
+    t.n += l.n; t.terc += l.terc; t.ins += l.ins; t.tot += l.tot;
+    contratistas.add(l.contratista);
+    if(SERVICIOS_SIN_TRABAJO_EJECUTADO.includes(normHdr(l.labor))) return;
+    const u = l.unidadTrabajo;
+    porUnidad[u] = (porUnidad[u]||0) + (l[CANT[u]||'ha']||0);
+  });
+  const unidades = Object.keys(porUnidad);
+  const ejec = unidades.length
+    ? unidades.map(u=>celdaTrabajoEjecutado(u, {ha:porUnidad[u], horas:porUnidad[u], kg:porUnidad[u],
+        ins:porUnidad[u], trabajos:porUnidad[u]}, false)).join('<span class="sv-tot-sep">·</span>')
+    : '<span class="tw-sin">—</span>';
+  const contr = contratistas.size===1 ? labelContratista([...contratistas][0])
+    : contratistas.size+' contratistas';
+  return `<tr class="sv-total"><td colspan="2">Total<span class="sv-tot-n">${labs.length} combinaciones</span></td>`+
+    `<td class="tr mono">${t.n}</td><td class="tr mono">${ejec}</td>`+
+    `<td class="tr mono col-terc">US$ ${fmtUSD(t.terc)}</td>`+
+    `<td class="col-contratista" title="${contr}">${contr}</td>`+
+    `<td class="tr mono col-ins">US$ ${fmtUSD(t.ins)}</td>`+
+    `<td class="tr mono col-tot">US$ ${fmtUSD(t.tot)}</td></tr>`;
 }
 
 // ---- Consumo de Gasoil por Área ----
