@@ -24,20 +24,33 @@ document.addEventListener('DOMContentLoaded', function(){
   });
   menuBackdrop.addEventListener('click', cerrarMenuModulos);
 
-  // Mapa de Siembra (Resumen Ejecutivo): ahora es una tarjeta más dentro de #cults (ver
-  // renderCultivoDetalle, render.js), que reescribe su innerHTML completo en cada carga — por eso
-  // el listener va delegado sobre #cults (elemento estable) y no atado directo a #mapa-siembra-img
-  // (se destruye y recrea junto con las tarjetas de cultivo). Clic/Enter/Espacio sobre la imagen
-  // la abre ampliada en #mapa-lightbox; clic sobre el lightbox o Escape la cierra.
+  // Mapas (Resumen Ejecutivo): son tarjetas más dentro de #cults (ver renderCultivoDetalle,
+  // render.js), que reescribe su innerHTML completo en cada carga — por eso el listener va
+  // delegado sobre #cults (elemento estable) y no atado directo a las imágenes, que se destruyen y
+  // recrean junto con las tarjetas de cultivo. Clic/Enter/Espacio sobre una imagen la abre ampliada
+  // en #mapa-lightbox; clic sobre el lightbox o Escape lo cierra.
+  //
+  // El lightbox es UNO solo y sirve a los dos mapas: al abrirlo se le copia el src de la imagen que
+  // se tocó. Por eso se selecciona por clase (.mapa-thumb) y no por id — con dos mapas un id ya no
+  // alcanza, y agregar un lightbox por mapa duplicaría el markup, el listener de Escape y el
+  // manejo del foco sin ninguna ventaja.
   const cultsCont = document.getElementById('cults');
   const mapaLightbox = document.getElementById('mapa-lightbox');
-  function abrirMapaLightbox(){ mapaLightbox.classList.add('open'); }
+  const mapaLightboxImg = document.getElementById('mapa-lightbox-img');
+  function abrirMapaLightbox(img){
+    mapaLightboxImg.src = img.getAttribute('src');
+    mapaLightboxImg.alt = img.getAttribute('data-mapa-alt') || img.getAttribute('alt') || '';
+    mapaLightbox.classList.add('open');
+  }
   function cerrarMapaLightbox(){ mapaLightbox.classList.remove('open'); }
   cultsCont.addEventListener('click', function(e){
-    if(e.target.closest('#mapa-siembra-img')) abrirMapaLightbox();
+    const img = e.target.closest('.mapa-thumb');
+    if(img) abrirMapaLightbox(img);
   });
   cultsCont.addEventListener('keydown', function(e){
-    if((e.key==='Enter' || e.key===' ') && e.target.closest('#mapa-siembra-img')){ e.preventDefault(); abrirMapaLightbox(); }
+    if(e.key!=='Enter' && e.key!==' ') return;
+    const img = e.target.closest('.mapa-thumb');
+    if(img){ e.preventDefault(); abrirMapaLightbox(img); }
   });
   mapaLightbox.addEventListener('click', cerrarMapaLightbox);
 
