@@ -400,6 +400,30 @@ const AUDITORIA_INSUMOS_CULTIVOS_EXCLUIDOS = ['AVENA', 'COBERTURA',
 // se marca como no disponible (ver loader.js): nunca bloquea la carga.
 const RECETAS_SRC_JSON = SRC_DATA+"recetas-insumos-26-27.json";
 const RECETAS_SRC_JSON_RESPALDO = "https://raw.githubusercontent.com/"+REPO+"/"+BRANCH+"/"+SRC_DATA+"recetas-insumos-26-27.json";
+// ---- AVANCE DE CAMPO: receta de labores ----
+// Cuantas labores distintas lleva cada estadio. Es el DIVISOR del avance: sin el, el avance de un
+// lote se promedia entre las labores que YA se confirmaron, asi que la primera labor que se hace
+// deja ese lote en 100% del estadio aunque falten todas las demas. Con receta, el divisor no puede
+// ser menor a lo que el ciclo realmente lleva.
+//
+// La receta NO se declara a mano: se deriva del export de Consulta OT de la campania anterior
+// (data/receta-labores-25-26.json), contando labores distintas por lote con el MISMO filtro que
+// usa el avance. El valor de cada cultivo/estadio es la MEDIANA de labores por lote — mediana y no
+// promedio para que un lote que recibio siete aplicaciones no arrastre al resto.
+//
+// Se aplica como PISO, nunca como tope: divisor = max(labores confirmadas del lote, receta). Un
+// lote que ya lleva mas labores que la receta conserva las suyas, y un estadio cuya receta salio
+// pobre (mediana 1) no puede bajar ningun numero. Por eso es seguro aplicarla a todos los estadios
+// aunque el export de la campania anterior no cubra el ciclo completo.
+const RECETA_LABORES_SRC_JSON = SRC_DATA+"receta-labores-25-26.json";
+const RECETA_LABORES_SRC_JSON_RESPALDO = "https://raw.githubusercontent.com/"+REPO+"/"+BRANCH+"/"+SRC_DATA+"receta-labores-25-26.json";
+// Cuantos lotes necesita un cultivo/estadio para que su propia receta se considere representativa.
+// Por debajo de esto se usa el RESPALDO: la mediana de las recetas de los demas cultivos del MISMO
+// estadio. El caso que lo motivo es el maiz, que en la 25/26 tuvo 21 OT en toda la campania y una
+// sola labor de cuidados en 7 lotes: su mediana daba 1 y lo dejaba marcando 100% de cuidados.
+// Con el umbral en 10, maiz toma el respaldo de arroz (3), sorgo (4) y soja (2) — mediana 3.
+const RECETA_LABORES_MIN_LOTES = 10;
+
 // Tolerancia SOLO para decidir "Según receta" — no es una tolerancia agronomica (el negocio todavia
 // no definio ninguna), es el margen de error de punto flotante: 1e-9 relativo al valor comparado.
 const RECETA_EPSILON_RELATIVO = 1e-9;

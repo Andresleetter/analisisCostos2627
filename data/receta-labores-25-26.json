@@ -1,0 +1,356 @@
+{
+  "_fuente": "Export de Consulta OT de Albor de la campania 25/26, analizado con el mismo filtro que usa el avance: solo OT Confirmadas, de un estadio reconocido y de modalidad hectareas. `labores` es la MEDIANA de labores distintas por lote — el divisor del estadio.",
+  "campania_origen": "25/26",
+  "generado": "2026-09-18",
+  "rango_datos": {
+    "desde": "2026-01-02",
+    "hasta": "2026-09-17"
+  },
+  "ot_en_el_export": 3417,
+  "ot_usadas": 851,
+  "recetas": [
+    {
+      "cultivo": "ARROZ",
+      "estadio": "preparacion de suelo",
+      "labores": 1,
+      "n_lotes": 2,
+      "promedio": 1,
+      "min": 1,
+      "max": 1,
+      "labores_vistas": [
+        {
+          "nombre": "Fumigacion Dron",
+          "lotes": 1
+        },
+        {
+          "nombre": "Taipa",
+          "lotes": 1
+        }
+      ]
+    },
+    {
+      "cultivo": "ARROZ",
+      "estadio": "siembra",
+      "labores": 1,
+      "n_lotes": 8,
+      "promedio": 1,
+      "min": 1,
+      "max": 1,
+      "labores_vistas": [
+        {
+          "nombre": "Tratamiento de semillas",
+          "lotes": 6
+        },
+        {
+          "nombre": "Siembra",
+          "lotes": 2
+        }
+      ]
+    },
+    {
+      "cultivo": "ARROZ",
+      "estadio": "cuidados",
+      "labores": 3,
+      "n_lotes": 104,
+      "promedio": 2.75,
+      "min": 1,
+      "max": 7,
+      "labores_vistas": [
+        {
+          "nombre": "Aplicación de Fungicida + Insecticida avion",
+          "lotes": 88
+        },
+        {
+          "nombre": "Guacheada ha",
+          "lotes": 64
+        },
+        {
+          "nombre": "Herbicidas Post-emergente avion",
+          "lotes": 34
+        },
+        {
+          "nombre": "Fertilización al Voleo Urea >50kg/ha",
+          "lotes": 24
+        },
+        {
+          "nombre": "Aplicación de insecticidas",
+          "lotes": 22
+        },
+        {
+          "nombre": "Herbicidas Post-emergente dron",
+          "lotes": 19
+        },
+        {
+          "nombre": "Fumigacion Avion 15L",
+          "lotes": 17
+        },
+        {
+          "nombre": "Paleada x Ha",
+          "lotes": 6
+        },
+        {
+          "nombre": "Fumigacion Dron",
+          "lotes": 4
+        },
+        {
+          "nombre": "Aplicación de Fungicida + Insecticida dron",
+          "lotes": 4
+        },
+        {
+          "nombre": "Paleada x persona",
+          "lotes": 2
+        },
+        {
+          "nombre": "Herbicidas Post-emergente",
+          "lotes": 2
+        }
+      ]
+    },
+    {
+      "cultivo": "ARROZ",
+      "estadio": "cosecha",
+      "labores": 1,
+      "n_lotes": 104,
+      "promedio": 1.01,
+      "min": 1,
+      "max": 2,
+      "labores_vistas": [
+        {
+          "nombre": "Cosecha arroz",
+          "lotes": 104
+        },
+        {
+          "nombre": "Aplicación de Fungicida + Insecticida avion",
+          "lotes": 1
+        }
+      ]
+    },
+    {
+      "cultivo": "CUIDADOS DE PATIOS SILO",
+      "estadio": "cuidados",
+      "labores": 1,
+      "n_lotes": 1,
+      "promedio": 1,
+      "min": 1,
+      "max": 1,
+      "labores_vistas": [
+        {
+          "nombre": "Aplicacion de herbicida con mochila",
+          "lotes": 1
+        }
+      ]
+    },
+    {
+      "cultivo": "CUIDADOS DE PATIOS VIVIENDA",
+      "estadio": "cuidados",
+      "labores": 1,
+      "n_lotes": 1,
+      "promedio": 1,
+      "min": 1,
+      "max": 1,
+      "labores_vistas": [
+        {
+          "nombre": "Aplicacion de herbicida con mochila",
+          "lotes": 1
+        }
+      ]
+    },
+    {
+      "cultivo": "MAIZ",
+      "estadio": "cuidados",
+      "labores": 1,
+      "n_lotes": 7,
+      "promedio": 1,
+      "min": 1,
+      "max": 1,
+      "labores_vistas": [
+        {
+          "nombre": "Aplicación de Fungicida + Insecticida avion",
+          "lotes": 7
+        }
+      ]
+    },
+    {
+      "cultivo": "SOJA",
+      "estadio": "preparacion de suelo",
+      "labores": 1,
+      "n_lotes": 11,
+      "promedio": 1.18,
+      "min": 1,
+      "max": 2,
+      "labores_vistas": [
+        {
+          "nombre": "Desecacion avion",
+          "lotes": 11
+        },
+        {
+          "nombre": "2° Plaina",
+          "lotes": 2
+        }
+      ]
+    },
+    {
+      "cultivo": "SOJA",
+      "estadio": "siembra",
+      "labores": 1,
+      "n_lotes": 7,
+      "promedio": 1,
+      "min": 1,
+      "max": 1,
+      "labores_vistas": [
+        {
+          "nombre": "Tratamiento de semillas",
+          "lotes": 7
+        }
+      ]
+    },
+    {
+      "cultivo": "SOJA",
+      "estadio": "cuidados",
+      "labores": 2,
+      "n_lotes": 30,
+      "promedio": 3.43,
+      "min": 2,
+      "max": 7,
+      "labores_vistas": [
+        {
+          "nombre": "Aplicación de Fungicida + Insecticida avion",
+          "lotes": 30
+        },
+        {
+          "nombre": "Aplicación de Fungicida + insect + nutri avion",
+          "lotes": 27
+        },
+        {
+          "nombre": "Aplicación de Fungicida + Insecticida imperator",
+          "lotes": 14
+        },
+        {
+          "nombre": "Fumigacion Avion 15L",
+          "lotes": 8
+        },
+        {
+          "nombre": "Fumigacion Avion 10L",
+          "lotes": 8
+        },
+        {
+          "nombre": "Herbicidas Post-emergente avion",
+          "lotes": 5
+        },
+        {
+          "nombre": "Herbicidas Post-emergente dron",
+          "lotes": 4
+        },
+        {
+          "nombre": "Aplicación de Fungicida + Insecticida dron",
+          "lotes": 3
+        },
+        {
+          "nombre": "Aplicación de Fungicida + insect + nutri dron",
+          "lotes": 2
+        },
+        {
+          "nombre": "Aplicación de insecticidas",
+          "lotes": 2
+        }
+      ]
+    },
+    {
+      "cultivo": "SOJA",
+      "estadio": "cosecha",
+      "labores": 2,
+      "n_lotes": 30,
+      "promedio": 1.9,
+      "min": 1,
+      "max": 3,
+      "labores_vistas": [
+        {
+          "nombre": "Cosecha soja",
+          "lotes": 30
+        },
+        {
+          "nombre": "Desecacion dron",
+          "lotes": 13
+        },
+        {
+          "nombre": "Fumigacion Imperator",
+          "lotes": 8
+        },
+        {
+          "nombre": "Desecacion imperator",
+          "lotes": 5
+        },
+        {
+          "nombre": "Desecacion imperator x Ha",
+          "lotes": 1
+        }
+      ]
+    },
+    {
+      "cultivo": "SORGO",
+      "estadio": "preparacion de suelo",
+      "labores": 1,
+      "n_lotes": 6,
+      "promedio": 1.33,
+      "min": 1,
+      "max": 2,
+      "labores_vistas": [
+        {
+          "nombre": "1° Disco",
+          "lotes": 3
+        },
+        {
+          "nombre": "2° Disco",
+          "lotes": 2
+        },
+        {
+          "nombre": "Valeteadora x hectarea",
+          "lotes": 2
+        },
+        {
+          "nombre": "Fumigacion Dron",
+          "lotes": 1
+        }
+      ]
+    },
+    {
+      "cultivo": "SORGO",
+      "estadio": "cuidados",
+      "labores": 4,
+      "n_lotes": 12,
+      "promedio": 3.75,
+      "min": 1,
+      "max": 4,
+      "labores_vistas": [
+        {
+          "nombre": "Aplicación de Fungicida + Insecticida avion",
+          "lotes": 12
+        },
+        {
+          "nombre": "Esparcir potasio en avion > 50kg/ha",
+          "lotes": 10
+        },
+        {
+          "nombre": "Fertilización al Voleo Urea >50kg/ha",
+          "lotes": 10
+        },
+        {
+          "nombre": "Fumigacion Imperator",
+          "lotes": 10
+        },
+        {
+          "nombre": "Herbicidas Post-emergente dron",
+          "lotes": 1
+        },
+        {
+          "nombre": "Esparcidor de Sólido",
+          "lotes": 1
+        },
+        {
+          "nombre": "Aplicación de insecticidas",
+          "lotes": 1
+        }
+      ]
+    }
+  ]
+}

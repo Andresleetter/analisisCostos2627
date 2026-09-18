@@ -137,6 +137,35 @@ function cargarRecetas(url, urlRespaldo){
     });
 }
 
+// Receta de labores por estadio (data/receta-labores-25-26.json). Mismo criterio que
+// cargarRecetas: JSON chico, una sola descarga, y si falla NO se propaga el error — el avance
+// vuelve a calcularse con el divisor de siempre y el resto del dashboard no se entera.
+function cargarRecetaLabores(url, urlRespaldo){
+  var pedir = function(u){
+    console.log('Iniciando carga:', u);
+    return fetch(conSello(u), {cache:'no-store'}).then(function(resp){
+      console.log('HTTP Status:', resp.status, '(receta de labores)');
+      if(!resp.ok) throw new Error('HTTP '+resp.status+' al descargar la receta de labores');
+      return resp.json();
+    });
+  };
+  return pedir(url)
+    .catch(function(e){
+      if(!urlRespaldo) throw e;
+      console.warn('No se pudo cargar la receta de labores desde el sitio ('+(e.message||e)+'). Reintentando desde GitHub…');
+      return pedir(urlRespaldo);
+    })
+    .then(function(json){
+      if(!json || !Array.isArray(json.recetas)) throw new Error('El JSON de receta de labores no tiene la lista `recetas`.');
+      return json;
+    })
+    .catch(function(e){
+      console.error('No se pudo cargar la receta de labores:', e.message||e,
+        '— el avance de campo se calcula igual, con el divisor de las labores ya confirmadas.');
+      return null;
+    });
+}
+
 // ---- Vigilancia: avisar cuando el sitio ya tiene un .xlsx distinto del que se esta mirando ----
 // El dashboard se deja abierto durante horas y el Excel se actualiza varias veces por dia, asi que
 // la pantalla envejece sin que nada lo indique. Al volver a la pestaña se hace UN pedido HEAD
@@ -282,10 +311,11 @@ function loadData(){
   Promise.all([
     cargarXLSX('datosCampania2627.xlsx', SRC_XLSX, SRC_XLSX_RESPALDO),
     cargarJSON('presupuesto-infraestructura-26-27.json', INFRA_SRC_JSON, INFRA_SRC_JSON_RESPALDO),
-    cargarRecetas(RECETAS_SRC_JSON, RECETAS_SRC_JSON_RESPALDO)
+    cargarRecetas(RECETAS_SRC_JSON, RECETAS_SRC_JSON_RESPALDO),
+    cargarRecetaLabores(RECETA_LABORES_SRC_JSON, RECETA_LABORES_SRC_JSON_RESPALDO)
   ])
     .then(function(wbs){
-      var wb = wbs[0], jsonInfra = wbs[1], recetas = wbs[2];
+      var wb = wbs[0], jsonInfra = wbs[1], recetas = wbs[2], recetaLabores = wbs[3];
       var consultaOT = hojaARows(wb, HOJA_OT);
       var consultaCultivos = hojaARows(wb, HOJA_CULTIVOS);
       var consultaInsumos = hojaARows(wb, HOJA_INSUMOS);
@@ -299,7 +329,9 @@ function loadData(){
       var presupuestoInfra = leerPresupuestoInfra(jsonInfra);
       console.log('Presupuesto de Infraestructura — items:', presupuestoInfra.length);
       console.log('Recetas de insumos — registros:', recetas ? recetas.length : '(no disponibles)');
-      try{ D = buildData(consultaOT, consultaCultivos, insumos, presupuestoInfra, recetas); }
+      console.log('Receta de labores — registros:', recetaLabores ? recetaLabores.recetas.length
+        + ' (campaña '+recetaLabores.campania_origen+')' : '(no disponible)');
+      try{ D = buildData(consultaOT, consultaCultivos, insumos, presupuestoInfra, recetas, recetaLabores); }
       catch(e){ console.error('Error al construir indicadores:', e); throw new Error('Error procesando los datos: '+e.message); }
       // D.excel_actualizado se fija UNA sola vez acá, por carga exitosa — nunca se recalcula en
       // render.js ni cambia al navegar entre módulos, usar filtros o abrir/cerrar el menú móvil.

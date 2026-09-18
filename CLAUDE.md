@@ -41,7 +41,7 @@ assets estáticos), con `raw.githubusercontent.com` solo como respaldo. Ver READ
 | Archivo | Dominio |
 |---|---|
 | `ordenes.js` | Base de `consultaOT` — todo lo demás depende de sus colecciones; `agruparOTS()` arma cada OT **solo con las líneas que están en el estado de la OT** (Albor confirma por línea: una OT medio confirmada no debe aportar lo pendiente) |
-| `cultivos.js` | Plan RTK, avance por cultivo/etapa, Control de Hectáreas — `desglosarEstadio()` descompone el avance de la etapa en el aporte de cada labor (vista Avance Detallado): es la misma cuenta de `equivalenteLoteEstadio` leída término a término, **no** una segunda fórmula |
+| `cultivos.js` | Plan RTK, avance por cultivo/etapa, Control de Hectáreas — `equivalenteLoteEstadio()` promedia las labores del lote con `divisor = max(labores confirmadas, receta del cultivo)`: la receta (`data/receta-labores-25-26.json`, derivada de la campaña anterior) es un **piso**, y sin ella la primera labor confirmada dejaba el lote en 100% del estadio. `desglosarEstadio()` descompone ese avance en el aporte de cada labor (vista Avance Detallado) usando **el mismo divisor**: es la misma cuenta leída término a término, **no** una segunda fórmula |
 | `servicios.js` | Módulo Servicios y el paquete por campaña — `unidadTrabajo` elige entre ha / hrs / kg / ins / trabajos; `acumularGrupoServicio()` es la única suma de una fila y `filtrarServiciosPorCultivo()` la reusa para el filtro de Cultivo |
 | `combustible.js` | Gasoil — cruza cada movimiento con su OT (`referenciaOrigen` = `consultaOT.referencia`; `referenciaAsiento` quedó descartado por no ser único) y lo atribuye por niveles: OT vinculada / Solo contratista / OT no disponible / Labor Propia |
 | `insumos.js` | Módulo Insumos |
