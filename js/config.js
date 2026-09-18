@@ -419,10 +419,26 @@ const RECETA_LABORES_SRC_JSON = SRC_DATA+"receta-labores-25-26.json";
 const RECETA_LABORES_SRC_JSON_RESPALDO = "https://raw.githubusercontent.com/"+REPO+"/"+BRANCH+"/"+SRC_DATA+"receta-labores-25-26.json";
 // Cuantos lotes necesita un cultivo/estadio para que su propia receta se considere representativa.
 // Por debajo de esto se usa el RESPALDO: la mediana de las recetas de los demas cultivos del MISMO
-// estadio. El caso que lo motivo es el maiz, que en la 25/26 tuvo 21 OT en toda la campania y una
-// sola labor de cuidados en 7 lotes: su mediana daba 1 y lo dejaba marcando 100% de cuidados.
-// Con el umbral en 10, maiz toma el respaldo de arroz (3), sorgo (4) y soja (2) — mediana 3.
-const RECETA_LABORES_MIN_LOTES = 10;
+// estadio, para que un cultivo marginal en la campania anterior no aporte un divisor que no
+// representa nada.
+//
+// Esta en 5 y no mas alto por el maiz, que es el cultivo chico de la serie: 7 lotes. Con el export
+// completo de la 25/26 su muestra quedo estrecha — preparacion entre 5 y 6 labores en los 7 lotes,
+// cuidados entre 6 y 8 — asi que un umbral de 10 le descartaba una receta buena y le prestaba la de
+// los demas. Con 5, cada cultivo usa la suya.
+const RECETA_LABORES_MIN_LOTES = 5;
+
+// Estadios a los que la receta NO se aplica, aunque el JSON traiga un valor para ellos.
+//
+// SIEMBRA esta excluida porque su receta y el avance NO cuentan lo mismo. La mediana de 2 labores
+// por lote de la 25/26 (arroz, soja) sale de contar "Siembra" MAS "Tratamiento de semillas" — y el
+// avance de siembra descarta explicitamente el tratamiento de semillas, que no acredita superficie
+// sembrada (ver esAvanceDeSiembraValido y SIEMBRA_SERVICIOS_NO_SIEMBRA). Usar ese 2 como divisor
+// seria dividir por una labor que el numerador se niega a acreditar: el avance de siembra caeria a
+// la mitad por una inconsistencia del calculo, no porque falte trabajo.
+//
+// Para incorporarla habria que aplicar el mismo filtro al generar la receta, no sacarla de aca.
+const RECETA_LABORES_ESTADIOS_EXCLUIDOS = ['siembra'];
 
 // Tolerancia SOLO para decidir "Según receta" — no es una tolerancia agronomica (el negocio todavia
 // no definio ninguna), es el margen de error de punto flotante: 1e-9 relativo al valor comparado.

@@ -226,40 +226,88 @@ El dato no sabe cuántas labores lleva un ciclo. No existe en ningún lado: `con
 hectáreas, no labores, y `recetas-insumos-26-27.json` es de insumos. Así que el divisor se saca de la
 campaña anterior.
 
-**`data/receta-labores-25-26.json`** — derivado del export de Consulta OT de la 25/26 con **el mismo
-filtro que usa el avance** (solo Confirmadas, estadio reconocido, modalidad hectáreas), contando
-labores distintas por lote. El valor de cada cultivo/estadio es la **mediana**, no el promedio: un
-lote que recibió siete aplicaciones no debe arrastrar al resto. El `.xlsx` fuente **no está en el
-repo** — se analiza una vez y lo que se versiona es el JSON (7,7 KB).
+**`data/receta-labores-25-26.json`** — derivado del export de Consulta OT de la 25/26 (13.691 filas,
+15/02/2025 a 17/09/2026: el ciclo completo) con **el mismo filtro que usa el avance** — solo
+Confirmadas, estadio reconocido, modalidad hectáreas —, contando labores distintas por lote. El valor
+de cada cultivo/estadio es la **mediana**, no el promedio: un lote que recibió once aplicaciones no
+debe arrastrar al resto. El `.xlsx` fuente **no está en el repo**: se analiza una vez y lo que se
+versiona es el JSON (14 KB).
 
 ```
 divisor(lote, estadio) = max( labores confirmadas del lote , receta(cultivo, estadio) )
 ```
 
-**Es un piso, nunca un tope.** Un lote que ya lleva más labores que la receta conserva las suyas. De
-ahí sale la propiedad que hace que todo esto sea seguro: un estadio cuya receta salió pobre da
-divisor 1, que no puede subir nada, así que **se puede aplicar a los cuatro estadios aunque el export
-de la campaña anterior no cubra el ciclo completo**. Y de hecho no lo cubre: el export arranca el
-02/01/2026, o sea que la Preparación de Suelo y la Siembra de la 25/26 (que pasaron en 2025) quedaron
-truncadas — ARROZ tiene 104 lotes con Cuidados y solo 2 con Preparación. La receta sirve para
-**Cuidados y Cosecha**; en Preparación y Siembra queda inerte y esos porcentajes no se movieron.
+**Es un piso, nunca un tope.** Un lote que ya lleva más labores que la receta conserva las suyas, así
+que la receta nunca puede inflar un avance: solo puede bajarlo hasta lo que el ciclo realmente exige.
+Y un cultivo/estadio sin receta da divisor 0, que no impone nada y deja el cálculo como estaba.
 
-**Respaldo entre cultivos** (`RECETA_LABORES_MIN_LOTES`, hoy 10). Un cultivo que en la campaña
-anterior fue marginal tendría una receta que no representa nada. MAIZ tuvo 21 OT en toda la 25/26 y
-una sola labor de cuidados en 7 lotes: su mediana daba 1 —es decir, ninguna— y lo dejaba igual de
-roto. Por debajo del umbral se usa la **mediana de las recetas representativas de los demás cultivos
-en el mismo estadio**, el mismo estadístico, para no cambiar de criterio a mitad de camino.
+| cultivo | Preparación | Siembra | Cuidados | Cosecha |
+|---|---|---|---|---|
+| ARROZ | **4** (118 lotes, 11 labores) | *excluida* | **7** (105 lotes, 18 labores) | 1 (104 lotes) |
+| SOJA | **5** (34, 12) | *excluida* | **7** (30, 18) | 2 (30) |
+| SORGO | **3,5** (14, 9) | *excluida* | **9** (14, 12) | — |
+| MAIZ | **5** (7, 6) | *excluida* | **7** (7, 9) | — |
 
-| cultivo | estadio | receta | base | antes | después |
-|---|---|---|---|---|---|
-| ARROZ | Cuidados | 3 | 104 lotes, 12 labores | 36,2 % | **13,1 %** |
-| SORGO | Cuidados | 4 | 12 lotes, 7 labores | 34,7 % | **8,7 %** |
-| SOJA | Cuidados | 2 | 30 lotes, 10 labores | 28,6 % | **14,3 %** |
-| MAIZ | Cuidados | 3 (respaldo) | 7 lotes: bajo el umbral | 100 % | **33,3 %** |
+El efecto sobre la campaña 26/27, contra el cálculo sin receta:
+
+| | sin receta | con receta |
+|---|---|---|
+| ARROZ Preparación | 90,1 % | **62,0 %** |
+| ARROZ Siembra | 39,5 % | 39,5 % (sin cambio) |
+| ARROZ Cuidados | 36,2 % | **5,6 %** |
+| SORGO Preparación | 97,6 % | **65,5 %** |
+| SORGO Cuidados | 34,7 % | **3,9 %** |
+| SOJA Preparación | 96,2 % | **44,3 %** |
+| SOJA Cuidados | 28,6 % | **4,1 %** |
+| MAIZ Preparación | 100 % | **33,0 %** |
+| MAIZ Cuidados | 100 % | **14,3 %** |
+
+**Qué significa ahora el número.** Dejó de ser "cuánta superficie tocó esta etapa" y pasó a ser
+**"cuánto del trabajo del ciclo está hecho"**. Ninguna etapa llega a 100 % hasta completar todas sus
+labores sobre todos sus lotes. En ARROZ · Preparación, los divisores que aplican son 4, 5, 6 y 7 —
+ninguno menor a 4; antes eran 1, 2, 4, 5, 6 y 7, y todos los lotes con una, dos o tres labores
+confirmadas subieron a 4. De ahí sale la caída de 90,1 % a 62,0 %.
+
+#### Siembra queda afuera (`RECETA_LABORES_ESTADIOS_EXCLUIDOS`)
+
+No es una preferencia: **la receta de Siembra y el avance de Siembra no cuentan lo mismo**. La mediana
+de 2 labores por lote de la 25/26 sale de contar `Siembra` **más** `Tratamiento de semillas`:
+
+```
+ARROZ siembra · 103 lotes · mediana 2
+   Siembra                  102 lotes
+   Tratamiento de semillas   87 lotes
+   RESiembra                 10 lotes
+   RESiembra s/implemento     2 lotes
+```
+
+Y el avance de Siembra **descarta explícitamente el tratamiento de semillas**, que no acredita
+superficie sembrada (ver `esAvanceDeSiembraValido` y `SIEMBRA_SERVICIOS_NO_SIEMBRA`). Usar ese 2 como
+divisor sería dividir por una labor que el numerador se niega a acreditar: el avance de siembra caería
+a la mitad por una inconsistencia del cálculo, no porque falte trabajo. Para incorporarla habría que
+aplicar el mismo filtro **al generar la receta**, no sacarla en el consumo.
+
+#### Respaldo entre cultivos (`RECETA_LABORES_MIN_LOTES`, hoy 5)
+
+Un cultivo que en la campaña anterior fue marginal tendría una receta que no representa nada. Por
+debajo del umbral se usa la **mediana de las recetas representativas de los demás cultivos en el mismo
+estadio** — el mismo estadístico, para no cambiar de criterio a mitad de camino.
+
+El umbral está en 5 y no más alto por el maíz, el cultivo chico de la serie: 7 lotes. Con el export
+completo su muestra quedó estrecha —preparación entre 5 y 6 labores en los 7 lotes, cuidados entre 6 y
+8—, así que un umbral de 10 le descartaba una receta buena y le prestaba la de los demás. Con 5, hoy
+**los cuatro cultivos usan su propia receta** y el respaldo queda como red por si un cultivo nuevo
+aparece sin historia.
+
+#### Detalles del cálculo
 
 **Un divisor de 1 no se muestra.** Todo lote con actividad tiene al menos una labor, así que un
-divisor 1 es inerte: la etapa expone `receta: null` y la pantalla no explica algo que no cambió
-ningún número. El índice completo, con el origen de cada divisor, queda en `D.receta_labores`.
+divisor 1 es inerte: la etapa expone `receta: null` y la pantalla no explica algo que no cambió ningún
+número. El índice completo, con el origen de cada divisor, queda en `D.receta_labores`.
+
+**La mediana puede no ser entera.** SORGO · Preparación da 3,5 porque son 14 lotes. Funciona igual
+como divisor; se muestra con coma decimal (`fmtDivisor` en `render.js`) y sin decimal cuando es
+entera.
 
 **Si el JSON no se descarga, el avance vuelve al cálculo anterior.** `cargarRecetaLabores()` sigue el
 mismo criterio que `cargarRecetas()`: el error se registra y devuelve `null`, nunca tumba la carga.
@@ -268,19 +316,19 @@ Verificado sacando el archivo del disco — el dashboard construye sin un error,
 **Nada fuera del avance se movió.** Comparando las 71 claves de `buildData()` con receta y sin ella,
 cambian exactamente tres: `cultivos`, `receta_labores` (nueva) y `resumen_campanias` (que contiene a
 `cultivos`). Costo ejecutado, gasto de servicios, consolidado, KPIs de OT, combustible, operativos,
-alertas, Auditoría de Siembra y Control de Hectáreas quedan idénticos.
+alertas, Auditoría de Siembra y Control de Hectáreas quedan idénticos. La suma de los aportes sigue
+dando el total de la etapa porque `desglosarEstadio` usa **el mismo divisor** que
+`equivalenteLoteEstadio`.
 
 **Lo que esto NO es.** No es un juicio agronómico sobre qué labores faltan: la receta aporta un
 número, no una lista. Los nombres de las labores de la 25/26 casi no coinciden con los de la 26/27
 («Aplicación de Fungicida + Insecticida avion», «Guacheada ha» contra «Esparcidor de Sólido»,
 «Fumigacion Imperator»), así que se usan solo como referencia en el tooltip. Y no corrige la
 clasificación del dato: el Esparcidor de Sólido se ejecuta **antes de la siembra en las 54 OT de la
-campaña** y sigue cargado en Albor con estadio Cuidados — se dejó donde está por decisión del
-usuario.
+campaña** y sigue cargado en Albor con estadio Cuidados — se dejó donde está por decisión del usuario.
 
-**Para actualizarla** hay que regenerar el JSON desde un export nuevo. Si alguna vez llega uno que
-arranque antes de 2025, la receta de Preparación y Siembra deja de ser inerte y esos porcentajes
-también se corrigen.
+**Para actualizarla** hay que regenerar el JSON desde un export nuevo de la campaña de referencia,
+con el mismo filtro. Mientras el ciclo de referencia no cambie, no hace falta tocarla.
 
 ### Avance Detallado por Cultivo
 
