@@ -45,7 +45,7 @@ Si el archivo está abierto en Excel al momento de necesitar inspeccionarlo (ej.
    > **Los rótulos visibles de este módulo usan los nombres de la OT.** El panel se llama "Detalle por Servicio" (antes "Detalle por Labor") y sus columnas son **Servicio** y **Estadio** (antes "Labor" y "Etapa"), igual que los campos `servicio` y `estadio` de `consultaOT`. Es un cambio de rótulo: no se tocaron los ids (`glabor`, `gestadio`, `gld`, `gld-sub`), ni las claves internas (`r.labor`, `r.estadio`), ni un solo cálculo. La única cadena de datos que cambió es el marcador de las OT sin estadio cargado, `'(Sin etapa)'` → `'(Sin estadio)'` (`servicios.js`), que se muestra tal cual en el filtro y en la columna. "Detalle de Etapas por Cultivo" (Resumen Ejecutivo) **no** se renombró: es otro módulo y agrupa por las cuatro etapas de `ETAPA_ORDEN`, no por el estadio crudo de la OT.
 3. **Combustible** — Ingreso por proveedor y **Consumo por Uso / Detalle**, con cada movimiento atribuido por niveles (OT vinculada / Solo contratista / OT no disponible / Labor Propia) y filtros de Mes, Tercero y **Máquina**. KPI de Stock Inicial (dinámico) y Balance, con arrastre mes a mes.
 4. **Insumos** — Ingreso/Consumo de insumos no-combustible en **cantidad real** (nunca en dinero), con flujo de Stock dinámico y filtros dependientes Tipo de Insumo → Insumo. Ver sección propia más abajo.
-5. **Control de Hectáreas** — lotes con exceso de superficie vs. RTK, OT sin correspondencia en el plan.
+5. **Control de Hectáreas** — lotes con exceso de superficie vs. RTK (con tolerancia por servicio), labores de preparación repetidas que sumando superan el lote, lotes inhabilitados y OT sin correspondencia en el plan.
 6. **Alertas Operacionales** — OT atrasadas, con filtro por Estado (Pendiente / En Ejecución / Todas) y color por fila según días de atraso.
 7. **Auditoría** — tres sub-módulos dentro de la misma pestaña, con navegación propia: **Infraestructura** (presupuesto vs. ejecución real), **Insumos por Parcela** (qué insumo se aplicó en cada lote, cuánto por hectárea y con qué OT) y **Siembra por Parcela** (cruce de las OT de siembra confirmadas contra el campo `hectareasSembradas` de la parcela, para detectar errores de carga). Última pestaña de la barra. Ver secciones propias más abajo.
 
@@ -59,7 +59,7 @@ Si el archivo está abierto en Excel al momento de necesitar inspeccionarlo (ej.
   - `data.js` — **orquestador** del modelo de datos. Conserva la única función pública `buildData(raw, proyecciones, insumos, presupuestoInfra, recetas)`, que ya no calcula nada: prepara las entradas, llama a las funciones de `js/data/` pasándoles explícitamente lo que necesitan, y ensambla el objeto final que consume `render.js`.
   - `js/data/` — el modelo de datos separado por dominio. Cada archivo expone funciones puras (reciben lo que necesitan por parámetro, devuelven colecciones explícitas) y **ninguno toca el DOM**:
     - `ordenes.js` — base compartida de `consultaOT`: normalización de filas, filtro por campaña (más la copia con todas las campañas que usa Servicios), agrupación por OT, modalidad de trabajo (hectáreas/horas/peso), importes, estados y KPIs de OT. Va primero porque todo lo demás depende de sus colecciones.
-    - `cultivos.js` — plan RTK desde `consultaCultivos`, avance de campo por cultivo y etapa (incluida la receta de labores que le pone piso al divisor, `construirRecetaLabores()`), y Control de Hectáreas (excesos, lotes inhabilitados, OT sin correspondencia en el plan).
+    - `cultivos.js` — plan RTK desde `consultaCultivos`, avance de campo por cultivo y etapa (incluida la receta de labores que le pone piso al divisor, `construirRecetaLabores()`), y Control de Hectáreas (excesos con tolerancia por servicio, labores de preparación repetidas que sumando superan el lote, lotes inhabilitados, OT sin correspondencia en el plan).
     - `servicios.js` — módulo Servicios completo (`construirServicios()`: detalle por servicio, gasoil, filtros y totales) y el paquete equivalente por cada campaña presente en `consultaOT`.
     - `combustible.js` — consumo e ingresos de gasoil y stock inicial.
     - `insumos.js` — ingresos, consumos y flujo de stock por (Tipo, Insumo, Unidad).
@@ -365,13 +365,99 @@ La fila principal queda con el qué y el cuánto (`N OT · N lote(s) · US$`), y
 
 Se reporta **solo cuando la suma supera el plan del lote**. Terminar un lote en dos tandas es normal y cierra clavado contra el plan (la 1° Plaina del lote 137: `67,47 + 20,48 = 87,95`, exacto), así que marcarlo sería ruido. Que la suma lo supere, en cambio, dice que la labor se rehizo sobre superficie ya trabajada — el caso más claro es SORGO · Fumigacion Imperator, con **8 lotes fumigados enteros dos veces**, en abril y de nuevo en julio.
 
-**Control de Hectáreas no detecta esto**, y por eso vive acá: allá el lote entra con el **máximo** de sus OT (`ha_ot = Math.max(...)`), no con la suma, así que dos cargas de 24,22 ha sobre un lote de 24,22 le dan exceso cero. Es el 2° Disco del lote 214, invisible en cualquier otra parte del dashboard. Hoy son 13 lotes / 26 OT en toda la campaña.
+El listado de excesos de Control de Hectáreas **no puede detectar esto por su propia cuenta**: allá el lote entra con el **máximo** de sus OT (`ha_ot = Math.max(...)`), no con la suma, así que dos cargas de 24,22 ha sobre un lote de 24,22 le dan exceso cero — es el 2° Disco del lote 214. Por eso Control de Hectáreas tiene desde el 18/09/2026 un panel propio para el caso, **Labores de Preparación Repetidas que Superan el Lote** (ver esa sección), que hace la cuenta por suma en vez de por máximo y se limita a Preparación de Suelo. Las dos vistas miran lo mismo desde ángulos distintos: acá se ve qué le hace al avance de la etapa, allá qué superficie se trabajó de más.
 
 Quedan fuera los casos sin plan contra el cual compararse: la siembra de Zafriña26 (comparte el plan de Maíz), los lotes sin plan RTK y los dados de baja (`RTK_LOTE_CANCELADO`), donde cualquier superficie lo superaría.
 
 **El costo es información adicional y no pondera nada.** Sale de `o.imp` (el importe total de la OT: Labor Propia + Labor Tercero + Insumos), y el costo de la labor es la suma del de sus OT. El aporte al estadio viene exclusivamente de la ejecución física.
 
 **Las labores que no acreditan superficie figuran aparte**, bajo "No aportan al avance", con su motivo (trabajo medido en horas, tratamiento de semillas, sin Has. Reales), su cantidad de OT y su costo, y aporte 0% explícito. Son los mismos descartes que el cálculo del avance ya hacía y que antes desaparecían en silencio; nunca entran en ninguna suma. Las labores que `LABORES_EQUIVALENTES` unifica se muestran como **una sola**, con los nombres originales al lado.
+
+## Control de Hectáreas
+
+Compara la superficie ejecutada de cada lote contra su plan RTK. La superficie sale de
+`haTrabajada(o)` — Unidades/Dosis de las líneas de **labor** de la OT (`categoria = Servicio`),
+nunca de Has. Reales: ver **Agrupación por OT**. Solo OT Confirmadas: una Pendiente no ejecutó nada,
+así que no puede haber excedido nada.
+
+### Tolerancia de sobrepase por servicio
+
+Un lote entra al listado de excesos cuando alguna de sus OT pasa el plan. `TOLERANCIA_EXCESO_SERVICIO`
+(`config.js`) define cuánto puede pasarse cada servicio sin que se reporte, como fracción del plan:
+
+```
+divisor de decisión:  ha_ot > plan_del_lote × (1 + tolerancia(servicio))
+```
+
+Hoy tiene una sola entrada, **Fumigación Dron: 5 %**, a pedido del usuario. El dron aplica con solape
+entre pasadas, así que cubrir un poco más que la superficie del lote es cómo trabaja, no un error de
+carga. Lo que no figure en la tabla tolera 0.
+
+**La tolerancia no cambia ninguna hectárea**: solo decide si el caso se reporta. El exceso que se
+muestra sigue siendo la diferencia real contra el plan.
+
+Dos consecuencias de diseño:
+
+- **`ha_ot` es la mayor de las OT que sobrepasan**, no la mayor del lote. Si la OT más grande queda
+  tolerada, no tiene sentido que sea ella la que fije el exceso que se reporta.
+- **Una OT tolerada no se lista en el detalle**, porque lo que dice la tolerancia es justamente que
+  está bien. Pero se la nombra en el encabezado del lote («incluye 1 dentro de la tolerancia de 5 %
+  de su servicio: OT 4405 · Fumigacion Dron»), para que no desaparezca sin dejar rastro.
+
+Con el dato de la campaña la tolerancia saca **un solo lote** del listado —ARROZ `.40A`, donde la OT
+4513 hace 42,80 ha sobre un plan de 40,77, un 4,98 %—. Los sobrepases grandes siguen enteros: el
+`.32B` sigue con +22,9 %.
+
+### El detalle lista solo las OT que sobrepasan
+
+El detalle de cada lote muestra **únicamente las OT que pasan el plan**. Las que quedan dentro son
+correctas y no explican nada del exceso: eran **74 de las 95 filas** del detalle, tres cuartas partes
+del panel dedicadas a decir que todo estaba bien. El panel pasó de 123 a 48 filas.
+
+Nada desaparece en silencio: el encabezado de cada lote dice cuántas OT superan el plan, cuántas
+quedaron sin listar por estar dentro, cuáles se toleraron y con qué tolerancia, y el total de OT del
+lote. El recorte es **solo de presentación** — `e.dets` sigue trayendo todas las OT del lote, así que
+la trazabilidad completa está en el modelo.
+
+### Labores de Preparación Repetidas que Superan el Lote
+
+Panel propio, porque el listado de excesos **no puede verlo**: allí el lote entra con el **máximo** de
+sus OT, no con la suma, así que dos pasadas de 24,22 ha sobre un lote de 24,22 dan exceso cero.
+
+La cuenta acá es por suma, agrupando por **labor normalizada** (`claveLaborAvance`, la misma del
+avance, para que dos nombres de la misma labor no queden como labores distintas):
+
+```
+suma de las OT de UNA labor de preparación sobre el lote  >  plan × (1 + tolerancia del servicio)
+```
+
+**Solo cuenta Preparación de Suelo** (`REPETIDAS_ESTADIOS`, `config.js`). Un cuidado se repite sobre
+el mismo lote por diseño agronómico —se fumiga varias veces en la campaña—, así que sumar sus OT y
+compararlas contra el plan no dice nada: dos fumigaciones de un lote entero dan 200 % y son correctas.
+Preparar el suelo, en cambio, se hace una vez.
+
+El filtro va **por OT y no por grupo**, y eso saca tres falsos positivos que no eran repeticiones: en
+los lotes `147A`, `147B` y `148A` de arroz la «Fumigación Dron» aparecía dos veces, pero una OT es de
+Preparación (desecación previa) y la otra de Cuidados — dos momentos distintos del ciclo que comparten
+el nombre del servicio, no la misma pasada dos veces.
+
+Se reporta solo cuando la suma supera el plan. Terminar un lote en dos tandas es normal y cierra
+clavado contra el plan, así que marcarlo sería ruido; que lo supere dice que **la labor se rehizo
+sobre superficie ya trabajada**. Vale la misma tolerancia por servicio que el listado de excesos, y
+quedan fuera los lotes sin plan y los dados de baja (`RTK_LOTE_CANCELADO`), donde cualquier superficie
+lo superaría.
+
+El detalle de cada caso lleva la **fecha real** de cada OT, que es lo primero que se quiere ver: dos
+pasadas separadas por meses son la firma de que la labor se rehizo. La 1° Plaina del lote `.33A` son
+49,42 ha el 31/07 y otras 49,42 el 17/09 — el lote entero, dos veces.
+
+Hoy son **15 casos y 296,97 ha** sobre el plan. El grueso es la Fumigación Imperator de sorgo —que en
+ese cultivo es desecación de preparación, no un cuidado— con ocho lotes tratados enteros dos veces, en
+abril y de nuevo en julio, más varios discos, plainas y una taipa.
+
+El mismo hallazgo se ve en **Avance Detallado** desde el ángulo del avance (cuánto le quita a la
+etapa); acá se ve desde el ángulo de la superficie (cuánta se trabajó de más). No son dos cálculos
+distintos del mismo número: son dos preguntas distintas sobre los mismos datos.
 
 ## Servicios
 

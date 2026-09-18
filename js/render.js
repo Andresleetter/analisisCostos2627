@@ -41,16 +41,49 @@ function renderAll(){
     `<div class="kpi"><div class="k-lab">Lotes con Exceso</div><div class="k-val c-r">${D.exc_kpi.n}</div><div class="k-foot">Superficie ejecutada &gt; planificada</div></div>`+
     `<div class="kpi"><div class="k-lab">Ha Excedidas Acum.</div><div class="k-val c-r" style="font-size:22px">+${fmt2(D.exc_kpi.ha)}</div></div>`+
     `<div class="kpi"><div class="k-lab">Mayor Exceso</div><div class="k-val c-r" style="font-size:22px">+${fmt2(D.exc_kpi.mayor)} ha</div></div>`+
+    `<div class="kpi"><div class="k-lab">Preparación Repetida</div><div class="k-val c-r">${D.exc_kpi.n_repetidas}</div><div class="k-foot">+${fmt2(D.exc_kpi.ha_repetidas)} ha sobre el lote</div></div>`+
     `<div class="kpi"><div class="k-lab">OT Fuera de RTK</div><div class="k-val c-r">${D.exc_kpi.n_sinrtk}</div><div class="k-foot">Lote inexistente en plan</div></div>`;
   document.getElementById('exc-sub').textContent=D.exceso.length+' lotes · ordenado por mayor diferencia';
   let excHtml='';
   D.exceso.forEach(e=>{
     excHtml+=`<tr class="grp"><td>${e.cult}</td><td class="mono">${e.lote}</td><td class="tr">${fmt2(e.ha_rtk)}</td><td class="tr">${fmt2(e.ha_ot)}</td><td class="tr exd">+${fmt2(e.diff)}</td><td class="tr exd">+${Math.round(e.pdiff)}%</td></tr>`;
-    excHtml+=`<tr class="dethead"><td colspan="6">OT que componen el lote · ${e.n_ot} OT (excl. labores por hora)</td></tr>`;
-    e.dets.forEach(x=>{ const tag=x.over?'<span class="tag">superficie sobre RTK</span>':'';
-      excHtml+=`<tr class="${x.over?'det-over':'det'}"><td class="dl mono">OT ${x.ot}</td><td>${x.act}</td><td colspan="2">${x.serv} ${tag}</td><td>${x.estado}</td><td class="tr ${x.over?'exd':''}">${fmt2(x.ha)} ha</td></tr>`; });
+    // Solo se listan las OT que SOBREPASAN el lote. Las que quedan dentro del plan son correctas y
+    // no explican nada del exceso: eran 74 de las 95 filas del detalle, tres cuartas partes del
+    // panel dedicadas a decir que todo estaba bien. Las toleradas (pasan el plan pero dentro de
+    // TOLERANCIA_EXCESO_SERVICIO) tampoco se listan, porque justamente lo que dice la tolerancia es
+    // que estan bien. Nada desaparece en silencio: el encabezado dice cuantas quedaron afuera y por
+    // que, para que se pueda pedir el detalle completo si hace falta.
+    const culpables=e.dets.filter(x=>x.over), toleradas=e.dets.filter(x=>x.tolerado);
+    const ocultas=e.dets.length-culpables.length;
+    excHtml+=`<tr class="dethead"><td colspan="6">${culpables.length} OT ${culpables.length===1?'supera':'superan'} el plan del lote`+
+      (ocultas?` · ${ocultas} dentro del plan no se ${ocultas===1?'lista':'listan'}`:'')+
+      (toleradas.length?` (incluye ${toleradas.length} dentro de la tolerancia de ${Math.round(toleradas[0].tol*100)}% de su servicio: ${toleradas.map(t=>'OT '+escHtml(String(t.ot))+' · '+escHtml(String(t.serv))).join(', ')})`:'')+
+      ` · ${e.n_ot} OT en total (excl. labores por hora)</td></tr>`;
+    culpables.forEach(x=>{ const tag='<span class="tag">superficie sobre RTK</span>';
+      excHtml+=`<tr class="det-over"><td class="dl mono">OT ${x.ot}</td><td>${x.act}</td><td colspan="2">${x.serv} ${tag}</td><td>${x.estado}</td><td class="tr exd">${fmt2(x.ha)} ha</td></tr>`; });
   });
   document.getElementById('exc').innerHTML=excHtml;
+  // ---- Labores repetidas que sumando pasan el lote ----
+  // Mismo formato que el panel de exceso (fila de grupo + detalle de OT), porque responde la misma
+  // pregunta con otra cuenta: alli el lote entra con su OT mas grande, aca con la SUMA de las OT
+  // de una misma labor. La fecha va en el detalle: dos pasadas separadas por meses es la firma de
+  // que la labor se rehizo, y es lo primero que se quiere ver.
+  document.getElementById('rep-sub').textContent = D.repetidas.length
+    ? D.repetidas.length+' caso(s) · +'+fmt2(D.exc_kpi.ha_repetidas)+' ha sobre el plan · solo Preparación de Suelo · ordenado por mayor exceso'
+    : 'ninguna labor de preparación repetida supera su lote';
+  let repHtml='';
+  D.repetidas.forEach(r=>{
+    repHtml+=`<tr class="grp"><td>${r.cult}</td><td class="mono">${escHtml(String(r.lote))}</td><td>${escHtml(String(r.serv))}</td>`+
+      `<td class="tr">${fmt2(r.ha_rtk)}</td><td class="tr">${fmt2(r.suma)}</td>`+
+      `<td class="tr exd">+${fmt2(r.exceso)}</td><td class="tr exd">+${Math.round(r.pdiff)}%</td></tr>`;
+    repHtml+=`<tr class="dethead"><td colspan="7">${r.n_ot} OT de esta labor sobre el mismo lote</td></tr>`;
+    r.dets.forEach(x=>{
+      repHtml+=`<tr class="det-over"><td class="dl mono">OT ${x.ot}</td><td>${escHtml(String(x.act))}</td>`+
+        `<td colspan="2">${escHtml(String(x.serv))}</td><td>${x.fr?ipFecha(x.fr):'—'}</td>`+
+        `<td>${escHtml(String(x.estado))}</td><td class="tr exd">${fmt2(x.ha)} ha</td></tr>`; });
+  });
+  document.getElementById('rep').innerHTML = repHtml ||
+    '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:16px">Ninguna labor de preparación está cargada dos veces sobre un lote sumando más que su plan</td></tr>';
   document.getElementById('cancel-sub').textContent=D.cancelados.length+' lote(s)';
   let cancelHtml='';
   D.cancelados.forEach(e=>{

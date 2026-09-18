@@ -28,7 +28,7 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra, recetas, receta
   // del avance. Si no se pudo descargar llega null y construirCultivos calcula como siempre.
   const {cultivos,avanceInconsistencias,siembraExcluidas,receta_labores} =
     construirCultivos(OTS, RTK, RTK_TOT, [], recetaLabores);
-  const {exceso,sinrtk,cancelados,exc_kpi} = construirControlHectareas(OTS, RTK);
+  const {exceso,sinrtk,cancelados,repetidas,exc_kpi} = construirControlHectareas(OTS, RTK);
   const {otsVisibles,otsAtrasadas,totalAtrasadas,TOLERANCIA_ATRASO_DIAS} = construirAlertas(OTS);
   const {operativas,oper_costo,oper_part} = construirOperativas(OTS, costo_total);
   const {auditoria_items,auditoria_metros,auditoria_puentes,auditoria_puentes_horas,auditoria_gastos} =
@@ -88,7 +88,9 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra, recetas, receta
      cultivos, operativas, oper_costo, oper_part, resumen});
 
   return {total_ot,ot_conf,ot_ejec:totalEnEjecucion,ot_pend:totalPendientes,costo_total,cultivos,operativas,oper_costo,oper_part,
-    exceso,sinrtk,cancelados,exc_kpi,alertas:otsVisibles,n_ot_atrasadas:totalAtrasadas,
+    // `repetidas`: la MISMA labor cargada mas de una vez sobre un lote, donde la SUMA de esas
+    // OT pasa el plan. No lo detecta `exceso`, que compara el plan contra la OT mas grande.
+    exceso,sinrtk,cancelados,repetidas,exc_kpi,alertas:otsVisibles,n_ot_atrasadas:totalAtrasadas,
     auditoria_items,auditoria_metros,auditoria_puentes,auditoria_puentes_horas,auditoria_gastos,
     auditoria_siembra,
     gastos,gasoil_sec,meses,gasto_total,gasoil_total,gasoil_litros_total,gmes,glit,
