@@ -160,7 +160,7 @@ function construirRecetaLabores(json){
   // Mediana de las representativas de cada estadio — el mismo estadistico que usa la receta de cada
   // cultivo, para que el respaldo no cambie de criterio a mitad de camino.
   const respaldo = {};
-  Object.keys(porEstadio).forEach(k=>{
+  Object.keys(porEstadio).filter(k=>RECETA_LABORES_ESTADIOS_EXCLUIDOS.indexOf(k)<0).forEach(k=>{
     const v = porEstadio[k].slice().sort((a,b)=>a-b);
     respaldo[k] = v.length%2 ? v[(v.length-1)/2] : (v[v.length/2-1]+v[v.length/2])/2;
   });
@@ -176,6 +176,10 @@ function construirCultivos(OTS, RTK, RTK_TOT, rawTodasCampanias=[], recetaLabore
   const RECETA = construirRecetaLabores(recetaLabores);
   // Divisor minimo de un (cultivo, estadio). 0 = sin receta: no impone nada.
   function recetaDe(cultivo, estadio){
+    // Estadios donde la receta y el avance no cuentan lo mismo — hoy solo Siembra, ver
+    // RECETA_LABORES_ESTADIOS_EXCLUIDOS en config.js.
+    if(RECETA_LABORES_ESTADIOS_EXCLUIDOS.indexOf(estadio)>=0)
+      return {divisor:0, origen:null, n_lotes:0, labores_vistas:[]};
     const propia = (RECETA.idx[cultivo]||{})[estadio];
     if(propia && propia.representativa)
       return {divisor:propia.divisor, origen:'propia', n_lotes:propia.n_lotes,

@@ -3,46 +3,90 @@
   "campania_origen": "25/26",
   "generado": "2026-09-18",
   "rango_datos": {
-    "desde": "2026-01-02",
+    "desde": "2025-02-15",
     "hasta": "2026-09-17"
   },
-  "ot_en_el_export": 3417,
-  "ot_usadas": 851,
+  "ot_en_el_export": 7478,
+  "ot_usadas": 2913,
   "recetas": [
     {
       "cultivo": "ARROZ",
       "estadio": "preparacion de suelo",
-      "labores": 1,
-      "n_lotes": 2,
-      "promedio": 1,
+      "labores": 4,
+      "n_lotes": 118,
+      "promedio": 4.18,
       "min": 1,
-      "max": 1,
+      "max": 7,
       "labores_vistas": [
         {
-          "nombre": "Fumigacion Dron",
-          "lotes": 1
+          "nombre": "Taipa",
+          "lotes": 100
         },
         {
-          "nombre": "Taipa",
-          "lotes": 1
+          "nombre": "1° Disco",
+          "lotes": 92
+        },
+        {
+          "nombre": "1° Plaina",
+          "lotes": 92
+        },
+        {
+          "nombre": "Desecacion imperator",
+          "lotes": 56
+        },
+        {
+          "nombre": "2° Disco",
+          "lotes": 54
+        },
+        {
+          "nombre": "Desecacion avion",
+          "lotes": 48
+        },
+        {
+          "nombre": "Fumigacion Dron",
+          "lotes": 25
+        },
+        {
+          "nombre": "3° Disco",
+          "lotes": 13
+        },
+        {
+          "nombre": "Levantamiento con dron",
+          "lotes": 6
+        },
+        {
+          "nombre": "2° Plaina",
+          "lotes": 5
+        },
+        {
+          "nombre": "Desarrollar estero con disco x Ha",
+          "lotes": 2
         }
       ]
     },
     {
       "cultivo": "ARROZ",
       "estadio": "siembra",
-      "labores": 1,
-      "n_lotes": 8,
-      "promedio": 1,
+      "labores": 2,
+      "n_lotes": 103,
+      "promedio": 1.95,
       "min": 1,
-      "max": 1,
+      "max": 3,
       "labores_vistas": [
         {
-          "nombre": "Tratamiento de semillas",
-          "lotes": 6
+          "nombre": "Siembra",
+          "lotes": 102
         },
         {
-          "nombre": "Siembra",
+          "nombre": "Tratamiento de semillas",
+          "lotes": 87
+        },
+        {
+          "nombre": "RESiembra",
+          "lotes": 10
+        },
+        {
+          "nombre": "RESiembra s/implemento",
           "lotes": 2
         }
       ]
@@ -50,59 +94,83 @@
     {
       "cultivo": "ARROZ",
       "estadio": "cuidados",
-      "labores": 3,
-      "n_lotes": 104,
-      "promedio": 2.75,
+      "labores": 7,
+      "n_lotes": 105,
+      "promedio": 6.96,
       "min": 1,
-      "max": 7,
+      "max": 9,
       "labores_vistas": [
+        {
+          "nombre": "Fertilización al Voleo Urea >50kg/ha",
+          "lotes": 103
+        },
         {
           "nombre": "Aplicación de Fungicida + Insecticida avion",
           "lotes": 88
+        },
+        {
+          "nombre": "Esparcidor de Sólido",
+          "lotes": 82
+        },
+        {
+          "nombre": "Paleada x Ha",
+          "lotes": 80
+        },
+        {
+          "nombre": "Herbicidas Post-emergente avion",
+          "lotes": 74
         },
         {
           "nombre": "Guacheada ha",
           "lotes": 64
         },
         {
-          "nombre": "Herbicidas Post-emergente avion",
-          "lotes": 34
+          "nombre": "Herbicidas Post-emergente dron",
+          "lotes": 57
         },
         {
-          "nombre": "Fertilización al Voleo Urea >50kg/ha",
-          "lotes": 24
+          "nombre": "Fertilización al Voleo Urea <50kg/ha",
+          "lotes": 55
+        },
+        {
+          "nombre": "Herbicidas Post-emergente imperator",
+          "lotes": 32
         },
         {
           "nombre": "Aplicación de insecticidas",
-          "lotes": 22
-        },
-        {
-          "nombre": "Herbicidas Post-emergente dron",
-          "lotes": 19
+          "lotes": 28
         },
         {
           "nombre": "Fumigacion Avion 15L",
           "lotes": 17
         },
         {
-          "nombre": "Paleada x Ha",
-          "lotes": 6
+          "nombre": "Esparcir potasio en avion > 50kg/ha",
+          "lotes": 13
+        },
+        {
+          "nombre": "Paleada x persona",
+          "lotes": 9
         },
         {
           "nombre": "Fumigacion Dron",
-          "lotes": 4
+          "lotes": 9
+        },
+        {
+          "nombre": "Herbicidas Post-emergente",
+          "lotes": 8
+        },
+        {
+          "nombre": "Desecacion imperator",
+          "lotes": 7
         },
         {
           "nombre": "Aplicación de Fungicida + Insecticida dron",
           "lotes": 4
         },
         {
-          "nombre": "Paleada x persona",
-          "lotes": 2
-        },
-        {
-          "nombre": "Herbicidas Post-emergente",
-          "lotes": 2
+          "nombre": "Aplicacion de herbicida con mochila",
+          "lotes": 1
         }
       ]
     },
@@ -111,13 +179,17 @@
       "estadio": "cosecha",
       "labores": 1,
       "n_lotes": 104,
-      "promedio": 1.01,
+      "promedio": 1.03,
       "min": 1,
-      "max": 2,
+      "max": 3,
       "labores_vistas": [
         {
           "nombre": "Cosecha arroz",
           "lotes": 104
+        },
+        {
+          "nombre": "Fertilización al Voleo Urea >50kg/ha",
+          "lotes": 2
         },
         {
           "nombre": "Aplicación de Fungicida + Insecticida avion",
@@ -128,14 +200,18 @@
     {
       "cultivo": "CUIDADOS DE PATIOS SILO",
       "estadio": "cuidados",
-      "labores": 1,
+      "labores": 2,
       "n_lotes": 1,
-      "promedio": 1,
-      "min": 1,
-      "max": 1,
+      "promedio": 2,
+      "min": 2,
+      "max": 2,
       "labores_vistas": [
         {
           "nombre": "Aplicacion de herbicida con mochila",
+          "lotes": 1
+        },
+        {
+          "nombre": "Fumigacion Dron",
           "lotes": 1
         }
       ]
@@ -157,40 +233,41 @@
     },
     {
       "cultivo": "MAIZ",
-      "estadio": "cuidados",
-      "labores": 1,
-      "n_lotes": 7,
-      "promedio": 1,
-      "min": 1,
-      "max": 1,
-      "labores_vistas": [
-        {
-          "nombre": "Aplicación de Fungicida + Insecticida avion",
-          "lotes": 7
-        }
-      ]
-    },
-    {
-      "cultivo": "SOJA",
       "estadio": "preparacion de suelo",
-      "labores": 1,
-      "n_lotes": 11,
-      "promedio": 1.18,
-      "min": 1,
-      "max": 2,
+      "labores": 5,
+      "n_lotes": 7,
+      "promedio": 5.29,
+      "min": 5,
+      "max": 6,
       "labores_vistas": [
         {
-          "nombre": "Desecacion avion",
-          "lotes": 11
+          "nombre": "1° Disco",
+          "lotes": 7
+        },
+        {
+          "nombre": "1° Plaina",
+          "lotes": 7
+        },
+        {
+          "nombre": "Fumigacion Dron",
+          "lotes": 7
+        },
+        {
+          "nombre": "Subsolador sin Implemento",
+          "lotes": 7
         },
         {
           "nombre": "2° Plaina",
+          "lotes": 7
+        },
+        {
+          "nombre": "Desecacion imperator",
           "lotes": 2
         }
       ]
     },
     {
-      "cultivo": "SOJA",
+      "cultivo": "MAIZ",
       "estadio": "siembra",
       "labores": 1,
       "n_lotes": 7,
@@ -199,19 +276,163 @@
       "max": 1,
       "labores_vistas": [
         {
-          "nombre": "Tratamiento de semillas",
+          "nombre": "Siembra",
           "lotes": 7
+        }
+      ]
+    },
+    {
+      "cultivo": "MAIZ",
+      "estadio": "cuidados",
+      "labores": 7,
+      "n_lotes": 7,
+      "promedio": 7,
+      "min": 6,
+      "max": 8,
+      "labores_vistas": [
+        {
+          "nombre": "Valeteadora x hectarea",
+          "lotes": 7
+        },
+        {
+          "nombre": "Esparcidor de Sólido",
+          "lotes": 7
+        },
+        {
+          "nombre": "Aplicación de insecticidas",
+          "lotes": 7
+        },
+        {
+          "nombre": "Fertilización al Voleo Urea >50kg/ha",
+          "lotes": 7
+        },
+        {
+          "nombre": "Fumigacion Dron",
+          "lotes": 7
+        },
+        {
+          "nombre": "Aplicación de Fungicida + Insecticida avion",
+          "lotes": 7
+        },
+        {
+          "nombre": "Aplicación de Fungicida + insect + nutri avion",
+          "lotes": 4
+        },
+        {
+          "nombre": "Desecacion imperator",
+          "lotes": 2
+        },
+        {
+          "nombre": "Herbicidas Post-emergente imperator",
+          "lotes": 1
+        }
+      ]
+    },
+    {
+      "cultivo": "PASTURA",
+      "estadio": "cuidados",
+      "labores": 1,
+      "n_lotes": 9,
+      "promedio": 1,
+      "min": 1,
+      "max": 1,
+      "labores_vistas": [
+        {
+          "nombre": "Esparcidor de Sólido",
+          "lotes": 9
+        }
+      ]
+    },
+    {
+      "cultivo": "SOJA",
+      "estadio": "preparacion de suelo",
+      "labores": 5,
+      "n_lotes": 34,
+      "promedio": 4.68,
+      "min": 2,
+      "max": 8,
+      "labores_vistas": [
+        {
+          "nombre": "2° Plaina",
+          "lotes": 28
+        },
+        {
+          "nombre": "1° Disco",
+          "lotes": 25
+        },
+        {
+          "nombre": "2° Disco",
+          "lotes": 23
+        },
+        {
+          "nombre": "1° Plaina",
+          "lotes": 20
+        },
+        {
+          "nombre": "Valeteadora x hectarea",
+          "lotes": 17
+        },
+        {
+          "nombre": "Desecacion avion",
+          "lotes": 15
+        },
+        {
+          "nombre": "Desecacion imperator",
+          "lotes": 12
+        },
+        {
+          "nombre": "Subsolador sin Implemento",
+          "lotes": 6
+        },
+        {
+          "nombre": "3° Plaina",
+          "lotes": 5
+        },
+        {
+          "nombre": "Fumigacion Dron",
+          "lotes": 3
+        },
+        {
+          "nombre": "Levantamiento con dron",
+          "lotes": 3
+        },
+        {
+          "nombre": "3° Disco",
+          "lotes": 2
+        }
+      ]
+    },
+    {
+      "cultivo": "SOJA",
+      "estadio": "siembra",
+      "labores": 2,
+      "n_lotes": 30,
+      "promedio": 2.07,
+      "min": 1,
+      "max": 3,
+      "labores_vistas": [
+        {
+          "nombre": "Siembra",
+          "lotes": 30
+        },
+        {
+          "nombre": "Tratamiento de semillas",
+          "lotes": 28
+        },
+        {
+          "nombre": "RESiembra",
+          "lotes": 4
         }
       ]
     },
     {
       "cultivo": "SOJA",
       "estadio": "cuidados",
-      "labores": 2,
+      "labores": 7,
       "n_lotes": 30,
-      "promedio": 3.43,
-      "min": 2,
-      "max": 7,
+      "promedio": 6.63,
+      "min": 5,
+      "max": 11,
       "labores_vistas": [
         {
           "nombre": "Aplicación de Fungicida + Insecticida avion",
@@ -219,11 +440,27 @@
         },
         {
           "nombre": "Aplicación de Fungicida + insect + nutri avion",
-          "lotes": 27
+          "lotes": 29
+        },
+        {
+          "nombre": "Valeteadora x hectarea",
+          "lotes": 26
+        },
+        {
+          "nombre": "Desecacion imperator",
+          "lotes": 25
+        },
+        {
+          "nombre": "Esparcidor de Sólido",
+          "lotes": 17
         },
         {
           "nombre": "Aplicación de Fungicida + Insecticida imperator",
           "lotes": 14
+        },
+        {
+          "nombre": "Herbicidas Post-emergente avion",
+          "lotes": 8
         },
         {
           "nombre": "Fumigacion Avion 15L",
@@ -234,15 +471,27 @@
           "lotes": 8
         },
         {
-          "nombre": "Herbicidas Post-emergente avion",
+          "nombre": "Herbicidas Post-emergente dron",
+          "lotes": 7
+        },
+        {
+          "nombre": "Herbicidas Post-emergente imperator",
+          "lotes": 6
+        },
+        {
+          "nombre": "Herbicidas Post-emergente",
           "lotes": 5
         },
         {
-          "nombre": "Herbicidas Post-emergente dron",
+          "nombre": "Paleada x persona",
           "lotes": 4
         },
         {
           "nombre": "Aplicación de Fungicida + Insecticida dron",
+          "lotes": 3
+        },
+        {
+          "nombre": "Fumigacion Dron",
           "lotes": 3
         },
         {
@@ -251,6 +500,10 @@
         },
         {
           "nombre": "Aplicación de insecticidas",
+          "lotes": 2
+        },
+        {
+          "nombre": "Aplicación de Fungicida + insect + nutri imperator",
           "lotes": 2
         }
       ]
@@ -289,42 +542,97 @@
     {
       "cultivo": "SORGO",
       "estadio": "preparacion de suelo",
-      "labores": 1,
-      "n_lotes": 6,
-      "promedio": 1.33,
-      "min": 1,
-      "max": 2,
+      "labores": 3.5,
+      "n_lotes": 14,
+      "promedio": 4.14,
+      "min": 2,
+      "max": 7,
       "labores_vistas": [
         {
+          "nombre": "Desecacion avion",
+          "lotes": 14
+        },
+        {
+          "nombre": "Desecacion imperator",
+          "lotes": 14
+        },
+        {
+          "nombre": "Valeteadora x hectarea",
+          "lotes": 9
+        },
+        {
+          "nombre": "Fumigacion Dron",
+          "lotes": 8
+        },
+        {
           "nombre": "1° Disco",
-          "lotes": 3
+          "lotes": 6
         },
         {
           "nombre": "2° Disco",
           "lotes": 2
         },
         {
-          "nombre": "Valeteadora x hectarea",
+          "nombre": "3° Disco",
           "lotes": 2
         },
         {
-          "nombre": "Fumigacion Dron",
+          "nombre": "2° Plaina",
+          "lotes": 2
+        },
+        {
+          "nombre": "1° Plaina",
           "lotes": 1
         }
       ]
     },
     {
       "cultivo": "SORGO",
-      "estadio": "cuidados",
-      "labores": 4,
-      "n_lotes": 12,
-      "promedio": 3.75,
+      "estadio": "siembra",
+      "labores": 1,
+      "n_lotes": 14,
+      "promedio": 1,
       "min": 1,
-      "max": 4,
+      "max": 1,
       "labores_vistas": [
+        {
+          "nombre": "Siembra",
+          "lotes": 14
+        }
+      ]
+    },
+    {
+      "cultivo": "SORGO",
+      "estadio": "cuidados",
+      "labores": 9,
+      "n_lotes": 14,
+      "promedio": 7.86,
+      "min": 3,
+      "max": 10,
+      "labores_vistas": [
+        {
+          "nombre": "Esparcidor de Sólido",
+          "lotes": 14
+        },
         {
           "nombre": "Aplicación de Fungicida + Insecticida avion",
           "lotes": 12
+        },
+        {
+          "nombre": "Valeteadora x hectarea",
+          "lotes": 11
+        },
+        {
+          "nombre": "Fumigacion Dron",
+          "lotes": 11
+        },
+        {
+          "nombre": "Aplicación de Fungicida + Insecticida imperator",
+          "lotes": 11
+        },
+        {
+          "nombre": "Fertilización al Voleo Urea <50kg/ha",
+          "lotes": 11
         },
         {
           "nombre": "Esparcir potasio en avion > 50kg/ha",
@@ -339,11 +647,11 @@
           "lotes": 10
         },
         {
-          "nombre": "Herbicidas Post-emergente dron",
-          "lotes": 1
+          "nombre": "Herbicidas Post-emergente imperator",
+          "lotes": 8
         },
         {
-          "nombre": "Esparcidor de Sólido",
+          "nombre": "Herbicidas Post-emergente dron",
           "lotes": 1
         },
         {

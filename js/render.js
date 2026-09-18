@@ -323,7 +323,7 @@ function renderCultivoDetalle(){
       const w = e.avance!=null ? Math.min(e.avance,100) : 0;
       // La tarjeta mide ~274px y no entra una línea más, así que el divisor va como title. El
       // detalle completo está en Avance Detallado (avLineaReceta), que es donde se va a buscarlo.
-      const tit = e.receta ? ` title="Divisor: ${e.receta.divisor} labor(es) por lote (referencia campaña ${escHtml(String(e.receta.campania))}${e.receta.origen==='respaldo'?', respaldo de otros cultivos':''})"` : '';
+      const tit = e.receta ? ` title="Divisor: ${fmtDivisor(e.receta.divisor)} labor(es) por lote (referencia campaña ${escHtml(String(e.receta.campania))}${e.receta.origen==='respaldo'?', respaldo de otros cultivos':''})"` : '';
       return `<div class="et-row"${tit}><div class="et-lbl">${e.nombre}</div>
         <div class="et-val c-${col}">${av} <span class="et-ha">· ${fmt2(e.ha_ejec)} ha</span></div>
         <div class="bar et-bar"><div class="bar-fill f-${col}" style="width:${w}%"></div></div></div>`;
@@ -350,6 +350,11 @@ function renderCultivoDetalle(){
 // lo que el estadio llevó en la campaña anterior (ver construirRecetaLabores, cultivos.js).
 // Esta línea existe para que el porcentaje sea legible: es la diferencia entre "13,1% y no sé por
 // qué" y "13,1% porque el ciclo lleva 3 labores por lote y se hizo una".
+// La mediana puede no ser entera (SORGO · Preparación: 3,5, porque son 14 lotes). Se muestra con
+// coma decimal como el resto de los números de la pantalla, y sin decimal cuando es entera.
+function fmtDivisor(n){
+  return Number.isInteger(n) ? String(n) : String(n).replace('.', ',');
+}
 function avLineaReceta(r){
   if(!r) return '';
   const vistas = (r.labores_vistas||[]).slice(0,8)
@@ -360,7 +365,7 @@ function avLineaReceta(r){
     : 'este cultivo no tuvo base suficiente en la campaña '+escHtml(String(r.campania))
       + (r.n_lotes ? ' ('+r.n_lotes+' lote(s))' : '') + ': se usa la mediana de los demás cultivos';
   return `<div class="av-receta${propia?'':' av-receta-resp'}"${vistas?` title="Labores de esta etapa en la campaña ${escHtml(String(r.campania))}: ${escHtml(vistas)}"`:''}>`+
-    `Divisor: <b>${r.divisor}</b> labor(es) por lote — ${det}.</div>`;
+    `Divisor: <b>${fmtDivisor(r.divisor)}</b> labor(es) por lote — ${det}.</div>`;
 }
 
 // c.etapas[].labores (desglosarEstadio, js/data/cultivos.js), donde la suma de los aportes es el
