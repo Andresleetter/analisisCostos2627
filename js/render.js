@@ -321,7 +321,10 @@ function renderCultivoDetalle(){
       const col = e.avance==null ? 'o' : color(e.avance);
       const av = e.avance!=null ? Math.round(e.avance)+'%' : e.n_lotes+' lotes';
       const w = e.avance!=null ? Math.min(e.avance,100) : 0;
-      return `<div class="et-row"><div class="et-lbl">${e.nombre}</div>
+      // La tarjeta mide ~274px y no entra una línea más, así que el divisor va como title. El
+      // detalle completo está en Avance Detallado (avLineaReceta), que es donde se va a buscarlo.
+      const tit = e.receta ? ` title="Divisor: ${e.receta.divisor} labor(es) por lote (referencia campaña ${escHtml(String(e.receta.campania))}${e.receta.origen==='respaldo'?', respaldo de otros cultivos':''})"` : '';
+      return `<div class="et-row"${tit}><div class="et-lbl">${e.nombre}</div>
         <div class="et-val c-${col}">${av} <span class="et-ha">· ${fmt2(e.ha_ejec)} ha</span></div>
         <div class="bar et-bar"><div class="bar-fill f-${col}" style="width:${w}%"></div></div></div>`;
     }).join('') : '<div class="et-empty">Sin etapa registrada en OT confirmadas</div>';
@@ -341,6 +344,25 @@ function renderCultivoDetalle(){
 // ================== AVANCE DETALLADO POR CULTIVO ==================
 // Explica de dónde sale el porcentaje que muestra "Detalle de Etapas por Cultivo": para cada etapa,
 // cuánto pone cada labor y con qué OT. NO calcula nada — el desglose ya viene armado en
+// ---- De dónde sale el divisor de una etapa (receta de labores) ----
+// El avance de un lote promedia sus labores. Sin receta el divisor son las labores YA confirmadas,
+// así que la primera que se hace deja ese lote en 100% del estadio. La receta le pone un piso con
+// lo que el estadio llevó en la campaña anterior (ver construirRecetaLabores, cultivos.js).
+// Esta línea existe para que el porcentaje sea legible: es la diferencia entre "13,1% y no sé por
+// qué" y "13,1% porque el ciclo lleva 3 labores por lote y se hizo una".
+function avLineaReceta(r){
+  if(!r) return '';
+  const vistas = (r.labores_vistas||[]).slice(0,8)
+    .map(v=>v.nombre+' ('+v.lotes+' lotes)').join(' · ');
+  const propia = r.origen==='propia';
+  const det = propia
+    ? 'mediana de labores por lote en la campaña '+escHtml(String(r.campania))+', sobre '+r.n_lotes+' lotes'
+    : 'este cultivo no tuvo base suficiente en la campaña '+escHtml(String(r.campania))
+      + (r.n_lotes ? ' ('+r.n_lotes+' lote(s))' : '') + ': se usa la mediana de los demás cultivos';
+  return `<div class="av-receta${propia?'':' av-receta-resp'}"${vistas?` title="Labores de esta etapa en la campaña ${escHtml(String(r.campania))}: ${escHtml(vistas)}"`:''}>`+
+    `Divisor: <b>${r.divisor}</b> labor(es) por lote — ${det}.</div>`;
+}
+
 // c.etapas[].labores (desglosarEstadio, js/data/cultivos.js), donde la suma de los aportes es el
 // avance de la etapa por construcción. Acá no se lee consultaOT ni se recalcula ninguna hectárea.
 //
@@ -473,6 +495,9 @@ function renderAvanceDetalladoCultivo(){
         (l.repetidas.length ? ` · <span class="av-rep-aviso" title="Lotes donde esta labor está cargada más de una vez y entre todas superan el plan del lote. Al abrir el detalle se listan sus OT.">${l.repetidas.length} lote(s) donde la repetición pasa el lote</span>` : ''),
       l.ots, avCadenaHa(l), l.repetidas)).join('')
       : '<div class="av-est-vacio">Ninguna labor acredita superficie en esta etapa.</div>';
+    // De dónde salió el divisor de esta etapa. Va debajo de la barra porque explica el número que
+    // acaba de leerse: sin esta línea, un 13,1% con tres labores hechas no se entiende.
+    const receta = avLineaReceta(e.receta);
     // La suma de los aportes se muestra al lado del % de la etapa: es la comprobación de que el
     // desglose explica ese número y no otro. Coincide siempre — el reparto se hace sobre el total ya
     // redondeado de la etapa (repartirMayorResto, cultivos.js), no redondeando cada labor aparte.
@@ -490,7 +515,7 @@ function renderAvanceDetalladoCultivo(){
       `<div class="av-est-head"><div class="av-est-nom">${escHtml(nomEtapa)}</div>`+
       `<div class="av-est-val c-${col}">${av} <span class="av-est-ha">· ${fmt2(e.ha_ejec)} ha de ${fmt2(e.ha_plan)}</span></div></div>`+
       `<div class="bar av-est-bar"><div class="bar-fill f-${col}" style="width:${w}%"></div></div>`+
-      labores+total+sinAp+`</div>`;
+      receta+labores+total+sinAp+`</div>`;
   }).join('');
 
   cont.innerHTML=`<div class="panel av-panel"><h3>${escHtml(c.nombre)} · Avance Detallado por Etapa `+

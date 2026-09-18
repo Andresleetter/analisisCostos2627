@@ -42,6 +42,14 @@
 .av-lab-det table{font-size:10.5px}
 
 /* Total de aportes: la comprobación a la vista de que el desglose explica el % del estadio. */
+/* Origen del divisor del estadio. Va entre la barra y las labores: explica el porcentaje que se
+   acaba de leer, antes de entrar al desglose. En gris y chico — es una nota al pie, no un dato. */
+.av-receta{font-size:10.5px;color:var(--muted);margin:-5px 0 9px;line-height:1.35}
+.av-receta b{color:var(--teal);font-weight:800}
+/* El respaldo (receta prestada de otros cultivos) se distingue: no es la receta del cultivo. */
+.av-receta-resp{font-style:italic}
+.av-receta-resp b{color:var(--muted)}
+
 .av-total{border-top:1px dashed var(--line);margin-top:6px;padding-top:7px;font-size:10.5px;color:var(--muted);text-align:right}
 .av-total b{color:var(--teal);font-weight:800}
 

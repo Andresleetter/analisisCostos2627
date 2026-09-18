@@ -6,7 +6,9 @@ Dashboard de seguimiento de campaña agrícola (Campo La Teresa). Es una web est
 - **`data/presupuesto-infraestructura-26-27.json`** — 10 ítems con el presupuesto de infraestructura usado en la pestaña Auditoría (`especificacion`, `cantidadPresupuestada`, `unidadMedida`, `costo`, `importeTotal`).
 - **`data/recetas-insumos-26-27.json`** — 179 registros con la dosis por hectárea recomendada por cultivo e insumo. Es una versión **reducida** del presupuesto de insumos: solo dosis, sin costos ni volúmenes. Alimenta el seguimiento de receta de Auditoría de Insumos por Parcela.
 
-El `.xlsx` se parsea en el navegador con SheetJS; los dos JSON **no** pasan por SheetJS (`resp.json()`). A partir de ellos se renderizan KPIs, tablas y alertas.
+- **`data/receta-labores-25-26.json`** — cuántas labores distintas lleva cada cultivo en cada estadio, derivado del export de la campaña 25/26. Es el **divisor** del avance de campo: sin él, la primera labor confirmada sobre un lote lo dejaba en 100 % del estadio (ver **El divisor del avance**).
+
+El `.xlsx` se parsea en el navegador con SheetJS; los JSON **no** pasan por SheetJS (`resp.json()`). A partir de ellos se renderizan KPIs, tablas y alertas.
 
 > **El presupuesto de infraestructura pasó de Excel a JSON.** Antes se descargaba y parseaba un segundo `.xlsx` (`PRESUPUESTO ALISON INFRAESTRUTURA 26-27.xlsx`, hoja `INFRAESTRUTURA 26-27`) solo para leer 10 filas. El JSON se generó a partir de él con la misma lógica de parseo (mismo rango de filas, mismas columnas, mismos números pasados por `num()`), y se verificó que los indicadores de Auditoría salen **idénticos** con una fuente y con la otra. **Ese `.xlsx` ya no está en el repo** (se quitó a pedido del usuario una vez migrado el dato): el JSON es ahora la única fuente del presupuesto de infraestructura, y para actualizarlo se lo edita directamente. Si alguna vez hay un Excel nuevo, la sección Auditoría documenta qué filas y columnas hay que leer para regenerarlo.
 
@@ -57,7 +59,7 @@ Si el archivo está abierto en Excel al momento de necesitar inspeccionarlo (ej.
   - `data.js` — **orquestador** del modelo de datos. Conserva la única función pública `buildData(raw, proyecciones, insumos, presupuestoInfra, recetas)`, que ya no calcula nada: prepara las entradas, llama a las funciones de `js/data/` pasándoles explícitamente lo que necesitan, y ensambla el objeto final que consume `render.js`.
   - `js/data/` — el modelo de datos separado por dominio. Cada archivo expone funciones puras (reciben lo que necesitan por parámetro, devuelven colecciones explícitas) y **ninguno toca el DOM**:
     - `ordenes.js` — base compartida de `consultaOT`: normalización de filas, filtro por campaña (más la copia con todas las campañas que usa Servicios), agrupación por OT, modalidad de trabajo (hectáreas/horas/peso), importes, estados y KPIs de OT. Va primero porque todo lo demás depende de sus colecciones.
-    - `cultivos.js` — plan RTK desde `consultaCultivos`, avance de campo por cultivo y etapa, y Control de Hectáreas (excesos, lotes inhabilitados, OT sin correspondencia en el plan).
+    - `cultivos.js` — plan RTK desde `consultaCultivos`, avance de campo por cultivo y etapa (incluida la receta de labores que le pone piso al divisor, `construirRecetaLabores()`), y Control de Hectáreas (excesos, lotes inhabilitados, OT sin correspondencia en el plan).
     - `servicios.js` — módulo Servicios completo (`construirServicios()`: detalle por servicio, gasoil, filtros y totales) y el paquete equivalente por cada campaña presente en `consultaOT`.
     - `combustible.js` — consumo e ingresos de gasoil y stock inicial.
     - `insumos.js` — ingresos, consumos y flujo de stock por (Tipo, Insumo, Unidad).
@@ -69,8 +71,8 @@ Si el archivo está abierto en Excel al momento de necesitar inspeccionarlo (ej.
     **Orden de carga** (ver `index.html`): los nueve `js/data/*.js` van **antes** de `js/data.js`. Entre sí no tienen orden obligatorio (solo definen funciones, no ejecutan nada al cargarse), pero `data.js` sí tiene que ir último porque `buildData()` las invoca. `loader.js` sigue llamando a `buildData()` exactamente igual que antes.
   - `render.js` — todas las funciones que pintan el DOM (`renderAll`, `renderG`, `renderCombustible`, `renderInsumos`, `renderAlertas`, `renderAuditoria`, etc.) y el cambio de pestaña (`show`).
   - `events.js` — conecta los elementos interactivos del HTML (pestañas, selects de filtro, botón de reintento) con las funciones de `render.js`/`loader.js`. El filtro dependiente Tipo de Insumo → Insumo se resuelve acá: el `change` de `#itipo` llama primero a `actualizarFiltroInsumo()` (repuebla `#iinsumo` y limpia la selección si ya no aplica) y **después** a `renderInsumos()`.
-  - `loader.js` — descarga el `.xlsx` de campaña (`cargarXLSX()`), el JSON de presupuesto de infraestructura (`cargarJSON()`) y el JSON de recetas (`cargarRecetas()`), los parsea, separa `consultaInsumos` en combustible/existencia inicial/otros insumos, normaliza y valida el presupuesto de infraestructura (`leerPresupuestoInfra()`), y dispara la carga inicial al terminar de cargar el DOM. Las tres descargas van en un mismo `Promise.all`. `cargarJSON()` es genérico y usa el mismo esquema de respaldo que `cargarXLSX()` (el sitio primero, GitHub como plan B una sola vez), y su error **sí** se propaga: sin presupuesto no hay Auditoría. La del JSON de recetas, en cambio, **no puede tumbar la carga**: si falla, se registra en consola y devuelve `null`, y el dashboard sigue igual con el seguimiento de receta marcado como no disponible.
-- **`data/`** — los archivos de datos que el dashboard descarga en runtime: `datosCampania2627.xlsx`, `presupuesto-infraestructura-26-27.json` y `recetas-insumos-26-27.json`. No hay build: se sirven tal cual desde el repo, así que actualizar los datos es commitear estos archivos.
+  - `loader.js` — descarga el `.xlsx` de campaña (`cargarXLSX()`), el JSON de presupuesto de infraestructura (`cargarJSON()`) y el JSON de recetas (`cargarRecetas()`), los parsea, separa `consultaInsumos` en combustible/existencia inicial/otros insumos, normaliza y valida el presupuesto de infraestructura (`leerPresupuestoInfra()`), y dispara la carga inicial al terminar de cargar el DOM. A eso se suma `cargarRecetaLabores()` (el divisor del avance). Las cuatro descargas van en un mismo `Promise.all`. `cargarJSON()` es genérico y usa el mismo esquema de respaldo que `cargarXLSX()` (el sitio primero, GitHub como plan B una sola vez), y su error **sí** se propaga: sin presupuesto no hay Auditoría. Las de los dos JSON de receta, en cambio, **no pueden tumbar la carga**: si fallan, se registran en consola y devuelven `null` — el dashboard sigue igual, con el seguimiento de receta marcado como no disponible y el avance calculado con el divisor de las labores confirmadas.
+- **`data/`** — los archivos de datos que el dashboard descarga en runtime: `datosCampania2627.xlsx`, `presupuesto-infraestructura-26-27.json`, `recetas-insumos-26-27.json` y `receta-labores-25-26.json` (el divisor del avance, ver **El divisor del avance**). No hay build: se sirven tal cual desde el repo, así que actualizar los datos es commitear estos archivos.
 - **`vendor/xlsx.full.min.js`** — copia sin modificar de [SheetJS](https://sheetjs.com) (`xlsx@0.18.5`), usada para leer el `.xlsx` en el navegador.
 
 ## Filtro de campaña (`CAMPANIA_ACTUAL`)
@@ -205,6 +207,81 @@ El caso real es la **OT 4339** (ARROZ, lote 137, "1° Plaina", 20,48 ha, Confirm
 
 **Efecto en el número:** ARROZ · Preparación de Suelo pasó de 90,1 % (3.506,08 ha) a 90,2 % (3.509,49 ha). Los 20,48 ha de la OT se convierten en 3,41 ha de aporte porque las reglas de siempre siguen aplicando: la OT entra al grupo "1° Plaina" del lote 137, que con ella llega a 87,95 ha —exactamente el plan RTK del lote, o sea que la plaina quedó completa entre la OT 3733 y esta— y ese valor se promedia con las otras 5 labores del lote (`20,48 / 6 = 3,41`).
 
+### El divisor del avance: la receta de labores
+
+El avance de un `(lote, estadio)` es el **promedio** de sus labores, cada una capada al plan del lote.
+La pregunta es entre cuántas se promedia, y hasta el 18/09/2026 la respuesta era "entre las labores
+que ya están confirmadas". Eso tiene una consecuencia que rompe el número:
+
+> **la primera labor que se confirma sobre un lote lo deja en 100 % de ese estadio**, porque el
+> divisor es 1.
+
+El caso que lo destapó: **MAIZ marcaba 100 % de Cuidados sin haberse sembrado**. Sus 5 lotes tenían
+una sola labor de cuidados confirmada (Esparcidor de Sólido), así que cada uno promediaba `x/1` y
+daba el plan entero. Lo mismo, más diluido, en SORGO — 6 lotes al 100 % individual — y el efecto
+inverso, ya conocido: **confirmar una labor nueva hacía BAJAR el porcentaje**, porque crecía el
+divisor.
+
+El dato no sabe cuántas labores lleva un ciclo. No existe en ningún lado: `consultaCultivos` planifica
+hectáreas, no labores, y `recetas-insumos-26-27.json` es de insumos. Así que el divisor se saca de la
+campaña anterior.
+
+**`data/receta-labores-25-26.json`** — derivado del export de Consulta OT de la 25/26 con **el mismo
+filtro que usa el avance** (solo Confirmadas, estadio reconocido, modalidad hectáreas), contando
+labores distintas por lote. El valor de cada cultivo/estadio es la **mediana**, no el promedio: un
+lote que recibió siete aplicaciones no debe arrastrar al resto. El `.xlsx` fuente **no está en el
+repo** — se analiza una vez y lo que se versiona es el JSON (7,7 KB).
+
+```
+divisor(lote, estadio) = max( labores confirmadas del lote , receta(cultivo, estadio) )
+```
+
+**Es un piso, nunca un tope.** Un lote que ya lleva más labores que la receta conserva las suyas. De
+ahí sale la propiedad que hace que todo esto sea seguro: un estadio cuya receta salió pobre da
+divisor 1, que no puede subir nada, así que **se puede aplicar a los cuatro estadios aunque el export
+de la campaña anterior no cubra el ciclo completo**. Y de hecho no lo cubre: el export arranca el
+02/01/2026, o sea que la Preparación de Suelo y la Siembra de la 25/26 (que pasaron en 2025) quedaron
+truncadas — ARROZ tiene 104 lotes con Cuidados y solo 2 con Preparación. La receta sirve para
+**Cuidados y Cosecha**; en Preparación y Siembra queda inerte y esos porcentajes no se movieron.
+
+**Respaldo entre cultivos** (`RECETA_LABORES_MIN_LOTES`, hoy 10). Un cultivo que en la campaña
+anterior fue marginal tendría una receta que no representa nada. MAIZ tuvo 21 OT en toda la 25/26 y
+una sola labor de cuidados en 7 lotes: su mediana daba 1 —es decir, ninguna— y lo dejaba igual de
+roto. Por debajo del umbral se usa la **mediana de las recetas representativas de los demás cultivos
+en el mismo estadio**, el mismo estadístico, para no cambiar de criterio a mitad de camino.
+
+| cultivo | estadio | receta | base | antes | después |
+|---|---|---|---|---|---|
+| ARROZ | Cuidados | 3 | 104 lotes, 12 labores | 36,2 % | **13,1 %** |
+| SORGO | Cuidados | 4 | 12 lotes, 7 labores | 34,7 % | **8,7 %** |
+| SOJA | Cuidados | 2 | 30 lotes, 10 labores | 28,6 % | **14,3 %** |
+| MAIZ | Cuidados | 3 (respaldo) | 7 lotes: bajo el umbral | 100 % | **33,3 %** |
+
+**Un divisor de 1 no se muestra.** Todo lote con actividad tiene al menos una labor, así que un
+divisor 1 es inerte: la etapa expone `receta: null` y la pantalla no explica algo que no cambió
+ningún número. El índice completo, con el origen de cada divisor, queda en `D.receta_labores`.
+
+**Si el JSON no se descarga, el avance vuelve al cálculo anterior.** `cargarRecetaLabores()` sigue el
+mismo criterio que `cargarRecetas()`: el error se registra y devuelve `null`, nunca tumba la carga.
+Verificado sacando el archivo del disco — el dashboard construye sin un error, con los números viejos.
+
+**Nada fuera del avance se movió.** Comparando las 71 claves de `buildData()` con receta y sin ella,
+cambian exactamente tres: `cultivos`, `receta_labores` (nueva) y `resumen_campanias` (que contiene a
+`cultivos`). Costo ejecutado, gasto de servicios, consolidado, KPIs de OT, combustible, operativos,
+alertas, Auditoría de Siembra y Control de Hectáreas quedan idénticos.
+
+**Lo que esto NO es.** No es un juicio agronómico sobre qué labores faltan: la receta aporta un
+número, no una lista. Los nombres de las labores de la 25/26 casi no coinciden con los de la 26/27
+(«Aplicación de Fungicida + Insecticida avion», «Guacheada ha» contra «Esparcidor de Sólido»,
+«Fumigacion Imperator»), así que se usan solo como referencia en el tooltip. Y no corrige la
+clasificación del dato: el Esparcidor de Sólido se ejecuta **antes de la siembra en las 54 OT de la
+campaña** y sigue cargado en Albor con estadio Cuidados — se dejó donde está por decisión del
+usuario.
+
+**Para actualizarla** hay que regenerar el JSON desde un export nuevo. Si alguna vez llega uno que
+arranque antes de 2025, la receta de Preparación y Siembra deja de ser inerte y esos porcentajes
+también se corrigen.
+
 ### Avance Detallado por Cultivo
 
 Vista de detalle a la que se entra con **"Ver desglose detallado →"**, el botón que está a la derecha del encabezado de "Detalle de Etapas por Cultivo", y de la que se sale con **"← Volver al Resumen Ejecutivo"**. Es **una sola vista** con un selector de **Cultivo** (ARROZ, SOJA, SORGO, MAIZ, en el orden de `CULTIVOS`), no una pestaña por cultivo. Existe como `.page` (`#page-avance-detallado`) pero **no tiene botón `.tab` propio**, y va **última en el HTML** a propósito: `events.js` indexa las `.tab` contra las `.page` por posición, así que una `.page` intercalada correría los índices de todos los módulos.
@@ -214,10 +291,11 @@ Responde a una sola pregunta: **de dónde sale el porcentaje que muestra cada et
 **El número de cada labor es un aporte, no un avance independiente.** Por eso se rotula "Aporte": si Preparación de Suelo va 90%, los aportes de sus labores suman exactamente 90 puntos, no cada una su propio porcentaje. La descomposición **no inventa ninguna ponderación**: sale de la misma cuenta que ya produce el avance. `equivalenteLoteEstadio` promedia las labores de cada lote, de modo que
 
 ```
-ha_ejec(estadio) = Σ_lotes  Σ_labores  min(ejecutadas, plan del lote) / n_labores(lote)
+ha_ejec(estadio) = Σ_lotes  Σ_labores  min(ejecutadas, plan del lote) / divisor(lote, estadio)
 ```
 
-y cada labor ya tiene ahí su propio sumando, `min(...)/n_labores`. `desglosarEstadio` (`js/data/cultivos.js`) agrupa esos sumandos por labor a través de los lotes: la suma de los aportes **es** el total del estadio por construcción. Los dos ajustes finales que no viven en la labor (el tope de Zafriña26 y el redondeo a 2 decimales) se trasladan repartiendo el total ya ajustado en proporción a los sumandos. El reparto usa **redondeo de mayor resto** (`repartirMayorResto`) sobre el total ya redondeado de la etapa, y no redondeando cada labor por su cuenta: sin eso, cuatro labores podían sumar 89,9% contra un estadio que muestra 90,0%, y esa diferencia de representación se lee como un error de negocio. Se muestra "Total aportes" al pie de cada estadio, que coincide siempre.
+donde `divisor = max(labores confirmadas del lote, receta del cultivo)` — ver **El divisor del avance**
+arriba. Cada labor ya tiene ahí su propio sumando, `min(...)/divisor`. `desglosarEstadio` (`js/data/cultivos.js`) agrupa esos sumandos por labor a través de los lotes: la suma de los aportes **es** el total del estadio por construcción. Los dos ajustes finales que no viven en la labor (el tope de Zafriña26 y el redondeo a 2 decimales) se trasladan repartiendo el total ya ajustado en proporción a los sumandos. El reparto usa **redondeo de mayor resto** (`repartirMayorResto`) sobre el total ya redondeado de la etapa, y no redondeando cada labor por su cuenta: sin eso, cuatro labores podían sumar 89,9% contra un estadio que muestra 90,0%, y esa diferencia de representación se lee como un error de negocio. Se muestra "Total aportes" al pie de cada estadio, que coincide siempre.
 
 **Ninguna regla de avance cambió.** La vista lee `c.etapas[].labores` y `c.etapas[].labores_sin_aporte`, que `construirCultivos` arma con los mismos datos que ya usaba; `render.js` solo pinta. Verificado con el arnés de regresión de CLAUDE.md: el volcado completo de `buildData()`, quitando esas dos claves nuevas, da **16.761.796 bytes idénticos** en las 69 claves.
 
@@ -230,7 +308,8 @@ y cada labor ya tiene ahí su propio sumando, `min(...)/n_labores`. `desglosarEs
 
 1. **`ha_ejec`** — suma cruda de `ha_trab` de sus OT. Es la que cierra con el desplegable de OT.
 2. **`ha_computada`** — cada lote capado a su plan RTK (`min(ejecutadas, plan del lote)`): la superficie que efectivamente se promedia. **Acá no se desglosa cuánto se recortó ni en qué lotes** — ese análisis es el de Control de Hectáreas y repetirlo sería tener el mismo dato en dos lugares. Esta vista solo dice con qué superficie se construyó el aporte.
-3. **`aporte_ha`** — dividido por la cantidad de labores de ese lote. El divisor se rotula: una labor puede tocar lotes con distinta cantidad de labores, así que el modelo guarda todos los divisores que aplicaron (`divisores`) y se muestra el valor exacto cuando hay uno solo ("promediada entre las 3 labores del lote") o el rango cuando hay varios. `divisores = [1]` significa que era la única labor de cada lote y no se promedió nada.
+3. **`aporte_ha`** — dividido por el divisor del lote: la cantidad de labores confirmadas, o la receta
+   del cultivo si es mayor (ver **El divisor del avance**). El divisor se rotula: una labor puede tocar lotes con distinta cantidad de labores, así que el modelo guarda todos los divisores que aplicaron (`divisores`) y se muestra el valor exacto cuando hay uno solo ("promediada entre las 3 labores del lote") o el rango cuando hay varios. `divisores = [1]` significa que era la única labor de cada lote y no se promedió nada.
 
 La fila principal queda con el qué y el cuánto (`N OT · N lote(s) · US$`), y la cadena en su propio renglón debajo.
 

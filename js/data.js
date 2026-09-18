@@ -7,7 +7,7 @@
 //
 // El contrato de salida (los nombres de las propiedades devueltas) es el que leen render.js y
 // events.js: no se renombra nada aunque internamente venga de otro archivo.
-function buildData(raw, proyecciones, insumos, presupuestoInfra, recetas){
+function buildData(raw, proyecciones, insumos, presupuestoInfra, recetas, recetaLabores){
   const { combustible: combustibleRaw, existenciaInicial, otros: otrosInsumos, excluidos: insumosExcluidosRaw } = insumos || {};
 
   // ---- Base compartida ----
@@ -24,7 +24,10 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra, recetas){
   // que el Resumen tiene su propio selector, Zafriña26 tiene su propia vista y plegarla en 26/27
   // hacia que el maiz figurara sembrado en una campania en la que todavia no se sembro: las dos
   // unicas OT de siembra de maiz (1836 y 1837) son de campania '26', no hay ninguna de 26/27.
-  const {cultivos,avanceInconsistencias,siembraExcluidas} = construirCultivos(OTS, RTK, RTK_TOT);
+  // El 5º argumento es la receta de labores (data/receta-labores-25-26.json): el piso del divisor
+  // del avance. Si no se pudo descargar llega null y construirCultivos calcula como siempre.
+  const {cultivos,avanceInconsistencias,siembraExcluidas,receta_labores} =
+    construirCultivos(OTS, RTK, RTK_TOT, [], recetaLabores);
   const {exceso,sinrtk,cancelados,exc_kpi} = construirControlHectareas(OTS, RTK);
   const {otsVisibles,otsAtrasadas,totalAtrasadas,TOLERANCIA_ATRASO_DIAS} = construirAlertas(OTS);
   const {operativas,oper_costo,oper_part} = construirOperativas(OTS, costo_total);
@@ -119,6 +122,10 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra, recetas){
     // OT del estadio Siembra que no acreditan avance de siembra (tratamiento de semillas). Solo
     // para trazabilidad: ningun render las lee, y sus costos siguen contando en el resto.
     siembra_excluidas:siembraExcluidas,
+    // Que divisor quedo vigente en cada cultivo/estadio y de donde salio (receta propia de la
+    // campania anterior o respaldo de los demas cultivos). Cada etapa lleva ademas su propio
+    // `receta`, que es lo que lee la pantalla; esto es el indice completo, para auditar.
+    receta_labores,
     resumen,
     // Paquetes del Resumen Ejecutivo por campaña (selector propio de esa pestaña y de la vista
     // Avance Detallado). `resumen` de arriba sigue siendo el de CAMPANIA_ACTUAL y es exactamente el

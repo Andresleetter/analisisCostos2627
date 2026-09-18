@@ -130,10 +130,62 @@ function construirPlanRTK(proyecciones){
   return {RTK,RTK_TOT};
 }
 
+// ---- Receta de labores: el piso del divisor del avance ----
+// Arma un indice {cultivo: {estadio: {divisor, origen, n_lotes}}} desde el JSON derivado del export
+// de la campania anterior (ver RECETA_LABORES_SRC_JSON en config.js).
+//
+// Por que hace falta: el avance de un (lote, estadio) promedia las labores de ESE lote, y hasta
+// ahora el divisor eran las labores ya confirmadas. Con una sola labor hecha, el divisor es 1 y el
+// lote queda en 100% del estadio aunque falte todo el resto del ciclo. La receta le pone un piso a
+// ese divisor con lo que el estadio realmente llevo el ano pasado.
+//
+// Dos niveles, en este orden:
+//  1. La receta del propio cultivo, si salio de al menos RECETA_LABORES_MIN_LOTES lotes.
+//  2. Si no, el RESPALDO: la mediana de las recetas representativas de los DEMAS cultivos en el
+//     mismo estadio. Un cultivo marginal en la campania anterior (maiz: 7 lotes, una sola labor de
+//     cuidados) tendria receta 1 — es decir, ninguna — y seguiria mostrando 100%.
+// Si no hay ni una ni otra, el divisor queda en 0 y equivalenteLoteEstadio calcula como siempre.
+function construirRecetaLabores(json){
+  const idx = {}, porEstadio = {};
+  if(!json || !Array.isArray(json.recetas)) return {idx, respaldo:{}, campania:null, disponible:false};
+  json.recetas.forEach(r=>{
+    const c = normHdr(r.cultivo).toUpperCase(), k = String(r.estadio||'').trim();
+    const n = Number(r.labores)||0, lotes = Number(r.n_lotes)||0;
+    if(!c || !k || n<=0) return;
+    idx[c] = idx[c] || {};
+    idx[c][k] = {divisor:n, n_lotes:lotes, representativa: lotes >= RECETA_LABORES_MIN_LOTES,
+      labores_vistas: Array.isArray(r.labores_vistas) ? r.labores_vistas : []};
+    if(lotes >= RECETA_LABORES_MIN_LOTES) (porEstadio[k] = porEstadio[k] || []).push(n);
+  });
+  // Mediana de las representativas de cada estadio — el mismo estadistico que usa la receta de cada
+  // cultivo, para que el respaldo no cambie de criterio a mitad de camino.
+  const respaldo = {};
+  Object.keys(porEstadio).forEach(k=>{
+    const v = porEstadio[k].slice().sort((a,b)=>a-b);
+    respaldo[k] = v.length%2 ? v[(v.length-1)/2] : (v[v.length/2-1]+v[v.length/2])/2;
+  });
+  return {idx, respaldo, campania: json.campania_origen||null, disponible:true};
+}
+
 // Avance de campo por cultivo y etapa. Devuelve tambien las dos colecciones de trazabilidad que
 // el avance deja de lado (OT sin Has. Reales validas, y trabajos del estadio Siembra que no son
 // sembrar) — se exponen en D pero ningun render las lee.
-function construirCultivos(OTS, RTK, RTK_TOT, rawTodasCampanias=[]){
+// `recetaLabores` es el JSON de receta ya descargado, o null: sin el, el avance sale exactamente
+// como salia antes de que existiera la receta.
+function construirCultivos(OTS, RTK, RTK_TOT, rawTodasCampanias=[], recetaLabores=null){
+  const RECETA = construirRecetaLabores(recetaLabores);
+  // Divisor minimo de un (cultivo, estadio). 0 = sin receta: no impone nada.
+  function recetaDe(cultivo, estadio){
+    const propia = (RECETA.idx[cultivo]||{})[estadio];
+    if(propia && propia.representativa)
+      return {divisor:propia.divisor, origen:'propia', n_lotes:propia.n_lotes,
+        labores_vistas:propia.labores_vistas};
+    const resp = RECETA.respaldo[estadio];
+    if(resp>0)
+      return {divisor:resp, origen:'respaldo', n_lotes:propia?propia.n_lotes:0,
+        labores_vistas:propia?propia.labores_vistas:[]};
+    return {divisor:0, origen:null, n_lotes:propia?propia.n_lotes:0, labores_vistas:[]};
+  }
   // ---- Integracion de la siembra de Zafriña26 al avance de Maiz ----
   // HOY NADIE LA ACTIVA: ningun llamador pasa rawTodasCampanias, asi que filasZafrina queda vacio y
   // este bloque no hace nada. Se conserva el mecanismo (y `planCompartidoZafrina`, que lo acompaña
@@ -265,11 +317,17 @@ function construirCultivos(OTS, RTK, RTK_TOT, rawTodasCampanias=[]){
     // Ejecucion equivalente de un (lote,estadio): promedio de las labores presentes, cada una
     // capada (min) a la superficie planificada de ESE lote — nunca sumadas entre si (ver ejemplo
     // Disco 1 + Disco 2 en el pedido: dos pasadas sobre la misma superficie, no 2x la superficie).
+    // El divisor es max(labores confirmadas del lote, receta del cultivo+estadio) — ver recetaDe y
+    // el comentario de construirRecetaLabores. Como la receta es un PISO, un lote que ya lleva mas
+    // labores que ella conserva las suyas, y un estadio sin receta (divisor 0) calcula como antes.
+    function divisorLoteEstadio(labores, estadio){
+      return Math.max(Object.keys(labores).length, recetaDe(c, estadio).divisor);
+    }
     function equivalenteLoteEstadio(lote, estadio){
       const labores=(porLoteEstadioLabor[lote]&&porLoteEstadioLabor[lote][estadio])||null;
       if(!labores) return 0;
       const valores=Object.values(labores).map(l=>l.planCompartidoZafrina ? l.ejecutadasReales : Math.min(l.ejecutadasReales,l.planificadas));
-      return valores.reduce((a,b)=>a+b,0)/valores.length;
+      return valores.reduce((a,b)=>a+b,0)/divisorLoteEstadio(labores, estadio);
     }
 
     // ---- Desglose del avance de un estadio en sus labores (vista "Avance Detallado") ----
@@ -288,7 +346,9 @@ function construirCultivos(OTS, RTK, RTK_TOT, rawTodasCampanias=[]){
       lotes.forEach(l=>{
         const labores=(porLoteEstadioLabor[l]&&porLoteEstadioLabor[l][k])||null;
         if(!labores) return;
-        const claves=Object.keys(labores), n=claves.length;
+        // MISMO divisor que equivalenteLoteEstadio: si aca se usara la cantidad de labores y alla
+        // la receta, la suma de los aportes dejaria de dar el total del estadio.
+        const claves=Object.keys(labores), n=divisorLoteEstadio(labores, k);
         claves.forEach(lk=>{
           const d=labores[lk];
           const valor=d.planCompartidoZafrina ? d.ejecutadasReales : Math.min(d.ejecutadasReales,d.planificadas);
@@ -408,7 +468,15 @@ function construirCultivos(OTS, RTK, RTK_TOT, rawTodasCampanias=[]){
       // aportes da ha_ejec y avance, no una segunda cuenta. "labores_sin_aporte" son las labores
       // confirmadas del estadio que no acreditan superficie, para que ninguna OT desaparezca sin
       // explicacion. Las dos son solo trazabilidad: ningun indicador existente las lee.
+      // `receta` es trazabilidad del divisor: de donde salio y con cuantos lotes se calculo, para
+      // que la pantalla pueda explicar por que un estadio no llega a 100% con una sola labor hecha.
+      // Un divisor de 1 es inerte: todo lote con actividad tiene al menos una labor, asi que nunca
+      // sube nada. Se expone como null para que la pantalla no muestre una explicacion de algo que
+      // no cambio ningun numero. El indice completo sigue en D.receta_labores para auditar.
+      const rec0 = recetaDe(c, k), rec = rec0.divisor>1 ? rec0 : {divisor:0};
       return {nombre:e.nombre, ha_ejec:ha_e, avance:av_e, n_lotes:e.lotes.size, ha_plan, incluyeZafrina,
+        receta: rec.divisor>0 ? {divisor:rec.divisor, origen:rec.origen, n_lotes:rec.n_lotes,
+          campania:RECETA.campania, labores_vistas:rec.labores_vistas} : null,
         otConfirmadas: subEtapa.filter(o=>o.estado==='Confirmado').length, otTotales: subEtapa.length,
         labores: desglosarEstadio(k, e.lotes, ha_e, av_e), labores_sin_aporte: sinAporteEstadio(k)};
     });
@@ -424,7 +492,12 @@ function construirCultivos(OTS, RTK, RTK_TOT, rawTodasCampanias=[]){
   }).filter(Boolean).sort((a,b)=>(b.ha_plan-a.ha_plan)||(b.costo-a.costo));
   if(avanceInconsistencias.length) console.warn('Avance de campo: '+avanceInconsistencias.length+' OT por hectareas sin Has. Reales valido (excluidas del avance, ver D.avance_inconsistencias).');
   if(siembraExcluidas.length) console.log('Avance de campo: '+siembraExcluidas.length+' OT del estadio Siembra excluidas del avance por no ser siembra ('+[...new Set(siembraExcluidas.map(x=>x.servicio))].join(', ')+') — ver D.siembra_excluidas.');
-  return {cultivos,avanceInconsistencias,siembraExcluidas};
+  // receta_labores: que divisor quedo vigente para cada cultivo/estadio y de donde salio.
+  // Es trazabilidad del calculo — ningun indicador lo lee, pero deja auditable por que un
+  // estadio con una sola labor hecha ya no marca 100%.
+  return {cultivos,avanceInconsistencias,siembraExcluidas,
+    receta_labores:{disponible:RECETA.disponible, campania:RECETA.campania,
+      respaldo:RECETA.respaldo, min_lotes:RECETA_LABORES_MIN_LOTES, indice:RECETA.idx}};
 }
 
 // Control de Hectareas: lotes con exceso de superficie, lotes inhabilitados y OT sin
