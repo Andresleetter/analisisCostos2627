@@ -204,6 +204,33 @@ const INSUMOS_EXCLUIDOS = ["Afrecho de Arroz - CH"];
 // (proyeccionRTK) unicamente — ver data.js. consultaInsumos (combustible + modulo Insumos) NO
 // se filtra por campania: se procesa completo, tal como antes de introducir este filtro.
 const CAMPANIA_ACTUAL = '26/27';
+
+// ---- CONTROL DE HECTAREAS: tolerancia de sobrepase por servicio ----
+// Cuanto puede pasarse una OT del plan de su lote sin que se reporte como exceso, como fraccion del
+// plan. Clave: el nombre del servicio normalizado (normHdr). Lo que no figure tolera 0.
+//
+// La Fumigacion Dron tolera 5% a pedido del usuario: el dron aplica con solape entre pasadas, asi
+// que cubrir un poco mas que la superficie del lote es como trabaja, no un error de carga. Con el
+// dato de hoy la tolerancia saca de la lista un solo lote (ARROZ .40A: la OT 4513 hace 42,80 ha
+// sobre un plan de 40,77, un 4,98%) y deja de marcar 2 de las 9 OT de dron que pasan su lote. Los
+// sobrepases grandes siguen apareciendo enteros — el .32B sigue con +22,9%.
+//
+// La tolerancia NO cambia ninguna hectarea: solo decide si el caso se reporta. El exceso que se
+// muestra sigue siendo la diferencia real contra el plan.
+const TOLERANCIA_EXCESO_SERVICIO = { 'fumigacion dron': 0.05 };
+// Exceso minimo en hectareas para reportar un lote. Por debajo es ruido de redondeo del dato.
+const EXCESO_MINIMO_HA = 0.5;
+
+// ---- CONTROL DE HECTAREAS: en que estadios una labor repetida es un hallazgo ----
+// Solo PREPARACION DE SUELO. Un cuidado se repite sobre el mismo lote por diseno agronomico — se
+// fumiga varias veces en la campania —, asi que sumar sus OT y compararlas contra el plan no dice
+// nada: dos fumigaciones de un lote entero dan 200% y son correctas. Preparar el suelo, en cambio,
+// se hace una vez: que la misma labor sume mas que el lote significa que se rehizo.
+//
+// El filtro ademas saca tres falsos positivos que no eran repeticiones: en los lotes 147A, 147B y
+// 148A de arroz la "Fumigacion Dron" aparecia dos veces, pero una OT es de Preparacion (desecacion
+// previa) y la otra de Cuidados — dos momentos distintos del ciclo con el mismo nombre de servicio.
+const REPETIDAS_ESTADIOS = ['preparacion de suelo'];
 // Filtro de Campaña del modulo Servicios: rotulo y orden de las opciones. Es SOLO presentacion —
 // el valor que se usa para filtrar consultaOT sigue siendo la clave tal como viene en el dato
 // ('25', '26', '25/26', '26/27'), nunca la etiqueta. CAMPANIA_LABEL renombra las campanias de

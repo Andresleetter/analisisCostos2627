@@ -506,6 +506,16 @@ function construirCultivos(OTS, RTK, RTK_TOT, rawTodasCampanias=[], recetaLabore
 
 // Control de Hectareas: lotes con exceso de superficie, lotes inhabilitados y OT sin
 // correspondencia en el plan RTK.
+// Tolerancia de sobrepase de un servicio, como fraccion del plan del lote (ver
+// TOLERANCIA_EXCESO_SERVICIO en config.js). Lo que no figure tolera 0.
+function toleranciaExceso(serv){
+  return TOLERANCIA_EXCESO_SERVICIO[normHdr(serv)] || 0;
+}
+// Superficie a partir de la cual una OT de ese servicio cuenta como sobrepase.
+function topeLote(serv, ha_rtk){
+  return ha_rtk * (1 + toleranciaExceso(serv));
+}
+
 function construirControlHectareas(OTS, RTK){
   // ---- CONTROL DE HECTÁREAS ----
   const RTK_CROPS=['ARROZ','SOJA','SORGO','MAIZ'];
@@ -516,7 +526,7 @@ function construirControlHectareas(OTS, RTK){
   const land=OTS.filter(o=>o.estado==='Confirmado' && !(o.lines.every(l=>l.esHoras))
     && RTK_CROPS.includes(o.act.toUpperCase()) && haTrabajada(o)!=null
     && !LOTES_NO_PARCELA.includes(normLote(o.lote)));
-  const exceso=[], sinrtk=[], cancelados=[];
+  const exceso=[], sinrtk=[], cancelados=[], repetidas=[];
   RTK_CROPS.forEach(c=>{
     const byLote={};
     land.filter(o=>o.act.toUpperCase()===c).forEach(o=>{ const k=normLote(o.lote); (byLote[k]=byLote[k]||[]).push(o); });
@@ -541,18 +551,60 @@ function construirControlHectareas(OTS, RTK){
       // tiempo se perdian 7 lotes donde SI se facturo de mas: en ellos Has. Reales coincide
       // exacto con el plan y la dosis lo supera (ej. Fumigacion Dron en .32B: 11,92 ha cobradas
       // sobre 9,70 de lote).
-      const ha_ot=Math.max.apply(null,g.map(o=>haTrabajada(o)));
-      const diff=Math.round((ha_ot-ha_rtk)*100)/100;
-      if(diff>0.5){
-        const dets=g.slice().sort((a,b)=>haTrabajada(b)-haTrabajada(a)).map(o=>({ot:o.ot,act:o.estadio||'-',serv:o.serv||'-',ha:haTrabajada(o),estado:o.estado,over:haTrabajada(o)>ha_rtk+0.01}));
-        exceso.push({cult:c,lote:g[0].lote,ha_rtk:Math.round(ha_rtk*100)/100,ha_ot:Math.round(ha_ot*100)/100,diff,pdiff:Math.round(diff/ha_rtk*1000)/10,n_ot:dets.length,dets});
+      // Una OT cuenta como sobrepase cuando pasa el plan MAS la tolerancia de su servicio (ver
+      // toleranciaExceso). El lote entra al listado solo si alguna lo hace, y `ha_ot` es la mayor
+      // de las que sobrepasan — no la mayor del lote: si la OT mas grande esta tolerada, no tiene
+      // sentido que sea ella la que fije el exceso que se reporta.
+      const supera=o=>haTrabajada(o)>topeLote(o.serv,ha_rtk)+0.01;
+      const culpables=g.filter(supera);
+      if(culpables.length){
+        const ha_ot=Math.max.apply(null,culpables.map(o=>haTrabajada(o)));
+        const diff=Math.round((ha_ot-ha_rtk)*100)/100;
+        if(diff>EXCESO_MINIMO_HA){
+          // `tolerado` son las OT que pasan el plan pero se quedan dentro de la tolerancia de su
+          // servicio: se muestran distinto para que no parezca que quedaron fuera por olvido.
+          const dets=g.slice().sort((a,b)=>haTrabajada(b)-haTrabajada(a)).map(o=>({ot:o.ot,act:o.estadio||'-',serv:o.serv||'-',ha:haTrabajada(o),estado:o.estado,
+            over:supera(o), tolerado:!supera(o) && haTrabajada(o)>ha_rtk+0.01,
+            tol:toleranciaExceso(o.serv)}));
+          exceso.push({cult:c,lote:g[0].lote,ha_rtk:Math.round(ha_rtk*100)/100,ha_ot:Math.round(ha_ot*100)/100,diff,pdiff:Math.round(diff/ha_rtk*1000)/10,n_ot:dets.length,dets});
+        }
       }
+      // ---- Labores repetidas que SUMANDO pasan el lote ----
+      // El exceso de arriba compara el plan contra la OT mas grande (max), no contra la suma: dos
+      // pasadas de 24,22 ha sobre un lote de 24,22 dan exceso cero y el caso no aparece en ningun
+      // lado. Y es justamente donde conviene mirar: que la MISMA labor se haya cargado dos veces y
+      // entre las dos pasen el lote significa que se rehizo sobre superficie ya trabajada.
+      // Se agrupa por labor normalizada (claveLaborAvance, la misma del avance) para que dos
+      // nombres de la misma labor no queden como labores distintas.
+      // Solo los estadios donde repetir una labor es un hallazgo (REPETIDAS_ESTADIOS, hoy solo
+      // Preparacion de Suelo): un cuidado se repite por diseno agronomico. El filtro va por OT y no
+      // por grupo, asi que una labor con una OT en Preparacion y otra en Cuidados deja de contar
+      // como repeticion — que es lo correcto: son dos momentos del ciclo, no la misma pasada dos
+      // veces.
+      const porLabor={};
+      g.filter(o=>REPETIDAS_ESTADIOS.indexOf(estadioAvance(o))>=0)
+       .forEach(o=>{ const lk=claveLaborAvance(o.serv); (porLabor[lk]=porLabor[lk]||{serv:o.serv||'-',ots:[]}).ots.push(o); });
+      Object.values(porLabor).forEach(v=>{
+        if(v.ots.length<2) return;                      // una sola OT no es repeticion
+        const suma=Math.round(v.ots.reduce((s,o)=>s+haTrabajada(o),0)*100)/100;
+        const exc=Math.round((suma-ha_rtk)*100)/100;
+        if(exc<=EXCESO_MINIMO_HA) return;               // terminar un lote en dos tandas es normal
+        if(suma<=topeLote(v.serv,ha_rtk)+0.01) return;  // misma tolerancia por servicio que arriba
+        repetidas.push({cult:c, lote:g[0].lote, serv:v.serv,
+          ha_rtk:Math.round(ha_rtk*100)/100, suma, exceso:exc,
+          pdiff:Math.round(exc/ha_rtk*1000)/10, n_ot:v.ots.length,
+          dets:v.ots.slice().sort((a,b)=>haTrabajada(b)-haTrabajada(a))
+            .map(o=>({ot:o.ot, act:o.estadio||'-', serv:o.serv||'-', ha:haTrabajada(o), estado:o.estado, fr:o.fr}))});
+      });
     }
   });
   exceso.sort((a,b)=>b.diff-a.diff);
   sinrtk.sort((a,b)=> a.cult<b.cult?-1:a.cult>b.cult?1:(a.lote<b.lote?-1:1));
   cancelados.sort((a,b)=> a.cult<b.cult?-1:a.cult>b.cult?1:(a.lote<b.lote?-1:1));
+  repetidas.sort((a,b)=>b.exceso-a.exceso);
   const exc_kpi={n:exceso.length, ha:Math.round(exceso.reduce((s,e)=>s+e.diff,0)*100)/100,
-    mayor:Math.round(Math.max(0,...exceso.map(e=>e.diff))*100)/100, n_sinrtk:sinrtk.length};
-  return {exceso,sinrtk,cancelados,exc_kpi};
+    mayor:Math.round(Math.max(0,...exceso.map(e=>e.diff))*100)/100, n_sinrtk:sinrtk.length,
+    n_repetidas:repetidas.length,
+    ha_repetidas:Math.round(repetidas.reduce((s,r)=>s+r.exceso,0)*100)/100};
+  return {exceso,sinrtk,cancelados,repetidas,exc_kpi};
 }
