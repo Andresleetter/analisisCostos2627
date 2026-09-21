@@ -49,6 +49,34 @@ Si el archivo está abierto en Excel al momento de necesitar inspeccionarlo (ej.
 6. **Alertas Operacionales** — OT atrasadas, con filtro por Estado (Pendiente / En Ejecución / Todas) y color por fila según días de atraso.
 7. **Auditoría** — tres sub-módulos dentro de la misma pestaña, con navegación propia: **Infraestructura** (presupuesto vs. ejecución real), **Insumos por Parcela** (qué insumo se aplicó en cada lote, cuánto por hectárea y con qué OT) y **Siembra por Parcela** (cruce de las OT de siembra confirmadas contra el campo `hectareasSembradas` de la parcela, para detectar errores de carga). Última pestaña de la barra. Ver secciones propias más abajo.
 
+### El módulo abierto queda en la URL
+
+Refrescar la página volvía siempre al Resumen Ejecutivo: el módulo activo vivía solo en la clase
+`.active` del HTML servido, así que cada F5 lo reseteaba. Ahora **el módulo se escribe en el hash**
+— `.../#combustible` — y al cargar se reabre ese.
+
+El nombre sale de `data-mod` del botón (`#tabs-nav`, `index.html`), **no del índice de la pestaña**:
+`resumen`, `servicios`, `combustible`, `insumos`, `hectareas`, `alertas`, `auditoria`. Si mañana se
+reordenan las pestañas o se agrega un módulo, un enlace guardado sigue apuntando al mismo lugar.
+
+Dos detalles de la implementación (`recordarModuloEnURL` y `restaurarModuloDeURL`, `render.js`):
+
+- **Se usa `history.replaceState`, no `location.hash = …`.** Con `location.hash`, cada clic de
+  pestaña agregaba una entrada al historial y salir del dashboard exigía tantos "atrás" como
+  pestañas se hubieran visitado; además el navegador salta el scroll hacia un elemento con ese id.
+  Verificado: cinco cambios de módulo dejan `history.length` en el mismo valor.
+- **Un hash que no corresponde a ningún módulo no hace nada.** Una URL vieja o un enlace mal copiado
+  abre el Resumen Ejecutivo, el que el HTML trae marcado activo, y la URL del usuario **no se toca**.
+
+`restaurarModuloDeURL()` lo llama `loader.js` una sola vez, **después de `renderAll()` y de hacer
+visible `#app`**: antes no hay nada dibujado, y el `scrollTo` de `show()` no tiene efecto sobre un
+contenedor oculto. No hay listener de `hashchange`: quien cambia de módulo es siempre `show()`, así
+que los tres caminos que llevan a un módulo — el botón de la barra, el menú hamburguesa del móvil y
+"Ver detalle" de Posibles Problemas — escriben el hash sin código propio.
+
+El **Avance Detallado por Cultivo** no tiene pestaña propia y no toca el hash: mientras se lo mira,
+la URL sigue diciendo el módulo del que se entró (el Resumen), que es donde deja un refresco.
+
 ## Qué texto va en la pantalla
 
 El dashboard muestra **cifras y rótulos, no explicaciones**. Un panel dice `17 lotes`, `1 de 11 OT`,
@@ -578,6 +606,12 @@ Cada fila se abre con clic (caret `▸`/`▾` en la celda **OT Conf.**, sin colu
 El desplegable **no recalcula nada ni vuelve a leer `consultaOT`**: recorre `l.ots`, el resumen que `construirServicios()` dejó guardado en el mismo recorrido con que sumó el grupo, sobre las OT **ya agrupadas** por `agruparOTS()` — por eso una OT con varias líneas (servicio + labor + insumos) aparece **una sola vez**. `Trabajo Ejecutado` usa `celdaTrabajoEjecutado()`, la misma función que la fila principal, con la unidad del grupo: hectáreas, horas, kilos, `3 insumos utilizados` en Tratamiento de semillas o `2 trabajos` en Camión + grúa. `Costo Total` de cada OT es su aporte real al grupo (`Labor Propia + Labor Tercero + Insumos`), sin redondear antes de sumar. Orden: fecha ascendente y, a igual fecha, número de OT ascendente.
 
 Verificado contra el dato real: en las 4 campañas y sus 175 grupos, la cantidad de OT del desplegable coincide con `OT Conf.` y las sumas de `ha`, `horas`, `kg`, líneas de insumo, trabajos y los tres importes coinciden con la fila principal (hasta un centavo de redondeo de presentación); ninguna OT aparece en dos grupos.
+
+**Columna Observaciones.** Última columna del desplegable, con la observación de la OT **completa, sin recortar**. Es donde constan las cosas que ningún número dice — el sobrepase que la propia OT declara con su número de boleta, el trabajo hecho para un tercero, la labor parcial — y justo el final del texto es donde suele estar la aclaración, así que truncarla dejaría afuera lo que importa. El encabezado del desplegable dice cuántas de las OT del grupo la traen (`63/64 con observación`), que de un vistazo distingue un grupo sin cargar de uno donde no hay nada que aclarar.
+
+Es **una por OT**, no un recorte de varias: verificado sobre las **2.042 OT de las cuatro campañas**, ninguna trae dos textos distintos entre sus líneas (627 no traen ninguno). El campo viaja desde `obs` de `agruparOTS` (`ordenes.js`) hasta `resumenOTServicio` (`servicios.js`), sin releer el Excel.
+
+**Los saltos de línea se conservan.** 68 de las 1.415 observaciones cargadas los traen, y son las que más los necesitan: una dosis por renglón (`Cyperex: 0,085 Kg/ha` / `Garant: 0,035 L/ha`) o el presupuesto desglosado (`Monto aprobado 217 hs` / `Metros aprobados 19355mts` / `Hora total: 98,61 hs`…). HTML los colapsaría, así que `obsHtml()` los convierte en `<br>` **después** de escapar, descartando los renglones vacíos y los espacios de los extremos, que es lo único que aporta la sangría del Excel. La celda es la única del desplegable que envuelve en varias líneas; el resto sigue en una sola.
 
 ### Fila de Total del Detalle por Servicio
 

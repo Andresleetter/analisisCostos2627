@@ -96,7 +96,7 @@ tr.sv-det>td{background:#f7faf5;padding:10px 12px}
 /* La tabla interna scrollea sola en pantallas angostas: las seis columnas (OT · Fecha · Cultivo ·
    Lote · Trabajo Ejecutado · Costo Total) se conservan siempre, nunca se oculta ninguna. */
 .sv-det-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
-.sv-ots{width:100%;border-collapse:collapse;min-width:520px}
+.sv-ots{width:100%;border-collapse:collapse;min-width:740px}
 .sv-ots th{font-size:10px;text-transform:uppercase;letter-spacing:.3px;color:var(--muted);font-weight:700;
   text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
 .sv-ots td{font-size:12px;padding:6px 8px;border-bottom:1px solid #edf1e9;white-space:nowrap}
@@ -104,6 +104,11 @@ tr.sv-det>td{background:#f7faf5;padding:10px 12px}
    se repite acá para las dos columnas numéricas de la cabecera interna. */
 .sv-ots th.tr{text-align:right}
 .sv-ots tr:last-child td{border-bottom:none}
+/* Observaciones: la unica celda del desplegable que NO va en una sola linea. El texto llega a
+   329 caracteres, asi que envuelve y lleva un ancho maximo para no empujar a las columnas de
+   numeros; el min-width evita que se comprima a una palabra por linea cuando la tabla scrollea. */
+.sv-ots td.sv-obs{white-space:normal;line-height:1.4;color:var(--muted);font-size:11px;
+  max-width:420px;min-width:220px}
 /* ---- Servicios · fila de Total al pie del Detalle por Servicio ---- */
 /* Se despega del cuerpo con una línea superior más marcada y fondo propio, para que se lea como
    cierre de la tabla y no como una fila más. No es clicable (no tiene .sv-fila), así que tampoco

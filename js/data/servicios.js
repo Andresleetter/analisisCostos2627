@@ -30,6 +30,11 @@ function resumenOTServicio(o){
   const cult=cultivoDeOT(o);
   return {ot:o.ot, fr:o.fr, cultivo:cult.label, cultivoKey:cult.key, lote:o.lote,
     ha:haTrabajada(o), horas:o.horas, kg:o.kg, n_insumos:o.n_insumos, trabajos:o.trabajos,
+    // obs = la observacion de la OT, para la columna Observaciones del desplegable. Es UNA por
+    // orden: verificado sobre las 2.042 OT de las cuatro campanias, ninguna trae dos textos
+    // distintos entre sus lineas (627 no traen ninguno), asi que este campo es la observacion
+    // completa de la OT y no un recorte. Ver `obs` en ordenes.js.
+    obs:o.obs||'',
     propia:o.propia, tercero:o.tercero, insumos:o.insumos};
 }
 // Orden del desplegable: fecha ascendente y, a igual fecha, numero de OT ascendente. Nunca el
