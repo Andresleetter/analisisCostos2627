@@ -539,6 +539,13 @@ const RECETA_TOLERANCIA_PCT = 5;
 const RECETAS_EQUIVALENCIAS = [
   {campania:'26', cultivo:'MAIZ',         usarCampania:'26/27', usarCultivo:'MAIZ'},
   {campania:'26', cultivo:'MAIZ ZAFRIÑA', usarCampania:'26/27', usarCultivo:'MAIZ'},
+  // PARCELA ARROZ usa el presupuesto de ARROZ (pedido del usuario, 21/09/2026): es el mismo
+  // cultivo en una parcela de ensayo, sin hoja de presupuesto propia. Son 4 movimientos de una
+  // sola OT (5056, 4,50 ha) y sus cuatro insumos —Glifotec Gold, Conductor Clomazone 48%,
+  // Cyperex 75 y Garant— ya estan en la receta de ARROZ, asi que pasan a compararse en vez de
+  // quedar en "Sin receta".
+  // Acotado a 26/27 porque es la unica campania en que aparece este cultivo.
+  {campania:'26/27', cultivo:'PARCELA ARROZ', usarCampania:'26/27', usarCultivo:'ARROZ'},
 ];
 const RECETAS_INSUMO_ALIAS = [
   // Mismo producto, separador decimal distinto: Albor lo carga con punto y el presupuesto con coma.

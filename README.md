@@ -4,7 +4,7 @@ Dashboard de seguimiento de campaña agrícola (Campo La Teresa). Es una web est
 
 - **`data/datosCampania2627.xlsx`** — 3 hojas: `consultaOT`, `consultaCultivos`, `consultaInsumos`.
 - **`data/presupuesto-infraestructura-26-27.json`** — 10 ítems con el presupuesto de infraestructura usado en la pestaña Auditoría (`especificacion`, `cantidadPresupuestada`, `unidadMedida`, `costo`, `importeTotal`).
-- **`data/recetas-insumos-26-27.json`** — 202 registros con la dosis por hectárea recomendada por cultivo e insumo. Es una versión **reducida** del presupuesto de insumos: solo dosis, sin costos ni volúmenes. Alimenta el seguimiento de receta de Auditoría de Insumos por Parcela.
+- **`data/recetas-insumos-26-27.json`** — 205 registros con la dosis por hectárea recomendada por cultivo e insumo. Es una versión **reducida** del presupuesto de insumos: solo dosis, sin costos ni volúmenes. Alimenta el seguimiento de receta de Auditoría de Insumos por Parcela.
 
 - **`data/receta-labores-25-26.json`** — cuántas labores distintas lleva cada cultivo en cada estadio, derivado del export de la campaña 25/26. Es el **divisor** del avance de campo: sin él, la primera labor confirmada sobre un lote lo dejaba en 100 % del estadio (ver **El divisor del avance**).
 
@@ -991,12 +991,12 @@ Efecto sobre los 1.247 movimientos de insumo con hectáreas:
 
 | Estado | Antes | Después |
 |---|---|---|
-| Sin receta | 225 | **69** |
-| Bajo receta | 769 | **913** |
+| Sin receta | 225 | **34** |
+| Bajo receta | 769 | **928** |
 | Dentro de tolerancia | 180 | 189 |
-| Sobre receta | 67 | 70 |
+| Sobre receta | 67 | **83** |
 | Según receta | 6 | 6 |
-| Unidad no comparable | 0 | **0** |
+| Unidad no comparable | 0 | 7 |
 
 #### Dos unidades corregidas contra el presupuesto
 
@@ -1024,6 +1024,61 @@ PUNTO DE AGUJA y 0,08 en PÓS EMERGENTES—, lo que dejaría la fila en «Sin re
 `resolverCandidatasReceta`). Se cargó **solo la de PÓS EMERGENTES** porque es la que el dato
 respalda: las 33 líneas de Cyperex 75 de la campaña son todas del estadio **Cuidados**, a 0,055–0,070
 kg/ha, y ninguna es una aplicación de punto de aguja.
+
+#### Tres productos más, y una dosis que el Excel no dice
+
+Las hojas que el usuario volvió a pasar el **21/09/2026** traen tres nombres comerciales que la
+versión anterior no tenía. Los tres aparecen compartiendo fila con un producto ya cargado, que es
+cómo el presupuesto anota las marcas alternativas:
+
+| Cultivo | Fila del presupuesto | Nombre nuevo | La OT dice | Dosis |
+|---|---|---|---|---|
+| ARROZ | `Maxirice - Zupressor` | Zupressor | `Zupressor` | 0,12 kg |
+| SOJA | `Nodu Soja - Brady + - Aq BPR Max` | Brady + | `+Brady` | 0,5 L |
+| SOJA | `Nodu Soja - Brady + - Aq BPR Max` | Aq BPR Max | `AQ BPR MAX` | **0,15 L** |
+
+**`AQ BPR MAX` no lleva la dosis de su fila.** El Excel dice 0,5 L/ha porque ésa es la del Nodu
+Soja, que encabeza la fila. El producto es **stock que sobró de antes y se está usando ahora a
+0,150 L/ha** (dato del usuario). Se cargó con esa dosis, no con la de la fila: el presupuesto acierta
+en el nombre y se equivoca en el número, y acá manda el número real.
+
+Con eso los dos inoculantes pasan a comparar, y dan cosas distintas:
+
+```
+AQ BPR MAX   12 movimientos de SOJA · Siembra · 0,184 L/ha  vs 0,150  =  +22,8%   Sobre receta
++Brady       12 movimientos de SOJA · Siembra · 0,344 L/ha  vs 0,500  =  -31,2%   Bajo receta
+```
+
+**`Zupressor` queda en «unidad no comparable»**, el caso inverso al de Cyperex: el presupuesto lo
+pone en **kilos** (la fila es Imazapic + Imazapir **WG**, un granulado) y Albor lo carga en
+**litros**, 0,280 L/ha en 7 movimientos contra un plan de 0,12 kg. Se cargó con la unidad del
+presupuesto y **queda pendiente de confirmar**: si `Zupressor` es realmente una formulación líquida,
+no es el mismo producto que el `Maxirice` de esa fila y su dosis tampoco es comparable.
+
+#### PARCELA ARROZ usa el presupuesto de ARROZ
+
+`PARCELA ARROZ` es el mismo cultivo en una parcela de ensayo y no tiene hoja de presupuesto propia,
+así que sus insumos quedaban en «Sin receta». Desde el 21/09/2026 una equivalencia de
+`RECETAS_EQUIVALENCIAS` lo manda a la receta de ARROZ, a pedido del usuario — el mismo mecanismo con
+que la zafriña de maíz usa la hoja de MAIZ.
+
+Son 4 movimientos de una sola OT, la **5056**, sobre 4,50 ha, y sus cuatro insumos ya estaban en la
+receta de ARROZ:
+
+```
+Glifotec Gold             3,333 L/ha   vs 3,00    =  +11,1%   Sobre receta
+Conductor Clomazone 48%   0,333 L/ha   vs 0,50    =  -33,3%   Bajo receta
+Cyperex 75                0,044 kg/ha  vs 0,08    =  -44,4%   Bajo receta
+Garant                    0,044 L/ha   vs 0,35    =  -87,3%   Bajo receta
+```
+
+Es la misma OT 5056 cuya observación dice *"Sobrepase con 3% a más de la aplicación de la fecha
+08/09. Por motivo de monte alrededor de ciertas parcelas a aplicar"* — coherente con el +11,1 % del
+Glifotec.
+
+La equivalencia va **acotada a la campaña 26/27**, la única en que aparece este cultivo, con el mismo
+criterio conservador que el resto de la tabla: nunca se amplía a una campaña o cultivo que no se
+verificó contra el dato.
 
 ### Equivalencias de campaña y cultivo
 
