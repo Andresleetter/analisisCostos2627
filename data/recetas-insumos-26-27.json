@@ -249,7 +249,7 @@
     "insumo": "Cyperex 75",
     "descripcion": "Pyrazosulfuron",
     "dosisHa": 0.08,
-    "unidad": "L"
+    "unidad": "kg"
   },
   {
     "campania": "26/27",
@@ -258,7 +258,7 @@
     "insumo": "Fyn",
     "descripcion": "Quinclorac 25% SC",
     "dosisHa": 2,
-    "unidad": "L"
+    "unidad": "kg"
   },
   {
     "campania": "26/27",
@@ -276,7 +276,7 @@
     "insumo": "Pyrazosulfuron",
     "descripcion": null,
     "dosisHa": 0.08,
-    "unidad": "L"
+    "unidad": "kg"
   },
   {
     "campania": "26/27",
@@ -294,7 +294,7 @@
     "insumo": "VULCANO PQT",
     "descripcion": "Quinclorac 25% SC",
     "dosisHa": 2,
-    "unidad": "L"
+    "unidad": "kg"
   },
   {
     "campania": "26/27",
@@ -339,7 +339,7 @@
     "insumo": "Pyrazosulfuron",
     "descripcion": null,
     "dosisHa": 0.21,
-    "unidad": "L"
+    "unidad": "kg"
   },
   {
     "campania": "26/27",
