@@ -344,6 +344,15 @@
   {
     "campania": "26/27",
     "cultivo": "ARROZ",
+    "grupo": "HERBICIDAS PUNTO DE AGUJA",
+    "insumo": "Zupressor",
+    "descripcion": "Imazapic 17.5% + Imazapir 52.5% WG",
+    "dosisHa": 0.12,
+    "unidad": "kg"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
     "grupo": "INSECTICIDAS",
     "insumo": "Biogard",
     "descripcion": "Imidacloprid 60%",
@@ -1407,6 +1416,15 @@
     "campania": "26/27",
     "cultivo": "SOJA",
     "grupo": "TRATAMIENTO DE SEMILLAS",
+    "insumo": "+Brady",
+    "descripcion": "Bradyrhizobium Japonicun 1x1010",
+    "dosisHa": 0.5,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "TRATAMIENTO DE SEMILLAS",
     "insumo": "Agriker",
     "descripcion": "nutrientes + extratos de alga",
     "dosisHa": 0.1,
@@ -1437,6 +1455,15 @@
     "insumo": "Ampere Duo",
     "descripcion": "Clorantraniliprol + Clotianidina",
     "dosisHa": 0.1,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "TRATAMIENTO DE SEMILLAS",
+    "insumo": "AQ BPR MAX",
+    "descripcion": "Bradyrhizobium Japonicun 1x1010",
+    "dosisHa": 0.15,
     "unidad": "L"
   },
   {
