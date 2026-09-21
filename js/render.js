@@ -54,10 +54,14 @@ function renderAll(){
     // que estan bien. Nada desaparece en silencio: el encabezado dice cuantas quedaron afuera y por
     // que, para que se pueda pedir el detalle completo si hace falta.
     const culpables=e.dets.filter(x=>x.over), toleradas=e.dets.filter(x=>x.tolerado);
+    // Las OT que declaran su propio sobrepase en la observacion no se cuentan como exceso, pero se
+    // nombran: si desaparecieran sin rastro pareceria que el control no las vio.
+    const declaradas=e.dets.filter(x=>x.declarado);
     const ocultas=e.dets.length-culpables.length;
     excHtml+=`<tr class="dethead"><td colspan="6">${culpables.length} OT ${culpables.length===1?'supera':'superan'} el plan del lote`+
       (ocultas?` · ${ocultas} dentro del plan no se ${ocultas===1?'lista':'listan'}`:'')+
       (toleradas.length?` (incluye ${toleradas.length} dentro de la tolerancia de ${Math.round(toleradas[0].tol*100)}% de su servicio: ${toleradas.map(t=>'OT '+escHtml(String(t.ot))+' · '+escHtml(String(t.serv))).join(', ')})`:'')+
+      (declaradas.length?` · ${declaradas.length} declara${declaradas.length===1?'':'n'} el sobrepase en su observación: ${declaradas.map(t=>'OT '+escHtml(String(t.ot))+' — '+escHtml(String(t.obs).slice(0,90))).join(' · ')}`:'')+
       ` · ${e.n_ot} OT en total (excl. labores por hora)</td></tr>`;
     culpables.forEach(x=>{ const tag='<span class="tag">superficie sobre RTK</span>';
       excHtml+=`<tr class="det-over"><td class="dl mono">OT ${x.ot}</td><td>${x.act}</td><td colspan="2">${x.serv} ${tag}</td><td>${x.estado}</td><td class="tr exd">${fmt2(x.ha)} ha</td></tr>`; });
@@ -397,8 +401,16 @@ function avLineaReceta(r){
     ? 'mediana de labores por lote en la campaña '+escHtml(String(r.campania))+', sobre '+r.n_lotes+' lotes'
     : 'este cultivo no tuvo base suficiente en la campaña '+escHtml(String(r.campania))
       + (r.n_lotes ? ' ('+r.n_lotes+' lote(s))' : '') + ': se usa la mediana de los demás cultivos';
-  return `<div class="av-receta${propia?'':' av-receta-resp'}"${vistas?` title="Labores de esta etapa en la campaña ${escHtml(String(r.campania))}: ${escHtml(vistas)}"`:''}>`+
-    `Divisor: <b>${fmtDivisor(r.divisor)}</b> labor(es) por lote — ${det}.</div>`;
+  // Lotes ya sembrados: en esos el divisor NO usa la receta, porque sembrar es posterior a
+  // preparar y no van a venir mas labores (ver loteSembrado en cultivos.js). Hay que decirlo, o el
+  // numero del divisor parece aplicarse a toda la etapa cuando en parte de ella no se aplico.
+  const sem = r.lotes_sembrados||0, tot = r.n_lotes_etapa||0;
+  const nota = !sem ? ''
+    : (sem>=tot
+        ? ` <b>No se aplica</b>: los ${tot} lote(s) de esta etapa ya están sembrados, así que su preparación está terminada y cada uno divide por las labores que tiene.`
+        : ` No se aplica en ${sem} de los ${tot} lote(s), ya sembrados: ahí la preparación está terminada y divide por las labores que tiene.`);
+  return `<div class="av-receta${propia?'':' av-receta-resp'}${sem>=tot&&tot?' av-receta-off':''}"${vistas?` title="Labores de esta etapa en la campaña ${escHtml(String(r.campania))}: ${escHtml(vistas)}"`:''}>`+
+    `Divisor: <b>${fmtDivisor(r.divisor)}</b> labor(es) por lote — ${det}.${nota}</div>`;
 }
 
 // c.etapas[].labores (desglosarEstadio, js/data/cultivos.js), donde la suma de los aportes es el
@@ -1642,6 +1654,7 @@ function renderG(){
   document.getElementById('gacc').innerHTML=`<svg width="100%" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet"><polygon points="${area}" fill="rgba(90,160,44,.12)"/><polyline points="${poly}" fill="none" stroke="var(--green)" stroke-width="2.5"/>${dots}</svg>`;
   renderLaborDetalle();
   renderGasoil();
+  renderTerceros();
 }
 
 // Qué fila del Detalle por Servicio está desplegada. Vive acá y no en el DOM porque la tabla se
@@ -1817,6 +1830,48 @@ function renderGasoil(){
   document.getElementById('gastop').innerHTML=`<div class="sop-kpi"><div class="l">Total Gasoil</div><div class="v">US$ ${fmtUSD(tot)}</div></div><div class="sop-kpi"><div class="l">Litros Consumidos</div><div class="v">${fmt1(litros)} L</div></div>`;
   const mx=Math.max(1,...rows.map(r=>r.total));
   document.getElementById('gasbody').innerHTML=rows.length?rows.map(r=>`<tr><td><b>${r.area}</b></td><td class="tr mono">${r.n}</td><td class="tr mono">${fmt1(r.litros)}</td><td class="tr mono col-tot">US$ ${fmtUSD(r.total)}</td><td class="tr"><div class="sopbar"><div style="width:${r.total/mx*100}%"></div></div></td><td class="tr mono">${tot?(r.total/tot*100).toFixed(1):0}%</td></tr>`).join(''):'<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:16px">Sin consumo de gasoil en el período</td></tr>';
+}
+// ---- Trabajos para Terceros ----
+// Sigue los mismos filtros que el resto de la pestania (Campania y Cultivo via serviciosFiltrados,
+// Mes aca) para que el panel hable del mismo periodo que el gasoil que tiene arriba.
+// Se muestran juntas las OT que PIDEN el descuento y las que solo nombran al tercero, separadas por
+// la etiqueta: pedir el descuento es una decision de quien cargo la OT, y suponerlo donde nadie lo
+// escribio seria inventar plata. La observacion va en cada fila porque es la unica prueba de que
+// ese trabajo fue para otro.
+function renderTerceros(){
+  const S=serviciosFiltrados();
+  const selV=document.getElementById('gmes').value, sel=selV==='ALL'?'ALL':parseInt(selV);
+  const T=(S.terceros||[]).filter(r=>sel==='ALL'||r.mesnum===sel);
+  const desc=T.filter(r=>r.descontar);
+  const impD=desc.reduce((s2,r)=>s2+r.imp,0), impT=T.reduce((s2,r)=>s2+r.imp,0);
+  document.getElementById('terctop').innerHTML=
+    `<div class="sop-kpi"><div class="l">A Descontar</div><div class="v">US$ ${fmtUSD(impD)}</div></div>`+
+    `<div class="sop-kpi"><div class="l">OT que lo Piden</div><div class="v">${desc.length}</div></div>`+
+    `<div class="sop-kpi"><div class="l">Total para Terceros</div><div class="v">US$ ${fmtUSD(impT)}</div></div>`+
+    `<div class="sop-kpi"><div class="l">OT en Total</div><div class="v">${T.length}</div></div>`;
+  document.getElementById('terc-sub').textContent = T.length
+    ? T.length+' OT · '+[...new Set(T.map(r=>r.tercero))].length+' tercero(s) · ordenado por costo'
+    : 'ninguna observación de OT nombra a un tercero en el período';
+  const by={};
+  T.forEach(r=>{ (by[r.tercero]=by[r.tercero]||{tercero:r.tercero,imp:0,impD:0,ots:[]}); const b=by[r.tercero];
+    b.imp+=r.imp; if(r.descontar) b.impD+=r.imp; b.ots.push(r); });
+  let html='';
+  Object.values(by).sort((a,b)=>b.imp-a.imp).forEach(b=>{
+    html+=`<tr class="grp"><td><b>${escHtml(String(b.tercero))}</b></td>`+
+      `<td colspan="2">${b.ots.length} OT`+(b.impD?` · US$ ${fmtUSD(b.impD)} pedidos a descontar`:'')+`</td>`+
+      `<td></td><td class="tr mono col-tot">US$ ${fmtUSD(b.imp)}</td></tr>`;
+    b.ots.forEach(r=>{
+      const tag=r.descontar?'<span class="tag tag-desc">a descontar</span>':'';
+      html+=`<tr class="det-over"><td class="dl mono">OT ${escHtml(String(r.ot))} ${tag}</td>`+
+        `<td class="mono">${r.fr?ipFecha(r.fr):'—'}</td>`+
+        `<td title="${escHtml(String(r.obs))}">${escHtml(String(r.serv))}`+
+        `<div class="terc-obs">${escHtml(String(r.obs))}</div></td>`+
+        `<td class="tr mono">${r.horas?fmt1(r.horas):'—'}</td>`+
+        `<td class="tr mono">US$ ${fmtUSD(r.imp)}</td></tr>`;
+    });
+  });
+  document.getElementById('tercbody').innerHTML = html ||
+    '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px">Ninguna OT del período tiene una observación que nombre a un tercero</td></tr>';
 }
 function show(i,btn){ document.querySelectorAll('.page').forEach((p,j)=>p.classList.toggle('active',j===i));
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); btn.classList.add('active'); window.scrollTo({top:0,behavior:'smooth'}); }

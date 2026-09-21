@@ -59,6 +59,19 @@ function acumularGrupoServicio(meta, ots){
     propia:Math.round(d.propia*100)/100,tercero:Math.round(d.tercero*100)/100,insumos:Math.round(d.insumos*100)/100,
     ots:ordenarOTsServicio(ots)};
 }
+// ---- Trabajos hechos PARA un tercero, segun la observacion de la OT ----
+// El tercero y el pedido de descuento constan UNICAMENTE en consultaOT.observaciones: ni el
+// cultivo, ni la actividad, ni el contratista los dicen (el contratista es quien ejecuto, no para
+// quien). Se resuelve por OT y no por linea porque la observacion es de la orden.
+// Devuelve null cuando la observacion no nombra ningun tercero del catalogo: no se deduce un
+// tercero por parecido, igual que en el catalogo de maquinas de combustible.js.
+function terceroDeObservacion(obs){
+  const t = String(obs || '');
+  if(!t) return null;
+  const hit = OBS_TERCEROS.filter(e => e.re.test(t));
+  if(!hit.length) return null;
+  return {nombre: hit.map(e => e.nombre).join(' + '), descontar: OBS_A_DESCONTAR.test(t)};
+}
 // Mismo criterio para el gasoil por area: una unica funcion de suma, reusada por el filtro.
 function acumularGrupoGasoil(meta, ots){
   const g={...meta,n:0,litros:0,total:0};
@@ -143,6 +156,17 @@ function acumularGrupoGasoil(meta, ots){
     if(!gmap[key]) gmap[key]={meta:{mesnum:m,area,personal:pers},ots:[]};
     gmap[key].ots.push({ot:o.ot,cultivo:cult.label,cultivoKey:cult.key,litros,total:o.imp}); });
   const gasoil_sec=Object.values(gmap).map(g=>acumularGrupoGasoil(g.meta,g.ots));
+  // ---- Trabajos para terceros ----
+  // Se arma sobre CONFin entero, no sobre detOT ni gasOT: un traslado para un tercero puede venir
+  // como servicio o como carga de gasoil, y las dos formas son el mismo hallazgo. El importe es
+  // `imp` de la OT, lo mismo que suman los demas paneles del modulo.
+  const terceros=CONFin.map(o=>{
+    const t=terceroDeObservacion(o.obs); if(!t) return null;
+    const cult=cultivoDeOT(o);
+    return {ot:o.ot, fr:o.fr, mesnum:o.fr?o.fr.getMonth()+1:0, serv:o.serv||'(sin servicio)',
+      area:o.estadio||'(sin area)', lote:o.lote, cultivo:cult.label, cultivoKey:cult.key,
+      tercero:t.nombre, descontar:t.descontar, horas:o.horas, imp:o.imp, obs:o.obs};
+  }).filter(Boolean).sort((a,b)=>b.imp-a.imp);
   const gasto_total=gastos.reduce((s,d)=>s+d.propia+d.tercero+d.insumos,0);
   const gasoil_total=gasOT.reduce((s,o)=>s+o.imp,0), gasoil_litros_total=gasOT.reduce((s,o)=>s+o.lines.reduce((a,l)=>a+l.ud,0),0);
   const gmes={}, glit={};
@@ -183,7 +207,7 @@ function acumularGrupoGasoil(meta, ots){
       if(ib!==-1) return 1;
       return a.lbl.localeCompare(b.lbl,'es');
     });
-  return {gastos,gasoil_sec,meses,gasto_total,gasoil_total,gasoil_litros_total,gmes,glit,
+  return {gastos,gasoil_sec,terceros,meses,gasto_total,gasoil_total,gasoil_litros_total,gmes,glit,
     labores,estadios_labor,contratistas_labor,cultivos_labor,costo_conf};
   }
 
@@ -209,7 +233,9 @@ function filtrarServiciosPorCultivo(S, cultivoKey){
   const gasoil_sec=(S.gasoil_sec||[])
     .map(g=>acumularGrupoGasoil(metaDeGrupo(g,META_GRUPO_GASOIL),(g.ots||[]).filter(esDelCultivo)))
     .filter(g=>g.n>0);
-  return {...S, gastos, gasoil_sec};
+  // Los trabajos para terceros son OT sueltas, no grupos: alcanza con filtrarlas por su cultivo.
+  const terceros=(S.terceros||[]).filter(esDelCultivo);
+  return {...S, gastos, gasoil_sec, terceros};
 }
 
 // Un paquete de Servicios por cada campania presente en consultaOT, mas los totales consolidados.

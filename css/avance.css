@@ -49,6 +49,9 @@
 /* El respaldo (receta prestada de otros cultivos) se distingue: no es la receta del cultivo. */
 .av-receta-resp{font-style:italic}
 .av-receta-resp b{color:var(--muted)}
+/* La receta no se aplico en ningun lote de la etapa (todos ya sembrados): el divisor que se muestra
+   es informativo, no el que se uso, asi que se apaga el resalte del numero. */
+.av-receta-off b{color:var(--muted)}
 
 .av-total{border-top:1px dashed var(--line);margin-top:6px;padding-top:7px;font-size:10.5px;color:var(--muted);text-align:right}
 .av-total b{color:var(--teal);font-weight:800}
