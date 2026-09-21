@@ -992,27 +992,34 @@ Efecto sobre los 1.247 movimientos de insumo con hectáreas:
 | Estado | Antes | Después |
 |---|---|---|
 | Sin receta | 225 | **69** |
-| Bajo receta | 769 | 892 |
-| Dentro de tolerancia | 180 | 186 |
-| Sobre receta | 67 | 68 |
+| Bajo receta | 769 | **913** |
+| Dentro de tolerancia | 180 | 189 |
+| Sobre receta | 67 | 70 |
 | Según receta | 6 | 6 |
-| Unidad no comparable | 0 | 26 |
+| Unidad no comparable | 0 | **0** |
 
-**Los 26 de «unidad no comparable» son un hallazgo, no una regresión.** Antes decían «Sin receta»,
-que no distinguía entre *no hay presupuesto para esto* y *hay presupuesto pero está en otra unidad*.
-Son dos productos del presupuesto de ARROZ que figuran en **litros** y que Albor carga en **kilos**:
+#### Dos unidades corregidas contra el presupuesto
 
-```
-Cyperex 75    25 movimientos · 34,70 kg sobre 500,87 ha = 0,069 kg/ha   (receta 0,08 lts)
-VULCANO PQT    1 movimiento  · 26,00 kg sobre  43,87 ha = 0,593 kg/ha   (receta 2 lts)
-```
+El presupuesto de ARROZ pone dos productos en **litros** y Albor los carga en **kilos**, así que al
+principio quedaron en «unidad no comparable» — el módulo nunca convierte entre magnitudes distintas.
+Los dos son formulaciones **sólidas** (Pyrazosulfuron WG y el Quinclorac de esa línea), de modo que
+el kilo de Albor es el correcto y la unidad del presupuesto el error. **Se corrigió la receta a kg**
+(decisión del usuario, 21/09/2026), y con eso «unidad no comparable» vuelve a cero:
 
-Los dos son formulaciones sólidas (Pyrazosulfuron WG, Quinclorac), así que el kilo de Albor parece
-el correcto y la unidad del presupuesto la equivocada. **No se cambió**: la receta es el
-presupuesto, y corregir la unidad de la fuente es una decisión del usuario, no del dashboard. Hasta
-entonces el módulo dice exactamente qué pasa en vez de comparar magnitudes distintas.
+| Producto | Real | Receta | Desvío |
+|---|---|---|---|
+| `Cyperex 75` | 0,069 kg/ha (34,70 kg sobre 500,87 ha) | 0,08 kg | **−13,4 %** |
+| `VULCANO PQT` | 0,593 kg/ha (26,00 kg sobre 43,87 ha) | 2 kg | **−70,4 %** |
 
-El `Cyperex` del presupuesto aparece en **dos grupos con dosis distintas** —0,21 L/ha en HERBICIDAS
+El cambio se aplicó a **los dos nombres de cada producto**, no solo al que Albor usa hoy:
+`Cyperex 75` y `Pyrazosulfuron` (sus dos grupos), `VULCANO PQT` y `Fyn`. Si mañana la OT viene
+cargada con el otro nombre, la receta ya está en la unidad correcta.
+
+El detalle por lote no es uniforme: de los 25 movimientos de `Cyperex 75` en ARROZ, 20 quedan bajo
+receta, 3 dentro de tolerancia y 2 sobre receta, con dosis de 0,044 a 0,087 kg/ha contra un plan de
+0,08. El movimiento restante es de `PARCELA ARROZ`, que no tiene receta propia.
+
+El `Cyperex` del presupuesto aparece en **dos grupos con dosis distintas** —0,21 en HERBICIDAS
 PUNTO DE AGUJA y 0,08 en PÓS EMERGENTES—, lo que dejaría la fila en «Sin receta» por ambigüedad (ver
 `resolverCandidatasReceta`). Se cargó **solo la de PÓS EMERGENTES** porque es la que el dato
 respalda: las 33 líneas de Cyperex 75 de la campaña son todas del estadio **Cuidados**, a 0,055–0,070
