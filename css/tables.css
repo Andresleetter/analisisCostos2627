@@ -7,6 +7,14 @@ tr.grp td:first-child{font-size:12.5px}
 tr.dethead td{background:#fbf3f2;font-size:9.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:700;padding:2px 8px 6px 22px;border-bottom:1px solid #f0dede}
 tr.det td,tr.det-over td{font-size:11.5px;padding:6px 8px;border-bottom:1px solid #f4f0f0}
 tr.det-over td{background:#fdf0ef}
+/* .neutra apaga el tinte rojo de las filas de grupo y detalle. El rojo de esas clases significa
+   hallazgo; Trabajos para Terceros no lo es, es informacion, y reusa la misma estructura de filas
+   solo por la forma (grupo + detalle), no por el significado. */
+tr.neutra.grp td{background:#f4f7f2;border-top-color:var(--teal)}
+tr.neutra.dethead td{background:#f4f7f2;border-bottom-color:var(--line)}
+tr.neutra.det-over td{background:transparent}
+/* Fila de total del pie de tabla. */
+tr.tot td{background:#eef3ec;border-top:2px solid var(--teal);font-weight:700;padding:9px 8px;font-size:12px}
 td.dl{padding-left:22px;color:var(--teal)}
 /* "a descontar" = la observacion de la OT pide explicitamente el descuento, a diferencia de las que
    solo nombran al tercero. Ambar y no rojo: es una accion pendiente, no un error. */

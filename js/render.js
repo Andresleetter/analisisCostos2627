@@ -38,12 +38,11 @@ function renderAll(){
   renderResumenModulo();
   // TAB3 control ha
   document.getElementById('ha-kpis').innerHTML=
-    `<div class="kpi"><div class="k-lab">Lotes con Exceso</div><div class="k-val c-r">${D.exc_kpi.n}</div><div class="k-foot">Superficie ejecutada &gt; planificada</div></div>`+
+    `<div class="kpi"><div class="k-lab">Lotes con Exceso</div><div class="k-val c-r">${D.exc_kpi.n}</div></div>`+
     `<div class="kpi"><div class="k-lab">Ha Excedidas Acum.</div><div class="k-val c-r" style="font-size:22px">+${fmt2(D.exc_kpi.ha)}</div></div>`+
-    `<div class="kpi"><div class="k-lab">Mayor Exceso</div><div class="k-val c-r" style="font-size:22px">+${fmt2(D.exc_kpi.mayor)} ha</div></div>`+
-    `<div class="kpi"><div class="k-lab">Preparación Repetida</div><div class="k-val c-r">${D.exc_kpi.n_repetidas}</div><div class="k-foot">+${fmt2(D.exc_kpi.ha_repetidas)} ha sobre el lote</div></div>`+
-    `<div class="kpi"><div class="k-lab">OT Fuera de RTK</div><div class="k-val c-r">${D.exc_kpi.n_sinrtk}</div><div class="k-foot">Lote inexistente en plan</div></div>`;
-  document.getElementById('exc-sub').textContent=D.exceso.length+' lotes · ordenado por mayor diferencia';
+    `<div class="kpi"><div class="k-lab">Preparación Repetida</div><div class="k-val c-r">${D.exc_kpi.n_repetidas}</div><div class="k-foot">+${fmt2(D.exc_kpi.ha_repetidas)} ha</div></div>`+
+    `<div class="kpi"><div class="k-lab">OT Fuera de RTK</div><div class="k-val c-r">${D.exc_kpi.n_sinrtk}</div></div>`;
+  document.getElementById('exc-sub').textContent=D.exceso.length+' lotes';
   let excHtml='';
   D.exceso.forEach(e=>{
     excHtml+=`<tr class="grp"><td>${e.cult}</td><td class="mono">${e.lote}</td><td class="tr">${fmt2(e.ha_rtk)}</td><td class="tr">${fmt2(e.ha_ot)}</td><td class="tr exd">+${fmt2(e.diff)}</td><td class="tr exd">+${Math.round(e.pdiff)}%</td></tr>`;
@@ -58,11 +57,7 @@ function renderAll(){
     // nombran: si desaparecieran sin rastro pareceria que el control no las vio.
     const declaradas=e.dets.filter(x=>x.declarado);
     const ocultas=e.dets.length-culpables.length;
-    excHtml+=`<tr class="dethead"><td colspan="6">${culpables.length} OT ${culpables.length===1?'supera':'superan'} el plan del lote`+
-      (ocultas?` · ${ocultas} dentro del plan no se ${ocultas===1?'lista':'listan'}`:'')+
-      (toleradas.length?` (incluye ${toleradas.length} dentro de la tolerancia de ${Math.round(toleradas[0].tol*100)}% de su servicio: ${toleradas.map(t=>'OT '+escHtml(String(t.ot))+' · '+escHtml(String(t.serv))).join(', ')})`:'')+
-      (declaradas.length?` · ${declaradas.length} declara${declaradas.length===1?'':'n'} el sobrepase en su observación: ${declaradas.map(t=>'OT '+escHtml(String(t.ot))+' — '+escHtml(String(t.obs).slice(0,90))).join(' · ')}`:'')+
-      ` · ${e.n_ot} OT en total (excl. labores por hora)</td></tr>`;
+    excHtml+=`<tr class="dethead"><td colspan="6">${culpables.length} de ${e.n_ot} OT</td></tr>`;
     culpables.forEach(x=>{ const tag='<span class="tag">superficie sobre RTK</span>';
       excHtml+=`<tr class="det-over"><td class="dl mono">OT ${x.ot}</td><td>${x.act}</td><td colspan="2">${x.serv} ${tag}</td><td>${x.estado}</td><td class="tr exd">${fmt2(x.ha)} ha</td></tr>`; });
   });
@@ -73,34 +68,34 @@ function renderAll(){
   // de una misma labor. La fecha va en el detalle: dos pasadas separadas por meses es la firma de
   // que la labor se rehizo, y es lo primero que se quiere ver.
   document.getElementById('rep-sub').textContent = D.repetidas.length
-    ? D.repetidas.length+' caso(s) · +'+fmt2(D.exc_kpi.ha_repetidas)+' ha sobre el plan · solo Preparación de Suelo · ordenado por mayor exceso'
-    : 'ninguna labor de preparación repetida supera su lote';
+    ? D.repetidas.length+' caso(s) · +'+fmt2(D.exc_kpi.ha_repetidas)+' ha'
+    : '';
   let repHtml='';
   D.repetidas.forEach(r=>{
     repHtml+=`<tr class="grp"><td>${r.cult}</td><td class="mono">${escHtml(String(r.lote))}</td><td>${escHtml(String(r.serv))}</td>`+
       `<td class="tr">${fmt2(r.ha_rtk)}</td><td class="tr">${fmt2(r.suma)}</td>`+
       `<td class="tr exd">+${fmt2(r.exceso)}</td><td class="tr exd">+${Math.round(r.pdiff)}%</td></tr>`;
-    repHtml+=`<tr class="dethead"><td colspan="7">${r.n_ot} OT de esta labor sobre el mismo lote</td></tr>`;
+    repHtml+=`<tr class="dethead"><td colspan="7">${r.n_ot} OT</td></tr>`;
     r.dets.forEach(x=>{
       repHtml+=`<tr class="det-over"><td class="dl mono">OT ${x.ot}</td><td>${escHtml(String(x.act))}</td>`+
         `<td colspan="2">${escHtml(String(x.serv))}</td><td>${x.fr?ipFecha(x.fr):'—'}</td>`+
         `<td>${escHtml(String(x.estado))}</td><td class="tr exd">${fmt2(x.ha)} ha</td></tr>`; });
   });
   document.getElementById('rep').innerHTML = repHtml ||
-    '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:16px">Ninguna labor de preparación está cargada dos veces sobre un lote sumando más que su plan</td></tr>';
+    '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:16px">Sin casos</td></tr>';
   document.getElementById('cancel-sub').textContent=D.cancelados.length+' lote(s)';
   let cancelHtml='';
   D.cancelados.forEach(e=>{
     cancelHtml+=`<tr class="grp"><td>${e.cult}</td><td class="mono">${e.lote}</td></tr>`;
     if(!e.n_ot){
-      cancelHtml+=`<tr class="dethead"><td colspan="2">Sin OT cargadas todavía</td></tr>`;
+      cancelHtml+=`<tr class="dethead"><td colspan="2">Sin OT</td></tr>`;
     } else {
-      cancelHtml+=`<tr class="dethead"><td colspan="2">OT que componen el lote · ${e.n_ot} OT (excl. labores por hora)</td></tr>`;
+      cancelHtml+=`<tr class="dethead"><td colspan="2">${e.n_ot} OT</td></tr>`;
       e.dets.forEach(x=>{ cancelHtml+=`<tr class="det"><td class="dl mono">OT ${x.ot}</td><td>${x.act} · ${x.serv} · ${x.estado}</td></tr>`; });
     }
   });
   document.getElementById('cancel').innerHTML=cancelHtml;
-  document.getElementById('sinrtk-sub').textContent=D.sinrtk.length+' OT · el lote no existe en el plan RTK';
+  document.getElementById('sinrtk-sub').textContent=D.sinrtk.length+' OT';
   document.getElementById('sinrtk').innerHTML=D.sinrtk.map(r=>
     `<tr><td class="mono">OT ${r.ot}</td><td>${r.cult}</td><td class="mono">${r.lote}</td><td>${r.act}</td><td>${r.serv}</td><td class="tr mono">${fmt2(r.ha)}</td><td>${r.estado}</td></tr>`).join('');
   renderAlertas();
@@ -218,16 +213,13 @@ function kpiCard(lab,val,foot,col){
 function renderResumenKPIs(){
   const P=paqueteResumen(), k=P.resumen.kpis;
   const atrasCol = k.otAtrasadas>0 ? (k.otAtrasadas>10?'r':'o') : 'g';
-  // La campaña se nombra en el pie de cada KPI, no al lado del selector: así el rótulo puede
-  // cambiar de largo sin reacomodar los controles (ver CLAUDE.md, trampas de layout).
-  const camp=CAMPANIA_LABEL[campaniaResumenActiva]||campaniaResumenActiva;
   document.getElementById('exec-kpis').innerHTML=[
-    kpiCard('OT Confirmadas', k.otConfirmadas, 'de '+P.total_ot+' totales · campaña '+escHtml(camp), 'g'),
-    kpiCard('OT Atrasadas', k.otAtrasadas, 'Pendiente/En Ejecución vencidas', atrasCol),
+    kpiCard('OT Confirmadas', k.otConfirmadas, 'de '+P.total_ot, 'g'),
+    kpiCard('OT Atrasadas', k.otAtrasadas, '', atrasCol),
     // Solo las OT confirmadas de la campaña seleccionada. El consolidado de todas las campañas
     // (D.costo_total_consolidado) se sigue calculando pero ya no alimenta este KPI: mezclaba
     // campañas dentro de una vista que representa una sola.
-    kpiCard('Costo Ejecutado', 'US$ '+fmtUSD(k.costoEjecutado), 'Solo OT confirmadas · campaña '+escHtml(camp), 'gris'),
+    kpiCard('Costo Ejecutado', 'US$ '+fmtUSD(k.costoEjecutado), '', 'gris'),
   ].join('');
 }
 
@@ -278,7 +270,7 @@ function renderGastosOperativos(){
     rowsCont.innerHTML='<div class="resumen-empty">Sin gastos operativos registrados</div>';
     return;
   }
-  subCont.textContent=list.length+' categoría(s) · '+fmt1(P.oper_part)+'% del costo ejecutado de la campaña · ordenado por importe';
+  subCont.textContent=list.length+' categoría(s) · '+fmt1(P.oper_part)+'%';
   // El costo de referencia es el de la campaña seleccionada (P.costo_total), no D.costo_total: ese
   // es siempre el de CAMPANIA_ACTUAL y dejaba el pie mostrando el total de 26/27 con el selector en
   // otra campaña, junto a un porcentaje que sí era de la campaña elegida.
@@ -394,23 +386,10 @@ function fmtDivisor(n){
 }
 function avLineaReceta(r){
   if(!r) return '';
-  const vistas = (r.labores_vistas||[]).slice(0,8)
-    .map(v=>v.nombre+' ('+v.lotes+' lotes)').join(' · ');
-  const propia = r.origen==='propia';
-  const det = propia
-    ? 'mediana de labores por lote en la campaña '+escHtml(String(r.campania))+', sobre '+r.n_lotes+' lotes'
-    : 'este cultivo no tuvo base suficiente en la campaña '+escHtml(String(r.campania))
-      + (r.n_lotes ? ' ('+r.n_lotes+' lote(s))' : '') + ': se usa la mediana de los demás cultivos';
-  // Lotes ya sembrados: en esos el divisor NO usa la receta, porque sembrar es posterior a
-  // preparar y no van a venir mas labores (ver loteSembrado en cultivos.js). Hay que decirlo, o el
-  // numero del divisor parece aplicarse a toda la etapa cuando en parte de ella no se aplico.
   const sem = r.lotes_sembrados||0, tot = r.n_lotes_etapa||0;
-  const nota = !sem ? ''
-    : (sem>=tot
-        ? ` <b>No se aplica</b>: los ${tot} lote(s) de esta etapa ya están sembrados, así que su preparación está terminada y cada uno divide por las labores que tiene.`
-        : ` No se aplica en ${sem} de los ${tot} lote(s), ya sembrados: ahí la preparación está terminada y divide por las labores que tiene.`);
-  return `<div class="av-receta${propia?'':' av-receta-resp'}${sem>=tot&&tot?' av-receta-off':''}"${vistas?` title="Labores de esta etapa en la campaña ${escHtml(String(r.campania))}: ${escHtml(vistas)}"`:''}>`+
-    `Divisor: <b>${fmtDivisor(r.divisor)}</b> labor(es) por lote — ${det}.${nota}</div>`;
+  const off = sem>=tot && tot;
+  return `<div class="av-receta${off?' av-receta-off':''}">Divisor: <b>${fmtDivisor(r.divisor)}</b>`+
+    (off?' (no aplicado)':(sem?` (no aplicado en ${sem}/${tot})`:''))+`</div>`;
 }
 
 // c.etapas[].labores (desglosarEstadio, js/data/cultivos.js), donde la suma de los aportes es el
@@ -713,7 +692,7 @@ function renderAuditoria(){
   // de Servicio/Observación, no la frase completa ni la palabra "desalijo" sola). Si nOT===0 (sin
   // ninguna OT que coincida) se muestra el estado vacío explícito en vez de una fila con puros
   // ceros silenciosos, y nunca se completa con otro trabajo para evitar dejarla vacía.
-  document.getElementById('audit-gastos-sub').textContent = 'Costo = Costo Labor + Costo Insumo de esas OT (cuando está disponible)';
+  document.getElementById('audit-gastos-sub').textContent = '';
   document.getElementById('audit-gastos').innerHTML = D.auditoria_gastos.map(g=>
     g.nOT
       ? `<tr><td>${g.trabajo}</td><td class="tr mono">${g.horas?fmt2(g.horas):'-'}</td><td class="tr mono">${g.litros?fmt2(g.litros):'-'}</td><td class="tr mono">US$ ${fmtUSD(g.costo)}</td><td class="tr mono">${g.nOT} (${g.nConfirmadas} conf.)</td></tr>`
@@ -792,8 +771,8 @@ function renderAuditoriaSiembra(){
   // Subtítulo: los dos totales enfrentados. La brecha entre ambos es, en una sola cifra, todo lo
   // que hay para corregir.
   document.getElementById('sb-sub').textContent =
-    'Sembrado según OT ' + fmt2(A.total_sembradas) + ' ha · declarado en las parcelas ' +
-    fmt2(A.total_declaradas) + ' ha · sobre un plan de ' + fmt2(A.total_plan) + ' ha';
+    'OT ' + fmt2(A.total_sembradas) + ' ha · parcelas ' +
+    fmt2(A.total_declaradas) + ' ha · plan ' + fmt2(A.total_plan) + ' ha';
 
   document.getElementById('sb-filas').innerHTML = A.filas.length ? A.filas.map(f=>{
     const d = SB_DIAG[f.estado] || SB_DIAG.difiere;
@@ -845,7 +824,7 @@ function siembraDetalle(f){
     ).join('');
   });
   if(f.sinConfirmar.length){
-    html += `<tr class="dethead"><td colspan="8">Sin confirmar · ${f.sinConfirmar.length} OT · no acreditan superficie</td></tr>`;
+    html += `<tr class="dethead"><td colspan="8">Sin confirmar · ${f.sinConfirmar.length} OT</td></tr>`;
     html += `<tr class="detcols"><td>OT</td><td>Servicio</td><td>Estado</td><td class="tr">Has. Reales</td><td colspan="4"></td></tr>`;
     html += f.sinConfirmar.map(o=>
       `<tr class="det"><td class="dl mono"><b>OT ${escHtml(o.ot)}</b></td>`+
@@ -1237,7 +1216,7 @@ function renderAlertas(){
     `<div class="kpi"><div class="k-lab">OT Atrasadas</div><div class="k-val c-r">${D.n_ot_atrasadas}</div></div>`+
     `<div class="kpi"><div class="k-lab">Pendientes</div><div class="k-val">${D.ot_pend}</div></div>`+
     `<div class="kpi"><div class="k-lab">En Ejecución</div><div class="k-val c-o">${D.ot_ejec}</div></div>`;
-  document.getElementById('al-sub').textContent=alertas.length+' registros · ordenado por días de atraso';
+  document.getElementById('al-sub').textContent=alertas.length+' registros';
   document.getElementById('al').innerHTML = alertas.length ? alertas.map(a=>{
     // Celda de días: SIEMPRE el día real transcurrido (a.diasTranscurridos, sin descontar la
     // tolerancia de 3) — 0d/1d/2d/3d/4d… tal cual, nunca se resta nada acá; la tolerancia solo
@@ -1420,8 +1399,7 @@ function renderCombustible(){
   const balance=stockInicioPeriodo+totIngresoMes-totConsumoMes+totTransfMes;
   // El pie del Balance solo menciona las transferencias cuando el neto NO es cero, o sea cuando hay
   // una pata sin su contraparte. Mientras cada traslado tenga su vuelta, dice lo mismo de siempre.
-  const pieBalance = (balance>=0?'Queda stock disponible':'Stock consumido en exceso')+
-    (totTransfMes ? ' · incluye '+fmt2(totTransfMes)+' L netos de transferencias' : '');
+  const pieBalance = totTransfMes ? fmt2(totTransfMes)+' L netos de transferencias' : '';
   const balCol=balance>=0?'g':'r';
   document.getElementById('comb-balance').innerHTML=
     `<div class="kpi"><div class="k-lab">Stock Inicial</div><div class="k-val c-g">${fmt2(stockInicioPeriodo)}<small> L</small></div></div>`+
@@ -1502,7 +1480,7 @@ function renderCombustible(){
   const ordenVinculo=[VINCULO_OT,VINCULO_CONTRATISTA,VINCULO_OT_NO_DISPONIBLE,VINCULO_LABOR_PROPIA];
   const desglose=ordenVinculo.filter(v=>porVinculo[v]).map(v=>VINCULO_LABEL[v]+': '+porVinculo[v]).join(' · ');
   document.getElementById('comb-uso-sub').textContent =
-    nMov ? fmtMovimientos(nMov)+' · '+desglose+' · clic en una fila para ver su detalle'
+    nMov ? fmtMovimientos(nMov)+' · '+desglose
          : 'Sin movimientos en el período';
   const mx=Math.max(1,...rowsC.map(r=>r.litros));
   document.getElementById('combbody').innerHTML = rowsC.length ? rowsC.map(r=>{
@@ -1645,7 +1623,7 @@ function renderG(){
     ['Costo Labor Tercero','US$ '+fmtUSD(totTerc),gasto?Math.round(totTerc/gasto*100)+'% del gasto':''],
     ['Costo Insumos','US$ '+fmtUSD(totIns),gasto?Math.round(totIns/gasto*100)+'% del gasto':'']];
   document.getElementById('gkpis').innerHTML=K.map(k=>`<div class="gkpi"><div class="k-lab">${k[0]}</div><div class="k-val">${k[1]}</div><div class="k-foot">${k[2]}</div></div>`).join('');
-  document.getElementById('gnote').textContent=sel==='ALL'?'Mostrando la campaña completa':'Detalle del período seleccionado';
+  document.getElementById('gnote').textContent='';
   let acc=0; const pts=mt.map(m=>{acc+=m.tot;return{lbl:m.lbl,acc};}); const W=1000,H=200,pad=34,aMax=acc||1;
   const xs=i=>pad+i*(W-2*pad)/Math.max(pts.length-1,1), ys=v=>H-24-(v/aMax)*(H-50);
   const poly=pts.map((p,i)=>xs(i).toFixed(0)+','+ys(p.acc).toFixed(0)).join(' ');
@@ -1745,7 +1723,7 @@ function renderLaborDetalle(){
   // Cultivo, Servicio, Estadio o Contratista), se cierra sola: nunca queda abierto un detalle que
   // corresponde a un filtro anterior.
   if(servFilaAbierta && !labs.some(l=>claveFilaServicio(l)===servFilaAbierta)) servFilaAbierta=null;
-  document.getElementById('gld-sub').textContent=labs.length+' combinación(es) servicio/estadio/contratista · ordenado por costo total · clic en una fila para ver sus OT';
+  document.getElementById('gld-sub').textContent=labs.length+' combinación(es)';
   document.getElementById('gld').innerHTML= (labs.length ? labs.map(l=>{
     // "Trabajo Ejecutado": una sola columna con la cantidad ejecutada en la unidad propia de ese
     // trabajo (l.unidadTrabajo, ver dmap en js/data/servicios.js). Nunca se convierte ni se suma
@@ -1840,29 +1818,29 @@ function renderGasoil(){
 // ese trabajo fue para otro.
 function renderTerceros(){
   const S=serviciosFiltrados();
-  const selV=document.getElementById('gmes').value, sel=selV==='ALL'?'ALL':parseInt(selV);
-  const T=(S.terceros||[]).filter(r=>sel==='ALL'||r.mesnum===sel);
+  const todas=S.terceros||[];
+  poblarFiltrosTerceros(todas);
+  const mesV=document.getElementById('tercmes').value;
+  const mes=mesV==='ALL'?'ALL':parseInt(mesV);
+  const ter=document.getElementById('terctercero').value;
+  const T=todas.filter(r=>(mes==='ALL'||r.mesnum===mes) && (ter==='ALL'||r.tercero===ter));
   const desc=T.filter(r=>r.descontar);
   const impD=desc.reduce((s2,r)=>s2+r.imp,0), impT=T.reduce((s2,r)=>s2+r.imp,0);
-  document.getElementById('terctop').innerHTML=
-    `<div class="sop-kpi"><div class="l">A Descontar</div><div class="v">US$ ${fmtUSD(impD)}</div></div>`+
-    `<div class="sop-kpi"><div class="l">OT que lo Piden</div><div class="v">${desc.length}</div></div>`+
-    `<div class="sop-kpi"><div class="l">Total para Terceros</div><div class="v">US$ ${fmtUSD(impT)}</div></div>`+
-    `<div class="sop-kpi"><div class="l">OT en Total</div><div class="v">${T.length}</div></div>`;
+  const horasT=T.reduce((s2,r)=>s2+(r.horas||0),0);
   document.getElementById('terc-sub').textContent = T.length
-    ? T.length+' OT · '+[...new Set(T.map(r=>r.tercero))].length+' tercero(s) · ordenado por costo'
-    : 'ninguna observación de OT nombra a un tercero en el período';
+    ? T.length+' OT · '+[...new Set(T.map(r=>r.tercero))].length+' tercero(s)'
+    : '';
   const by={};
-  T.forEach(r=>{ (by[r.tercero]=by[r.tercero]||{tercero:r.tercero,imp:0,impD:0,ots:[]}); const b=by[r.tercero];
-    b.imp+=r.imp; if(r.descontar) b.impD+=r.imp; b.ots.push(r); });
+  T.forEach(r=>{ (by[r.tercero]=by[r.tercero]||{tercero:r.tercero,imp:0,impD:0,horas:0,ots:[]}); const b=by[r.tercero];
+    b.imp+=r.imp; b.horas+=r.horas||0; if(r.descontar) b.impD+=r.imp; b.ots.push(r); });
   let html='';
   Object.values(by).sort((a,b)=>b.imp-a.imp).forEach(b=>{
-    html+=`<tr class="grp"><td><b>${escHtml(String(b.tercero))}</b></td>`+
-      `<td colspan="2">${b.ots.length} OT`+(b.impD?` · US$ ${fmtUSD(b.impD)} pedidos a descontar`:'')+`</td>`+
-      `<td></td><td class="tr mono col-tot">US$ ${fmtUSD(b.imp)}</td></tr>`;
+    html+=`<tr class="grp neutra"><td><b>${escHtml(String(b.tercero))}</b></td>`+
+      `<td colspan="2">${b.ots.length} OT`+(b.impD?` · US$ ${fmtUSD(b.impD)} a descontar`:'')+`</td>`+
+      `<td class="tr mono">${b.horas?fmt1(b.horas):'—'}</td><td class="tr mono col-tot">US$ ${fmtUSD(b.imp)}</td></tr>`;
     b.ots.forEach(r=>{
       const tag=r.descontar?'<span class="tag tag-desc">a descontar</span>':'';
-      html+=`<tr class="det-over"><td class="dl mono">OT ${escHtml(String(r.ot))} ${tag}</td>`+
+      html+=`<tr class="det-over neutra"><td class="dl mono">OT ${escHtml(String(r.ot))} ${tag}</td>`+
         `<td class="mono">${r.fr?ipFecha(r.fr):'—'}</td>`+
         `<td title="${escHtml(String(r.obs))}">${escHtml(String(r.serv))}`+
         `<div class="terc-obs">${escHtml(String(r.obs))}</div></td>`+
@@ -1871,7 +1849,30 @@ function renderTerceros(){
     });
   });
   document.getElementById('tercbody').innerHTML = html ||
-    '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px">Ninguna OT del período tiene una observación que nombre a un tercero</td></tr>';
+    '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px">Sin OT en el período</td></tr>';
+  // El total va en <tfoot> y no como una fila mas del cuerpo: asi no se mezcla con los grupos al
+  // ordenar ni queda a merced del estado vacio.
+  document.getElementById('tercfoot').innerHTML = T.length
+    ? `<tr class="tot"><td><b>Total</b></td><td colspan="2">${T.length} OT`+
+      (impD?` · US$ ${fmtUSD(impD)} a descontar`:'')+`</td>`+
+      `<td class="tr mono">${horasT?fmt1(horasT):'—'}</td>`+
+      `<td class="tr mono"><b>US$ ${fmtUSD(impT)}</b></td></tr>`
+    : '';
+}
+// Opciones de los dos filtros propios del panel. Se repueblan en cada render porque dependen de la
+// campania y del cultivo elegidos arriba; si el valor que estaba elegido ya no existe, vuelve a
+// "ALL" en vez de dejar el filtro apuntando a algo inexistente y la tabla vacia sin explicacion.
+function poblarFiltrosTerceros(rows){
+  const llenar=(id,items)=>{
+    const sel=document.getElementById(id), previo=sel.value;
+    sel.querySelectorAll('option:not([value=ALL])').forEach(o=>o.remove());
+    items.forEach(v=>{const o=document.createElement('option');o.value=v.val;o.textContent=v.lbl;sel.appendChild(o);});
+    sel.value=[...sel.options].some(o=>o.value===previo)?previo:'ALL';
+  };
+  llenar('tercmes',[...new Set(rows.map(r=>r.mesnum))].filter(m=>m>0).sort((a,b)=>a-b)
+    .map(m=>({val:String(m),lbl:MES[m]})));
+  llenar('terctercero',[...new Set(rows.map(r=>r.tercero))].sort((a,b)=>a.localeCompare(b,'es'))
+    .map(t=>({val:t,lbl:t})));
 }
 function show(i,btn){ document.querySelectorAll('.page').forEach((p,j)=>p.classList.toggle('active',j===i));
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); btn.classList.add('active'); window.scrollTo({top:0,behavior:'smooth'}); }

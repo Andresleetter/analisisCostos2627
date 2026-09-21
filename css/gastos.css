@@ -64,7 +64,6 @@
 .scontr label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
 .scontr select{font-family:inherit;font-size:12.5px;font-weight:700;color:var(--teal);border:1.5px solid var(--line);border-radius:var(--radius-input);padding:6px 12px;background:#fcfdfb;cursor:pointer;min-width:190px}
 .scontr select:focus{outline:none;border-color:var(--green)}
-.scontr .sc-note{margin-left:auto;font-size:11px;color:var(--muted)}
 /* wrap: con dos KPI nunca hace falta (Gasoil por Area), pero Trabajos para Terceros tiene
    cuatro y en pantalla angosta se salian del panel, empujando el scroll horizontal de toda la
    pagina. Envolver no cambia nada donde ya entraban. */
