@@ -162,6 +162,12 @@
     <div class="panel sub"><h3>Consumo de Gasoil por Área <span>"Labor Propia" = personal interno</span></h3>
       <div class="sop-top" id="gastop"></div>
       <div class="scroll"><table><thead><tr><th>Área</th><th class="tr">OT</th><th class="tr">Litros</th><th class="tr">Total Pagado</th><th class="tr">Participación</th><th class="tr">%</th></tr></thead><tbody id="gasbody"></tbody></table></div></div>
+    <!-- Trabajos que la campania hizo PARA un tercero. El dato sale de la observacion de la OT,
+         que es el unico lugar donde consta: el contratista dice quien ejecuto, no para quien. Va
+         debajo del gasoil porque la mayoria son traslados y logistica, el mismo tipo de trabajo. -->
+    <div class="panel sub"><h3>Trabajos para Terceros <span id="terc-sub"></span></h3>
+      <div class="sop-top" id="terctop"></div>
+      <div class="scroll"><table><thead><tr><th>Tercero / OT</th><th>Fecha</th><th>Trabajo</th><th class="tr">Horas</th><th class="tr">Costo</th></tr></thead><tbody id="tercbody"></tbody></table></div></div>
     <div class="panel sub"><h3>Gasto Acumulado de Campaña</h3><div id="gacc"></div></div>
   </section>
 

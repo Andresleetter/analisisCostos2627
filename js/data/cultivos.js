@@ -324,14 +324,50 @@ function construirCultivos(OTS, RTK, RTK_TOT, rawTodasCampanias=[], recetaLabore
     // El divisor es max(labores confirmadas del lote, receta del cultivo+estadio) — ver recetaDe y
     // el comentario de construirRecetaLabores. Como la receta es un PISO, un lote que ya lleva mas
     // labores que ella conserva las suyas, y un estadio sin receta (divisor 0) calcula como antes.
-    function divisorLoteEstadio(labores, estadio){
-      return Math.max(Object.keys(labores).length, recetaDe(c, estadio).divisor);
+    // ---- Un lote ya sembrado no espera mas labores de las etapas anteriores ----
+    // La receta es un PISO sobre el divisor, y lo que ese piso representa es "las labores que
+    // todavia tienen que venir sobre este lote". Cuando el lote ya se sembro no viene ninguna mas:
+    // sembrar es posterior a preparar, asi que la preparacion de ESE lote esta terminada, tenga
+    // cargadas las labores que tenga. Sostener el piso ahi no mide un atraso, lo inventa.
+    //
+    // Caso real que lo motivo (21/09/2026, pedido del usuario): SOJA tiene sus 12 lotes sembrados
+    // al 100% y la Preparacion de Suelo marcaba 44,3%, porque la receta de 5 labores dividia lotes
+    // que traen entre 1 y 3. La soja ya esta sembrada: esa preparacion no esta a medias.
+    //
+    // Se resuelve POR LOTE y no por cultivo. Es la misma razon agronomica, pero aplicada donde de
+    // verdad vale: un cultivo a medio sembrar tiene lotes terminados y lotes que todavia esperan
+    // labores, y darle a los dos el mismo trato volveria a mentir, ahora en el otro sentido.
+    //
+    // Solo afecta a las etapas ANTERIORES a la siembra. La siembra no tiene receta
+    // (RECETA_LABORES_ESTADIOS_EXCLUIDOS) y los cuidados vienen DESPUES de sembrar, asi que ahi la
+    // receta sigue valiendo entera. Ese recorte es tambien lo que evita que loteSembrado se llame
+    // a si mismo.
+    const ETAPAS_PREVIAS_A_SIEMBRA = ETAPA_ORDEN.slice(0, ETAPA_ORDEN.indexOf('siembra'));
+    const memoSembrado={};
+    function loteSembrado(lote){
+      if(memoSembrado[lote]!==undefined) return memoSembrado[lote];
+      const plan=(RTK[c]&&RTK[c][lote])||0;
+      const labores=(porLoteEstadioLabor[lote]&&porLoteEstadioLabor[lote]['siembra'])||null;
+      let sembrado=false;
+      if(plan>0 && labores){
+        // Misma cuenta que equivalenteLoteEstadio para la siembra, escrita aca para no depender
+        // del divisor (que es justamente lo que esta funcion ayuda a decidir).
+        const vals=Object.values(labores).map(l=>l.planCompartidoZafrina ? l.ejecutadasReales : Math.min(l.ejecutadasReales,l.planificadas));
+        const ha=vals.reduce((a,b)=>a+b,0)/Object.keys(labores).length;
+        sembrado = ha >= plan*AVANCE_LOTE_SEMBRADO_UMBRAL;
+      }
+      return (memoSembrado[lote]=sembrado);
+    }
+    function divisorLoteEstadio(labores, estadio, lote){
+      const n=Object.keys(labores).length;
+      if(ETAPAS_PREVIAS_A_SIEMBRA.indexOf(estadio)>=0 && loteSembrado(lote)) return n;
+      return Math.max(n, recetaDe(c, estadio).divisor);
     }
     function equivalenteLoteEstadio(lote, estadio){
       const labores=(porLoteEstadioLabor[lote]&&porLoteEstadioLabor[lote][estadio])||null;
       if(!labores) return 0;
       const valores=Object.values(labores).map(l=>l.planCompartidoZafrina ? l.ejecutadasReales : Math.min(l.ejecutadasReales,l.planificadas));
-      return valores.reduce((a,b)=>a+b,0)/divisorLoteEstadio(labores, estadio);
+      return valores.reduce((a,b)=>a+b,0)/divisorLoteEstadio(labores, estadio, lote);
     }
 
     // ---- Desglose del avance de un estadio en sus labores (vista "Avance Detallado") ----
@@ -352,7 +388,7 @@ function construirCultivos(OTS, RTK, RTK_TOT, rawTodasCampanias=[], recetaLabore
         if(!labores) return;
         // MISMO divisor que equivalenteLoteEstadio: si aca se usara la cantidad de labores y alla
         // la receta, la suma de los aportes dejaria de dar el total del estadio.
-        const claves=Object.keys(labores), n=divisorLoteEstadio(labores, k);
+        const claves=Object.keys(labores), n=divisorLoteEstadio(labores, k, l);
         claves.forEach(lk=>{
           const d=labores[lk];
           const valor=d.planCompartidoZafrina ? d.ejecutadasReales : Math.min(d.ejecutadasReales,d.planificadas);
@@ -477,10 +513,17 @@ function construirCultivos(OTS, RTK, RTK_TOT, rawTodasCampanias=[], recetaLabore
       // Un divisor de 1 es inerte: todo lote con actividad tiene al menos una labor, asi que nunca
       // sube nada. Se expone como null para que la pantalla no muestre una explicacion de algo que
       // no cambio ningun numero. El indice completo sigue en D.receta_labores para auditar.
+      // Lotes de esta etapa que ya estan sembrados y por lo tanto NO usan el piso de la receta
+      // (ver loteSembrado). Es trazabilidad para la pantalla: sin esto, un estadio con receta
+      // mostraria un divisor que para parte de sus lotes no se aplico.
+      const lotesSembrados = ETAPAS_PREVIAS_A_SIEMBRA.indexOf(k)>=0
+        ? [...e.lotes].filter(loteSembrado).length : 0;
       const rec0 = recetaDe(c, k), rec = rec0.divisor>1 ? rec0 : {divisor:0};
       return {nombre:e.nombre, ha_ejec:ha_e, avance:av_e, n_lotes:e.lotes.size, ha_plan, incluyeZafrina,
+        lotes_sembrados:lotesSembrados,
         receta: rec.divisor>0 ? {divisor:rec.divisor, origen:rec.origen, n_lotes:rec.n_lotes,
-          campania:RECETA.campania, labores_vistas:rec.labores_vistas} : null,
+          campania:RECETA.campania, labores_vistas:rec.labores_vistas,
+          lotes_sembrados:lotesSembrados, n_lotes_etapa:e.lotes.size} : null,
         otConfirmadas: subEtapa.filter(o=>o.estado==='Confirmado').length, otTotales: subEtapa.length,
         labores: desglosarEstadio(k, e.lotes, ha_e, av_e), labores_sin_aporte: sinAporteEstadio(k)};
     });
@@ -514,6 +557,13 @@ function toleranciaExceso(serv){
 // Superficie a partir de la cual una OT de ese servicio cuenta como sobrepase.
 function topeLote(serv, ha_rtk){
   return ha_rtk * (1 + toleranciaExceso(serv));
+}
+// La OT declara su propio sobrepase en la observacion (OBS_SOBREPASE_DECLARADO, config.js). No se
+// alerta: el dato ya viene con la explicacion — normalmente el numero de boleta de la aplicacion
+// aerea o la zona de la terrestre — y volver a marcarlo seria pedir dos veces lo mismo. No se
+// esconde: el encabezado del lote la nombra, igual que a las que caen dentro de la tolerancia.
+function sobrepaseDeclarado(o){
+  return OBS_SOBREPASE_DECLARADO.test(String(o.obs || ''));
 }
 
 function construirControlHectareas(OTS, RTK){
@@ -555,7 +605,7 @@ function construirControlHectareas(OTS, RTK){
       // toleranciaExceso). El lote entra al listado solo si alguna lo hace, y `ha_ot` es la mayor
       // de las que sobrepasan — no la mayor del lote: si la OT mas grande esta tolerada, no tiene
       // sentido que sea ella la que fije el exceso que se reporta.
-      const supera=o=>haTrabajada(o)>topeLote(o.serv,ha_rtk)+0.01;
+      const supera=o=>!sobrepaseDeclarado(o) && haTrabajada(o)>topeLote(o.serv,ha_rtk)+0.01;
       const culpables=g.filter(supera);
       if(culpables.length){
         const ha_ot=Math.max.apply(null,culpables.map(o=>haTrabajada(o)));
@@ -564,7 +614,8 @@ function construirControlHectareas(OTS, RTK){
           // `tolerado` son las OT que pasan el plan pero se quedan dentro de la tolerancia de su
           // servicio: se muestran distinto para que no parezca que quedaron fuera por olvido.
           const dets=g.slice().sort((a,b)=>haTrabajada(b)-haTrabajada(a)).map(o=>({ot:o.ot,act:o.estadio||'-',serv:o.serv||'-',ha:haTrabajada(o),estado:o.estado,
-            over:supera(o), tolerado:!supera(o) && haTrabajada(o)>ha_rtk+0.01,
+            over:supera(o), tolerado:!supera(o) && !sobrepaseDeclarado(o) && haTrabajada(o)>ha_rtk+0.01,
+            declarado:sobrepaseDeclarado(o) && haTrabajada(o)>ha_rtk+0.01, obs:o.obs||'',
             tol:toleranciaExceso(o.serv)}));
           exceso.push({cult:c,lote:g[0].lote,ha_rtk:Math.round(ha_rtk*100)/100,ha_ot:Math.round(ha_ot*100)/100,diff,pdiff:Math.round(diff/ha_rtk*1000)/10,n_ot:dets.length,dets});
         }
@@ -582,7 +633,9 @@ function construirControlHectareas(OTS, RTK){
       // como repeticion — que es lo correcto: son dos momentos del ciclo, no la misma pasada dos
       // veces.
       const porLabor={};
-      g.filter(o=>REPETIDAS_ESTADIOS.indexOf(estadioAvance(o))>=0)
+      // Se descartan tambien las OT que declaran su propio sobrepase (ver sobrepaseDeclarado): si
+      // la superficie de mas ya esta explicada, sumarla contra el plan vuelve a alertar lo mismo.
+      g.filter(o=>REPETIDAS_ESTADIOS.indexOf(estadioAvance(o))>=0 && !sobrepaseDeclarado(o))
        .forEach(o=>{ const lk=claveLaborAvance(o.serv); (porLabor[lk]=porLabor[lk]||{serv:o.serv||'-',ots:[]}).ots.push(o); });
       Object.values(porLabor).forEach(v=>{
         if(v.ots.length<2) return;                      // una sola OT no es repeticion

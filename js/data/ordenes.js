@@ -238,6 +238,11 @@ function trabajosCamionGruaDeLinea(linea){
         // lines = lineas de la OT EN EL ESTADO DE LA OT (ver arriba). Es lo que consumen Servicios,
         // la Auditoria de Siembra y el avance de cultivos, y por eso tambien tiene que quedar
         // limpio de lineas en otro estado. lines_todas conserva el grupo completo para rastreo.
+        // obs = observacion de la OT (consultaOT.observaciones). Se toma la primera linea que la
+        // traiga entre TODAS las lineas, no solo entre las del estado de la OT: es un campo de la
+        // orden, no de la linea, y ninguna OT del dato trae dos textos distintos. La leen el panel
+        // de Trabajos para Terceros (servicios.js) y Control de Hectareas (cultivos.js).
+        obs: (todas.find(x=>x.obs)||{}).obs || '',
         lines: g, lines_todas: todas };
     });
   }

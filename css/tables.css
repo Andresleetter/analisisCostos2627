@@ -8,6 +8,12 @@ tr.dethead td{background:#fbf3f2;font-size:9.5px;text-transform:uppercase;letter
 tr.det td,tr.det-over td{font-size:11.5px;padding:6px 8px;border-bottom:1px solid #f4f0f0}
 tr.det-over td{background:#fdf0ef}
 td.dl{padding-left:22px;color:var(--teal)}
+/* "a descontar" = la observacion de la OT pide explicitamente el descuento, a diferencia de las que
+   solo nombran al tercero. Ambar y no rojo: es una accion pendiente, no un error. */
+.tag-desc{background:rgba(245,158,11,.14);color:#f59e0b;border-color:rgba(245,158,11,.35)}
+/* La observacion debajo del servicio: es la prueba del hallazgo, asi que se lee, pero en segundo
+   plano para no competir con el nombre del trabajo. */
+.terc-obs{font-size:10.5px;color:var(--muted);line-height:1.35;margin-top:2px;max-width:640px}
 .tag{display:inline-block;background:var(--r);color:#fff;font-size:9px;font-weight:700;padding:1px 7px;border-radius:var(--radius-pill);margin-left:6px;text-transform:uppercase;letter-spacing:.3px}
 /* overflow-x:auto — en pantallas angostas una tabla con muchas columnas (ej. barra .sopbar) no
    entra en el ancho disponible; sin esto desbordaba la página entera en vez de scrollear dentro

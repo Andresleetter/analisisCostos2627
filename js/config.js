@@ -231,6 +231,39 @@ const EXCESO_MINIMO_HA = 0.5;
 // 148A de arroz la "Fumigacion Dron" aparecia dos veces, pero una OT es de Preparacion (desecacion
 // previa) y la otra de Cuidados — dos momentos distintos del ciclo con el mismo nombre de servicio.
 const REPETIDAS_ESTADIOS = ['preparacion de suelo'];
+
+// ---- OBSERVACIONES DE LA OT ----
+// consultaOT.observaciones es un campo de la OT, no de la linea: en la 26/27 ninguna OT trae dos
+// textos distintos entre sus lineas (verificado sobre las 1.891 OT). 1.351 lo traen cargado.
+// El texto explica cosas que los numeros solos dejan como sospecha, asi que dos modulos lo leen.
+// Ojo con el ruido: 561 OT tienen solo el sello "OT OK" (marca de revision) y muchas traen solo la
+// dosis aplicada o el nombre de la maquina — por eso se busca por patron, nunca se lee entero.
+
+// Sobrepase que la PROPIA OT declara y justifica, casi siempre con el numero de boleta de la
+// aplicacion aerea o la zona de la terrestre ("Sobrepase de 27,81 hectareas. Referente a la boleta
+// de aplicacion aerea Nro: 29.279"). Control de Hectareas no lo cuenta como exceso: ya esta
+// explicado, alertarlo seria pedir dos veces la misma explicacion. La OT no desaparece — se nombra
+// en el encabezado del lote, igual que las que quedan dentro de la tolerancia de su servicio.
+const OBS_SOBREPASE_DECLARADO = /sobrepas/i;
+
+// Trabajos hechos PARA un tercero, que hoy cargan su costo a la campania. La observacion es el
+// unico lugar donde consta: ni el cultivo, ni la actividad, ni el contratista lo dicen. Se listan
+// en Servicios, debajo del Consumo de Gasoil por Area.
+// OBS_A_DESCONTAR marca las que ademas piden explicitamente el descuento ("descontar de agrovial",
+// "(a descontar)"). Las demas nombran al tercero sin pedirlo: se listan igual, pero separadas, para
+// no inventar un descuento que nadie pidio.
+const OBS_A_DESCONTAR = /descont/i;
+// Terceros nombrados en las observaciones. Mismo criterio que el catalogo de maquinas de
+// combustible.js: la lista sale del dato real, y una OT que no coincida con ninguna entrada no se
+// le inventa un tercero. Los patrones toleran como aparecen escritos de verdad ("agrovial",
+// "Agro vial S.A", "Exc Agrovial S.A").
+const OBS_TERCEROS = [
+  {nombre:'Agrovial S.A', re:/agro\s?vial/i},
+  {nombre:'Cedrela S.A',  re:/cedrela/i},
+  {nombre:'DINN S.A',     re:/\bDINN\b/i},
+  {nombre:'IM S.A',       re:/\bIM\s+S\.?\s?A\b/i},
+  {nombre:'Agrícola JG',  re:/agr[ií]cola\s+JG/i},
+];
 // Filtro de Campaña del modulo Servicios: rotulo y orden de las opciones. Es SOLO presentacion —
 // el valor que se usa para filtrar consultaOT sigue siendo la clave tal como viene en el dato
 // ('25', '26', '25/26', '26/27'), nunca la etiqueta. CAMPANIA_LABEL renombra las campanias de
@@ -466,6 +499,13 @@ const RECETA_LABORES_MIN_LOTES = 5;
 //
 // Para incorporarla habria que aplicar el mismo filtro al generar la receta, no sacarla de aca.
 const RECETA_LABORES_ESTADIOS_EXCLUIDOS = ['siembra'];
+
+// Cuanto de su plan tiene que tener sembrado un lote para darlo por sembrado, y con eso dar por
+// cerradas sus etapas anteriores (ver loteSembrado en cultivos.js). No es 1 exacto porque la
+// superficie sembrada casi nunca cae clavada contra el plan RTK: el lote 31A de arroz declara
+// 50,39 sobre un plan de 52,94. Con 0,995 entran los redondeos y queda afuera cualquier lote
+// realmente a medio sembrar.
+const AVANCE_LOTE_SEMBRADO_UMBRAL = 0.995;
 
 // Tolerancia SOLO para decidir "Según receta" — no es una tolerancia agronomica (el negocio todavia
 // no definio ninguna), es el margen de error de punto flotante: 1e-9 relativo al valor comparado.

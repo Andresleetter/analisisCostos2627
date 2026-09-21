@@ -41,11 +41,11 @@ Si el archivo está abierto en Excel al momento de necesitar inspeccionarlo (ej.
 ## Pestañas del dashboard
 
 1. **Resumen Ejecutivo** — KPIs ejecutivos, Detalle de Etapas por Cultivo, estado de las OT, actividad operacional por mes, distribución del gasto en áreas no agrícolas y Posibles Problemas en la Campaña. Desde "Detalle de Etapas por Cultivo" se entra a **Avance Detallado por Cultivo**, una vista de detalle que cuelga de esta pestaña y no ocupa un botón propio en la barra. Ver sección propia más abajo.
-2. **Servicios** *(antes "Resumen de Gastos" — se renombró el botón, sin tocar cálculos ni ids internos)* — gasto por servicio/estadio, consumo de gasoil por área, evolución del gasto.
+2. **Servicios** *(antes "Resumen de Gastos" — se renombró el botón, sin tocar cálculos ni ids internos)* — gasto por servicio/estadio, consumo de gasoil por área, trabajos hechos para terceros y evolución del gasto.
    > **Los rótulos visibles de este módulo usan los nombres de la OT.** El panel se llama "Detalle por Servicio" (antes "Detalle por Labor") y sus columnas son **Servicio** y **Estadio** (antes "Labor" y "Etapa"), igual que los campos `servicio` y `estadio` de `consultaOT`. Es un cambio de rótulo: no se tocaron los ids (`glabor`, `gestadio`, `gld`, `gld-sub`), ni las claves internas (`r.labor`, `r.estadio`), ni un solo cálculo. La única cadena de datos que cambió es el marcador de las OT sin estadio cargado, `'(Sin etapa)'` → `'(Sin estadio)'` (`servicios.js`), que se muestra tal cual en el filtro y en la columna. "Detalle de Etapas por Cultivo" (Resumen Ejecutivo) **no** se renombró: es otro módulo y agrupa por las cuatro etapas de `ETAPA_ORDEN`, no por el estadio crudo de la OT.
 3. **Combustible** — Ingreso por proveedor y **Consumo por Uso / Detalle**, con cada movimiento atribuido por niveles (OT vinculada / Solo contratista / OT no disponible / Labor Propia) y filtros de Mes, Tercero y **Máquina**. KPI de Stock Inicial (dinámico) y Balance, con arrastre mes a mes.
 4. **Insumos** — Ingreso/Consumo de insumos no-combustible en **cantidad real** (nunca en dinero), con flujo de Stock dinámico y filtros dependientes Tipo de Insumo → Insumo. Ver sección propia más abajo.
-5. **Control de Hectáreas** — lotes con exceso de superficie vs. RTK (con tolerancia por servicio), labores de preparación repetidas que sumando superan el lote, lotes inhabilitados y OT sin correspondencia en el plan.
+5. **Control de Hectáreas** — lotes con exceso de superficie vs. RTK (con tolerancia por servicio y sin alertar el sobrepase que la OT declara), labores de preparación repetidas que sumando superan el lote, lotes inhabilitados y OT sin correspondencia en el plan.
 6. **Alertas Operacionales** — OT atrasadas, con filtro por Estado (Pendiente / En Ejecución / Todas) y color por fila según días de atraso.
 7. **Auditoría** — tres sub-módulos dentro de la misma pestaña, con navegación propia: **Infraestructura** (presupuesto vs. ejecución real), **Insumos por Parcela** (qué insumo se aplicó en cada lote, cuánto por hectárea y con qué OT) y **Siembra por Parcela** (cruce de las OT de siembra confirmadas contra el campo `hectareasSembradas` de la parcela, para detectar errores de carga). Última pestaña de la barra. Ver secciones propias más abajo.
 
@@ -153,6 +153,23 @@ La línea pendiente trae `dosisReales = 0`, `Has. Reales` vacío y `facturada = 
 **`lines` también queda filtrado.** Es lo que consumen Servicios (`servicios.js`), la Auditoría de Siembra (`haSembradaDeOT`) y el avance de cultivos, así que tiene que estar limpio por el mismo motivo. `lines_todas` conserva el grupo completo para rastreo; hoy no lo consume nadie.
 
 > **Lo que esto no hace.** La parte pendiente de una OT mixta no se cuenta en ningún lado: la OT aporta su parte confirmada y nada más, y sigue figurando como una sola OT confirmada en los contadores. Es deliberado — el arreglo de fondo es en Albor, dejando la OT en un solo estado.
+
+### La observación de la OT
+
+`consultaOT.observaciones` es un **campo de la orden, no de la línea**: verificado sobre las 1.891
+OT de la 26/27, ninguna trae dos textos distintos entre sus líneas. Por eso `agruparOTS` la expone
+como `obs`, tomando la primera línea que la traiga.
+
+1.351 OT la tienen cargada. Es el único lugar del dato donde constan cosas que ningún número dice, y
+por eso dos módulos la leen: **Trabajos para Terceros** (Servicios) y **Control de Hectáreas**.
+
+Hay que leerla con cuidado, porque la mayor parte es ruido: **561 OT tienen solo el sello `OT OK`**
+—una marca de revisión, no información— y muchas otras traen únicamente la dosis aplicada
+(`Garant: 0,035 L/ha`) o el nombre de la máquina, que es lo que ya usa `combustible.js` para
+atribuir el gasoil. Por eso ningún módulo lee el texto entero: todos buscan un patrón declarado en
+`config.js`.
+
+El sello sirve además como indicador propio: **801 de las 1.697 OT confirmadas están revisadas**.
 
 ## Resumen Ejecutivo
 
@@ -330,6 +347,53 @@ campaña** y sigue cargado en Albor con estadio Cuidados — se dejó donde est�
 **Para actualizarla** hay que regenerar el JSON desde un export nuevo de la campaña de referencia,
 con el mismo filtro. Mientras el ciclo de referencia no cambie, no hace falta tocarla.
 
+#### Un lote ya sembrado no usa la receta
+
+La receta es un **piso** sobre el divisor, y lo que ese piso representa es *las labores que todavía
+tienen que venir sobre este lote*. Cuando el lote ya se sembró no viene ninguna más: **sembrar es
+posterior a preparar**, así que la preparación de ese lote está terminada, tenga cargadas las labores
+que tenga. Sostener el piso ahí no mide un atraso, lo inventa.
+
+```
+divisor(lote, estadio) = lote sembrado y estadio anterior a la siembra
+                           ? labores confirmadas del lote
+                           : max(labores confirmadas del lote, receta del cultivo+estadio)
+```
+
+Se resuelve **por lote, no por cultivo**. Es la misma razón agronómica, pero aplicada donde de
+verdad vale: un cultivo a medio sembrar tiene lotes terminados y lotes que todavía esperan labores, y
+darle a los dos el mismo trato volvería a mentir, ahora en el otro sentido.
+
+Un lote cuenta como sembrado cuando su siembra cubre `AVANCE_LOTE_SEMBRADO_UMBRAL` (0,995) de su
+plan. No es 1 exacto porque la superficie sembrada casi nunca cae clavada contra el plan RTK — el
+lote 31A de arroz declara 50,39 sobre 52,94 —, y con 0,995 entran los redondeos y queda afuera
+cualquier lote realmente a medio sembrar.
+
+**Solo alcanza a las etapas anteriores a la siembra.** La siembra no tiene receta y los Cuidados
+vienen *después* de sembrar, así que ahí el piso sigue valiendo entero. Ese recorte es además lo que
+evita que `loteSembrado()` se llame a sí mismo.
+
+Efecto sobre el dato (21/09/2026):
+
+| Cultivo | Preparación antes | después | lotes sembrados |
+|---|---|---|---|
+| SOJA | 44,3 % | **96,2 %** | 12 de 12 |
+| ARROZ | 62,0 % | **66,4 %** | 45 de 134 |
+| SORGO | 65,5 % | 65,5 % | 0 |
+| MAIZ | 33,0 % | 33,0 % | 0 |
+
+Lo que motivó el cambio fue soja: sus 12 lotes están sembrados al 100 % y la preparación marcaba
+44,3 %, porque la receta de 5 labores dividía lotes que traen entre 2 y 4.
+
+El 3,8 % que le falta a soja para llegar a 100 **es real y está documentado en el dato**: diez de los
+doce lotes quedan en 100 %, y los dos que no son el `111` (85,4 %: el 1° Disco cubre 7,05 de 16,87
+ha) y el `112A` (75,0 %: el 2° Disco cubre 10,05 y el 1° Disco 13,53 de 23,58). La OT 5026 del `112A`
+lo dice con todas las letras en su observación: *"Parcial. Disco uno que falta."*
+
+La pantalla lo explica en la misma línea del divisor: cuando la receta no se aplicó en ningún lote de
+la etapa dice «No se aplica» y apaga el resalte del número; cuando se aplicó solo en parte, dice en
+cuántos lotes no. Un divisor que se muestra pero no se usó, sin decirlo, sería peor que no mostrarlo.
+
 ### Avance Detallado por Cultivo
 
 Vista de detalle a la que se entra con **"Ver desglose detallado →"**, el botón que está a la derecha del encabezado de "Detalle de Etapas por Cultivo", y de la que se sale con **"← Volver al Resumen Ejecutivo"**. Es **una sola vista** con un selector de **Cultivo** (ARROZ, SOJA, SORGO, MAIZ, en el orden de `CULTIVOS`), no una pestaña por cultivo. Existe como `.page` (`#page-avance-detallado`) pero **no tiene botón `.tab` propio**, y va **última en el HTML** a propósito: `events.js` indexa las `.tab` contra las `.page` por posición, así que una `.page` intercalada correría los índices de todos los módulos.
@@ -419,6 +483,30 @@ quedaron sin listar por estar dentro, cuáles se toleraron y con qué tolerancia
 lote. El recorte es **solo de presentación** — `e.dets` sigue trayendo todas las OT del lote, así que
 la trazabilidad completa está en el modelo.
 
+### Sobrepase que la propia OT declara
+
+Cuando la observación de la OT declara su sobrepase, **Control de Hectáreas no lo alerta**
+(`OBS_SOBREPASE_DECLARADO` en `config.js`, `sobrepaseDeclarado()` en `cultivos.js`). El texto suele
+traer la prueba:
+
+```
+Sobrepase de 27,81 hectáreas. Referente a la boleta de aplicación aérea Nro: 29.279
+Sobrepase con 3% a más de la aplicación de la fecha 08/09. Por motivo de monte alrededor
+  de ciertas parcelas a aplicar.
+```
+
+Volver a marcarlo sería pedir dos veces la misma explicación. Vale para las dos vistas del módulo:
+la OT no cuenta como exceso y tampoco arrastra a su labor al panel de repetidas.
+
+**No desaparece**: el encabezado del lote la nombra con su observación, igual que hace con las que
+quedan dentro de la tolerancia de su servicio. Un control que esconde lo que decidió no alertar no
+se puede auditar.
+
+Hoy la regla **no saca ningún caso**, y eso es esperable, no un error: las 12 OT que declaran
+sobrepase en la 26/27 son todas de cultivos `PARCELA` (arroz, soja y sorgo de parcela), y Control de
+Hectáreas solo cubre los cuatro cultivos con plan RTK — ARROZ, SOJA, SORGO y MAIZ. La regla está
+puesta para el día en que una de estas declaraciones caiga sobre un lote con plan.
+
 ### Labores de Preparación Repetidas que Superan el Lote
 
 Panel propio, porque el listado de excesos **no puede verlo**: allí el lote entra con el **máximo** de
@@ -492,6 +580,49 @@ La columna muestra la cantidad ejecutada en la unidad propia de cada trabajo, **
 | `trabajos` | cantidad de trabajos | `SERVICIOS_CAMION_GRUA` (ver abajo) |
 
 Los servicios de `SERVICIOS_SIN_TRABAJO_EJECUTADO` muestran "—".
+
+### Trabajos para Terceros
+
+Panel debajo del Consumo de Gasoil por Área. Lista los trabajos que la campaña hizo **para otra
+empresa** y que hoy cargan su costo acá.
+
+El dato sale exclusivamente de la observación de la OT, porque **no está en ningún otro campo**: el
+Contratista dice quién ejecutó el trabajo, no para quién, y la actividad de todas estas OT es
+`OPERATIVO`. `OBS_TERCEROS` (`config.js`) es el catálogo de terceros nombrados, con el mismo
+criterio que el catálogo de máquinas de `combustible.js`: sale del dato real, tolera cómo está
+escrito de verdad (`agrovial`, `Agro vial S.A`, `Exc Agrovial S.A`) y **a una OT que no coincida con
+ninguna entrada no se le inventa un tercero**.
+
+Se distinguen dos cosas que conviene no mezclar:
+
+- Las que **piden el descuento** explícitamente (`OBS_A_DESCONTAR`), rotuladas «a descontar»:
+  *"Translado de caranda'y para puentes descontar agrovial combustible tambien"*, *"Estirar
+  camioneta trancada de IM S.A (a descontar)"*.
+- Las que solo **nombran al tercero** sin pedirlo: *"Traslado de Retro desde P38 hasta P139 Cedrela
+  S.A"*. Se listan igual, pero aparte. Pedir el descuento es una decisión de quien cargó la OT;
+  suponerlo donde nadie lo escribió sería inventar plata.
+
+Cada fila lleva su observación completa, porque es la única prueba de que ese trabajo fue para otro.
+
+El panel se arma sobre las OT confirmadas enteras, no sobre el detalle de servicios ni sobre el
+gasoil: un traslado para un tercero puede venir de cualquiera de las dos formas y es el mismo
+hallazgo. Sigue los filtros de la pestaña (Campaña y Cultivo por `filtrarServiciosPorCultivo`, Mes
+en el render), así que filtrar por un cultivo lo deja vacío: estas OT son operativas y no tienen
+cultivo.
+
+Hoy son **20 OT y US$ 3.425,34**, de los cuales **US$ 2.200,92 en 9 OT piden el descuento**:
+
+| Tercero | OT | Costo | Piden descuento |
+|---|---|---|---|
+| Agrovial S.A | 7 | 2.055,05 | 5 OT · 1.891,36 |
+| Cedrela S.A | 8 | 1.082,31 | 1 OT · 86,48 |
+| Agrícola JG | 2 | 136,63 | 2 OT · 136,63 |
+| IM S.A | 1 | 86,46 | 1 OT · 86,46 |
+| DINN S.A | 2 | 64,90 | — |
+
+**El panel no descuenta nada.** El costo de la campaña sigue incluyendo estas OT: el dashboard
+reporta lo que el dato dice, y sacarlas del costo es una decisión contable que no le corresponde
+tomar a una vista.
 
 ### Camión + grúa: el trabajo se cuenta en trabajos, no en horas
 
