@@ -348,6 +348,10 @@ function loadData(){
       if(conPlan===0) console.warn('Advertencia: consultaCultivos no aportó hectáreas planificadas.');
       renderAll();
       ov.style.display='none'; document.getElementById('app').style.display='block';
+      // Despues de dibujar y de hacer visible la app: si la URL trae un modulo (#combustible),
+      // se abre ese en lugar del Resumen Ejecutivo. Asi F5 deja al usuario donde estaba.
+      // Va aca y no antes porque show() hace scroll, y sobre #app oculto no tiene efecto.
+      restaurarModuloDeURL();
       console.log('Dashboard renderizado correctamente.');
       vigilarDatosNuevos();
     })

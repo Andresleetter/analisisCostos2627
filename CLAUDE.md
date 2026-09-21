@@ -58,6 +58,10 @@ Reglas al tocar esto:
   uno nuevo, acordate del `<script>`.
 - No renombrar propiedades del objeto que devuelve `buildData()`: es el contrato que leen
   `render.js` y `events.js`.
+- **`data-mod` de los botones `.tab` es parte de la URL.** El módulo abierto se guarda en el hash
+  (`#combustible`) para que un refresco no vuelva al Resumen, así que renombrar un `data-mod` rompe
+  los enlaces ya guardados. Agregar una pestaña implica darle el suyo: sin `data-mod` el módulo
+  funciona, pero no se recuerda. Ver `recordarModuloEnURL` / `restaurarModuloDeURL` en `render.js`.
 
 ## Verificar que un cambio no alteró el modelo
 

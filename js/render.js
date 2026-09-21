@@ -1675,18 +1675,36 @@ function celdaTrabajoEjecutado(unidadTrabajo, v, sinEjec){
 // dejó guardado sobre las OT YA agrupadas por agruparOTS(), así que una OT con varias líneas
 // (servicio + labor + insumos) aparece una sola vez. El costo total de cada OT es su aporte real
 // al grupo: Labor Propia + Labor Tercero + Insumos, sin redondear antes de sumar.
+// La observacion de la OT en HTML. 68 de las 1.415 observaciones cargadas traen saltos de linea y
+// son las que mas los necesitan: una dosis por renglon ("Cyperex: 0,085 Kg/ha / Garant: 0,035 L/ha")
+// o el presupuesto desglosado ("Monto aprobado 217 hs / Metros aprobados 19355mts / Hora total...").
+// HTML colapsa el salto, asi que se convierte en <br> DESPUES de escapar; de cada renglon se quitan
+// los espacios de los extremos y los renglones vacios se descartan, que es lo unico que aporta la
+// sangria del Excel. El texto va completo: no se recorta.
+function obsHtml(t){
+  return String(t||'').split(/\r?\n/).map(x=>x.replace(/\s+/g,' ').trim())
+    .filter(Boolean).map(escHtml).join('<br>');
+}
 function svDetalleOTs(l, sinEjec){
   const ots=ordenarOTsServicio(l.ots||[]);
   const filas=ots.map(o=>{
     const ejec=celdaTrabajoEjecutado(l.unidadTrabajo,{ha:o.ha,horas:o.horas,kg:o.kg,ins:o.n_insumos,trabajos:o.trabajos},sinEjec);
+    // La observacion va COMPLETA, sin recortar: es la unica que trae la OT (ver obs en
+    // resumenOTServicio) y es donde constan cosas que ningun numero dice — el sobrepase que la
+    // propia OT declara, el trabajo hecho para un tercero, la labor parcial. Recortarla dejaria
+    // justo afuera el final, que es donde suele estar el numero de boleta o la aclaracion.
+    const obs=String(o.obs||'').trim();
     return `<tr><td class="mono"><b>${escHtml(o.ot)}</b></td><td class="mono">${ipFecha(o.fr)}</td>`+
       `<td>${escHtml(o.cultivo)}</td><td>${escHtml(o.lote)||'<span class="ip-sin">—</span>'}</td>`+
       `<td class="tr mono">${ejec}</td>`+
-      `<td class="tr mono col-tot">US$ ${fmtUSD(o.propia+o.tercero+o.insumos)}</td></tr>`;
+      `<td class="tr mono col-tot">US$ ${fmtUSD(o.propia+o.tercero+o.insumos)}</td>`+
+      `<td class="sv-obs">${obs?obsHtml(obs):'<span class="ip-sin">—</span>'}</td></tr>`;
   }).join('');
-  return `<tr class="sv-det"><td colspan="8"><div class="sv-det-tit">${ots.length} orden(es) de trabajo · ${escHtml(l.labor)} · ${escHtml(l.estadio)}</div>`+
+  const conObs=ots.filter(o=>String(o.obs||'').trim()).length;
+  return `<tr class="sv-det"><td colspan="8"><div class="sv-det-tit">${ots.length} orden(es) de trabajo · ${escHtml(l.labor)} · ${escHtml(l.estadio)}`+
+    (ots.length?` · ${conObs}/${ots.length} con observación`:'')+`</div>`+
     `<div class="sv-det-wrap"><table class="sv-ots"><thead><tr><th>OT</th><th>Fecha</th><th>Cultivo</th><th>Lote</th>`+
-    `<th class="tr">Trabajo Ejecutado</th><th class="tr">Costo Total</th></tr></thead><tbody>${filas}</tbody></table></div>`+
+    `<th class="tr">Trabajo Ejecutado</th><th class="tr">Costo Total</th><th>Observaciones</th></tr></thead><tbody>${filas}</tbody></table></div>`+
     `</td></tr>`;
 }
 // ---- Detalle por Servicio: filtros de Servicio, Estadio y Contratista, afectan SOLO esta tabla ----
@@ -1887,4 +1905,39 @@ function poblarFiltrosTerceros(rows){
     .map(t=>({val:t,lbl:t})));
 }
 function show(i,btn){ document.querySelectorAll('.page').forEach((p,j)=>p.classList.toggle('active',j===i));
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); btn.classList.add('active'); window.scrollTo({top:0,behavior:'smooth'}); }
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); btn.classList.add('active');
+  recordarModuloEnURL(btn); window.scrollTo({top:0,behavior:'smooth'}); }
+
+// ---- El módulo abierto queda en la URL ----
+// Refrescar la página (F5, o el aviso de datos nuevos) volvía siempre al Resumen Ejecutivo, porque
+// el módulo activo vivía solo en la clase .active del HTML servido. Ahora se escribe en el hash
+// (#combustible), que es lo único que sobrevive a una recarga sin guardar nada en el navegador — y
+// de paso hace que la URL de un módulo se pueda copiar y mandar.
+//
+// Se usa replaceState y no location.hash = ... por dos motivos: no agrega una entrada al historial
+// por cada clic de pestaña (con location.hash, salir del dashboard exigía tantos "atrás" como
+// pestañas se hubieran visitado), y no dispara el salto de scroll del navegador hacia un elemento
+// con ese id. No hay listener de hashchange: quien cambia de módulo es siempre show().
+//
+// El nombre sale de data-mod del botón (ver #tabs-nav en index.html), no del índice: un enlace
+// guardado sigue apuntando al mismo módulo aunque mañana se reordenen las pestañas.
+function recordarModuloEnURL(btn){
+  const mod = btn && btn.dataset ? btn.dataset.mod : '';
+  if(!mod || !window.history || !history.replaceState) return;
+  history.replaceState(null, '', location.pathname + location.search + '#' + mod);
+}
+
+// Abre el módulo que pide el hash de la URL. Lo llama loader.js una sola vez, después de
+// renderAll() — antes no hay nada dibujado que mostrar.
+//
+// Sin hash, o con un hash que no corresponde a ningún módulo (una URL vieja, un enlace mal
+// copiado), no hace nada: queda el Resumen Ejecutivo, que es el que el HTML trae marcado activo.
+// Nunca se inventa un módulo ni se limpia la URL del usuario.
+function restaurarModuloDeURL(){
+  const mod = decodeURIComponent(String(location.hash || '').replace(/^#/, ''));
+  if(!mod) return;
+  const tabs = [...document.querySelectorAll('.tab')];
+  const i = tabs.findIndex(t => t.dataset.mod === mod);
+  if(i < 0) return;
+  show(i, tabs[i]);
+}
