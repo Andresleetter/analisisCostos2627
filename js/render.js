@@ -1110,11 +1110,23 @@ function renderInsumosParcela(){
       chip('Sin receta', conteoReceta.get(RECETA_ESTADO.SIN)||0, 'rc-sin', 'No hay una receta inequívoca para ese cultivo e insumo: no se compara ni se estima');
   }
 
-  // ---- Resumen por lote (ordenado por costo/ha: es la comparación que busca la auditoría) ----
+  // ---- Resumen por lote, ordenado por COSTO TOTAL de mayor a menor ----
+  // Encabeza el lote que más plata de insumos se llevó en la campaña, que es por donde se empieza a
+  // mirar. Antes ordenaba por costo/ha; se cambió a pedido del usuario (21/09/2026).
+  //
+  // Costo/ha sigue siendo una columna de la tabla, pero ya NO ordena: al recorrerla de arriba abajo
+  // sus valores van a saltar, y eso es correcto — un lote chico puede tener el costo por hectárea
+  // más alto y aun así un costo total bajo.
+  //
+  // Desempata el costo/ha de mayor a menor y después el nombre del lote, para que dos lotes con el
+  // mismo costo no se intercambien entre un render y el siguiente. Un lote sin hectáreas reales no
+  // tiene costo/ha: en el desempate va al final, nunca como si valiera cero.
   const estRec = ipEstadoRecetaSel();
   const parcelas = parcelasTodas
     .filter(p=>estRec==='ALL' || ipInsumosVisibles(insumosPorParcela.get(p.parcela)).length>0)
-    .sort((a,b)=>(b.costoHa==null?-1:b.costoHa)-(a.costoHa==null?-1:a.costoHa) || b.costo-a.costo);
+    .sort((a,b)=> b.costo-a.costo
+      || (b.costoHa==null?-1:b.costoHa)-(a.costoHa==null?-1:a.costoHa)
+      || String(a.lote).localeCompare(String(b.lote), 'es', {numeric:true}));
   document.getElementById('ip-parcelas').innerHTML = parcelas.length ? parcelas.map(p=>{
     const abierta = ipParcelaAbierta===p.parcela;
     let html = `<tr class="ip-parcela${abierta?' open':''}" data-parcela="${encodeURIComponent(p.parcela)}">`+
