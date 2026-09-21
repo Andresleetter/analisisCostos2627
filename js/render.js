@@ -1701,6 +1701,14 @@ function renderLaborDetalle(){
   const selV=document.getElementById('gmes').value, sel=selV==='ALL'?'ALL':parseInt(selV);
   const laborV=document.getElementById('glabor').value, estV=document.getElementById('gestadio').value;
   const contV=document.getElementById('gcontratista').value;
+  // La fila de Total aparece SOLO con el filtro de Servicio puesto. Con cualquier otro filtro (o
+  // sin ninguno) la tabla mezcla servicios de unidades distintas y el Trabajo Ejecutado del Total
+  // sale como una lista de magnitudes sueltas —"15.528,63 ha · 167 insumos · 899,28 hrs ·
+  // 639.462,00 kg"—, que no es un total de nada.
+  // Filtrar por Servicio, en cambio, garantiza una unica unidad: verificado contra el dato, en las
+  // 4 campanias NINGUN servicio aparece con mas de una unidad de trabajo (68 servicios en la 26/27,
+  // 0 con unidad mixta), asi que ahi el Total suma una sola magnitud y significa algo.
+  const hayFiltro = laborV!=='ALL';
   let recs=sel==='ALL'?S.gastos:S.gastos.filter(r=>r.mesnum===sel);
   if(laborV!=='ALL') recs=recs.filter(r=>r.labor===laborV);
   if(estV!=='ALL') recs=recs.filter(r=>r.estadio===estV);
@@ -1746,14 +1754,15 @@ function renderLaborDetalle(){
     if(abierta) html+=svDetalleOTs(l, sinEjec);
     return html;
   }).join('') : '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:16px">Sin registros para el filtro seleccionado</td></tr>')
-    + filaTotalServicios(labs);
+    + filaTotalServicios(labs, hayFiltro);
 }
 
 // ---- Fila de Total al pie del Detalle por Servicio ----
 // Se agregó porque con un filtro puesto (ej. Servicio = 1° Disco) la tabla queda en dos o tres
 // filas y sumarlas a mano —o con calculadora— era el único modo de ver cuánto costó ese servicio.
 //
-// Aparece solo con MÁS DE UNA fila: con una sola repetiría la misma cifra dos veces, que es ruido.
+// Aparece solo con el filtro de SERVICIO puesto y con MÁS DE UNA fila: con otros filtros se
+// mezclarían unidades en el acumulado, y con una sola fila repetiría la misma cifra dos veces.
 // No lleva data-fila, así que el clic delegado de #gld (events.js, busca .sv-fila) no la toma y no
 // se despliega.
 //
@@ -1767,8 +1776,11 @@ function renderLaborDetalle(){
 //    servicios sin trabajo medible (SERVICIOS_SIN_TRABAJO_EJECUTADO, celda "—") quedan afuera del
 //    acumulado: su superficie no describe ningún trabajo.
 //  · Contratista no es sumable: con uno solo se repite su nombre, con varios se dice cuántos.
-function filaTotalServicios(labs){
-  if(labs.length < 2) return '';
+//
+// `hayFiltro` es lo que decide que aparezca, y hoy vale solo con el filtro de Servicio puesto: es
+// el único que garantiza una sola unidad de trabajo en el acumulado (ver renderLaborDetalle).
+function filaTotalServicios(labs, hayFiltro){
+  if(!hayFiltro || labs.length < 2) return '';
   const CANT = {hrs:'horas', kg:'kg', ins:'ins_lineas', trabajos:'trabajos'};
   const t = {n:0, terc:0, ins:0, tot:0};
   const porUnidad = {};
