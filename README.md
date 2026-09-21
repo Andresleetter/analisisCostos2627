@@ -579,6 +579,34 @@ El desplegable **no recalcula nada ni vuelve a leer `consultaOT`**: recorre `l.o
 
 Verificado contra el dato real: en las 4 campañas y sus 175 grupos, la cantidad de OT del desplegable coincide con `OT Conf.` y las sumas de `ha`, `horas`, `kg`, líneas de insumo, trabajos y los tres importes coinciden con la fila principal (hasta un centavo de redondeo de presentación); ninguna OT aparece en dos grupos.
 
+### Fila de Total del Detalle por Servicio
+
+Al pie de la tabla, y **solo con el filtro de Servicio puesto**. La razón es la unidad: cualquier
+otra vista de la tabla mezcla servicios medidos en magnitudes distintas, y el Trabajo Ejecutado del
+Total sale como una lista de cosas sueltas —`15.528,63 ha · 167 insumos utilizados · 899,28 hrs ·
+639.462,00 kg`—, que no es el total de nada. Sin ningún filtro, además, repetiría los KPI de la
+pestaña.
+
+**Filtrar por Servicio garantiza una sola unidad.** Verificado contra el dato: en las **4 campañas**,
+ningún servicio aparece con más de una unidad de trabajo — 68 servicios en la 26/27, **0 con unidad
+mixta**. Probados los 68 uno por uno en pantalla, los 30 que tienen dos o más combinaciones muestran
+el Total con **una única magnitud** y ninguno con separador de unidades.
+
+Tampoco aparece con **una sola fila**, donde repetiría la misma cifra dos veces.
+
+Con el filtro puesto es el único lugar donde se lee ese subtotal: `1° Disco` son 3 combinaciones,
+111 OT y 2.874,34 ha por US$ 94.853,22, y esa suma no está en ninguna otra parte del dashboard.
+
+Qué se puede sumar y qué no:
+
+- **OT Conf., Labor Tercero, Insumos y Costo Total** se suman directo. Ninguna OT se duplica entre
+  filas: cada una pertenece a un único grupo labor + estadio + contratista + unidad.
+- **Trabajo Ejecutado** se acumula por unidad y no se convierte nunca entre magnitudes. Con la regla
+  de arriba hoy siempre sale una sola, pero el acumulado por unidad se conserva: si algún día un
+  servicio llegara con dos, el Total las muestra separadas en vez de sumar peras con manzanas. Los
+  servicios sin trabajo medible (`SERVICIOS_SIN_TRABAJO_EJECUTADO`) quedan fuera del acumulado.
+- **Contratista no es sumable**: con uno solo se repite su nombre, con varios se dice cuántos.
+
 ### Unidades de "Trabajo Ejecutado"
 
 La columna muestra la cantidad ejecutada en la unidad propia de cada trabajo, **nunca convertida a otra**. Hay cinco, y la elige `unidadTrabajo` (`servicios.js`) a partir de la modalidad de la línea principal de labor (`modalidadLaborOT`, `ordenes.js`):
