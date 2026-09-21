@@ -49,6 +49,21 @@ Si el archivo está abierto en Excel al momento de necesitar inspeccionarlo (ej.
 6. **Alertas Operacionales** — OT atrasadas, con filtro por Estado (Pendiente / En Ejecución / Todas) y color por fila según días de atraso.
 7. **Auditoría** — tres sub-módulos dentro de la misma pestaña, con navegación propia: **Infraestructura** (presupuesto vs. ejecución real), **Insumos por Parcela** (qué insumo se aplicó en cada lote, cuánto por hectárea y con qué OT) y **Siembra por Parcela** (cruce de las OT de siembra confirmadas contra el campo `hectareasSembradas` de la parcela, para detectar errores de carga). Última pestaña de la barra. Ver secciones propias más abajo.
 
+## Qué texto va en la pantalla
+
+El dashboard muestra **cifras y rótulos, no explicaciones**. Un panel dice `17 lotes`, `1 de 11 OT`,
+`Divisor: 5 (no aplicado)` — no cómo hay que leer esos números, por qué están ordenados así, ni qué
+quedó fuera del cálculo.
+
+El porqué de cada regla vive en dos lugares que no compiten con la pantalla: los comentarios del
+código, junto a la línea que la implementa, y este README. Los datos de respaldo de cada hallazgo
+siguen enteros en el modelo (por ejemplo `e.dets` conserva todas las OT de un lote con sus banderas
+`over` / `tolerado` / `declarado`, aunque el panel liste solo las que sobrepasan).
+
+Lo que sí se muestra, porque es dato y no comentario: los números, sus unidades, los rótulos de
+columna, las observaciones reales de las OT y los estados vacíos (`Sin casos`, `Sin OT en el
+período`).
+
 ## Contenido de cada carpeta
 
 - **`index.html`** — Markup semántico de la página (header, tabs, secciones por pestaña). No contiene estilos ni scripts inline; solo referencias a `css/` y `js/`. El orden de los botones `<button class="tab">` y de las `<section class="page">` debe coincidir 1 a 1 (`show(i, btn)` en `render.js` las empareja por posición, no por id) — mover una pestaña de lugar implica mover el botón **y** su sección juntos.
@@ -390,9 +405,8 @@ doce lotes quedan en 100 %, y los dos que no son el `111` (85,4 %: el 1° Disco 
 ha) y el `112A` (75,0 %: el 2° Disco cubre 10,05 y el 1° Disco 13,53 de 23,58). La OT 5026 del `112A`
 lo dice con todas las letras en su observación: *"Parcial. Disco uno que falta."*
 
-La pantalla lo explica en la misma línea del divisor: cuando la receta no se aplicó en ningún lote de
-la etapa dice «No se aplica» y apaga el resalte del número; cuando se aplicó solo en parte, dice en
-cuántos lotes no. Un divisor que se muestra pero no se usó, sin decirlo, sería peor que no mostrarlo.
+La línea del divisor lo marca en corto: `Divisor: 5 (no aplicado)` cuando ningún lote de la etapa lo
+usó, y `Divisor: 4 (no aplicado en 45/134)` cuando se aplicó solo en parte.
 
 ### Avance Detallado por Cultivo
 
@@ -465,8 +479,8 @@ Dos consecuencias de diseño:
 - **`ha_ot` es la mayor de las OT que sobrepasan**, no la mayor del lote. Si la OT más grande queda
   tolerada, no tiene sentido que sea ella la que fije el exceso que se reporta.
 - **Una OT tolerada no se lista en el detalle**, porque lo que dice la tolerancia es justamente que
-  está bien. Pero se la nombra en el encabezado del lote («incluye 1 dentro de la tolerancia de 5 %
-  de su servicio: OT 4405 · Fumigacion Dron»), para que no desaparezca sin dejar rastro.
+  está bien. Queda contada en el encabezado del lote (`1 de 11 OT`) y entera en `e.dets`, que es
+  donde vive la trazabilidad.
 
 Con el dato de la campaña la tolerancia saca **un solo lote** del listado —ARROZ `.40A`, donde la OT
 4513 hace 42,80 ha sobre un plan de 40,77, un 4,98 %—. Los sobrepases grandes siguen enteros: el
@@ -478,10 +492,9 @@ El detalle de cada lote muestra **únicamente las OT que pasan el plan**. Las qu
 correctas y no explican nada del exceso: eran **74 de las 95 filas** del detalle, tres cuartas partes
 del panel dedicadas a decir que todo estaba bien. El panel pasó de 123 a 48 filas.
 
-Nada desaparece en silencio: el encabezado de cada lote dice cuántas OT superan el plan, cuántas
-quedaron sin listar por estar dentro, cuáles se toleraron y con qué tolerancia, y el total de OT del
-lote. El recorte es **solo de presentación** — `e.dets` sigue trayendo todas las OT del lote, así que
-la trazabilidad completa está en el modelo.
+El encabezado de cada lote da la cuenta (`1 de 11 OT`): cuántas se listan y cuántas tiene el lote.
+El recorte es **solo de presentación** — `e.dets` sigue trayendo todas las OT con sus banderas
+(`over`, `tolerado`, `declarado`), así que la trazabilidad completa está en el modelo.
 
 ### Sobrepase que la propia OT declara
 
@@ -498,9 +511,8 @@ Sobrepase con 3% a más de la aplicación de la fecha 08/09. Por motivo de monte
 Volver a marcarlo sería pedir dos veces la misma explicación. Vale para las dos vistas del módulo:
 la OT no cuenta como exceso y tampoco arrastra a su labor al panel de repetidas.
 
-**No desaparece**: el encabezado del lote la nombra con su observación, igual que hace con las que
-quedan dentro de la tolerancia de su servicio. Un control que esconde lo que decidió no alertar no
-se puede auditar.
+La OT queda igual en `e.dets` con la bandera `declarado` y su observación, así que el caso se puede
+auditar desde el modelo aunque el panel no lo liste.
 
 Hoy la regla **no saca ningún caso**, y eso es esperable, no un error: las 12 OT que declaran
 sobrepase en la 26/27 son todas de cultivos `PARCELA` (arroz, soja y sorgo de parcela), y Control de
@@ -602,13 +614,24 @@ Se distinguen dos cosas que conviene no mezclar:
   S.A"*. Se listan igual, pero aparte. Pedir el descuento es una decisión de quien cargó la OT;
   suponerlo donde nadie lo escribió sería inventar plata.
 
-Cada fila lleva su observación completa, porque es la única prueba de que ese trabajo fue para otro.
+Cada fila lleva su observación completa: es la única prueba de que ese trabajo fue para otro, así
+que es dato y no comentario.
 
 El panel se arma sobre las OT confirmadas enteras, no sobre el detalle de servicios ni sobre el
 gasoil: un traslado para un tercero puede venir de cualquiera de las dos formas y es el mismo
-hallazgo. Sigue los filtros de la pestaña (Campaña y Cultivo por `filtrarServiciosPorCultivo`, Mes
-en el render), así que filtrar por un cultivo lo deja vacío: estas OT son operativas y no tienen
-cultivo.
+hallazgo.
+
+**Filtros.** Campaña y Cultivo de la barra de la pestaña siguen valiendo, porque definen el conjunto
+de OT (filtrar por un cultivo lo deja vacío: estas OT son operativas y no tienen cultivo). El **Mes**
+de esa barra **no** se aplica acá: el panel tiene el suyo (`#tercmes`), junto con un filtro de
+**Tercero** (`#terctercero`). Son dos y no tres para que no se crucen y dejen la tabla vacía sin que
+se pueda saber cuál de los dos meses la vació. Las opciones de ambos salen de las OT que quedaron
+después de Campaña y Cultivo, y si el valor elegido deja de existir vuelve solo a «Todos».
+
+**Presentación.** Las filas reusan la estructura de grupo + detalle de los paneles de exceso, pero
+con la clase `.neutra`, que apaga el tinte rojo: ahí el rojo significa hallazgo y esto es
+información, no un error. El pie de la tabla (`<tfoot>`) lleva el total de OT, horas e importe del
+filtro activo, y cuánto de eso pide descuento.
 
 Hoy son **20 OT y US$ 3.425,34**, de los cuales **US$ 2.200,92 en 9 OT piden el descuento**:
 

@@ -72,6 +72,9 @@ document.addEventListener('DOMContentLoaded', function(){
   // completo (ver cambiarCampaniaServicios en render.js). Solo afecta a la pestaña Servicios.
   document.getElementById('gcampania').addEventListener('change', cambiarCampaniaServicios);
   document.getElementById('gmes').addEventListener('change', renderG);
+  // Filtros propios de Trabajos para Terceros: solo re-renderizan ese panel.
+  document.getElementById('tercmes').addEventListener('change', renderTerceros);
+  document.getElementById('terctercero').addEventListener('change', renderTerceros);
   // Cultivo tiene el mismo alcance que Mes (KPIs, acumulado, Detalle por Servicio y Gasoil por
   // Área), así que dispara el mismo render completo. No repuebla los demás filtros: elegir un
   // cultivo no reinicia Servicio/Estadio/Contratista.

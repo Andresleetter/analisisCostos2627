@@ -147,7 +147,6 @@
         <select id="gestadio"><option value="ALL">Todos los estadios</option></select>
         <label for="gcontratista">Contratista</label>
         <select id="gcontratista"><option value="ALL">Todos</option></select>
-        <span class="sc-note">Filtra solo esta tabla · un mismo servicio puede repetirse en más de un estadio</span>
       </div>
       <div class="scroll scroll-tall"><table class="ldt"><thead><tr>
         <!-- "Trabajo Ejecutado" unifica las viejas columnas "Ha Ejec." y "Horas Ejec.": cada fila
@@ -159,15 +158,23 @@
         <th>Servicio</th><th>Estadio</th><th class="tr">OT Conf.</th><th class="tr">Trabajo Ejecutado</th>
         <th class="tr grp-pt">Labor Tercero</th><th>Contratista</th>
         <th class="tr">Insumos</th><th class="tr">Costo Total</th></tr></thead><tbody id="gld"></tbody></table></div></div>
-    <div class="panel sub"><h3>Consumo de Gasoil por Área <span>"Labor Propia" = personal interno</span></h3>
+    <div class="panel sub"><h3>Consumo de Gasoil por Área</h3>
       <div class="sop-top" id="gastop"></div>
       <div class="scroll"><table><thead><tr><th>Área</th><th class="tr">OT</th><th class="tr">Litros</th><th class="tr">Total Pagado</th><th class="tr">Participación</th><th class="tr">%</th></tr></thead><tbody id="gasbody"></tbody></table></div></div>
     <!-- Trabajos que la campania hizo PARA un tercero. El dato sale de la observacion de la OT,
          que es el unico lugar donde consta: el contratista dice quien ejecuto, no para quien. Va
          debajo del gasoil porque la mayoria son traslados y logistica, el mismo tipo de trabajo. -->
     <div class="panel sub"><h3>Trabajos para Terceros <span id="terc-sub"></span></h3>
-      <div class="sop-top" id="terctop"></div>
-      <div class="scroll"><table><thead><tr><th>Tercero / OT</th><th>Fecha</th><th>Trabajo</th><th class="tr">Horas</th><th class="tr">Costo</th></tr></thead><tbody id="tercbody"></tbody></table></div></div>
+      <!-- Mes propio: el de la barra de arriba NO se aplica a este panel, para que los dos no se
+           crucen y dejen la tabla vacia sin que se entienda cual de los dos la vacio. Campania y
+           Cultivo si siguen valiendo, porque definen el conjunto de OT. -->
+      <div class="scontr">
+        <label for="tercmes">Mes</label>
+        <select id="tercmes"><option value="ALL">Toda la Campaña</option></select>
+        <label for="terctercero">Tercero</label>
+        <select id="terctercero"><option value="ALL">Todos</option></select>
+      </div>
+      <div class="scroll"><table><thead><tr><th>Tercero / OT</th><th>Fecha</th><th>Trabajo</th><th class="tr">Horas</th><th class="tr">Costo</th></tr></thead><tbody id="tercbody"></tbody><tfoot id="tercfoot"></tfoot></table></div></div>
     <div class="panel sub"><h3>Gasto Acumulado de Campaña</h3><div id="gacc"></div></div>
   </section>
 
@@ -186,7 +193,7 @@
       <select id="cmaq"><option value="ALL">Todas</option></select>
     </div>
     <div class="kpis" id="comb-balance"></div>
-    <div class="panel sub"><h3>Ingresos <span>No es consumo — indica quién abastece, no quién usa</span></h3>
+    <div class="panel sub"><h3>Ingresos</h3>
       <div class="scroll"><table><thead><tr><th>Proveedor</th><th class="tr">Registros</th><th class="tr">Litros</th><th class="tr">Participación</th><th class="tr">%</th></tr></thead><tbody id="combingbody"></tbody></table></div></div>
     <!-- Consumo: la columna no es "Tercero" sino "Uso / Detalle". El texto sale de la atribución
          por niveles que resuelve js/data/combustible.js (OT vinculada -> observación de la OT;
@@ -284,9 +291,9 @@
       <div class="scroll"><table><thead><tr><th>Estado</th><th class="tr">OT</th><th class="tr">Horas</th></tr></thead><tbody id="audit-puentes-horas"></tbody></table></div></div>
     <div class="panel sub"><h3>Gastos (trabajos medidos en Horas o Litros) <span id="audit-gastos-sub"></span></h3>
       <div class="scroll"><table><thead><tr><th>Trabajo</th><th class="tr">Horas Ejecutadas</th><th class="tr">Litros</th><th class="tr">Costo (Labor+Insumo)</th><th class="tr">OT (Confirmadas)</th></tr></thead><tbody id="audit-gastos"></tbody></table></div></div>
-    <div class="panel"><h3>Auditoría de Infraestructura <span>Cruce Especificación (presupuesto) ↔ Servicio de OT — resto de los ítems (no puentes)</span></h3>
+    <div class="panel"><h3>Auditoría de Infraestructura</h3>
       <div class="scroll"><table><thead><tr><th>Especificación</th><th>Unidad Medida</th><th class="tr">Presupuestado</th><th class="tr">Horas Ejecutadas</th><th class="tr">OT Labor Propia</th><th class="tr">OT Labor Tercero</th></tr></thead><tbody id="audit-items"></tbody></table></div></div>
-    <div class="panel sub"><h3>Metros Presupuestados vs. Avance Ejecutado <span>Sin dato de metraje real en las OT — se aproxima con cantidad de OT confirmadas, rotulado como tal</span></h3>
+    <div class="panel sub"><h3>Metros Presupuestados vs. Avance Ejecutado</h3>
       <div class="scroll"><table><thead><tr><th>Ítem</th><th class="tr">Metros Presupuestados</th><th class="tr">Avance Ejecutado</th><th class="tr">% Avance</th></tr></thead><tbody id="audit-metros"></tbody></table></div></div>
     </div>
 
