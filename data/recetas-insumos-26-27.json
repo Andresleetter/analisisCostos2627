@@ -66,6 +66,15 @@
     "campania": "26/27",
     "cultivo": "ARROZ",
     "grupo": "DESECACIÓN",
+    "insumo": "Glifex Full",
+    "descripcion": "Glifosato sal DMA 60.8%",
+    "dosisHa": 3,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "DESECACIÓN",
     "insumo": "GLIFEX GOLD 60,8",
     "descripcion": "Glifosato sal DMA 60.8%",
     "dosisHa": 3,
@@ -75,7 +84,7 @@
     "campania": "26/27",
     "cultivo": "ARROZ",
     "grupo": "DESECACIÓN",
-    "insumo": "Glifex Full",
+    "insumo": "Glifotec Gold",
     "descripcion": "Glifosato sal DMA 60.8%",
     "dosisHa": 3,
     "unidad": "L"
@@ -218,37 +227,10 @@
   {
     "campania": "26/27",
     "cultivo": "ARROZ",
-    "grupo": "HERBICIDAS PUNTO DE AGUJA",
-    "insumo": "Conductor Clomazone 48%",
-    "descripcion": "Clomazone 48%",
-    "dosisHa": 0.5,
-    "unidad": "L"
-  },
-  {
-    "campania": "26/27",
-    "cultivo": "ARROZ",
-    "grupo": "HERBICIDAS PUNTO DE AGUJA",
-    "insumo": "GLIFEX GOLD 60,8",
-    "descripcion": "Glifosato sal DMA 60.8%",
-    "dosisHa": 3,
-    "unidad": "L"
-  },
-  {
-    "campania": "26/27",
-    "cultivo": "ARROZ",
-    "grupo": "HERBICIDAS PUNTO DE AGUJA",
-    "insumo": "Maxirice",
-    "descripcion": "Imazapic 17.5% + Imazapir 52.5% WG",
-    "dosisHa": 0.12,
-    "unidad": "kg"
-  },
-  {
-    "campania": "26/27",
-    "cultivo": "ARROZ",
-    "grupo": "HERBICIDAS PUNTO DE AGUJA",
-    "insumo": "Pyrazosulfuron",
-    "descripcion": null,
-    "dosisHa": 0.21,
+    "grupo": "HERBICIDAS PÓS EMERGENTES",
+    "insumo": "Basanex",
+    "descripcion": "Bentazona 60%",
+    "dosisHa": 1.8,
     "unidad": "L"
   },
   {
@@ -264,9 +246,9 @@
     "campania": "26/27",
     "cultivo": "ARROZ",
     "grupo": "HERBICIDAS PÓS EMERGENTES",
-    "insumo": "Basanex",
-    "descripcion": "Bentazona 60%",
-    "dosisHa": 1.8,
+    "insumo": "Cyperex 75",
+    "descripcion": "Pyrazosulfuron",
+    "dosisHa": 0.08,
     "unidad": "L"
   },
   {
@@ -303,6 +285,60 @@
     "insumo": "Triclon",
     "descripcion": "Triclopyr 48%",
     "dosisHa": 0.5,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "HERBICIDAS PÓS EMERGENTES",
+    "insumo": "VULCANO PQT",
+    "descripcion": "Quinclorac 25% SC",
+    "dosisHa": 2,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "HERBICIDAS PUNTO DE AGUJA",
+    "insumo": "Conductor Clomazone 48%",
+    "descripcion": "Clomazone 48%",
+    "dosisHa": 0.5,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "HERBICIDAS PUNTO DE AGUJA",
+    "insumo": "GLIFEX GOLD 60,8",
+    "descripcion": "Glifosato sal DMA 60.8%",
+    "dosisHa": 3,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "HERBICIDAS PUNTO DE AGUJA",
+    "insumo": "Glifotec Gold",
+    "descripcion": "Glifosato sal DMA 60.8%",
+    "dosisHa": 3,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "HERBICIDAS PUNTO DE AGUJA",
+    "insumo": "Maxirice",
+    "descripcion": "Imazapic 17.5% + Imazapir 52.5% WG",
+    "dosisHa": 0.12,
+    "unidad": "kg"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "HERBICIDAS PUNTO DE AGUJA",
+    "insumo": "Pyrazosulfuron",
+    "descripcion": null,
+    "dosisHa": 0.21,
     "unidad": "L"
   },
   {
@@ -372,8 +408,8 @@
     "campania": "26/27",
     "cultivo": "ARROZ",
     "grupo": "NUTRICIÓN",
-    "insumo": "AZUFRE 9,7 % + MANGANESO 9,7 % + ZINC 9,7 % AL",
-    "descripcion": null,
+    "insumo": "Amino Active Supreme",
+    "descripcion": "BioAtivadores Mn-ZN",
     "dosisHa": 0.3,
     "unidad": "L"
   },
@@ -381,8 +417,8 @@
     "campania": "26/27",
     "cultivo": "ARROZ",
     "grupo": "NUTRICIÓN",
-    "insumo": "Amino Active Supreme",
-    "descripcion": "BioAtivadores Mn-ZN",
+    "insumo": "AZUFRE 9,7 % + MANGANESO 9,7 % + ZINC 9,7 % AL",
+    "descripcion": null,
     "dosisHa": 0.3,
     "unidad": "L"
   },
@@ -453,8 +489,8 @@
     "campania": "26/27",
     "cultivo": "ARROZ",
     "grupo": "SEMILLAS",
-    "insumo": "Semilla de arroz V. BRSA706CL 26/27",
-    "descripcion": "BRS A706 CL",
+    "insumo": "Semilla de Arroz V. 424RI 26/27",
+    "descripcion": "424RI",
     "dosisHa": 85,
     "unidad": "kg"
   },
@@ -462,8 +498,8 @@
     "campania": "26/27",
     "cultivo": "ARROZ",
     "grupo": "SEMILLAS",
-    "insumo": "Semilla de Arroz V. 424RI 26/27",
-    "descripcion": "424RI",
+    "insumo": "Semilla de arroz V. BRSA706CL 26/27",
+    "descripcion": "BRS A706 CL",
     "dosisHa": 85,
     "unidad": "kg"
   },
@@ -489,6 +525,24 @@
     "campania": "26/27",
     "cultivo": "ARROZ",
     "grupo": "TRATAMIENTO DE SEMILLAS",
+    "insumo": "Fulminant Top",
+    "descripcion": "Fipronil 25% + Piraclostrobina 2.5% + Tiofanato 22.5%",
+    "dosisHa": 0.15,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "TRATAMIENTO DE SEMILLAS",
+    "insumo": "ProMax Arrank",
+    "descripcion": "Biostart + ZN",
+    "dosisHa": 0.15,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "TRATAMIENTO DE SEMILLAS",
     "insumo": "Seed+",
     "descripcion": null,
     "dosisHa": 0.15,
@@ -501,6 +555,15 @@
     "insumo": "T.F.P",
     "descripcion": "Fipronil 25% + Piraclostrobina 2.5% + Tiofanato 22.5%",
     "dosisHa": 0.15,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "TRATAMIENTO DE SEMILLAS",
+    "insumo": "Thiamex Seeds GL 5L",
+    "descripcion": "Tiametoxan 50%",
+    "dosisHa": 0.14,
     "unidad": "L"
   },
   {
@@ -605,6 +668,42 @@
   {
     "campania": "26/27",
     "cultivo": "MAIZ",
+    "grupo": "HERBICIDAS PÓS EMERGENTES",
+    "insumo": "Atrazina 76% + Mesotriona 12,5%",
+    "descripcion": null,
+    "dosisHa": 1.2,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "MAIZ",
+    "grupo": "HERBICIDAS PÓS EMERGENTES",
+    "insumo": "Glifex full",
+    "descripcion": "Glifosato Sal Amonio 75%",
+    "dosisHa": 1.8,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "MAIZ",
+    "grupo": "HERBICIDAS PÓS EMERGENTES",
+    "insumo": "Glifosato Sal Amonio 75%",
+    "descripcion": null,
+    "dosisHa": 1.8,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "MAIZ",
+    "grupo": "HERBICIDAS PÓS EMERGENTES",
+    "insumo": "Sineret",
+    "descripcion": "Atrazina 76% + Mesotriona 12,5%",
+    "dosisHa": 1.2,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "MAIZ",
     "grupo": "HERBICIDAS PRÉ EMERGENTES",
     "insumo": "Alfamex",
     "descripcion": "S-metalaclor",
@@ -646,42 +745,6 @@
     "descripcion": null,
     "dosisHa": 0.07,
     "unidad": "kg"
-  },
-  {
-    "campania": "26/27",
-    "cultivo": "MAIZ",
-    "grupo": "HERBICIDAS PÓS EMERGENTES",
-    "insumo": "Atrazina 76% + Mesotriona 12,5%",
-    "descripcion": null,
-    "dosisHa": 1.2,
-    "unidad": "L"
-  },
-  {
-    "campania": "26/27",
-    "cultivo": "MAIZ",
-    "grupo": "HERBICIDAS PÓS EMERGENTES",
-    "insumo": "Glifex full",
-    "descripcion": "Glifosato Sal Amonio 75%",
-    "dosisHa": 1.8,
-    "unidad": "L"
-  },
-  {
-    "campania": "26/27",
-    "cultivo": "MAIZ",
-    "grupo": "HERBICIDAS PÓS EMERGENTES",
-    "insumo": "Glifosato Sal Amonio 75%",
-    "descripcion": null,
-    "dosisHa": 1.8,
-    "unidad": "L"
-  },
-  {
-    "campania": "26/27",
-    "cultivo": "MAIZ",
-    "grupo": "HERBICIDAS PÓS EMERGENTES",
-    "insumo": "Sineret",
-    "descripcion": "Atrazina 76% + Mesotriona 12,5%",
-    "dosisHa": 1.2,
-    "unidad": "L"
   },
   {
     "campania": "26/27",
@@ -840,15 +903,6 @@
     "campania": "26/27",
     "cultivo": "MAIZ",
     "grupo": "NUTRICIÓN",
-    "insumo": "AZUFRE 9,7 % + MANGANESO 9,7 % + ZINC 9,7 % AL",
-    "descripcion": null,
-    "dosisHa": 0.3,
-    "unidad": "L"
-  },
-  {
-    "campania": "26/27",
-    "cultivo": "MAIZ",
-    "grupo": "NUTRICIÓN",
     "insumo": "Amino Active Supreme",
     "descripcion": "BioAtivadores Mn-ZN",
     "dosisHa": 0.3,
@@ -858,10 +912,10 @@
     "campania": "26/27",
     "cultivo": "MAIZ",
     "grupo": "NUTRICIÓN",
-    "insumo": "BIOSTART + Zn",
-    "descripcion": "(Co 0,5% + Mo 5% + Ni 1% + Zn 25% + Kinetina (Kin) 0,02% + Acido Giberelico 0,01% + Acido Indolbutirico (IBA) 0,01% + Acido Indolacetico (IAA) 0,01%)",
-    "dosisHa": 0.25,
-    "unidad": null
+    "insumo": "AZUFRE 9,7 % + MANGANESO 9,7 % + ZINC 9,7 % AL",
+    "descripcion": null,
+    "dosisHa": 0.3,
+    "unidad": "L"
   },
   {
     "campania": "26/27",
@@ -877,6 +931,15 @@
     "cultivo": "MAIZ",
     "grupo": "NUTRICIÓN",
     "insumo": "Biostar + Zn",
+    "descripcion": "(Co 0,5% + Mo 5% + Ni 1% + Zn 25% + Kinetina (Kin) 0,02% + Acido Giberelico 0,01% + Acido Indolbutirico (IBA) 0,01% + Acido Indolacetico (IAA) 0,01%)",
+    "dosisHa": 0.25,
+    "unidad": null
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "MAIZ",
+    "grupo": "NUTRICIÓN",
+    "insumo": "BIOSTART + Zn",
     "descripcion": "(Co 0,5% + Mo 5% + Ni 1% + Zn 25% + Kinetina (Kin) 0,02% + Acido Giberelico 0,01% + Acido Indolbutirico (IBA) 0,01% + Acido Indolacetico (IAA) 0,01%)",
     "dosisHa": 0.25,
     "unidad": null
@@ -939,8 +1002,17 @@
     "campania": "26/27",
     "cultivo": "SOJA",
     "grupo": "ACEITES Y ADJUVANTES",
-    "insumo": "Iop",
+    "insumo": "Iop Full",
     "descripcion": "Aceite vegetaL",
+    "dosisHa": 2,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "ACEITES Y ADJUVANTES",
+    "insumo": "Power Oil",
+    "descripcion": "Aceite vegetal",
     "dosisHa": 2,
     "unidad": "L"
   },
@@ -957,7 +1029,25 @@
     "campania": "26/27",
     "cultivo": "SOJA",
     "grupo": "DESECACIÓN",
+    "insumo": "Fascinate",
+    "descripcion": "Glufosinato 50%",
+    "dosisHa": 2,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "DESECACIÓN",
     "insumo": "Glifex Gold 60,8",
+    "descripcion": "Glifosato DMA 60.8%",
+    "dosisHa": 3,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "DESECACIÓN",
+    "insumo": "Glifotec Gold",
     "descripcion": "Glifosato DMA 60.8%",
     "dosisHa": 3,
     "unidad": "L"
@@ -970,6 +1060,15 @@
     "descripcion": "Glufosinato 50%",
     "dosisHa": 2,
     "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "FERTILIZANTES",
+    "insumo": "Abono 04-30-10 COFCO",
+    "descripcion": "04.30.10",
+    "dosisHa": 0.22,
+    "unidad": "ton"
   },
   {
     "campania": "26/27",
@@ -1046,42 +1145,6 @@
   {
     "campania": "26/27",
     "cultivo": "SOJA",
-    "grupo": "HERBICIDAS PRÉ EMERGENTES",
-    "insumo": "Alfamex",
-    "descripcion": "S-Metolaclor 96%",
-    "dosisHa": 1.2,
-    "unidad": "L"
-  },
-  {
-    "campania": "26/27",
-    "cultivo": "SOJA",
-    "grupo": "HERBICIDAS PRÉ EMERGENTES",
-    "insumo": "Brutus",
-    "descripcion": "Diclosulam 84%",
-    "dosisHa": 0.035,
-    "unidad": "kg"
-  },
-  {
-    "campania": "26/27",
-    "cultivo": "SOJA",
-    "grupo": "HERBICIDAS PRÉ EMERGENTES",
-    "insumo": "Imperator Glufosinato de amonio",
-    "descripcion": "Glufosinato",
-    "dosisHa": 2,
-    "unidad": "L"
-  },
-  {
-    "campania": "26/27",
-    "cultivo": "SOJA",
-    "grupo": "HERBICIDAS PRÉ EMERGENTES",
-    "insumo": "Saflufenacil",
-    "descripcion": null,
-    "dosisHa": 0.03,
-    "unidad": "kg"
-  },
-  {
-    "campania": "26/27",
-    "cultivo": "SOJA",
     "grupo": "HERBICIDAS PÓS EMERGENTES",
     "insumo": "Bromus",
     "descripcion": "Diquat",
@@ -1104,6 +1167,69 @@
     "insumo": "Glifex Full",
     "descripcion": "Glifosato Sal Amonio 75% WG",
     "dosisHa": 1.8,
+    "unidad": "kg"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "HERBICIDAS PÓS EMERGENTES",
+    "insumo": "Glifotec Gold",
+    "descripcion": "Glifosato Sal Amonio 75% WG",
+    "dosisHa": 1.8,
+    "unidad": "kg"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "HERBICIDAS PRÉ EMERGENTES",
+    "insumo": "Alfamex",
+    "descripcion": "S-Metolaclor 96%",
+    "dosisHa": 1.2,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "HERBICIDAS PRÉ EMERGENTES",
+    "insumo": "Brutus",
+    "descripcion": "Diclosulam 84%",
+    "dosisHa": 0.035,
+    "unidad": "kg"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "HERBICIDAS PRÉ EMERGENTES",
+    "insumo": "Fascinate",
+    "descripcion": "Glufosinato",
+    "dosisHa": 2,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "HERBICIDAS PRÉ EMERGENTES",
+    "insumo": "Imperator Glufosinato de amonio",
+    "descripcion": "Glufosinato",
+    "dosisHa": 2,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "HERBICIDAS PRÉ EMERGENTES",
+    "insumo": "Saflufenacil",
+    "descripcion": null,
+    "dosisHa": 0.03,
+    "unidad": "kg"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "HERBICIDAS PRÉ EMERGENTES",
+    "insumo": "Vizio",
+    "descripcion": "Saflufenacil",
+    "dosisHa": 0.03,
     "unidad": "kg"
   },
   {
@@ -1236,6 +1362,33 @@
     "campania": "26/27",
     "cultivo": "SOJA",
     "grupo": "SEMILLAS",
+    "insumo": "Semilla de soja V. BMX 64I61 FIBRA 2026/27",
+    "descripcion": "DM64IX61",
+    "dosisHa": 60,
+    "unidad": "kg"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "SEMILLAS",
+    "insumo": "Semilla de soja V. DM64IX66 NEXUS 2026/27",
+    "descripcion": "DM64I66",
+    "dosisHa": 65,
+    "unidad": "kg"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "SEMILLAS",
+    "insumo": "Semilla de soja V. NS6483 2026/27",
+    "descripcion": "6483",
+    "dosisHa": 60,
+    "unidad": "kg"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "SEMILLAS",
     "insumo": "Variedad 4",
     "descripcion": null,
     "dosisHa": 60,
@@ -1263,9 +1416,54 @@
     "campania": "26/27",
     "cultivo": "SOJA",
     "grupo": "TRATAMIENTO DE SEMILLAS",
+    "insumo": "Agriker Seed",
+    "descripcion": "nutrientes + extratos de alga",
+    "dosisHa": 0.1,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "TRATAMIENTO DE SEMILLAS",
     "insumo": "Ampere",
     "descripcion": "Clorantraniliprol + Clotianidina",
     "dosisHa": 0.1,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "TRATAMIENTO DE SEMILLAS",
+    "insumo": "Ampere Duo",
+    "descripcion": "Clorantraniliprol + Clotianidina",
+    "dosisHa": 0.1,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "TRATAMIENTO DE SEMILLAS",
+    "insumo": "Clothiex",
+    "descripcion": "Clorantraniliprol + Clotianidina",
+    "dosisHa": 0.1,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "TRATAMIENTO DE SEMILLAS",
+    "insumo": "METAFLUX",
+    "descripcion": "Fludioxonil + metalaxil + sedaxanes",
+    "dosisHa": 0.075,
+    "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "TRATAMIENTO DE SEMILLAS",
+    "insumo": "Nitropar Aq Azos",
+    "descripcion": "azospirilum brasiliense 4x10^9 + 4 esp bacillus + sacaromices",
+    "dosisHa": 0.15,
     "unidad": "L"
   },
   {
@@ -1415,6 +1613,15 @@
   {
     "campania": "26/27",
     "cultivo": "SORGO",
+    "grupo": "HERBICIDAS PÓS EMERGENTES",
+    "insumo": "Maxirice",
+    "descripcion": "Imazapic 17.5% + Imazapir 52.5% WG",
+    "dosisHa": 0.14,
+    "unidad": "kg"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SORGO",
     "grupo": "HERBICIDAS PRÉ EMERGENTES",
     "insumo": "Alfamex",
     "descripcion": "S-metalclor",
@@ -1437,15 +1644,6 @@
     "insumo": "Squadra",
     "descripcion": "IMAZETAPIR 10 %",
     "dosisHa": 1,
-    "unidad": "kg"
-  },
-  {
-    "campania": "26/27",
-    "cultivo": "SORGO",
-    "grupo": "HERBICIDAS PÓS EMERGENTES",
-    "insumo": "Maxirice",
-    "descripcion": "Imazapic 17.5% + Imazapir 52.5% WG",
-    "dosisHa": 0.14,
     "unidad": "kg"
   },
   {
@@ -1533,8 +1731,8 @@
     "campania": "26/27",
     "cultivo": "SORGO",
     "grupo": "NUTRICIÓN",
-    "insumo": "AZUFRE 9,7 % + MANGANESO 9,7 % + ZINC 9,7 % AL",
-    "descripcion": null,
+    "insumo": "Amino Active Supreme",
+    "descripcion": "BioAtivadores Mn-ZN",
     "dosisHa": 0.3,
     "unidad": "L"
   },
@@ -1542,8 +1740,8 @@
     "campania": "26/27",
     "cultivo": "SORGO",
     "grupo": "NUTRICIÓN",
-    "insumo": "Amino Active Supreme",
-    "descripcion": "BioAtivadores Mn-ZN",
+    "insumo": "AZUFRE 9,7 % + MANGANESO 9,7 % + ZINC 9,7 % AL",
+    "descripcion": null,
     "dosisHa": 0.3,
     "unidad": "L"
   },

@@ -134,11 +134,17 @@ function construirResumen(ctx){
   // 3) Superficie ejecutada superior al plan — reutiliza exceso/exc_kpi ya calculados en Control
   // de Hectáreas, sin recalcular nada. Severidad según el % de exceso del PEOR caso encontrado.
   if(exc_kpi.n){
-    const pctMayor = exceso.length ? Math.max(...exceso.map(e=>e.pdiff)) : 0;
+    // La severidad sale del PORCENTAJE del peor lote, y el contexto nombra a ESE lote con sus dos
+    // numeros propios (exc_kpi.peor, ver cultivos.js). Antes el texto tomaba las hectareas del lote
+    // que mas hectareas excedia y el porcentaje del que mas porcentaje excedia: eran dos lotes
+    // distintos y la frase describia uno que no existe.
+    const peor = exc_kpi.peor;
+    const pctMayor = peor ? peor.pdiff : 0;
     const sev = pctMayor>=RESUMEN_SOBREEJECUCION_CRITICA?'critica':(pctMayor>=RESUMEN_SOBREEJECUCION_ALTA?'alta':'media');
     RP.push({id:'crop_overexecution', severidad:sev, titulo:'Superficie ejecutada superior al plan',
       descripcion:exc_kpi.n+' lote(s) con hectáreas ejecutadas por encima de lo planificado (RTK).',
-      metrica:'+'+fmt2(exc_kpi.ha)+' ha', contexto:'Mayor caso: +'+fmt2(exc_kpi.mayor)+' ha ('+Math.round(pctMayor)+'% de exceso)',
+      metrica:'+'+fmt2(exc_kpi.ha)+' ha',
+      contexto: peor ? 'Mayor caso: '+peor.cult+' '+peor.lote+' · +'+fmt2(peor.diff)+' ha sobre '+fmt2(peor.ha_rtk)+' (+'+Math.round(peor.pdiff)+'%)' : '',
       accion:'Ver Control de Hectáreas', destinoTab:4, impacto:exc_kpi.ha});
   }
 

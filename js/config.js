@@ -563,11 +563,8 @@ const RECETAS_INSUMO_ALIAS = [
   {insumo:'TFP 50 FS', receta:'T.F.P'},
   // Misma molecula (Tiametoxan 50%), ultima letra distinta entre los dos sistemas.
   {insumo:'CIAMETOXAN', receta:'Ciametoxam'},
-  // En SOJA el presupuesto lo llama solo "Iop" (un unico registro, ACEITES Y ADJUVANTES, 2 L/ha),
-  // mientras que Albor lo carga como "IOP FULL". Se acota a SOJA a proposito: los presupuestos de
-  // ARROZ, MAIZ y SORGO ya dicen "Iop Full" y cruzan solos con su propia dosis (1,75 / 1,6 / 1,6),
-  // asi que este alias no debe alcanzarlos.
-  {insumo:'IOP FULL', receta:'Iop', cultivo:'SOJA'},
+  // (El alias IOP FULL -> Iop de SOJA se quito el 21/09/2026: el presupuesto de agosto ya escribe
+  // "Iop Full", igual que Albor, y la receta de SOJA se cargo con ese nombre.)
   // Fila "Power Oil - Iop Full - Tafir Oil" del presupuesto de ARROZ: Albor lo carga con un guion
   // en el medio ("Tafir- Oil"), que normInsumoNombre no puede igualar a "Tafir Oil".
   {insumo:'Tafir- Oil', receta:'Tafir Oil'},

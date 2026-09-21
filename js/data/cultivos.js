@@ -655,8 +655,18 @@ function construirControlHectareas(OTS, RTK){
   sinrtk.sort((a,b)=> a.cult<b.cult?-1:a.cult>b.cult?1:(a.lote<b.lote?-1:1));
   cancelados.sort((a,b)=> a.cult<b.cult?-1:a.cult>b.cult?1:(a.lote<b.lote?-1:1));
   repetidas.sort((a,b)=>b.exceso-a.exceso);
+  // `peor` = el lote que define la severidad del hallazgo en el Resumen Ejecutivo, elegido por
+  // PORCENTAJE de exceso y no por hectareas: +3,53 ha sobre un lote de 1,83 es un error de carga,
+  // +14,44 sobre uno de 78,18 es un desborde de trabajo. Viaja como objeto, con el lote y SUS dos
+  // numeros juntos, justamente para que no se pueda volver a armar una frase con las hectareas de
+  // un lote y el porcentaje de otro (era el caso hasta el 21/09/2026: "Mayor caso: +14,44 ha (193%
+  // de exceso)" mezclaba el 204, que excede 18,5%, con el .34A, que excede 192,9%).
+  const peor = exceso.length
+    ? exceso.reduce((a,b)=> b.pdiff>a.pdiff ? b : a)
+    : null;
   const exc_kpi={n:exceso.length, ha:Math.round(exceso.reduce((s,e)=>s+e.diff,0)*100)/100,
-    mayor:Math.round(Math.max(0,...exceso.map(e=>e.diff))*100)/100, n_sinrtk:sinrtk.length,
+    n_sinrtk:sinrtk.length,
+    peor: peor ? {cult:peor.cult, lote:peor.lote, diff:peor.diff, pdiff:peor.pdiff, ha_rtk:peor.ha_rtk} : null,
     n_repetidas:repetidas.length,
     ha_repetidas:Math.round(repetidas.reduce((s,r)=>s+r.exceso,0)*100)/100};
   return {exceso,sinrtk,cancelados,repetidas,exc_kpi};

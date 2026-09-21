@@ -4,7 +4,7 @@ Dashboard de seguimiento de campaña agrícola (Campo La Teresa). Es una web est
 
 - **`data/datosCampania2627.xlsx`** — 3 hojas: `consultaOT`, `consultaCultivos`, `consultaInsumos`.
 - **`data/presupuesto-infraestructura-26-27.json`** — 10 ítems con el presupuesto de infraestructura usado en la pestaña Auditoría (`especificacion`, `cantidadPresupuestada`, `unidadMedida`, `costo`, `importeTotal`).
-- **`data/recetas-insumos-26-27.json`** — 179 registros con la dosis por hectárea recomendada por cultivo e insumo. Es una versión **reducida** del presupuesto de insumos: solo dosis, sin costos ni volúmenes. Alimenta el seguimiento de receta de Auditoría de Insumos por Parcela.
+- **`data/recetas-insumos-26-27.json`** — 202 registros con la dosis por hectárea recomendada por cultivo e insumo. Es una versión **reducida** del presupuesto de insumos: solo dosis, sin costos ni volúmenes. Alimenta el seguimiento de receta de Auditoría de Insumos por Parcela.
 
 - **`data/receta-labores-25-26.json`** — cuántas labores distintas lleva cada cultivo en cada estadio, derivado del export de la campaña 25/26. Es el **divisor** del avance de campo: sin él, la primera labor confirmada sobre un lote lo dejaba en 100 % del estadio (ver **El divisor del avance**).
 
@@ -948,6 +948,75 @@ Compara la **dosis real por hectárea** (la que ya calculaba y mostraba el módu
 El alias va último a propósito: así nunca pisa una receta que ya coincide sola. Importa con el dato real — `Potasio KCL 00-00-60` existe tal cual en las recetas de MAIZ y SORGO, y con puntos en las de ARROZ; con este orden cada cultivo usa la suya y el alias solo cubre ARROZ. Hoy hay **quince** alias: dos por separador decimal (`GLIFEX GOLD 60.8` → `60,8`; `Potasio KCL 00-00-60` → `00.00.60`), `BIOSTART Zn FL Root` → `Biostar + Zn` fijando además el **grupo** `TRATAMIENTO DE SEMILLAS`, cuatro verificados uno por uno contra la fila del Excel que los define (`Glifex Full K` → `Glifex Full`, `PowerOil` → `Power Oil`, `TFP 50 FS` → `T.F.P`, `CIAMETOXAN` → `Ciametoxam`), `IOP FULL` → `Iop` **acotado a SOJA**, que es el único cultivo cuyo presupuesto lo llama así — en ARROZ, MAIZ y SORGO la receta ya dice `Iop Full` y cruza sola con su propia dosis, y el alias no debe alcanzarlos. Ese `cultivo` opcional del alias existe justamente para casos como este. El noveno es `Tafir- Oil` → `Tafir Oil`: Albor lo carga con un guion en el medio. El décimo desempata el `GLIFEX GOLD 60.8` de **SORGO**, que el presupuesto trae dos veces con dosis distintas (3 L/ha en DESECACIÓN y 0,4 L/ha en PRÉ EMERGENTES): el alias fija DESECACIÓN, respaldado por el dato — las 14 OT aplican ~3,03 L/ha y sus servicios son «Desecacion imperator» y «Fumigacion Imperator», ambos en Preparación de Suelo.
 
 > **Prioridad entre aliases.** Un alias con `cultivo` declarado gana sobre el genérico del mismo producto, **sin depender del orden** en que estén escritos. Sin esto, el genérico `GLIFEX GOLD 60.8` → `GLIFEX GOLD 60,8` se llevaba también el caso de SORGO y el desempate por grupo nunca llegaba a aplicarse.
+
+### Los insumos cargados con el nombre de las OT
+
+La receta se cargó originalmente con los nombres del **presupuesto**, y `RECETAS_INSUMO_ALIAS`
+(`config.js`) traduce el nombre de Albor al del presupuesto cuando difieren. Los 22 registros
+agregados el **21/09/2026** —desde las hojas de agosto de ARROZ y SOJA, versión 3— van cargados
+directamente con **el nombre que usa la OT**, a pedido del usuario: así cruzan sin necesidad de un
+alias, y cada alias que no existe es una regla menos que mantener.
+
+Cada uno sale de una fila concreta del presupuesto, y su nombre se verificó contra
+`consultaOT.insumo` / `consultaInsumos.nombre`, no por parecido:
+
+| Cultivo | Presupuesto dice | La OT dice | Dosis |
+|---|---|---|---|
+| ARROZ | `Glifotec Gold` | `Glifotec Gold` | 3 L (Desecación y Punto de Aguja) |
+| ARROZ | `Fulminant top` | `Fulminant Top` | 0,15 L |
+| ARROZ | `Thiamex seed` | `Thiamex Seeds GL 5L` | 0,14 L |
+| ARROZ | `Promax Arrank` | `ProMax Arrank` | 0,15 L |
+| ARROZ | `Cyperex` | `Cyperex 75` | 0,08 L |
+| ARROZ | `Vulcano` | `VULCANO PQT` | 2 L |
+| SOJA | `glifotec gold` | `Glifotec Gold` | 3 L / 1,8 kg |
+| SOJA | `fascinate` | `Fascinate` | 2 L (Desecación y Pré Emergentes) |
+| SOJA | `Abono 04.30.10 COFCO` | `Abono 04-30-10 COFCO` | 0,22 ton |
+| SOJA | `Vibrance max- Metaflux` | `METAFLUX` | 0,075 L |
+| SOJA | `Ampere Duo - Clothiex` | `Ampere Duo`, `Clothiex` | 0,1 L |
+| SOJA | `Agriker seed` | `Agriker Seed` | 0,1 L |
+| SOJA | `Nitropar aq azos` | `Nitropar Aq Azos` | 0,15 L |
+| SOJA | tres variedades nuevas | igual que el presupuesto | 65 / 60 / 60 kg |
+
+Dos excepciones, por falta de nombre de OT:
+
+- **`Vizio`** (SOJA, 0,03 kg) no aparece en ninguna OT: su única huella en el dato es un movimiento
+  de stock, `VIZIO - SAFLUFENACIL`. Se cargó con el nombre del presupuesto.
+- **`Power Oil`** (SOJA, 2 L): Albor lo escribe `PowerOil` en 12 OT, y el alias `PowerOil → Power
+  Oil` ya existía. Se cargó con el nombre del alias para no duplicar la regla.
+
+**`Iop` pasó a llamarse `Iop Full`** en la receta de SOJA, y con eso se quitó el alias
+`IOP FULL → Iop`: el presupuesto de agosto ya lo escribe igual que Albor.
+
+Efecto sobre los 1.247 movimientos de insumo con hectáreas:
+
+| Estado | Antes | Después |
+|---|---|---|
+| Sin receta | 225 | **69** |
+| Bajo receta | 769 | 892 |
+| Dentro de tolerancia | 180 | 186 |
+| Sobre receta | 67 | 68 |
+| Según receta | 6 | 6 |
+| Unidad no comparable | 0 | 26 |
+
+**Los 26 de «unidad no comparable» son un hallazgo, no una regresión.** Antes decían «Sin receta»,
+que no distinguía entre *no hay presupuesto para esto* y *hay presupuesto pero está en otra unidad*.
+Son dos productos del presupuesto de ARROZ que figuran en **litros** y que Albor carga en **kilos**:
+
+```
+Cyperex 75    25 movimientos · 34,70 kg sobre 500,87 ha = 0,069 kg/ha   (receta 0,08 lts)
+VULCANO PQT    1 movimiento  · 26,00 kg sobre  43,87 ha = 0,593 kg/ha   (receta 2 lts)
+```
+
+Los dos son formulaciones sólidas (Pyrazosulfuron WG, Quinclorac), así que el kilo de Albor parece
+el correcto y la unidad del presupuesto la equivocada. **No se cambió**: la receta es el
+presupuesto, y corregir la unidad de la fuente es una decisión del usuario, no del dashboard. Hasta
+entonces el módulo dice exactamente qué pasa en vez de comparar magnitudes distintas.
+
+El `Cyperex` del presupuesto aparece en **dos grupos con dosis distintas** —0,21 L/ha en HERBICIDAS
+PUNTO DE AGUJA y 0,08 en PÓS EMERGENTES—, lo que dejaría la fila en «Sin receta» por ambigüedad (ver
+`resolverCandidatasReceta`). Se cargó **solo la de PÓS EMERGENTES** porque es la que el dato
+respalda: las 33 líneas de Cyperex 75 de la campaña son todas del estadio **Cuidados**, a 0,055–0,070
+kg/ha, y ninguna es una aplicación de punto de aguja.
 
 ### Equivalencias de campaña y cultivo
 
