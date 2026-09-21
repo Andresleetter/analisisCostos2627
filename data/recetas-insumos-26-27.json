@@ -246,6 +246,16 @@
     "campania": "26/27",
     "cultivo": "ARROZ",
     "grupo": "HERBICIDAS PÓS EMERGENTES",
+    "insumo": "CLETOGROP",
+    "descripcion": "Cletodim 24%",
+    "dosisHa": 1,
+    "unidad": "L",
+    "origen": "insumo de SOJA que quedo en ARROZ al cambiarse el tipo de cultivo del lote · dosis declarada por el usuario · no presupuestado en la hoja de ARROZ"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "HERBICIDAS PÓS EMERGENTES",
     "insumo": "Cyperex 75",
     "descripcion": "Pyrazosulfuron",
     "dosisHa": 0.08,
@@ -348,7 +358,8 @@
     "insumo": "Zupressor",
     "descripcion": "Imazapic 17.5% + Imazapir 52.5% WG",
     "dosisHa": 0.12,
-    "unidad": "kg"
+    "unidad": "L",
+    "origen": "unidad corregida a L para que coincida con la carga de Albor · dosis de la fila \"Maxirice - Zupressor\" del presupuesto de ARROZ"
   },
   {
     "campania": "26/27",
@@ -1645,6 +1656,16 @@
     "descripcion": "Imazapic 17.5% + Imazapir 52.5% WG",
     "dosisHa": 0.14,
     "unidad": "kg"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SORGO",
+    "grupo": "HERBICIDAS PÓS EMERGENTES",
+    "insumo": "Triclon",
+    "descripcion": "Triclopyr 48%",
+    "dosisHa": 1,
+    "unidad": "L",
+    "origen": "dosis declarada por el usuario · no presupuestado en la hoja de SORGO"
   },
   {
     "campania": "26/27",

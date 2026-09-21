@@ -4,7 +4,7 @@ Dashboard de seguimiento de campaña agrícola (Campo La Teresa). Es una web est
 
 - **`data/datosCampania2627.xlsx`** — 3 hojas: `consultaOT`, `consultaCultivos`, `consultaInsumos`.
 - **`data/presupuesto-infraestructura-26-27.json`** — 10 ítems con el presupuesto de infraestructura usado en la pestaña Auditoría (`especificacion`, `cantidadPresupuestada`, `unidadMedida`, `costo`, `importeTotal`).
-- **`data/recetas-insumos-26-27.json`** — 205 registros con la dosis por hectárea recomendada por cultivo e insumo. Es una versión **reducida** del presupuesto de insumos: solo dosis, sin costos ni volúmenes. Alimenta el seguimiento de receta de Auditoría de Insumos por Parcela.
+- **`data/recetas-insumos-26-27.json`** — 207 registros con la dosis por hectárea recomendada por cultivo e insumo. Es una versión **reducida** del presupuesto de insumos: solo dosis, sin costos ni volúmenes. Alimenta el seguimiento de receta de Auditoría de Insumos por Parcela.
 
 - **`data/receta-labores-25-26.json`** — cuántas labores distintas lleva cada cultivo en cada estadio, derivado del export de la campaña 25/26. Es el **divisor** del avance de campo: sin él, la primera labor confirmada sobre un lote lo dejaba en 100 % del estadio (ver **El divisor del avance**).
 
@@ -991,12 +991,12 @@ Efecto sobre los 1.247 movimientos de insumo con hectáreas:
 
 | Estado | Antes | Después |
 |---|---|---|
-| Sin receta | 225 | **34** |
-| Bajo receta | 769 | **928** |
-| Dentro de tolerancia | 180 | 189 |
-| Sobre receta | 67 | **83** |
+| Sin receta | 225 | **21** |
+| Bajo receta | 769 | **929** |
+| Dentro de tolerancia | 180 | 194 |
+| Sobre receta | 67 | **97** |
 | Según receta | 6 | 6 |
-| Unidad no comparable | 0 | 7 |
+| Unidad no comparable | 0 | **0** |
 
 #### Dos unidades corregidas contra el presupuesto
 
@@ -1033,7 +1033,7 @@ cómo el presupuesto anota las marcas alternativas:
 
 | Cultivo | Fila del presupuesto | Nombre nuevo | La OT dice | Dosis |
 |---|---|---|---|---|
-| ARROZ | `Maxirice - Zupressor` | Zupressor | `Zupressor` | 0,12 kg |
+| ARROZ | `Maxirice - Zupressor` | Zupressor | `Zupressor` | 0,12 **L** (ver abajo) |
 | SOJA | `Nodu Soja - Brady + - Aq BPR Max` | Brady + | `+Brady` | 0,5 L |
 | SOJA | `Nodu Soja - Brady + - Aq BPR Max` | Aq BPR Max | `AQ BPR MAX` | **0,15 L** |
 
@@ -1049,11 +1049,54 @@ AQ BPR MAX   12 movimientos de SOJA · Siembra · 0,184 L/ha  vs 0,150  =  +22,8
 +Brady       12 movimientos de SOJA · Siembra · 0,344 L/ha  vs 0,500  =  -31,2%   Bajo receta
 ```
 
-**`Zupressor` queda en «unidad no comparable»**, el caso inverso al de Cyperex: el presupuesto lo
-pone en **kilos** (la fila es Imazapic + Imazapir **WG**, un granulado) y Albor lo carga en
-**litros**, 0,280 L/ha en 7 movimientos contra un plan de 0,12 kg. Se cargó con la unidad del
-presupuesto y **queda pendiente de confirmar**: si `Zupressor` es realmente una formulación líquida,
-no es el mismo producto que el `Maxirice` de esa fila y su dosis tampoco es comparable.
+**`Zupressor` lleva la unidad de la OT, no la del presupuesto.** La fila
+`Maxirice - Zupressor` está en **kilos** —es Imazapic + Imazapir **WG**, un granulado— pero Albor lo
+carga en **litros**, así que cargado con la unidad del Excel quedaba en «unidad no comparable»: el
+módulo nunca convierte entre magnitudes distintas. Se cargó con **la misma dosis de la fila (0,12) y
+la unidad de la OT (L)**, por decisión del usuario del 21/09/2026: el producto sí está presupuestado,
+lo que estaba mal escrito era la unidad.
+
+Con eso los 7 movimientos comparan, y el resultado es alto: **0,280 L/ha contra 0,12 = +133,0 %**,
+los siete sobre receta (lotes 135, 137, 138, 139, 140, 142 y `.95B`). La dosis real es notablemente
+consistente —de 0,277 a 0,281 L/ha— así que el desvío no viene de una carga errática. Queda a la
+vista para que se revise si el 0,12 de la fila es la dosis correcta para la formulación líquida.
+`Maxirice`, el otro nombre de esa fila, no tiene ningún movimiento en la campaña.
+
+#### Una dosis que no viene del presupuesto: Triclon en SORGO
+
+La hoja de SORGO **no presupuesta Triclon**, así que sus 12 movimientos quedaban en «Sin receta». El
+usuario declaró la dosis —**1 L/ha**— y el dato la confirma de forma llamativa: los 12 movimientos
+van de **1,047 a 1,054 L/ha**, un rango de 7 milésimas. Se cargó con esa dosis, y el registro lleva
+un campo `origen` que dice de dónde salió, para que nadie la confunda con una línea del presupuesto:
+
+```json
+{ "cultivo": "SORGO", "grupo": "HERBICIDAS PÓS EMERGENTES", "insumo": "Triclon",
+  "dosisHa": 1, "unidad": "L",
+  "origen": "dosis declarada por el usuario · no presupuestado en la hoja de SORGO" }
+```
+
+`origen` es un campo informativo: `construirIndiceRecetas` arma cada fila con los campos que conoce,
+así que un campo extra en el JSON no participa de ninguna comparación.
+
+Con la dosis puesta, los 12 movimientos quedan **justo en el borde de la tolerancia**: 1,051 L/ha
+contra 1,000 es **+5,1 %**, y la tolerancia de la campaña es +5 %. Por eso el panel los parte en
+**7 sobre receta y 5 dentro de tolerancia** en vez de dar un veredicto único. No es una
+inconsistencia del cálculo: es lo que pasa cuando el consumo real cae sobre el umbral.
+
+Ojo con no confundirlo con el **Triclon de ARROZ**, que sí está presupuestado (0,5 L/ha, fila
+`Triclon y Morfeu`) y se aplica muy distinto: 39 movimientos con una mediana de 0,300 L/ha y un
+rango de 0,085 a 1,042. Son dos cultivos con dos dosis y dos comportamientos.
+
+El otro caso de dosis declarada es **`CLETOGROP` en ARROZ**: un insumo de SOJA que quedó en arroz al
+cambiarse el tipo de cultivo del lote. Es un solo movimiento —la OT 3557, lote `.16`, 27 L sobre
+27,67 ha— y se cargó a **1 L/ha**, la misma dosis que la entrada de SOJA, con lo que da **−2,4 %**.
+
+**Qué va en `descripcion` y qué en `origen`.** `descripcion` es la **molécula**, siempre: acá
+`Cletodim 24%`, igual que la entrada de SOJA y que todas las demás del archivo (`Bentazona 60%`,
+`Triclopyr 48%`, `Quinclorac 25% SC`…). No es un campo de notas — `construirIndiceRecetas` lo usa
+como clave del índice `porDescripcion`, que es el segundo camino por el que una OT encuentra su
+receta cuando el nombre comercial no coincide. Meterle una explicación ahí rompería ese cruce. La
+historia del registro va en `origen`, que no participa de ninguna comparación.
 
 #### PARCELA ARROZ usa el presupuesto de ARROZ
 
