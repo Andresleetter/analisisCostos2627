@@ -1366,8 +1366,18 @@ function renderInsumos(){
   ).join('') : '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:16px">Sin consumo de insumos en el período</td></tr>';
 }
 
+// Total por mes del modulo Servicios. `tot` cuenta las CUATRO patas del gasto: labor propia, labor
+// de terceros, insumos y combustible — lo mismo que el KPI de Gasto Total (ver renderG). El gasoil
+// entra por gasoil_sec, que es la misma coleccion que dibuja el panel de Consumo de Gasoil por Area.
+//
+// Antes el acumulado dejaba el gasoil afuera, y entonces el ultimo punto del grafico (1.394k) no
+// coincidia con el total de la campania. Ahora los dos dicen la misma cifra.
+// `ot` y `horas` NO suman las OT de gasoil: son ordenes de carga de combustible, no de labor, y el
+// KPI que las cuenta se llama "OT Confirmadas con labor".
 function monthTotals(S){ const t={}; S.meses.forEach(m=>t[m.k]={k:m.k,lbl:m.lbl,tot:0,ot:0,horas:0});
-  S.gastos.forEach(r=>{const o=t[r.mesnum]; if(o){o.tot+=r.propia+r.tercero+r.insumos;o.ot+=r.n;o.horas+=(r.esH?r.horas:0);}}); return S.meses.map(m=>t[m.k]); }
+  S.gastos.forEach(r=>{const o=t[r.mesnum]; if(o){o.tot+=r.propia+r.tercero+r.insumos;o.ot+=r.n;o.horas+=(r.esH?r.horas:0);}});
+  (S.gasoil_sec||[]).forEach(r=>{const o=t[r.mesnum]; if(o) o.tot+=r.total;});
+  return S.meses.map(m=>t[m.k]); }
 // ---- Combustible: balance Ingreso vs Consumo + consumo por Uso / Detalle ----
 // Qué fila del Consumo está desplegada (clave usoOrigen|usoKey, ver renderCombustible). Vive acá
 // y no en el DOM porque la tabla se regenera completa en cada cambio de filtro — mismo patrón que
@@ -1629,11 +1639,56 @@ function renderG(){
   const by={}; recs.forEach(r=>{ if(!by[r.labor])by[r.labor]={labor:r.labor,esH:r.esH,n:0,ha:0,horas:0,prop:0,terc:0,ins:0};
     const o=by[r.labor];o.n+=r.n;o.ha+=r.ha;o.horas+=r.horas;o.prop+=r.propia;o.terc+=r.tercero;o.ins+=r.insumos; });
   const labs=Object.values(by).map(o=>({...o,tot:o.prop+o.terc+o.ins})).sort((a,b)=>b.tot-a.tot);
-  const gasto=labs.reduce((s,l)=>s+l.tot,0), nOT=labs.reduce((s,l)=>s+l.n,0);
-  const totTerc=labs.reduce((s,l)=>s+l.terc,0), totIns=labs.reduce((s,l)=>s+l.ins,0);
-  const K=[['Gasto Total (servicios)','US$ '+fmtUSD(gasto),''],['OT Confirmadas',nOT,'con labor'],['Labores Ejecutadas',labs.length,'tipos de labor'],
-    ['Costo Labor Tercero','US$ '+fmtUSD(totTerc),gasto?Math.round(totTerc/gasto*100)+'% del gasto':''],
-    ['Costo Insumos','US$ '+fmtUSD(totIns),gasto?Math.round(totIns/gasto*100)+'% del gasto':'']];
+  // El combustible se lee de gasoil_sec con los MISMOS filtros que usa renderGasoil (Campania y
+  // Cultivo ya vienen aplicados en serviciosFiltrados; Mes se aplica aca), asi que el KPI dice
+  // exactamente lo que suma el panel de Consumo de Gasoil por Area que esta mas abajo.
+  const recsGas=sel==='ALL'?S.gasoil_sec:S.gasoil_sec.filter(r=>r.mesnum===sel);
+  const totComb=recsGas.reduce((s,r)=>s+r.total,0);
+  // ---- Los tres KPI de plata reparten el Gasto Total, y no queda nada afuera ----
+  //
+  //   Costo Labor + Costo Insumos + Costo Combustible = Gasto Total
+  //
+  // Dos correcciones del 22/09/2026, las dos por la misma razon: habia plata que el modulo sumaba
+  // y no mostraba, asi que los KPI no cerraban contra su propio total.
+  //
+  //  1. El KPI de labor mostraba SOLO `terc` y se llamaba "Costo Labor Tercero", pero el Detalle
+  //     por Servicio suma tres columnas: propia, tercero e insumos. La labor propia — US$ 15,73 en
+  //     la 26/27, dos filas de Tratamiento de semillas — entraba en el total y no se veia.
+  //  2. El Gasto Total dejaba afuera el COMBUSTIBLE, que vive en su propio panel (Consumo de Gasoil
+  //     por Area) y son US$ 51.518,93 en la 26/27. Por eso el modulo cerraba en 1.394.404,71 contra
+  //     el costo total de la campania del Resumen Ejecutivo, 1.445.923,66.
+  //
+  // El redondeo de los porcentajes a entero tapaba lo primero: 48% + 52% daba 100% justo aunque
+  // faltara plata. Ahora los tres porcentajes se calculan sobre el total que SI incluye todo.
+  //
+  // El desglose propia/tercero no se perdio: el Detalle por Servicio conserva sus columnas.
+  const totLabor=labs.reduce((s,l)=>s+l.prop+l.terc,0), totIns=labs.reduce((s,l)=>s+l.ins,0);
+  const gasto=totLabor+totIns+totComb;
+  // ---- Los tres porcentajes suman 100,0 exacto, siempre ----
+  //
+  // Un decimal y no entero: con enteros los tres daban 101% (46,62 + 49,82 + 3,56 redondea a
+  // 47 + 50 + 4). Es el mismo formato que ya usa la columna de porcentaje del panel de Consumo de
+  // Gasoil por Area.
+  //
+  // Un decimal solo no alcanza: redondeando cada uno por su cuenta, 3 de 28 combinaciones de filtro
+  // daban 99,9% o 100,1% (mayo, julio y septiembre de la 26/27). En un panel cuyo sentido es que la
+  // cuenta cierre, un 100,1% es justo lo que no puede pasar.
+  //
+  // Se reparte por RESTO MAYOR: se redondean los tres y el sobrante — nunca mas de 0,1 — se le suma
+  // al mas grande, donde 0,1 punto no cambia como se lee la cifra. El monto en dolares de cada KPI
+  // NO se toca: esto es solo el porcentaje del pie.
+  const pcts=(()=>{
+    if(!gasto) return ['','',''];
+    const crudos=[totLabor,totIns,totComb].map(v=>v/gasto*100);
+    const red=crudos.map(v=>Math.round(v*10)/10);
+    const resto=Math.round((100-red.reduce((a,b)=>a+b,0))*10)/10;
+    if(resto){ const i=crudos.indexOf(Math.max(...crudos)); red[i]=Math.round((red[i]+resto)*10)/10; }
+    return red.map(v=>fmt1(v)+'% del gasto');
+  })();
+  const K=[['Gasto Total','US$ '+fmtUSD(gasto),'labor + insumos + combustible'],['Labores Ejecutadas',labs.length,'tipos de labor'],
+    ['Costo Labor','US$ '+fmtUSD(totLabor),pcts[0]],
+    ['Costo Insumos','US$ '+fmtUSD(totIns),pcts[1]],
+    ['Costo Combustible','US$ '+fmtUSD(totComb),pcts[2]]];
   document.getElementById('gkpis').innerHTML=K.map(k=>`<div class="gkpi"><div class="k-lab">${k[0]}</div><div class="k-val">${k[1]}</div><div class="k-foot">${k[2]}</div></div>`).join('');
   document.getElementById('gnote').textContent='';
   let acc=0; const pts=mt.map(m=>{acc+=m.tot;return{lbl:m.lbl,acc};}); const W=1000,H=200,pad=34,aMax=acc||1;
@@ -1847,7 +1902,10 @@ function renderGasoil(){
     const o=by[key]; o.n+=r.n; o.litros+=r.litros; o.total+=r.total; });
   const rows=Object.values(by).sort((a,b)=>b.total-a.total);
   const tot=rows.reduce((s,r)=>s+r.total,0), litros=rows.reduce((s,r)=>s+r.litros,0);
-  document.getElementById('gastop').innerHTML=`<div class="sop-kpi"><div class="l">Total Gasoil</div><div class="v">US$ ${fmtUSD(tot)}</div></div><div class="sop-kpi"><div class="l">Litros Consumidos</div><div class="v">${fmt1(litros)} L</div></div>`;
+  // Sin KPI de "Total Gasoil": esa misma cifra ya esta arriba, en el KPI de Costo Combustible, que
+  // aplica los mismos filtros. Se quito a pedido del usuario (22/09/2026) para no repetirla.
+  // `tot` sigue usandose mas abajo, para el porcentaje de cada area sobre el total del periodo.
+  document.getElementById('gastop').innerHTML=`<div class="sop-kpi"><div class="l">Litros Consumidos</div><div class="v">${fmt1(litros)} L</div></div>`;
   const mx=Math.max(1,...rows.map(r=>r.total));
   document.getElementById('gasbody').innerHTML=rows.length?rows.map(r=>`<tr><td><b>${r.area}</b></td><td class="tr mono">${r.n}</td><td class="tr mono">${fmt1(r.litros)}</td><td class="tr mono col-tot">US$ ${fmtUSD(r.total)}</td><td class="tr"><div class="sopbar"><div style="width:${r.total/mx*100}%"></div></div></td><td class="tr mono">${tot?(r.total/tot*100).toFixed(1):0}%</td></tr>`).join(''):'<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:16px">Sin consumo de gasoil en el período</td></tr>';
 }
