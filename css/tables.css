@@ -27,3 +27,8 @@ td.dl{padding-left:22px;color:var(--teal)}
    entra en el ancho disponible; sin esto desbordaba la página entera en vez de scrollear dentro
    de su propio panel. */
 .scroll{max-height:560px;overflow-y:auto;overflow-x:auto;max-width:100%}
+
+/* Subtotal por tercero de "Trabajos para Terceros": va DEBAJO de las OT que suma, asi que la linea
+   de arriba (heredada de tr.grp) lo separa de su propio detalle, y hace falta aire abajo para que
+   no se pegue al primer OT del bloque siguiente. Ver renderTerceros en render.js. */
+tr.grp.terc-sub td{padding-bottom:11px;border-bottom:1px solid var(--line)}
