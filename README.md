@@ -77,6 +77,73 @@ que los tres caminos que llevan a un módulo — el botón de la barra, el menú
 El **Avance Detallado por Cultivo** no tiene pestaña propia y no toca el hash: mientras se lo mira,
 la URL sigue diciendo el módulo del que se entró (el Resumen), que es donde deja un refresco.
 
+### Los KPI de Servicios cierran contra el Gasto Total
+
+Los tres KPI de plata del módulo reparten el **Gasto Total**, sin que quede nada afuera:
+
+```
+Costo Labor + Costo Insumos + Costo Combustible = Gasto Total
+```
+
+Y el Gasto Total del módulo es **el mismo número** que el Costo Ejecutado del Resumen Ejecutivo:
+US$ 1.445.923,66 en la 26/27. Los dos módulos dicen lo mismo.
+
+Hasta el 22/09/2026 nada de eso era cierto, por dos huecos distintos que se arreglaron el mismo día.
+
+**Hueco 1: la labor propia no se veía.** El KPI se llamaba «Costo Labor **Tercero**» y mostraba solo
+`terc`, pero el Detalle por Servicio suma **tres** columnas: propia, tercero e insumos
+(`servicios.js`). La labor propia se calculaba, entraba en el total y no aparecía en ningún lado —
+US$ 15,73 en la 26/27, dos filas de Tratamiento de semillas sobre 47 OT. Así,
+674.110,77 + 720.278,21 daba 1.394.388,98 contra un Gasto Total de 1.394.404,71.
+
+Lo que lo hacía difícil de ver es que **los porcentajes cerraban igual**: los pies decían `48% del
+gasto` y `52% del gasto`, 100% justo, porque el redondeo a entero se comía el 0,001% que faltaba.
+
+La corrección: el KPI cuenta **toda la labor, propia más tercero** (decisión del usuario — un solo
+KPI de labor, no uno nuevo para la propia). El desglose no se perdió: el Detalle por Servicio sigue
+teniendo sus columnas separadas.
+
+**Hueco 2: el combustible quedaba afuera del total.** El KPI se llamaba «Gasto Total (servicios)» y
+sumaba solo el Detalle por Servicio; el gasoil vivía en su propio panel sin entrar en ninguna cifra
+global del módulo — US$ 51.518,95 en la 26/27, un 3,6% del gasto. Por eso el módulo cerraba en
+1.394.404,71 y el Resumen Ejecutivo en 1.445.923,66, y no había forma de ver de dónde salía la
+diferencia sin sumar los dos paneles a mano.
+
+La corrección: el Gasto Total suma las cuatro patas (labor propia, labor de terceros, insumos y
+combustible), hay un KPI propio de **Costo Combustible**, y el gráfico de **Gasto Acumulado de
+Campaña** también cuenta el gasoil (`monthTotals`) — sin eso, el último punto del gráfico habría
+quedado en 1.394k contra un KPI de 1.446k, que es el mismo problema mudado de lugar.
+
+El combustible se lee de `gasoil_sec` con los **mismos filtros** que usa `renderGasoil`, así que el
+KPI dice exactamente lo que suma el panel de Consumo de Gasoil por Área que está más abajo.
+
+**Los porcentajes suman 100,0 exacto.** Van con un decimal: a entero, los tres daban **101%**
+(46,62 + 49,82 + 3,56 redondea a 47 + 50 + 4). Pero un decimal solo no alcanzaba — redondeando cada
+uno por su cuenta, 3 de 28 combinaciones de filtro daban 99,9% o 100,1% (mayo, julio y septiembre).
+Se reparte por **resto mayor**: se redondean los tres y el sobrante, nunca más de 0,1, se le suma al
+más grande. El monto en dólares de cada KPI no se toca; esto es solo el porcentaje del pie.
+
+Composición del gasto de la 26/27:
+
+| | US$ | % |
+|---|---|---|
+| Costo Labor (propia + tercero) | 674.126,50 | 46,6 % |
+| Costo Insumos | 720.278,21 | 49,8 % |
+| Costo Combustible | 51.518,95 | 3,6 % |
+| **Gasto Total** | **1.445.923,66** | **100,0 %** |
+
+De los US$ 674.126,50 de labor, solo **15,73 son propios**: 0,001% del gasto. Es plata
+insignificante, y esa es justamente la razón por la que el hueco podía quedarse años sin que nadie
+lo notara. El problema nunca fue el monto: era que unos KPI se leían como la descomposición completa
+de otro sin serlo, y si mañana crece la labor propia el hueco crece con ella.
+
+Verificado en pantalla: el total cierra al céntimo y los porcentajes suman 100,0 en **28
+combinaciones** — las 4 campañas, los 8 meses y los 16 cultivos.
+
+El módulo tiene **cinco KPI**: Gasto Total, Labores Ejecutadas y los tres de plata. El de
+«OT Confirmadas» se quitó a pedido del usuario (22/09/2026); el conteo de OT sigue en el Resumen
+Ejecutivo y en cada fila del Detalle por Servicio.
+
 ## Qué texto va en la pantalla
 
 El dashboard muestra **cifras y rótulos, no explicaciones**. Un panel dice `17 lotes`, `1 de 11 OT`,
@@ -633,7 +700,7 @@ Con el filtro puesto es el único lugar donde se lee ese subtotal: `1° Disco` s
 
 Qué se puede sumar y qué no:
 
-- **OT Conf., Labor Tercero, Insumos y Costo Total** se suman directo. Ninguna OT se duplica entre
+- **OT Conf., Labor, Insumos y Costo Total** se suman directo. Ninguna OT se duplica entre
   filas: cada una pertenece a un único grupo labor + estadio + contratista + unidad.
 - **Trabajo Ejecutado** se acumula por unidad y no se convierte nunca entre magnitudes. Con la regla
   de arriba hoy siempre sale una sola, pero el acumulado por unidad se conserva: si algún día un

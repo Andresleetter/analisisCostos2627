@@ -17,6 +17,8 @@
 /* Campaña (Servicios) muestra valores cortos tipo "26/27": no necesita el min-width de 200px del
    resto de los selects, así no empuja al filtro de Mes a otra línea. */
 #gcampania{min-width:110px}
+/* Cinco KPI: Gasto Total, Labores Ejecutadas y los tres de plata (labor, insumos, combustible),
+   que reparten el Gasto Total. Ver renderG en render.js. */
 .gkpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-bottom:20px}
 .gkpi{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-lg);padding:13px 14px;box-shadow:var(--shadow-sm)}
 .gkpi .k-lab{font-size:10.5px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.3px}
@@ -74,7 +76,11 @@
 .sopbar{display:inline-block;width:100%;min-width:80px;height:9px;background:#eef2ec;border-radius:var(--radius-bar);overflow:hidden}
 .sopbar>div{height:100%;background:var(--teal);border-radius:var(--radius-bar)}
 .scroll-tall{max-height:640px}
-@media(max-width:900px){.gkpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:1200px){.gkpis{grid-template-columns:repeat(3,minmax(0,1fr))}}
+/* A dos columnas la tarjeta queda en ~155px y el valor del Gasto Total — el mas largo,
+   "US$ 1.445.923,66" — se cortaba por 6px a 21px de fuente. */
+@media(max-width:900px){.gkpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .gkpi .k-val{font-size:18px}}
 /* Cultivo (Servicios): valores cortos tipo "ARROZ" — mismo criterio que #gcampania, no necesita
    el min-width de 200px del resto de los selects para no empujar la barra a otra línea. */
 #gcultivo{min-width:150px}
