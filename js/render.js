@@ -1924,20 +1924,22 @@ function renderTerceros(){
   const mes=mesV==='ALL'?'ALL':parseInt(mesV);
   const ter=document.getElementById('terctercero').value;
   const T=todas.filter(r=>(mes==='ALL'||r.mesnum===mes) && (ter==='ALL'||r.tercero===ter));
-  const desc=T.filter(r=>r.descontar);
-  const impD=desc.reduce((s2,r)=>s2+r.imp,0), impT=T.reduce((s2,r)=>s2+r.imp,0);
-  const horasT=T.reduce((s2,r)=>s2+(r.horas||0),0);
   document.getElementById('terc-sub').textContent = T.length
     ? T.length+' OT · '+[...new Set(T.map(r=>r.tercero))].length+' tercero(s)'
     : '';
   const by={};
   T.forEach(r=>{ (by[r.tercero]=by[r.tercero]||{tercero:r.tercero,imp:0,impD:0,horas:0,ots:[]}); const b=by[r.tercero];
     b.imp+=r.imp; b.horas+=r.horas||0; if(r.descontar) b.impD+=r.imp; b.ots.push(r); });
+  // ---- Primero las OT de cada tercero, y DEBAJO su total ----
+  // El total iba arriba, como encabezado del grupo, y se leeía como si fuera una fila mas de la
+  // tabla: un importe antes de las OT que lo forman no se entiende como total (decision del usuario,
+  // 22/09/2026). Abajo funciona como un subtotal de toda la vida — primero los items, despues la
+  // suma, con la linea de separacion arriba del subtotal.
+  //
+  // El nombre del tercero va en esa fila de subtotal, que es el unico lugar donde aparece: las OT
+  // de un bloque se leen como el detalle de la linea que las cierra.
   let html='';
   Object.values(by).sort((a,b)=>b.imp-a.imp).forEach(b=>{
-    html+=`<tr class="grp neutra"><td><b>${escHtml(String(b.tercero))}</b></td>`+
-      `<td colspan="2">${b.ots.length} OT`+(b.impD?` · US$ ${fmtUSD(b.impD)} a descontar`:'')+`</td>`+
-      `<td class="tr mono">${b.horas?fmt1(b.horas):'—'}</td><td class="tr mono col-tot">US$ ${fmtUSD(b.imp)}</td></tr>`;
     b.ots.forEach(r=>{
       const tag=r.descontar?'<span class="tag tag-desc">a descontar</span>':'';
       html+=`<tr class="det-over neutra"><td class="dl mono">OT ${escHtml(String(r.ot))} ${tag}</td>`+
@@ -1947,17 +1949,24 @@ function renderTerceros(){
         `<td class="tr mono">${r.horas?fmt1(r.horas):'—'}</td>`+
         `<td class="tr mono">US$ ${fmtUSD(r.imp)}</td></tr>`;
     });
+    html+=`<tr class="grp neutra terc-sub"><td><b>${escHtml(String(b.tercero))}</b></td>`+
+      `<td colspan="2">${b.ots.length} OT`+(b.impD?` · US$ ${fmtUSD(b.impD)} a descontar`:'')+`</td>`+
+      `<td class="tr mono">${b.horas?fmt1(b.horas):'—'}</td><td class="tr mono col-tot">US$ ${fmtUSD(b.imp)}</td></tr>`;
   });
   document.getElementById('tercbody').innerHTML = html ||
     '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px">Sin OT en el período</td></tr>';
-  // El total va en <tfoot> y no como una fila mas del cuerpo: asi no se mezcla con los grupos al
-  // ordenar ni queda a merced del estado vacio.
-  document.getElementById('tercfoot').innerHTML = T.length
-    ? `<tr class="tot"><td><b>Total</b></td><td colspan="2">${T.length} OT`+
-      (impD?` · US$ ${fmtUSD(impD)} a descontar`:'')+`</td>`+
-      `<td class="tr mono">${horasT?fmt1(horasT):'—'}</td>`+
-      `<td class="tr mono"><b>US$ ${fmtUSD(impT)}</b></td></tr>`
-    : '';
+  // ---- Sin fila de Total ----
+  // No hay ningun caso en que sirva, y los dos motivos son distintos:
+  //
+  //  · Con el filtro de Tercero puesto queda UN grupo, y su fila ya dice exactamente lo mismo que
+  //    diría el Total (mismas OT, mismas horas, mismo costo, mismo "a descontar"). Ver la cifra dos
+  //    veces seguidas hace dudar de si son dos numeros distintos.
+  //  · Con el filtro en "Todos" el Total sumaria plata de contratistas DISTINTOS, que no es una
+  //    cifra que se use para nada: a cada tercero se le descuenta lo suyo, no una bolsa comun.
+  //
+  // Los dos juntos no dejan ningun caso vivo, asi que el pie se fue entero (decision del usuario,
+  // 22/09/2026). La fila de cada tercero sigue siendo su total, que es el numero que se usa. El
+  // conteo global de OT y de terceros sigue en el subtitulo del panel (#terc-sub).
 }
 // Opciones de los dos filtros propios del panel. Se repueblan en cada render porque dependen de la
 // campania y del cultivo elegidos arriba; si el valor que estaba elegido ya no existe, vuelve a

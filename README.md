@@ -759,8 +759,26 @@ después de Campaña y Cultivo, y si el valor elegido deja de existir vuelve sol
 
 **Presentación.** Las filas reusan la estructura de grupo + detalle de los paneles de exceso, pero
 con la clase `.neutra`, que apaga el tinte rojo: ahí el rojo significa hallazgo y esto es
-información, no un error. El pie de la tabla (`<tfoot>`) lleva el total de OT, horas e importe del
-filtro activo, y cuánto de eso pide descuento.
+información, no un error.
+
+La fila de cada tercero va **debajo de sus OT**, no arriba (se cambió el 22/09/2026). Arriba se
+leía como una fila más de la tabla: un importe puesto antes de las OT que lo forman no se entiende
+como total. Abajo funciona como un subtotal de toda la vida — primero los ítems, después la suma,
+con la línea de separación justo encima. El nombre del tercero va en esa fila, que es el único
+lugar donde aparece: las OT de un bloque se leen como el detalle de la línea que las cierra.
+
+**La tabla no tiene fila de Total** (se quitó el 22/09/2026). No hay ningún caso en que sirva, y
+los dos motivos son distintos:
+
+- Con el **filtro de Tercero puesto** queda un solo grupo, y su fila ya dice exactamente lo mismo
+  que diría el Total: mismas OT, mismas horas, mismo costo, mismo « a descontar ». Ver la cifra
+  dos veces seguidas hace dudar de si son dos números distintos.
+- Con el filtro en **« Todos »** el Total sumaría plata de contratistas distintos, y esa cifra no
+  se usa para nada: a cada tercero se le descuenta lo suyo, no hay una bolsa común.
+
+La fila de cada tercero **es** su total, que es el número que se usa de verdad. El conteo global
+de OT y de terceros sigue en el subtítulo del panel. Verificado sobre las 12 combinaciones de los
+dos filtros: en ninguna aparece un Total.
 
 Hoy son **20 OT y US$ 3.425,34**, de los cuales **US$ 2.200,92 en 9 OT piden el descuento**:
 
