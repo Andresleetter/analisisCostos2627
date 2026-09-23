@@ -1243,8 +1243,10 @@ function renderAlertas(){
     const rowCls = sev?` class="al-${sev}"`:'';
     const diasCell = sinComparacionValida ? `<span class="mono">-</span>`
       : sev ? `<span class="pill pill-${sev}">${a.diasTranscurridos}d</span>` : `<span class="mono">${a.diasTranscurridos}d</span>`;
-    return `<tr${rowCls}><td>${diasCell}</td><td class="mono">OT ${a.ot}</td><td>${a.act}</td><td>${a.serv}</td><td class="mono">${a.lote}</td><td>${a.cult}</td><td>${a.estado}</td><td class="mono">${ft}</td></tr>`;}).join('')
-    : '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:16px">Sin OT para el filtro seleccionado</td></tr>';
+    // Contratista: misma traduccion que el Detalle por Servicio (labelContratista), para que
+    // una OT sin el campo cargado diga "Sin contratista" y no una celda vacia.
+    return `<tr${rowCls}><td>${diasCell}</td><td class="mono">OT ${a.ot}</td><td>${a.act}</td><td>${a.serv}</td><td class="mono">${a.lote}</td><td>${a.cult}</td><td>${escHtml(labelContratista(a.contr))}</td><td>${a.estado}</td><td class="mono">${ft}</td></tr>`;}).join('')
+    : '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:16px">Sin OT para el filtro seleccionado</td></tr>';
 }
 
 // ---- Insumos (no combustible): filtros dependientes Tipo de Insumo -> Insumo, + Mes ----
