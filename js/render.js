@@ -1608,7 +1608,15 @@ function cultivoSeleccionado(){ const sel=document.getElementById('gcultivo'); r
 // serviciosActivos() directo, para que los tres muestren siempre el mismo conjunto.
 // poblarFiltrosServicios() sí usa serviciosActivos(): las opciones de los selectores son las de la
 // campaña completa y no dependen del cultivo elegido (elegir un cultivo no reinicia los demás filtros).
-function serviciosFiltrados(){ return filtrarServiciosPorCultivo(serviciosActivos(), cultivoSeleccionado()); }
+// Lote elegido en el filtro. Se aplica DESPUES del de Cultivo y con el mismo mecanismo: los dos
+// componen, y como la lista de lotes ya viene acotada al cultivo elegido no puede quedar una
+// combinacion imposible.
+function loteSeleccionado(){ const sel=document.getElementById('glote'); return sel?sel.value:'ALL'; }
+function serviciosFiltrados(){
+  return filtrarServiciosPorLote(
+    filtrarServiciosPorCultivo(serviciosActivos(), cultivoSeleccionado()),
+    loteSeleccionado());
+}
 // Opciones de Mes / Labor / Etapa / Contratista: dependen de la campaña activa, así que se
 // repueblan al cargar y en cada cambio de campaña. Si el valor que estaba elegido sigue existiendo
 // en la campaña nueva se conserva; si no existe, vuelve a "ALL" (nunca queda un filtro apuntando a
@@ -1630,7 +1638,36 @@ function poblarFiltrosServicios(){
   llenar('glabor', S.labores.map(l=>({val:l})), v=>v.val);
   llenar('gestadio', S.estadios_labor.map(e=>({val:e})), v=>v.val);
   llenar('gcontratista', S.contratistas_labor.map(c=>({val:c})), v=>labelContratista(v.val));
+  poblarLotesServicios();
 }
+// ---- Lote: unico filtro DEPENDIENTE del modulo ----
+// Los demas selectores muestran siempre las opciones de la campania entera. El de Lote no puede:
+// hoy son 183 lotes en 26/27 y una lista plana no se puede recorrer. Con un cultivo elegido se
+// acota a los lotes de ese cultivo; con "Todos" se muestran todos.
+//
+// Un mismo nombre de lote puede existir en dos cultivos (por eso lotes_labor los guarda por
+// lote+cultivo, ver servicios.js). Con Cultivo en "Todos" esos duplicados se colapsan a una sola
+// opcion, que es lo correcto: el valor del <option> es el nombre del lote, y filtrar por el trae
+// las OT de los dos cultivos — igual que pasaria eligiendo el lote sin decir el cultivo.
+//
+// Si el lote que estaba elegido no existe en el cultivo nuevo, vuelve solo a "Todos": nunca queda
+// un filtro apuntando a un valor inexistente, que dejaria la pestaña vacia sin explicacion. Es la
+// misma regla que usa llenar() en poblarFiltrosServicios().
+function poblarLotesServicios(){
+  const S=serviciosActivos(), cultV=cultivoSeleccionado();
+  const sel=document.getElementById('glote');
+  if(!sel) return;
+  const previo=sel.value;
+  const lotes=(S.lotes_labor||[]).filter(l=>cultV==='ALL' || l.cultivoKey===cultV);
+  const vistos=new Set();
+  sel.querySelectorAll('option:not([value=ALL])').forEach(o=>o.remove());
+  lotes.forEach(l=>{ if(vistos.has(l.val)) return; vistos.add(l.val);
+    const o=document.createElement('option'); o.value=l.val; o.textContent=l.lbl; sel.appendChild(o); });
+  sel.value=[...sel.options].some(o=>o.value===previo)?previo:'ALL';
+}
+// Cambio de cultivo: primero se reconstruye la lista de lotes, recien despues se re-renderiza —
+// mismo patron que el cambio de campaña y que la cascada Tipo -> Insumo del modulo Insumos.
+function cambiarCultivoServicios(){ poblarLotesServicios(); renderG(); }
 // Cambio de campaña: primero se repueblan los filtros dependientes (Mes/Labor/Etapa/Contratista),
 // recién después se re-renderiza — mismo patrón que el filtro dependiente de Insumos.
 function cambiarCampaniaServicios(){ poblarFiltrosServicios(); renderG(); }
@@ -1663,7 +1700,8 @@ function renderG(){
   // El redondeo de los porcentajes a entero tapaba lo primero: 48% + 52% daba 100% justo aunque
   // faltara plata. Ahora los tres porcentajes se calculan sobre el total que SI incluye todo.
   //
-  // El desglose propia/tercero no se perdio: el Detalle por Servicio conserva sus columnas.
+  // El Detalle por Servicio ya no muestra el desglose propia/tercero/insumos (solo el Costo
+  // Total), pero el modelo lo sigue calculando: es lo que usan estos KPIs.
   const totLabor=labs.reduce((s,l)=>s+l.prop+l.terc,0), totIns=labs.reduce((s,l)=>s+l.ins,0);
   const gasto=totLabor+totIns+totComb;
   // ---- Los tres porcentajes suman 100,0 exacto, siempre ----
@@ -1770,7 +1808,7 @@ function svDetalleOTs(l, sinEjec){
       `<td class="sv-obs">${obs?obsHtml(obs):'<span class="ip-sin">—</span>'}</td></tr>`;
   }).join('');
   const conObs=ots.filter(o=>String(o.obs||'').trim()).length;
-  return `<tr class="sv-det"><td colspan="8"><div class="sv-det-tit">${ots.length} orden(es) de trabajo · ${escHtml(l.labor)} · ${escHtml(l.estadio)}`+
+  return `<tr class="sv-det"><td colspan="6"><div class="sv-det-tit">${ots.length} orden(es) de trabajo · ${escHtml(l.labor)} · ${escHtml(l.estadio)}`+
     (ots.length?` · ${conObs}/${ots.length} con observación`:'')+`</div>`+
     `<div class="sv-det-wrap"><table class="sv-ots"><thead><tr><th>OT</th><th>Fecha</th><th>Cultivo</th><th>Lote</th>`+
     `<th class="tr">Trabajo Ejecutado</th><th class="tr">Costo Total</th><th>Observaciones</th></tr></thead><tbody>${filas}</tbody></table></div>`+
@@ -1824,7 +1862,7 @@ function renderLaborDetalle(){
     // trabajo (l.unidadTrabajo, ver dmap en js/data/servicios.js). Nunca se convierte ni se suma
     // entre unidades. El formato de la celda lo resuelve celdaTrabajoEjecutado(), la misma función
     // que usa cada OT del desplegable.
-    const sinEjec=SERVICIOS_SIN_TRABAJO_EJECUTADO.includes(normHdr(l.labor));
+    const sinEjec=servicioEnLista(l.labor, SERVICIOS_SIN_TRABAJO_EJECUTADO);
     const ejec=celdaTrabajoEjecutado(l.unidadTrabajo,{ha:l.ha,horas:l.horas,kg:l.kg,ins:l.ins_lineas,trabajos:l.trabajos},sinEjec);
     // El chip de unidad de la columna Servicio solo existe para las tres unidades MEDIDAS: sin
     // trabajo ejecutado no hay unidad que rotular, y 'ins'/'trabajos' son conteos, no unidades.
@@ -1835,12 +1873,13 @@ function renderLaborDetalle(){
     // "Ver detalle") y el clic se atiende delegado sobre #gld, ver js/events.js.
     const clave=claveFilaServicio(l);
     const abierta=servFilaAbierta===clave;
-    // Labor Propia no tiene costo de tercero asignado en el sistema (siempre US$ 0 en la columna
-    // "Labor Tercero") — no hay columna de costo separada para Labor Propia en esta tabla.
-    let html=`<tr class="sv-fila${abierta?' open':''}" data-fila="${encodeURIComponent(clave)}"><td><span class="lname">${l.labor}</span> ${chip}</td><td><span class="chip chip-etapa">${l.estadio}</span></td><td class="tr mono"><span class="ip-caret">${abierta?'▾':'▸'}</span> ${l.n}</td><td class="tr mono">${ejec}</td><td class="tr mono col-terc">US$ ${fmtUSD(l.terc)}</td><td class="col-contratista" title="${contratistaTxt}">${contratistaTxt}</td><td class="tr mono col-ins">US$ ${fmtUSD(l.ins)}</td><td class="tr mono col-tot">US$ ${fmtUSD(l.tot)}</td></tr>`;
+    // La fila muestra solo el Costo Total (propia + tercero + insumos): las columnas "Labor
+    // Tercero" e "Insumos" se quitaron a pedido del usuario. l.terc y l.ins se siguen acumulando
+    // porque forman l.tot.
+    let html=`<tr class="sv-fila${abierta?' open':''}" data-fila="${encodeURIComponent(clave)}"><td><span class="lname">${l.labor}</span> ${chip}</td><td><span class="chip chip-etapa">${l.estadio}</span></td><td class="tr mono"><span class="ip-caret">${abierta?'▾':'▸'}</span> ${l.n}</td><td class="tr mono">${ejec}</td><td class="col-contratista" title="${contratistaTxt}">${contratistaTxt}</td><td class="tr mono col-tot">US$ ${fmtUSD(l.tot)}</td></tr>`;
     if(abierta) html+=svDetalleOTs(l, sinEjec);
     return html;
-  }).join('') : '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:16px">Sin registros para el filtro seleccionado</td></tr>')
+  }).join('') : '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:16px">Sin registros para el filtro seleccionado</td></tr>')
     + filaTotalServicios(labs, hayFiltro);
 }
 
@@ -1854,7 +1893,7 @@ function renderLaborDetalle(){
 // se despliega.
 //
 // Qué se puede sumar y qué no:
-//  · OT Conf., Labor Tercero, Insumos y Costo Total se suman directo. Las OT no se duplican entre
+//  · OT Conf. y Costo Total se suman directo. Las OT no se duplican entre
 //    filas — cada OT pertenece a un único grupo labor+estadio+contratista+unidad (ver el comentario
 //    de agrupación más arriba), así que sumar `n` no cuenta ninguna dos veces.
 //  · Trabajo Ejecutado NO se puede sumar entre unidades distintas: 1.717 ha y 320 hrs no hacen
@@ -1869,13 +1908,13 @@ function renderLaborDetalle(){
 function filaTotalServicios(labs, hayFiltro){
   if(!hayFiltro || labs.length < 2) return '';
   const CANT = {hrs:'horas', kg:'kg', ins:'ins_lineas', trabajos:'trabajos'};
-  const t = {n:0, terc:0, ins:0, tot:0};
+  const t = {n:0, tot:0};
   const porUnidad = {};
   const contratistas = new Set();
   labs.forEach(l=>{
-    t.n += l.n; t.terc += l.terc; t.ins += l.ins; t.tot += l.tot;
+    t.n += l.n; t.tot += l.tot;
     contratistas.add(l.contratista);
-    if(SERVICIOS_SIN_TRABAJO_EJECUTADO.includes(normHdr(l.labor))) return;
+    if(servicioEnLista(l.labor, SERVICIOS_SIN_TRABAJO_EJECUTADO)) return;
     const u = l.unidadTrabajo;
     porUnidad[u] = (porUnidad[u]||0) + (l[CANT[u]||'ha']||0);
   });
@@ -1888,9 +1927,7 @@ function filaTotalServicios(labs, hayFiltro){
     : contratistas.size+' contratistas';
   return `<tr class="sv-total"><td colspan="2">Total<span class="sv-tot-n">${labs.length} combinaciones</span></td>`+
     `<td class="tr mono">${t.n}</td><td class="tr mono">${ejec}</td>`+
-    `<td class="tr mono col-terc">US$ ${fmtUSD(t.terc)}</td>`+
     `<td class="col-contratista" title="${contr}">${contr}</td>`+
-    `<td class="tr mono col-ins">US$ ${fmtUSD(t.ins)}</td>`+
     `<td class="tr mono col-tot">US$ ${fmtUSD(t.tot)}</td></tr>`;
 }
 

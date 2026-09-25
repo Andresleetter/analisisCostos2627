@@ -137,6 +137,11 @@
            con ARROZ/SOJA/SORGO/MAIZ primero. -->
       <label for="gcultivo">Cultivo</label>
       <select id="gcultivo"><option value="ALL">Todos</option></select>
+      <!-- Lote: mismo alcance que Cultivo (vuelve a sumar los grupos, ver filtrarServiciosPorLote en
+           js/data/servicios.js). Es DEPENDIENTE del Cultivo: elegir uno acota la lista a sus lotes;
+           con Cultivo en "Todos" se ven todos. Ver poblarLotesServicios en render.js. -->
+      <label for="glote">Lote</label>
+      <select id="glote"><option value="ALL">Todos</option></select>
       <span class="fnote" id="gnote"></span></div>
     <div class="gkpis" id="gkpis"></div>
     <div class="panel hero-panel"><h3>Detalle por Servicio <span id="gld-sub"></span></h3>
@@ -155,9 +160,11 @@
         <!-- La columna "OT Conf." lleva el caret ▸/▾: cada fila se despliega y muestra las OT
              individuales que la componen (OT · Fecha · Cultivo · Lote · Trabajo Ejecutado · Costo
              Total), sin columna extra de "Ver detalle" — ver renderLaborDetalle (render.js). -->
+        <!-- Solo el Costo Total: las columnas "Labor Tercero" e "Insumos" se quitaron a pedido del
+             usuario. El modelo sigue calculando las tres partes (l.prop/l.terc/l.ins), que usan los
+             KPIs de la pestaña. -->
         <th>Servicio</th><th>Estadio</th><th class="tr">OT Conf.</th><th class="tr">Trabajo Ejecutado</th>
-        <th class="tr grp-pt">Labor Tercero</th><th>Contratista</th>
-        <th class="tr">Insumos</th><th class="tr">Costo Total</th></tr></thead><tbody id="gld"></tbody></table></div></div>
+        <th>Contratista</th><th class="tr">Costo Total</th></tr></thead><tbody id="gld"></tbody></table></div></div>
     <div class="panel sub"><h3>Consumo de Gasoil por Área</h3>
       <div class="sop-top" id="gastop"></div>
       <div class="scroll"><table><thead><tr><th>Área</th><th class="tr">OT</th><th class="tr">Litros</th><th class="tr">Total Pagado</th><th class="tr">Participación</th><th class="tr">%</th></tr></thead><tbody id="gasbody"></tbody></table></div></div>

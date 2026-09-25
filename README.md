@@ -100,8 +100,9 @@ Lo que lo hacía difícil de ver es que **los porcentajes cerraban igual**: los 
 gasto` y `52% del gasto`, 100% justo, porque el redondeo a entero se comía el 0,001% que faltaba.
 
 La corrección: el KPI cuenta **toda la labor, propia más tercero** (decisión del usuario — un solo
-KPI de labor, no uno nuevo para la propia). El desglose no se perdió: el Detalle por Servicio sigue
-teniendo sus columnas separadas.
+KPI de labor, no uno nuevo para la propia). Desde el 24/09/2026 el Detalle por Servicio muestra
+solo el **Costo Total** de cada fila (se quitaron las columnas Labor Tercero e Insumos a pedido del
+usuario); el modelo sigue calculando las tres partes y los KPIs las usan.
 
 **Hueco 2: el combustible quedaba afuera del total.** El KPI se llamaba «Gasto Total (servicios)» y
 sumaba solo el Detalle por Servicio; el gasoil vivía en su propio panel sin entrar en ninguna cifra
@@ -666,13 +667,23 @@ Las opciones se recalculan por campaña, en este orden: `Todos`, después los pr
 
 > El selector se arma sobre **todas** las OT confirmadas de la campaña (las del Detalle por Servicio y las de retiro de gasoil), para que el filtro sea una partición completa del módulo y ningún registro quede fuera de su alcance. Por eso puede aparecer un cultivo que solo tenga OT de gasoil — hoy `SECADERO` en 26/27 y `OPERATIVO` en 25/26 —: ahí el Detalle por Servicio queda vacío y el consumo de gasoil no.
 
+### Filtro de Lote
+
+Va **después de Cultivo** y es el mismo mecanismo un nivel más abajo: `filtrarServiciosPorLote()` (`servicios.js`) vuelve a sumar cada grupo sobre sus propias OT de ese lote, con las mismas funciones de siempre. KPIs, gasto acumulado, Detalle por Servicio y Consumo de Gasoil quedan expresados sobre `Campaña + Mes + Cultivo + Lote`. Con `Todos` devuelve el paquete original sin recalcular nada.
+
+Los dos filtros **componen**: se aplica primero Cultivo y después Lote, y el resultado es el mismo en cualquier orden. Verificado contra el dato: la suma de los **183 lotes** de la 26/27 da el total del módulo (`US$ 1.512.585`, con 22 centésimos de diferencia por el redondeo por grupo que ya arrastran todas las vistas), y no hay ninguna OT sin lote.
+
+**Es el único filtro dependiente del módulo.** Los demás selectores muestran siempre las opciones de la campaña entera; el de Lote no puede — son 183 lotes en la 26/27 y una lista plana no se recorre. Con un cultivo elegido se acota a los suyos: ARROZ deja 137, MAIZ deja 5. Si el lote elegido no existe en el cultivo nuevo, el selector vuelve solo a `Todos`, la misma regla que ya usa el cambio de campaña.
+
+> **Un mismo nombre de lote puede existir en dos cultivos.** Hoy hay **211 pares lote+cultivo** sobre 183 nombres distintos, así que 28 nombres están repartidos. Por eso `lotes_labor` los guarda por `lote+cultivo` y no por lote solo. Con Cultivo en `Todos` esos duplicados se colapsan en una sola opción y filtrar por ella trae las OT de los dos cultivos — que es exactamente lo que se está pidiendo al elegir un lote sin decir el cultivo. El `.69`, por ejemplo, da `US$ 5.797,04` suelto y `US$ 4.673,72` acotado a MAIZ.
+
 ### Detalle por Servicio desplegable
 
 Cada fila se abre con clic (caret `▸`/`▾` en la celda **OT Conf.**, sin columna extra de "Ver detalle") y muestra las OT que la componen: `OT · Fecha · Cultivo · Lote · Trabajo Ejecutado · Costo Total`. Una sola fila abierta a la vez; si la fila deja de estar en el resultado tras cambiar un filtro, se cierra sola.
 
 El desplegable **no recalcula nada ni vuelve a leer `consultaOT`**: recorre `l.ots`, el resumen que `construirServicios()` dejó guardado en el mismo recorrido con que sumó el grupo, sobre las OT **ya agrupadas** por `agruparOTS()` — por eso una OT con varias líneas (servicio + labor + insumos) aparece **una sola vez**. `Trabajo Ejecutado` usa `celdaTrabajoEjecutado()`, la misma función que la fila principal, con la unidad del grupo: hectáreas, horas, kilos, `3 insumos utilizados` en Tratamiento de semillas o `2 trabajos` en Camión + grúa. `Costo Total` de cada OT es su aporte real al grupo (`Labor Propia + Labor Tercero + Insumos`), sin redondear antes de sumar. Orden: fecha ascendente y, a igual fecha, número de OT ascendente.
 
-Verificado contra el dato real: en las 4 campañas y sus 175 grupos, la cantidad de OT del desplegable coincide con `OT Conf.` y las sumas de `ha`, `horas`, `kg`, líneas de insumo, trabajos y los tres importes coinciden con la fila principal (hasta un centavo de redondeo de presentación); ninguna OT aparece en dos grupos.
+Verificado contra el dato real: en las 4 campañas y sus 175 grupos, la cantidad de OT del desplegable coincide con `OT Conf.` y las sumas de `ha`, `horas`, `kg`, líneas de insumo, trabajos y el costo coinciden con la fila principal (hasta un centavo de redondeo de presentación); ninguna OT aparece en dos grupos.
 
 **Columna Observaciones.** Última columna del desplegable, con la observación de la OT **completa, sin recortar**. Es donde constan las cosas que ningún número dice — el sobrepase que la propia OT declara con su número de boleta, el trabajo hecho para un tercero, la labor parcial — y justo el final del texto es donde suele estar la aclaración, así que truncarla dejaría afuera lo que importa. El encabezado del desplegable dice cuántas de las OT del grupo la traen (`63/64 con observación`), que de un vistazo distingue un grupo sin cargar de uno donde no hay nada que aclarar.
 
@@ -700,7 +711,7 @@ Con el filtro puesto es el único lugar donde se lee ese subtotal: `1° Disco` s
 
 Qué se puede sumar y qué no:
 
-- **OT Conf., Labor, Insumos y Costo Total** se suman directo. Ninguna OT se duplica entre
+- **OT Conf. y Costo Total** se suman directo. Ninguna OT se duplica entre
   filas: cada una pertenece a un único grupo labor + estadio + contratista + unidad.
 - **Trabajo Ejecutado** se acumula por unidad y no se convierte nunca entre magnitudes. Con la regla
   de arriba hoy siempre sale una sola, pero el acumulado por unidad se conserva: si algún día un
@@ -1056,7 +1067,7 @@ Segundo sub-módulo de la pestaña Auditoría (`js/data/auditoria.js` → `const
 
 > El módulo se construyó primero sobre `consultaInsumos` y se cambió a `consultaOT` a pedido del usuario. El cambio redujo el alcance (de 3.328 movimientos de stock a ~500 aplicaciones, de 2.046 insumos a ~35) pero eliminó el agujero de las hectáreas: las líneas sin superficie pasaron de 2.744 (82%) a 4.
 
-**Validaciones hechas contra el dato real** (sobre las líneas confirmadas no combustibles): `Unidades/Dosis` coincide con `Total Aplicado` en todas; `Unidades/Dosis ÷ Has. Reales` coincide **exactamente** con la columna `dosisReales` que ya trae la hoja — o sea que la "cantidad por hectárea" que muestra el módulo es la misma dosis que registra el sistema, no una interpretación nuestra; ninguna OT trae dos valores distintos de `Has. Reales` entre sus líneas de insumo. El costo usa `Unidades/Dosis × Precio Unitario`, la misma fórmula que todo el dashboard, y **cierra al centavo** con la columna Insumos del módulo Servicios (no se usa la columna `costoInsumo` de la hoja, que difiere en ~US$ 886 por redondeos del origen: tener dos costos distintos conviviendo sería peor).
+**Validaciones hechas contra el dato real** (sobre las líneas confirmadas no combustibles): `Unidades/Dosis` coincide con `Total Aplicado` en todas; `Unidades/Dosis ÷ Has. Reales` coincide **exactamente** con la columna `dosisReales` que ya trae la hoja — o sea que la "cantidad por hectárea" que muestra el módulo es la misma dosis que registra el sistema, no una interpretación nuestra; ninguna OT trae dos valores distintos de `Has. Reales` entre sus líneas de insumo. El costo usa `Unidades/Dosis × Precio Unitario`, la misma fórmula que todo el dashboard, y **cierra al centavo** con los insumos que suma el módulo Servicios (no se usa la columna `costoInsumo` de la hoja, que difiere en ~US$ 886 por redondeos del origen: tener dos costos distintos conviviendo sería peor).
 
 **Sin subtítulos en los paneles, sin fila de KPIs y sin nota de fuente.** Se quitaron a pedido del usuario: las cifras del módulo se leen en los paneles de abajo, que las dan desglosadas —por unidad de medida y por lote— en vez de agregadas en cuatro tarjetas. Los tres paneles —Seguimiento de Receta, Cantidad Utilizada por Unidad de Medida y Resumen por Lote— quedaron solo con su título, y el resumen de receta perdió su línea de pie. Las reglas que decían esos textos (qué hoja alimenta el módulo, las fórmulas de cantidad/costo/hectáreas, de dónde sale la receta, que las unidades nunca se suman entre sí, y que al filtrar por estado de receta los importes de cada lote siguen siendo los del lote completo) están acá y en los comentarios de `construirAuditoriaInsumosParcela` y `renderInsumosParcela`, que es donde sirven.
 

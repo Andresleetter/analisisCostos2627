@@ -78,7 +78,9 @@ document.addEventListener('DOMContentLoaded', function(){
   // Cultivo tiene el mismo alcance que Mes (KPIs, acumulado, Detalle por Servicio y Gasoil por
   // Área), así que dispara el mismo render completo. No repuebla los demás filtros: elegir un
   // cultivo no reinicia Servicio/Estadio/Contratista.
-  document.getElementById('gcultivo').addEventListener('change', renderG);
+  // Cultivo repuebla la lista de Lotes antes de dibujar (cascada Cultivo -> Lote).
+  document.getElementById('gcultivo').addEventListener('change', cambiarCultivoServicios);
+  document.getElementById('glote').addEventListener('change', renderG);
   document.getElementById('glabor').addEventListener('change', renderLaborDetalle);
   document.getElementById('gestadio').addEventListener('change', renderLaborDetalle);
   document.getElementById('gcontratista').addEventListener('change', renderLaborDetalle);

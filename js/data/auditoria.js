@@ -249,7 +249,7 @@ function construirAuditoriaInsumosParcela(rawTodasCampanias){
     // de Servicios. Sin esta exclusion, dividir por 0,01 daria costos por hectarea de decenas de
     // miles de dolares que encabezarian la auditoria siendo un artefacto del marcador. Verificado:
     // las unicas 4 lineas con Has. Reales <= 0,01 son exactamente las de aplicacion con mochila.
-    const sinSuperficie = SERVICIOS_SIN_TRABAJO_EJECUTADO.includes(normHdr(servicio));
+    const sinSuperficie = servicioEnLista(servicio, SERVICIOS_SIN_TRABAJO_EJECUTADO);
     const haRaw = numN(keyOf(r,['hectareasReales','Has. Reales']));
     const ha = (sinSuperficie || haRaw==null || haRaw<=0) ? null : haRaw;
     const lote = String(keyOf(r,['lote','Lote'])||'').trim();
