@@ -361,9 +361,10 @@ const INFRA_HORAS_MARCADOR_SIN_CARGAR = 0.01;
 // sobre el lote sino sobre la semilla, asi que mostrar esas hectareas como "Trabajo Ejecutado"
 // describe mal la labor. Las hectareas NO se borran del modelo (siguen en o.ha, disponibles para
 // dosis y controles agronomicos): solo dejan de ser el valor visible de esa columna.
-// Se compara el NOMBRE COMPLETO normalizado con normHdr, no un prefijo, a diferencia de
-// SIEMBRA_SERVICIOS_NO_SIEMBRA: "Tratamiento de semilla arroz tractor x Hs" es otra labor, se mide
-// realmente en horas y debe seguir mostrandose en horas.
+// Se compara por PREFIJO normalizado, con servicioEnLista() (utils.js). El prefijo llega hasta la
+// "s" de "semillas" a proposito: asi alcanza a "Tratamiento de semillas LABOR PROPIA" (como se
+// llama desde el 25/09/2026) y NO a "Tratamiento de semilla arroz tractor x Hs", que es otra labor,
+// se mide realmente en horas y debe seguir mostrandose en horas.
 const SERVICIOS_TRABAJO_MEDIDO_EN_INSUMOS = ['tratamiento de semillas'];
 // Servicios ejecutados con personal propio, donde el Contratista vacio NO significa "no
 // corresponde" sino que la labor la hizo la empresa. En el Detalle por Servicio se rotulan "Labor
@@ -374,7 +375,7 @@ const SERVICIOS_TRABAJO_MEDIDO_EN_INSUMOS = ['tratamiento de semillas'];
 // tiene ejecucion propia.
 // El rotulo NO sale de esta lista sola: ademas se exige que la OT traiga realmente una linea de
 // tipo "Labor Propia" (ver servicios.js). Si alguna de estas labores se ejecutara con un tercero,
-// se sigue mostrando el contratista real. Se comparan normalizados con normHdr.
+// se sigue mostrando el contratista real. Se comparan por prefijo con servicioEnLista() (utils.js).
 const SERVICIOS_EJECUCION_PROPIA = [
   'tratamiento de semillas',
   'construccion puentes labor propia',
@@ -388,9 +389,11 @@ const SERVICIOS_EJECUCION_PROPIA = [
 // superficie ni a un tiempo de labor. La columna "Trabajo Ejecutado" del Detalle por Servicio
 // (Servicios) muestra "—" para estas filas en vez de un número que no significa nada; los costos
 // (Labor Tercero / Insumos / Total) y la cantidad de OT no se tocan.
-// Se comparan normalizados con normHdr (sin acentos, minúsculas) porque el mismo servicio aparece
-// escrito de dos formas distintas en consultaOT ("Aplicacion de herbicida con mochila" y
-// "Aplicación Herbicida con mochila"), verificado contra el .xlsx.
+// Se comparan por prefijo normalizado con servicioEnLista() (utils.js) — sin acentos, minúsculas —
+// porque el mismo servicio aparece escrito de dos formas distintas en consultaOT ("Aplicacion de
+// herbicida con mochila" y "Aplicación Herbicida con mochila"), verificado contra el .xlsx. Hoy
+// las tres entradas dan el mismo resultado con prefijo que con nombre exacto; se unifica el
+// criterio para que un rename en Albor no rompa una lista y deje las otras dos en pie.
 const SERVICIOS_SIN_TRABAJO_EJECUTADO = [
   'aplicacion de herbicida con mochila',
   'aplicacion herbicida con mochila',

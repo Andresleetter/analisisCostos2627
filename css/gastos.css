@@ -29,7 +29,7 @@
    solo esta celda, no afecta las tablas de Combustible que reutilizan el mismo .scroll/table. */
 .qty-unit{white-space:nowrap}
 .ldt th{font-size:10px} .ldt td{padding:9px 8px} .ldt .lname{font-weight:700;color:var(--ink);font-size:12.5px}
-.col-terc{color:var(--teal);font-weight:800} .col-ins{color:var(--muted)} .col-tot{font-weight:800}
+.col-tot{font-weight:800}
 /* Unidad de la columna "Trabajo Ejecutado" (ha / hrs / kg). Antes iba en un <small> gris claro que
    quedaba casi ilegible al lado del numero; ahora va al mismo tamaño que el resto de la tabla y en
    negrita, para que la unidad se lea de un vistazo sin competir con el valor. El color es el MISMO
@@ -48,7 +48,6 @@
 /* Servicios donde la OT solo aporta insumos (SERVICIOS_SIN_TRABAJO_EJECUTADO): la celda muestra un
    guion gris, no un cero — un 0,00 se leeria como "se ejecuto y dio cero". */
 .tw-sin{color:var(--muted);cursor:default}
-.ldt th.grp-pt{color:var(--teal);border-bottom-color:var(--teal)}
 /* Columna Contratista: nombres reales pueden ser largos (razón social) — se truncan con elipsis y
    tooltip nativo (title) en vez de romper el ancho de la tabla o forzar scroll horizontal. */
 .col-contratista{max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;cursor:default}

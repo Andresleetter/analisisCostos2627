@@ -108,14 +108,14 @@ function acumularGrupoGasoil(meta, ots){
   detOT.forEach(o=>{ const m=o.fr?o.fr.getMonth()+1:0; const est=o.estadio&&o.estadio.trim()?o.estadio.trim():'(Sin estadio)';
     // esTrabajoPorInsumos: labores de SERVICIOS_TRABAJO_MEDIDO_EN_INSUMOS (config.js), donde el
     // trabajo ejecutado se expresa en cantidad de lineas de insumo y no en hectareas/horas/kilos.
-    const esTrabajoPorInsumos = SERVICIOS_TRABAJO_MEDIDO_EN_INSUMOS.includes(normHdr(o.serv));
+    const esTrabajoPorInsumos = servicioEnLista(o.serv, SERVICIOS_TRABAJO_MEDIDO_EN_INSUMOS);
     // El contratista sale del dato, nunca del nombre de la labor: si hay contratista cargado se usa
     // ese (Labor Tercero sigue exactamente igual que antes). El marcador '(Ejecución Labor Propia)'
     // solo se usa cuando la OT trae realmente una linea de tipo "Labor Propia" — ahi el campo no es
     // "No aplica" sino un dato: la labor la ejecuto personal propio. Se limita a las labores de
     // SERVICIOS_EJECUCION_PROPIA (config.js) para no cambiar el texto que ya muestran todas las
     // demas filas del Detalle por Servicio.
-    const ejecucionPropia = SERVICIOS_EJECUCION_PROPIA.includes(normHdr(o.serv))
+    const ejecucionPropia = servicioEnLista(o.serv, SERVICIOS_EJECUCION_PROPIA)
       && o.lines.some(l=>l.tipo==='Labor Propia');
     const contratista = o.contr && o.contr.trim() ? o.contr.trim()
       : (o.tercero>0 ? '(Sin contratista)' : (ejecucionPropia ? '(Ejecución Labor Propia)' : '(Labor Propia)'));
@@ -159,7 +159,10 @@ function acumularGrupoGasoil(meta, ots){
     const litros=o.lines.reduce((s,l)=>s+l.ud,0);
     const cult=cultivoDeOT(o);
     if(!gmap[key]) gmap[key]={meta:{mesnum:m,area,personal:pers},ots:[]};
-    gmap[key].ots.push({ot:o.ot,cultivo:cult.label,cultivoKey:cult.key,litros,total:o.imp}); });
+    // lote: lo necesita filtrarServiciosPorLote, igual que cultivoKey. En las OT de gasoil casi
+    // siempre es el pseudo-lote del area (Operativos, Secadero Arroz, PARCELA ARROZ...), que es
+    // justamente lo que corresponde mostrar si se filtra por uno de ellos.
+    gmap[key].ots.push({ot:o.ot,cultivo:cult.label,cultivoKey:cult.key,lote:o.lote,litros,total:o.imp}); });
   const gasoil_sec=Object.values(gmap).map(g=>acumularGrupoGasoil(g.meta,g.ots));
   // ---- Trabajos para terceros ----
   // Se arma sobre CONFin entero, no sobre detOT ni gasOT: un traslado para un tercero puede venir
@@ -204,6 +207,20 @@ function acumularGrupoGasoil(meta, ots){
   const cultivosVistos=new Map();
   CONFin.forEach(o=>{ const c=cultivoDeOT(o); if(!cultivosVistos.has(c.key)) cultivosVistos.set(c.key,c.label); });
   const prioridad=CULTIVOS.map(c=>normHdr(c));
+  // ---- Lotes para el filtro de Lote ----
+  // Se recorre CONFin entero, igual que los cultivos: asi el selector es una particion completa del
+  // modulo (Detalle por Servicio Y Consumo de Gasoil), y ningun registro queda fuera de su alcance.
+  // Cada lote viaja con su cultivoKey porque el filtro es DEPENDIENTE: elegir un cultivo acota la
+  // lista de lotes a los de ese cultivo (ver poblarLotesServicios en render.js). Un mismo nombre de
+  // lote puede existir en mas de un cultivo, asi que la clave del Set es lote+cultivo y no el lote
+  // solo — de lo contrario el .22 de ARROZ se comeria al .22 de otro cultivo.
+  // Orden natural con numeric:true: .9 antes que .10, y 135 antes que 1350.
+  const lotesVistos=new Map();
+  CONFin.forEach(o=>{ const l=o.lote==null?'':String(o.lote).trim(); if(!l) return;
+    const c=cultivoDeOT(o); const k=l+'|'+c.key;
+    if(!lotesVistos.has(k)) lotesVistos.set(k,{val:l,lbl:l,cultivoKey:c.key}); });
+  const lotes_labor=[...lotesVistos.values()]
+    .sort((a,b)=>a.val.localeCompare(b.val,'es',{numeric:true}) || a.cultivoKey.localeCompare(b.cultivoKey,'es'));
   const cultivos_labor=[...cultivosVistos.entries()].map(([val,lbl])=>({val,lbl}))
     .sort((a,b)=>{
       const ia=prioridad.indexOf(a.val), ib=prioridad.indexOf(b.val);
@@ -213,7 +230,7 @@ function acumularGrupoGasoil(meta, ots){
       return a.lbl.localeCompare(b.lbl,'es');
     });
   return {gastos,gasoil_sec,terceros,meses,gasto_total,gasoil_total,gasoil_litros_total,gmes,glit,
-    labores,estadios_labor,contratistas_labor,cultivos_labor,costo_conf};
+    labores,estadios_labor,contratistas_labor,cultivos_labor,lotes_labor,costo_conf};
   }
 
 // ---- Filtro de Cultivo del modulo Servicios ----
@@ -240,6 +257,33 @@ function filtrarServiciosPorCultivo(S, cultivoKey){
     .filter(g=>g.n>0);
   // Los trabajos para terceros son OT sueltas, no grupos: alcanza con filtrarlas por su cultivo.
   const terceros=(S.terceros||[]).filter(esDelCultivo);
+  return {...S, gastos, gasoil_sec, terceros};
+}
+
+// ---- Filtro de Lote del modulo Servicios ----
+// Mismo mecanismo y mismo alcance que filtrarServiciosPorCultivo, un nivel mas abajo: NO esconde
+// filas ya sumadas, vuelve a sumar cada grupo sobre sus propias OT de ese lote con las mismas
+// funciones del modelo, asi que KPIs, acumulado por mes, Detalle por Servicio y Consumo de Gasoil
+// quedan todos expresados sobre Campania + Cultivo + Lote. Con 'ALL' devuelve el paquete intacto.
+//
+// Se aplica DESPUES del de Cultivo (ver serviciosFiltrados en render.js) y los dos componen sin
+// interferir: filtrar por el lote .22 de ARROZ es filtrar por ARROZ y despues por .22. El selector
+// de Lote ya viene acotado al cultivo elegido, asi que no puede quedar una combinacion vacia por
+// elegir un lote que no pertenece al cultivo.
+//
+// El lote se compara normalizado (trim) contra el mismo campo que alimenta lotes_labor, para que
+// una diferencia de espacios no deje la pestaña en blanco sin explicacion.
+function filtrarServiciosPorLote(S, lote){
+  if(!S || !lote || lote==='ALL') return S;
+  const objetivo=String(lote).trim();
+  const esDelLote=o=>String(o.lote==null?'':o.lote).trim()===objetivo;
+  const gastos=(S.gastos||[])
+    .map(g=>acumularGrupoServicio(metaDeGrupo(g,META_GRUPO_SERVICIO),(g.ots||[]).filter(esDelLote)))
+    .filter(g=>g.n>0);
+  const gasoil_sec=(S.gasoil_sec||[])
+    .map(g=>acumularGrupoGasoil(metaDeGrupo(g,META_GRUPO_GASOIL),(g.ots||[]).filter(esDelLote)))
+    .filter(g=>g.n>0);
+  const terceros=(S.terceros||[]).filter(esDelLote);
   return {...S, gastos, gasoil_sec, terceros};
 }
 

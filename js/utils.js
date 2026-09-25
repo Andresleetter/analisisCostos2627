@@ -51,6 +51,31 @@ function labelContratista(key){
   if(key==='(Ejecución Labor Propia)') return 'Labor Propia';
   return key||'Sin contratista';
 }
+// ---- ¿Este servicio esta en esta lista de servicios? ----
+// Compara por PREFIJO normalizado, no por nombre exacto. Unica funcion que resuelve la pertenencia
+// de un servicio a las listas de config.js (SERVICIOS_TRABAJO_MEDIDO_EN_INSUMOS,
+// SERVICIOS_EJECUCION_PROPIA, SERVICIOS_SIN_TRABAJO_EJECUTADO), para que las tres se comporten
+// igual y no haya dos criterios conviviendo.
+//
+// POR QUE PREFIJO. Las tres listas comparaban el nombre exacto. El 25/09/2026 en Albor renombraron
+// "Tratamiento de semillas" a "Tratamiento de semillas LABOR PROPIA" en 96 OT y las tres reglas
+// dejaron de aplicarse de golpe: el Detalle por Servicio paso a mostrar 1.105,04 ha y 1.507,49 ha
+// como Trabajo Ejecutado (la superficie del lote, justo el numero que estas reglas existen para no
+// mostrar) y el contratista paso de "Labor Propia" a "No aplica". Ningun costo cambio, pero la
+// tabla quedo diciendo otra cosa. Con prefijo, un sufijo agregado al nombre ya no rompe la regla.
+//
+// Es el mismo criterio que ya usaba SIEMBRA_SERVICIOS_NO_SIEMBRA, que por eso NO se vio afectada.
+//
+// El prefijo no se come labores vecinas: verificado contra el .xlsx, "tratamiento de semillas"
+// alcanza solo a "Tratamiento de semillas LABOR PROPIA" y NO a "Tratamiento de semilla arroz
+// tractor x Hs" — que es otra labor, se mide realmente en horas y tiene que seguir en horas. La
+// diferencia esta en la "s" de "semillas", asi que los prefijos de estas listas deben escribirse
+// completos hasta donde la labor se distingue de sus vecinas, nunca recortados de mas.
+function servicioEnLista(servicio, lista){
+  const s = normHdr(servicio);
+  if(!s) return false;
+  return (lista||[]).some(p => s.startsWith(normHdr(p)));
+}
 // Porcentaje seguro: evita division por cero devolviendo null (no NaN/Infinity) cuando no hay una
 // base valida — el llamador decide como mostrar la ausencia de dato (ej. "Sin plan disponible"),
 // en vez de que un 0 o un NaN se cuele silenciosamente en un KPI.

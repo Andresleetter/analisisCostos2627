@@ -48,7 +48,7 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra, recetas, receta
   // cual (no lo recalcula) y agrega uno por cada campania restante de consultaOT.
   const SERVICIOS = construirServicios(CONF);
   const {gastos,gasoil_sec,meses,gasto_total,gasoil_total,gasoil_litros_total,gmes,glit,
-    labores,estadios_labor,contratistas_labor,cultivos_labor} = SERVICIOS;
+    labores,estadios_labor,contratistas_labor,cultivos_labor,lotes_labor} = SERVICIOS;
   const {servicios_campanias,costo_por_campania,costo_total_consolidado} =
     construirServiciosPorCampania(rawTodasCampanias, campanias_ot, SERVICIOS);
 
@@ -94,7 +94,7 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra, recetas, receta
     auditoria_items,auditoria_metros,auditoria_puentes,auditoria_puentes_horas,auditoria_gastos,
     auditoria_siembra,
     gastos,gasoil_sec,meses,gasto_total,gasoil_total,gasoil_litros_total,gmes,glit,
-    labores,estadios_labor,contratistas_labor,cultivos_labor,
+    labores,estadios_labor,contratistas_labor,cultivos_labor,lotes_labor,
     // Solo para el filtro de Campaña del modulo Servicios (ver render.js: serviciosActivos()).
     campanias_ot,servicios_campanias,campania_actual:CAMPANIA_ACTUAL,
     // Costo ejecutado consolidado de todas las campanias + su desglose. Ya NO alimenta el KPI
