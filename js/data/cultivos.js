@@ -566,7 +566,12 @@ function sobrepaseDeclarado(o){
   return OBS_SOBREPASE_DECLARADO.test(String(o.obs || ''));
 }
 
-function construirControlHectareas(OTS, RTK){
+// excesoBaseline = foto de los lotes en exceso y de las labores repetidas TAL COMO estaban en la
+// exportacion anterior del .xlsx (data/exceso-baseline.json, ver README). Sirve para una sola cosa:
+// marcar cuales de los casos de hoy NO estaban antes, o sea cuales aparecieron con esta subida de
+// datos. Si llega null (no se pudo descargar, o es la primera vez) nada se marca como nuevo y el
+// modulo funciona exactamente igual que siempre — el aviso es un agregado, nunca un requisito.
+function construirControlHectareas(OTS, RTK, excesoBaseline){
   // ---- CONTROL DE HECTÁREAS ----
   const RTK_CROPS=['ARROZ','SOJA','SORGO','MAIZ'];
   // Solo OT Confirmadas: una OT Pendiente o En Ejecucion no ejecuto superficie todavia, asi que no
@@ -613,7 +618,10 @@ function construirControlHectareas(OTS, RTK){
         if(diff>EXCESO_MINIMO_HA){
           // `tolerado` son las OT que pasan el plan pero se quedan dentro de la tolerancia de su
           // servicio: se muestran distinto para que no parezca que quedaron fuera por olvido.
-          const dets=g.slice().sort((a,b)=>haTrabajada(b)-haTrabajada(a)).map(o=>({ot:o.ot,act:o.estadio||'-',serv:o.serv||'-',ha:haTrabajada(o),estado:o.estado,
+          // fr = fecha real de la OT, para la columna Fecha del detalle (ver render.js). Es el mismo
+          // campo que ya mostraba el panel de labores repetidas: saber CUANDO se cargo el sobrepase
+          // es lo que distingue un error de carga de una pasada posterior sobre el mismo lote.
+          const dets=g.slice().sort((a,b)=>haTrabajada(b)-haTrabajada(a)).map(o=>({ot:o.ot,act:o.estadio||'-',serv:o.serv||'-',ha:haTrabajada(o),estado:o.estado,fr:o.fr,
             over:supera(o), tolerado:!supera(o) && !sobrepaseDeclarado(o) && haTrabajada(o)>ha_rtk+0.01,
             declarado:sobrepaseDeclarado(o) && haTrabajada(o)>ha_rtk+0.01, obs:o.obs||'',
             tol:toleranciaExceso(o.serv)}));
@@ -664,10 +672,35 @@ function construirControlHectareas(OTS, RTK){
   const peor = exceso.length
     ? exceso.reduce((a,b)=> b.pdiff>a.pdiff ? b : a)
     : null;
+  // ---- Cuales de estos casos son NUEVOS ----
+  // "Nuevo" = no estaba en la exportacion anterior. La clave de un lote en exceso es cultivo+lote;
+  // la de una labor repetida es cultivo+lote+servicio, porque el mismo lote puede tener dos labores
+  // repetidas distintas y son dos hallazgos distintos.
+  //
+  // No se compara por hectareas ni por porcentaje a proposito: un lote que ya estaba y que hoy
+  // excede un poco mas NO es un hallazgo nuevo, es el mismo de siempre. Lo que interesa avisar es
+  // la aparicion, que es lo unico que pide una revision que antes no se hizo.
+  //
+  // Sin baseline (null) nadie queda marcado: mejor no avisar nada que avisar que TODO es nuevo la
+  // primera vez que se carga el archivo.
+  const baseLotes = new Set((excesoBaseline && excesoBaseline.lotes) || []);
+  const baseRepetidas = new Set((excesoBaseline && excesoBaseline.repetidas) || []);
+  const hayBaseline = !!excesoBaseline;
+  exceso.forEach(e=>{ e.nuevo = hayBaseline && !baseLotes.has(e.cult+'|'+e.lote); });
+  repetidas.forEach(r=>{ r.nuevo = hayBaseline && !baseRepetidas.has(r.cult+'|'+r.lote+'|'+r.serv); });
+  const nuevosExceso=exceso.filter(e=>e.nuevo), nuevasRepetidas=repetidas.filter(r=>r.nuevo);
   const exc_kpi={n:exceso.length, ha:Math.round(exceso.reduce((s,e)=>s+e.diff,0)*100)/100,
     n_sinrtk:sinrtk.length,
     peor: peor ? {cult:peor.cult, lote:peor.lote, diff:peor.diff, pdiff:peor.pdiff, ha_rtk:peor.ha_rtk} : null,
     n_repetidas:repetidas.length,
-    ha_repetidas:Math.round(repetidas.reduce((s,r)=>s+r.exceso,0)*100)/100};
+    ha_repetidas:Math.round(repetidas.reduce((s,r)=>s+r.exceso,0)*100)/100,
+    // hay_baseline distingue "no hay ninguno nuevo" de "no se pudo comparar": sin esto, un fallo de
+    // descarga se leeria en pantalla como una campania sin novedades.
+    hay_baseline:hayBaseline,
+    baseline_fecha:(excesoBaseline && excesoBaseline.exportacion_base) || null,
+    n_nuevos:nuevosExceso.length,
+    ha_nuevos:Math.round(nuevosExceso.reduce((s,e)=>s+e.diff,0)*100)/100,
+    n_nuevas_repetidas:nuevasRepetidas.length,
+    ha_nuevas_repetidas:Math.round(nuevasRepetidas.reduce((s,r)=>s+r.exceso,0)*100)/100};
   return {exceso,sinrtk,cancelados,repetidas,exc_kpi};
 }

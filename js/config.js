@@ -478,6 +478,12 @@ const RECETAS_SRC_JSON_RESPALDO = "https://raw.githubusercontent.com/"+REPO+"/"+
 // lote que ya lleva mas labores que la receta conserva las suyas, y un estadio cuya receta salio
 // pobre (mediana 1) no puede bajar ningun numero. Por eso es seguro aplicarla a todos los estadios
 // aunque el export de la campania anterior no cubra el ciclo completo.
+// Foto de Control de Hectareas de la exportacion ANTERIOR del .xlsx: con ella el Resumen
+// Ejecutivo puede decir que excesos aparecieron con la subida de hoy y cuales ya estaban.
+// Se regenera en cada subida de datos (ver README) y es OPCIONAL: si falla la descarga, el
+// dashboard entero funciona igual, solo deja de marcar los casos nuevos.
+const EXCESO_BASELINE_SRC_JSON = SRC_DATA+"exceso-baseline.json";
+const EXCESO_BASELINE_SRC_JSON_RESPALDO = "https://raw.githubusercontent.com/"+REPO+"/"+BRANCH+"/"+SRC_DATA+"exceso-baseline.json";
 const RECETA_LABORES_SRC_JSON = SRC_DATA+"receta-labores-25-26.json";
 const RECETA_LABORES_SRC_JSON_RESPALDO = "https://raw.githubusercontent.com/"+REPO+"/"+BRANCH+"/"+SRC_DATA+"receta-labores-25-26.json";
 // Cuantos lotes necesita un cultivo/estadio para que su propia receta se considere representativa.

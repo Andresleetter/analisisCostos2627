@@ -33,6 +33,18 @@ que se carga con `fetch`+`resp.json()`, **no** con SheetJS, y cuyo fallo nunca b
 Los `.xlsx` se descargan **del propio sitio** por ruta relativa (Cloudflare sirve el repo como
 assets estáticos), con `raw.githubusercontent.com` solo como respaldo. Ver README.
 
+### Al subir datos hay que regenerar `data/exceso-baseline.json`
+
+**Antes** de commitear un `datosCampania2627.xlsx` nuevo, hay que regenerar ese JSON a partir del
+Excel que está en `HEAD`, es decir el de la exportación **anterior**. Es la foto contra la que el
+dashboard decide qué excesos de superficie son nuevos (ver README). Si no se regenera, el aviso
+queda mostrando las novedades de la subida pasada, que es peor que no mostrarlas.
+
+El orden es: sacar el `.xlsx` de `HEAD` con `git show`, correr `buildData()` sobre ese archivo,
+escribir `lotes` (`cultivo|lote`) y `repetidas` (`cultivo|lote|servicio`) ordenados, y recién
+entonces commitear el JSON junto con el `.xlsx` nuevo. El campo `exportacion_base` lleva la fecha
+de esa exportación anterior y se muestra en pantalla.
+
 ## Arquitectura del modelo de datos
 
 `buildData()` en `js/data.js` es solo un **orquestador**: prepara entradas, llama a las funciones de

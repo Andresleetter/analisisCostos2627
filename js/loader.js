@@ -166,6 +166,36 @@ function cargarRecetaLabores(url, urlRespaldo){
     });
 }
 
+// Baseline de Control de Hectareas (data/exceso-baseline.json). Mismo criterio que cargarRecetas:
+// JSON chico, una sola descarga, y si falla NO se propaga el error — Control de Hectareas y el
+// Resumen Ejecutivo siguen funcionando, solo que sin marcar cuales casos son nuevos.
+function cargarExcesoBaseline(url, urlRespaldo){
+  var pedir = function(u){
+    console.log('Iniciando carga:', u);
+    return fetch(conSello(u), {cache:'no-store'}).then(function(resp){
+      console.log('HTTP Status:', resp.status, '(baseline de exceso)');
+      if(!resp.ok) throw new Error('HTTP '+resp.status+' al descargar el baseline de exceso');
+      return resp.json();
+    });
+  };
+  return pedir(url)
+    .catch(function(e){
+      if(!urlRespaldo) throw e;
+      console.warn('No se pudo cargar el baseline de exceso desde el sitio ('+(e.message||e)+'). Reintentando desde GitHub…');
+      return pedir(urlRespaldo);
+    })
+    .then(function(json){
+      if(!json || !Array.isArray(json.lotes) || !Array.isArray(json.repetidas))
+        throw new Error('El JSON de baseline no tiene las listas `lotes` y `repetidas`.');
+      return json;
+    })
+    .catch(function(e){
+      console.error('No se pudo cargar el baseline de exceso:', e.message||e,
+        '— Control de Hectareas funciona igual, pero no se marcan los casos nuevos.');
+      return null;
+    });
+}
+
 // ---- Vigilancia: avisar cuando el sitio ya tiene un .xlsx distinto del que se esta mirando ----
 // El dashboard se deja abierto durante horas y el Excel se actualiza varias veces por dia, asi que
 // la pantalla envejece sin que nada lo indique. Al volver a la pestaña se hace UN pedido HEAD
@@ -312,10 +342,12 @@ function loadData(){
     cargarXLSX('datosCampania2627.xlsx', SRC_XLSX, SRC_XLSX_RESPALDO),
     cargarJSON('presupuesto-infraestructura-26-27.json', INFRA_SRC_JSON, INFRA_SRC_JSON_RESPALDO),
     cargarRecetas(RECETAS_SRC_JSON, RECETAS_SRC_JSON_RESPALDO),
-    cargarRecetaLabores(RECETA_LABORES_SRC_JSON, RECETA_LABORES_SRC_JSON_RESPALDO)
+    cargarRecetaLabores(RECETA_LABORES_SRC_JSON, RECETA_LABORES_SRC_JSON_RESPALDO),
+    cargarExcesoBaseline(EXCESO_BASELINE_SRC_JSON, EXCESO_BASELINE_SRC_JSON_RESPALDO)
   ])
     .then(function(wbs){
-      var wb = wbs[0], jsonInfra = wbs[1], recetas = wbs[2], recetaLabores = wbs[3];
+      var wb = wbs[0], jsonInfra = wbs[1], recetas = wbs[2], recetaLabores = wbs[3],
+          excesoBaseline = wbs[4];
       var consultaOT = hojaARows(wb, HOJA_OT);
       var consultaCultivos = hojaARows(wb, HOJA_CULTIVOS);
       var consultaInsumos = hojaARows(wb, HOJA_INSUMOS);
@@ -331,7 +363,11 @@ function loadData(){
       console.log('Recetas de insumos — registros:', recetas ? recetas.length : '(no disponibles)');
       console.log('Receta de labores — registros:', recetaLabores ? recetaLabores.recetas.length
         + ' (campaña '+recetaLabores.campania_origen+')' : '(no disponible)');
-      try{ D = buildData(consultaOT, consultaCultivos, insumos, presupuestoInfra, recetas, recetaLabores); }
+      console.log('Baseline de exceso — ' + (excesoBaseline
+        ? excesoBaseline.lotes.length+' lote(s) y '+excesoBaseline.repetidas.length
+          +' labor(es) repetida(s) de la exportacion del '+excesoBaseline.exportacion_base
+        : '(no disponible: no se marcan los casos nuevos)'));
+      try{ D = buildData(consultaOT, consultaCultivos, insumos, presupuestoInfra, recetas, recetaLabores, excesoBaseline); }
       catch(e){ console.error('Error al construir indicadores:', e); throw new Error('Error procesando los datos: '+e.message); }
       // D.excel_actualizado se fija UNA sola vez acá, por carga exitosa — nunca se recalcula en
       // render.js ni cambia al navegar entre módulos, usar filtros o abrir/cerrar el menú móvil.

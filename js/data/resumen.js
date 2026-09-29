@@ -148,6 +148,30 @@ function construirResumen(ctx){
       accion:'Ver Control de Hectáreas', destinoTab:4, impacto:exc_kpi.ha});
   }
 
+  // 3b) Excesos que APARECIERON con esta subida de datos — los que no estaban en la exportacion
+  // anterior (ver exceso-baseline.json y construirControlHectareas). Es una tarjeta aparte de la
+  // de arriba a proposito: aquella dice cuanto exceso hay acumulado en la campaña, esta dice que
+  // reviso hoy y no revise ayer. Con 20 lotes en la lista, saber cuales son los 2 nuevos es la
+  // diferencia entre mirar el panel y no mirarlo.
+  //
+  // Solo aparece si HAY baseline: sin comparacion posible no se afirma que no hay novedades.
+  // Cuenta las dos cosas que vigila Control de Hectareas (lotes en exceso y labores repetidas)
+  // porque las dos son "un caso nuevo para revisar", aunque se calculen distinto.
+  if(exc_kpi.hay_baseline && (exc_kpi.n_nuevos || exc_kpi.n_nuevas_repetidas)){
+    const partes=[];
+    if(exc_kpi.n_nuevos) partes.push(exc_kpi.n_nuevos+' lote(s) con superficie sobre RTK (+'+fmt2(exc_kpi.ha_nuevos)+' ha)');
+    if(exc_kpi.n_nuevas_repetidas) partes.push(exc_kpi.n_nuevas_repetidas+' labor(es) repetida(s) (+'+fmt2(exc_kpi.ha_nuevas_repetidas)+' ha)');
+    const total=exc_kpi.n_nuevos+exc_kpi.n_nuevas_repetidas;
+    // Severidad por cantidad, no por hectareas: un caso nuevo se revisa igual sea de 1 ha o de 50,
+    // y lo que satura es la cantidad de casos a mirar, no su tamaño.
+    const sev = total>=5?'alta':(total>=2?'media':'informativa');
+    RP.push({id:'new_overexecution', severidad:sev, titulo:'Excesos de superficie nuevos',
+      descripcion:total+' caso(s) que no estaban en la exportación anterior'
+        +(exc_kpi.baseline_fecha?' ('+exc_kpi.baseline_fecha+')':'')+'.',
+      metrica:total+' nuevo(s)', contexto:partes.join(' · '),
+      accion:'Ver Control de Hectáreas', destinoTab:4, impacto:exc_kpi.ha_nuevos+exc_kpi.ha_nuevas_repetidas});
+  }
+
   // 4) OT sin correspondencia en el plan — reutiliza sinrtk ya calculado en Control de Hectáreas.
   if(sinrtk.length){
     const porCultivo={}; sinrtk.forEach(r=>{ porCultivo[r.cult]=(porCultivo[r.cult]||0)+1; });
