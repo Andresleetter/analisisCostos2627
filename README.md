@@ -677,6 +677,46 @@ Los dos filtros **componen**: se aplica primero Cultivo y después Lote, y el re
 
 > **Un mismo nombre de lote puede existir en dos cultivos.** Hoy hay **211 pares lote+cultivo** sobre 183 nombres distintos, así que 28 nombres están repartidos. Por eso `lotes_labor` los guarda por `lote+cultivo` y no por lote solo. Con Cultivo en `Todos` esos duplicados se colapsan en una sola opción y filtrar por ella trae las OT de los dos cultivos — que es exactamente lo que se está pidiendo al elegir un lote sin decir el cultivo. El `.69`, por ejemplo, da `US$ 5.797,04` suelto y `US$ 4.673,72` acotado a MAIZ.
 
+### Excesos nuevos: qué apareció con esta subida de datos
+
+Control de Héctareas tenía un problema de uso: con **20 lotes en exceso y 23 labores repetidas** en
+la lista, no había forma de saber cuáles ya se habían revisado y cuáles recién aparecían. La lista
+crece y nadie la vuelve a leer entera.
+
+Ahora el dashboard compara contra **`data/exceso-baseline.json`**, una foto de los casos tal como
+estaban en la exportación **anterior** del `.xlsx`. Lo que no esté en esa foto se marca como nuevo:
+
+- una tarjeta propia en **Posibles Problemas** del Resumen Ejecutivo (`new_overexecution`),
+- un pie en los KPI de Control de Hectáreas (`2 nuevo(s)`),
+- y una etiqueta verde **`nuevo`** en la fila de cada caso, en las dos tablas.
+
+La clave de un lote en exceso es `cultivo|lote`; la de una labor repetida es
+`cultivo|lote|servicio`, porque el mismo lote puede tener dos labores repetidas distintas y son dos
+hallazgos separados. **No se compara por hectáreas ni por porcentaje**: un lote que ya estaba y hoy
+excede un poco más no es un hallazgo nuevo, es el de siempre. Lo único que se avisa es la
+aparición, que es lo único que pide una revisión que antes no se hizo.
+
+El archivo es **opcional**. Si no se puede descargar, Control de Hectáreas y el Resumen funcionan
+igual y simplemente no se marca nada; `exc_kpi.hay_baseline` distingue *«no hay ninguno nuevo»* de
+*«no se pudo comparar»*, para que un fallo de red no se lea en pantalla como una campaña sin
+novedades.
+
+> **Se regenera en cada subida de datos**, a partir del `.xlsx` que está en `HEAD` — el de la
+> exportación anterior — y se commitea junto con el nuevo. Si se olvida, el aviso queda mostrando
+> las novedades de la subida pasada. Ver CLAUDE.md.
+
+En la exportación del 29/09/2026, sobre la base del 25/09, dio **10 casos nuevos**: 2 lotes en
+exceso (`.39C` y `.27H` de arroz, +2,38 ha) y 8 labores repetidas (+167,04 ha), de las cuales 6 son
+Fumigación Imperator en sorgo — pasadas sucesivas sobre el mismo lote, no errores de carga.
+
+### La fecha en el detalle de Lotes con Exceso
+
+Las filas de detalle del panel de exceso muestran `OT · Actividad · Servicio · **Fecha** · Estado ·
+Ha`. Es el mismo dato y el mismo formato que ya tenía el panel de labores repetidas, y responde lo
+primero que se pregunta frente a un sobrepase: si se cargó el día de la labor o meses después. La
+celda del servicio dejó de ocupar dos columnas para hacerle lugar, así que la fila sigue teniendo
+las mismas seis celdas que la cabecera.
+
 ### Detalle por Servicio desplegable
 
 Cada fila se abre con clic (caret `▸`/`▾` en la celda **OT Conf.**, sin columna extra de "Ver detalle") y muestra las OT que la componen: `OT · Fecha · Cultivo · Lote · Trabajo Ejecutado · Costo Total`. Una sola fila abierta a la vez; si la fila deja de estar en el resultado tras cambiar un filtro, se cierra sola.

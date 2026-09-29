@@ -7,7 +7,7 @@
 //
 // El contrato de salida (los nombres de las propiedades devueltas) es el que leen render.js y
 // events.js: no se renombra nada aunque internamente venga de otro archivo.
-function buildData(raw, proyecciones, insumos, presupuestoInfra, recetas, recetaLabores){
+function buildData(raw, proyecciones, insumos, presupuestoInfra, recetas, recetaLabores, excesoBaseline){
   const { combustible: combustibleRaw, existenciaInicial, otros: otrosInsumos, excluidos: insumosExcluidosRaw } = insumos || {};
 
   // ---- Base compartida ----
@@ -28,7 +28,7 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra, recetas, receta
   // del avance. Si no se pudo descargar llega null y construirCultivos calcula como siempre.
   const {cultivos,avanceInconsistencias,siembraExcluidas,receta_labores} =
     construirCultivos(OTS, RTK, RTK_TOT, [], recetaLabores);
-  const {exceso,sinrtk,cancelados,repetidas,exc_kpi} = construirControlHectareas(OTS, RTK);
+  const {exceso,sinrtk,cancelados,repetidas,exc_kpi} = construirControlHectareas(OTS, RTK, excesoBaseline);
   const {otsVisibles,otsAtrasadas,totalAtrasadas,TOLERANCIA_ATRASO_DIAS} = construirAlertas(OTS);
   const {operativas,oper_costo,oper_part} = construirOperativas(OTS, costo_total);
   const {auditoria_items,auditoria_metros,auditoria_puentes,auditoria_puentes_horas,auditoria_gastos} =

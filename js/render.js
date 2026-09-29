@@ -38,14 +38,22 @@ function renderAll(){
   renderResumenModulo();
   // TAB3 control ha
   document.getElementById('ha-kpis').innerHTML=
-    `<div class="kpi"><div class="k-lab">Lotes con Exceso</div><div class="k-val c-r">${D.exc_kpi.n}</div></div>`+
+    `<div class="kpi"><div class="k-lab">Lotes con Exceso</div><div class="k-val c-r">${D.exc_kpi.n}</div>`+
+      // Pie con los casos que aparecieron en esta subida de datos (ver exceso-baseline.json). Sin
+      // baseline el pie no se dibuja: no se puede afirmar que no hay novedades si no hubo con que
+      // comparar.
+      `${D.exc_kpi.hay_baseline&&D.exc_kpi.n_nuevos?`<div class="k-foot">${D.exc_kpi.n_nuevos} nuevo(s)</div>`:''}</div>`+
     `<div class="kpi"><div class="k-lab">Ha Excedidas Acum.</div><div class="k-val c-r" style="font-size:22px">+${fmt2(D.exc_kpi.ha)}</div></div>`+
-    `<div class="kpi"><div class="k-lab">Preparación Repetida</div><div class="k-val c-r">${D.exc_kpi.n_repetidas}</div><div class="k-foot">+${fmt2(D.exc_kpi.ha_repetidas)} ha</div></div>`+
+    `<div class="kpi"><div class="k-lab">Preparación Repetida</div><div class="k-val c-r">${D.exc_kpi.n_repetidas}</div><div class="k-foot">+${fmt2(D.exc_kpi.ha_repetidas)} ha`+
+      `${D.exc_kpi.hay_baseline&&D.exc_kpi.n_nuevas_repetidas?` · ${D.exc_kpi.n_nuevas_repetidas} nuevo(s)`:''}</div></div>`+
     `<div class="kpi"><div class="k-lab">OT Fuera de RTK</div><div class="k-val c-r">${D.exc_kpi.n_sinrtk}</div></div>`;
   document.getElementById('exc-sub').textContent=D.exceso.length+' lotes';
   let excHtml='';
   D.exceso.forEach(e=>{
-    excHtml+=`<tr class="grp"><td>${e.cult}</td><td class="mono">${e.lote}</td><td class="tr">${fmt2(e.ha_rtk)}</td><td class="tr">${fmt2(e.ha_ot)}</td><td class="tr exd">+${fmt2(e.diff)}</td><td class="tr exd">+${Math.round(e.pdiff)}%</td></tr>`;
+    // tag "nuevo": este lote no estaba en exceso en la exportacion anterior. Va en la fila del
+    // grupo y no en la de la OT porque lo nuevo es el HALLAZGO, no la orden.
+    const tagNuevo = e.nuevo ? ' <span class="tag tag-nuevo">nuevo</span>' : '';
+    excHtml+=`<tr class="grp"><td>${e.cult}</td><td class="mono">${e.lote}${tagNuevo}</td><td class="tr">${fmt2(e.ha_rtk)}</td><td class="tr">${fmt2(e.ha_ot)}</td><td class="tr exd">+${fmt2(e.diff)}</td><td class="tr exd">+${Math.round(e.pdiff)}%</td></tr>`;
     // Solo se listan las OT que SOBREPASAN el lote. Las que quedan dentro del plan son correctas y
     // no explican nada del exceso: eran 74 de las 95 filas del detalle, tres cuartas partes del
     // panel dedicadas a decir que todo estaba bien. Las toleradas (pasan el plan pero dentro de
@@ -58,8 +66,12 @@ function renderAll(){
     const declaradas=e.dets.filter(x=>x.declarado);
     const ocultas=e.dets.length-culpables.length;
     excHtml+=`<tr class="dethead"><td colspan="6">${culpables.length} de ${e.n_ot} OT</td></tr>`;
+    // Fecha real de la OT: el servicio deja de ocupar dos columnas para hacerle lugar, asi la fila
+    // sigue teniendo las mismas 6 celdas que la cabecera. Es el mismo dato y el mismo formato que
+    // ya muestra el panel de labores repetidas, y responde lo primero que se pregunta al ver un
+    // sobrepase: si se cargo el dia de la labor o meses despues.
     culpables.forEach(x=>{ const tag='<span class="tag">superficie sobre RTK</span>';
-      excHtml+=`<tr class="det-over"><td class="dl mono">OT ${x.ot}</td><td>${x.act}</td><td colspan="2">${x.serv} ${tag}</td><td>${x.estado}</td><td class="tr exd">${fmt2(x.ha)} ha</td></tr>`; });
+      excHtml+=`<tr class="det-over"><td class="dl mono">OT ${x.ot}</td><td>${x.act}</td><td>${x.serv} ${tag}</td><td class="mono">${x.fr?ipFecha(x.fr):'—'}</td><td>${x.estado}</td><td class="tr exd">${fmt2(x.ha)} ha</td></tr>`; });
   });
   document.getElementById('exc').innerHTML=excHtml;
   // ---- Labores repetidas que sumando pasan el lote ----
@@ -72,7 +84,8 @@ function renderAll(){
     : '';
   let repHtml='';
   D.repetidas.forEach(r=>{
-    repHtml+=`<tr class="grp"><td>${r.cult}</td><td class="mono">${escHtml(String(r.lote))}</td><td>${escHtml(String(r.serv))}</td>`+
+    const tagRepNuevo = r.nuevo ? ' <span class="tag tag-nuevo">nuevo</span>' : '';
+    repHtml+=`<tr class="grp"><td>${r.cult}</td><td class="mono">${escHtml(String(r.lote))}${tagRepNuevo}</td><td>${escHtml(String(r.serv))}</td>`+
       `<td class="tr">${fmt2(r.ha_rtk)}</td><td class="tr">${fmt2(r.suma)}</td>`+
       `<td class="tr exd">+${fmt2(r.exceso)}</td><td class="tr exd">+${Math.round(r.pdiff)}%</td></tr>`;
     repHtml+=`<tr class="dethead"><td colspan="7">${r.n_ot} OT</td></tr>`;
