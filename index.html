@@ -171,7 +171,13 @@
            (OT · Fecha · Cultivo · Lote · L. Consumidos · Costo Total · Observaciones) — ver
            renderGasoil/svDetalleGasoil en js/render.js. -->
       <div class="sop-top" id="gastop"></div>
-      <div class="scroll"><table><thead><tr><th>Área</th><th class="tr">OT</th><th class="tr">Litros</th><th class="tr">Total Pagado</th><th class="tr">Participación</th><th class="tr">%</th></tr></thead><tbody id="gasbody"></tbody></table></div></div>
+      <!-- Las MISMAS columnas del Detalle por Servicio, con "L. Consumidos" donde aquel pone
+           "Trabajo Ejecutado". Servicio y Contratista van VACIAS: asi vienen en las lineas del
+           Excel para estas OT —no traen linea de categoria Servicio y el campo contratista esta
+           en blanco—, y se muestran tal cual en lugar de inventarles un valor. El area es el
+           estadio de la OT, por eso ocupa esa columna. La barra de Participacion y la columna %
+           se quitaron a pedido del usuario. -->
+      <div class="scroll"><table><thead><tr><th>Servicio</th><th>Estadio</th><th class="tr">OT Conf.</th><th class="tr">L. Consumidos</th><th>Contratista</th><th class="tr">Costo Total</th></tr></thead><tbody id="gasbody"></tbody></table></div></div>
     <!-- Trabajos que la campania hizo PARA un tercero. El dato sale de la observacion de la OT,
          que es el unico lugar donde consta: el contratista dice quien ejecuto, no para quien. Va
          debajo del gasoil porque la mayoria son traslados y logistica, el mismo tipo de trabajo. -->

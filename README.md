@@ -735,6 +735,19 @@ Es **una por OT**, no un recorte de varias: verificado sobre las **2.042 OT de l
 
 El mismo patrón que el Detalle por Servicio, y por el mismo motivo: la tabla resume ocho áreas y
 `Operativo` sola se lleva 253 OT y 12.990 litros, así que la fila no dice nada de qué se cargó.
+
+**La tabla principal usa las mismas seis columnas de aquel panel**: `Servicio · Estadio ·
+OT Conf. · L. Consumidos · Contratista · Costo Total`. El área ocupa la columna de **Estadio**,
+que es literalmente lo que es: el `estadio` de la OT.
+
+**Servicio y Contratista quedan vacías**, y así debe ser: las OT de gasoil **no traen línea de
+categoría `Servicio`** —son solo líneas de insumo— y el campo `contratista` viene en blanco en las
+501. Rellenarlas con `GASOIL` o `Sin contratista` sería un dato puesto por el dashboard y no por la
+OT, así que se muestra el hueco tal como está en el Excel. Quien sí queda registrado es el
+**Personal** que retiró el combustible, y por él agrupa el modelo.
+
+Se quitaron la barra de **Participación** y la columna **%**: con ocho filas ordenadas por monto el
+peso relativo ya se ve, y la barra era la única columna del módulo que no era un dato de la OT.
 Ahora cada área se abre con clic (caret `▸`/`▾` en la celda **OT**) y lista sus OT con las
 **mismas columnas del Detalle por Servicio**: `OT · Fecha · Cultivo · Lote · L. Consumidos ·
 Costo Total · Observaciones`. La única diferencia es la columna de cantidad — donde el otro panel
