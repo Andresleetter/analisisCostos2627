@@ -1982,17 +1982,18 @@ function renderGasoil(){
   // Si el área desplegada desapareció del resultado (cambió Campaña, Mes, Cultivo o Lote), la fila
   // se cierra sola: nunca queda abierto un detalle de un filtro anterior.
   if(gasFilaAbierta && !rows.some(r=>r.area===gasFilaAbierta)) gasFilaAbierta=null;
-  const tot=rows.reduce((s,r)=>s+r.total,0), litros=rows.reduce((s,r)=>s+r.litros,0);
+  const litros=rows.reduce((s,r)=>s+r.litros,0);
   // Sin KPI de "Total Gasoil": esa misma cifra ya esta arriba, en el KPI de Costo Combustible, que
   // aplica los mismos filtros. Se quito a pedido del usuario (22/09/2026) para no repetirla.
-  // `tot` sigue usandose mas abajo, para el porcentaje de cada area sobre el total del periodo.
   document.getElementById('gastop').innerHTML=`<div class="sop-kpi"><div class="l">Litros Consumidos</div><div class="v">${fmt1(litros)} L</div></div>`;
-  const mx=Math.max(1,...rows.map(r=>r.total));
   // El caret ▸/▾ va en la celda de OT, igual que en el Detalle por Servicio, y el clic se atiende
   // delegado sobre #gasbody (js/events.js).
   document.getElementById('gasbody').innerHTML=rows.length?rows.map(r=>{
     const abierta=gasFilaAbierta===r.area;
-    let html=`<tr class="sv-fila${abierta?' open':''}" data-area="${encodeURIComponent(r.area)}"><td><b>${escHtml(r.area)}</b></td><td class="tr mono"><span class="ip-caret">${abierta?'▾':'▸'}</span> ${r.n}</td><td class="tr mono">${fmt1(r.litros)}</td><td class="tr mono col-tot">US$ ${fmtUSD(r.total)}</td><td class="tr"><div class="sopbar"><div style="width:${r.total/mx*100}%"></div></div></td><td class="tr mono">${tot?(r.total/tot*100).toFixed(1):0}%</td></tr>`;
+    // Servicio y Contratista van vacias: las OT de gasoil no traen linea de categoria Servicio y
+    // el campo contratista esta en blanco en el Excel. Se deja el hueco en vez de rellenarlo con
+    // "GASOIL" o "Sin contratista", que serian datos puestos por el dashboard, no por la OT.
+    let html=`<tr class="sv-fila${abierta?' open':''}" data-area="${encodeURIComponent(r.area)}"><td></td><td><span class="chip chip-etapa">${escHtml(r.area)}</span></td><td class="tr mono"><span class="ip-caret">${abierta?'▾':'▸'}</span> ${r.n}</td><td class="tr mono">${fmt1(r.litros)} L</td><td class="col-contratista"></td><td class="tr mono col-tot">US$ ${fmtUSD(r.total)}</td></tr>`;
     if(abierta) html+=svDetalleGasoil(r.area, r.ots||[]);
     return html;
   }).join(''):'<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:16px">Sin consumo de gasoil en el período</td></tr>';
