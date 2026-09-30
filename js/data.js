@@ -61,6 +61,8 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra, recetas, receta
     combustible_litros_total,combustible_n_total,
     combustible_ingresos_litros_total,combustible_ingresos_n_total,combustible_uso,combustible_maquinas,
     combustible_transferencias,combustible_transferencias_neto,combustible_transferencias_n,
+    combustible_prestamos,combustible_prestamos_saldo,combustible_prestamos_mov,
+    combustible_prestamos_neto,
     combustible_existencia_inicial,stock_inicial_combustible} =
     construirCombustible(combustibleRaw, existenciaInicial, indice_ot_referencia);
   const {insumos_ingreso,insumos_consumo,insumos_meses,insumos_tipos,insumos_por_tipo,
@@ -105,6 +107,8 @@ function buildData(raw, proyecciones, insumos, presupuestoInfra, recetas, receta
     combustible_ingresos,combustible_ingresos_litros_total,combustible_ingresos_n_total,
     combustible_uso,combustible_maquinas,
     combustible_transferencias,combustible_transferencias_neto,combustible_transferencias_n,
+    combustible_prestamos,combustible_prestamos_saldo,combustible_prestamos_mov,
+    combustible_prestamos_neto,
     combustible_existencia_inicial,stock_inicial_combustible,
     insumos_ingreso,insumos_consumo,insumos_meses,insumos_tipos,insumos_por_tipo,
     insumos_stock_flujo,insumos_ingreso_mensual,insumos_consumo_mensual,

@@ -295,6 +295,11 @@ function separarInsumos(rows){
       'Tercero': r.proveedor || '',
       'Insumo': r.nombre,
       'Descripción Tipo de Comprobante': r.tipoMovimiento,
+      // Observacion del MOVIMIENTO (no de la OT). En casi todos repite el texto automatico de
+      // Albor y no dice nada, pero es el UNICO lugar donde consta un prestamo de combustible y su
+      // devolucion — ver clasificarPrestamoCombustible en js/data/combustible.js.
+      'Observaciones': r.observaciones,
+      'Importe Moneda Extranjera': r.importeMonedaExtranjera,
       // Campania declarada por el propio movimiento. No filtra nada (consultaInsumos se sigue
       // procesando completo): solo queda disponible en el detalle para poder distinguir un
       // movimiento historico de uno de la campania vigente.
