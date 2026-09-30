@@ -209,6 +209,17 @@
            niveles "Solo contratista" y "OT no disponible" — es esperado, no un filtro roto. -->
       <label for="cmaq">Máquina</label>
       <select id="cmaq"><option value="ALL">Todas</option></select>
+      <!-- Movimiento: separa el consumo real de los préstamos de combustible y sus devoluciones,
+           que viajan en la misma hoja pero no son consumo (ver clasificarPrestamoCombustible en
+           js/data/combustible.js). Los préstamos no tienen tercero ni máquina, así que elegir uno
+           de esos filtros los deja fuera. -->
+      <label for="ctipo">Movimiento</label>
+      <select id="ctipo">
+        <option value="ALL">Todos</option>
+        <option value="consumo">Solo consumo</option>
+        <option value="prestamo">Solo préstamos</option>
+        <option value="devolucion">Solo devoluciones</option>
+      </select>
     </div>
     <div class="kpis" id="comb-balance"></div>
     <div class="panel sub"><h3>Ingresos</h3>

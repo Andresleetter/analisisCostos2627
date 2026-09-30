@@ -731,6 +731,53 @@ Es **una por OT**, no un recorte de varias: verificado sobre las **2.042 OT de l
 
 **Los saltos de línea se conservan.** 68 de las 1.415 observaciones cargadas los traen, y son las que más los necesitan: una dosis por renglón (`Cyperex: 0,085 Kg/ha` / `Garant: 0,035 L/ha`) o el presupuesto desglosado (`Monto aprobado 217 hs` / `Metros aprobados 19355mts` / `Hora total: 98,61 hs`…). HTML los colapsaría, así que `obsHtml()` los convierte en `<br>` **después** de escapar, descartando los renglones vacíos y los espacios de los extremos, que es lo único que aporta la sangría del Excel. La celda es la única del desplegable que envuelve en varias líneas; el resto sigue en una sola.
 
+### Préstamos de combustible
+
+Un préstamo de gasoil **no tiene tipo de movimiento propio en Albor**, y ahí estaba el problema:
+el que nos hacen entra como `tipoMovimiento = "Stock Inicial"` —un tipo que este módulo no
+conocía— y el loader mandaba al saco del Consumo todo lo que no fuera exactamente
+`"Existencia inicial"`. Resultado: los **1.500 L que El Fogón nos prestó el 30/09 figuraban como
+1.500 L gastados por Labor Propia**, con el signo al revés. El error sobre el saldo de stock era
+de 3.000 L: no se sumaban como entrada y encima se restaban como consumo.
+
+**Lo único que distingue un préstamo es el texto de la observación del movimiento**, así que se
+reconoce por ahí (`clasificarPrestamoCombustible`, con los patrones en `config.js`). Cuatro
+sentidos, excluyentes y evaluados en ese orden:
+
+| Observación | Sentido | Efecto |
+|---|---|---|
+| `Devolución de Préstamo a El Fogón` | devolvimos nosotros | cancela un recibido |
+| `Préstamo de 1.500 lts de gasoil de El Fogón.` | **recibido** | entra stock que hay que devolver |
+| `Préstamo a Seagro S.A. Ticket 45.731` | **otorgado** | sale stock que nos deben |
+| `Devolución de Seagro S.A.` | nos devolvieron | cancela un otorgado |
+
+La contraparte se recorta del mismo texto — del **último** `de` en los recibidos, porque el texto
+real es *«Préstamo de 1.500 lts de gasoil de El Fogón»*— y se agrupa por su forma normalizada, así
+que `El Fogón` y `El Fogon` son la misma.
+
+**Qué cambia en los números.** Los préstamos salen de Consumo y de Ingreso: no se compraron ni se
+gastaron, cambiaron de dueño temporalmente. El Consumo bajó de 571.126,27 a **569.626,27 L**. Los
+que mueven stock entran al **Balance** con su signo, por el mismo lado que las transferencias, y el
+pie del KPI lo dice (`1.500,00 L de préstamos`). Los préstamos que hacemos **nosotros** ya venían
+bien: son `Transferencia de Mercadería` con sus dos patas, netean cero y no se les toca nada.
+
+**En la tabla.** Cada caso es una fila del Consumo con su etiqueta `préstamo` o `devolución`, la
+fecha, el tipo de comprobante y el importe, **fuera del total y sin porcentaje**. La fila de Total
+avisa cuántos hay aparte y su neto al stock. El filtro **Movimiento** (Todos · Solo consumo · Solo
+préstamos · Solo devoluciones) los aísla; con un Tercero o una Máquina elegidos no se muestran,
+porque un préstamo no tiene ni uno ni otra.
+
+Las dos patas de una transferencia son el mismo gasoil visto desde los dos depósitos
+(`SURTIDOR CENTRAL` e `INSUMOS EN DEPOSITOS DE TERCEROS`), así que **se colapsan por comprobante**:
+un préstamo es un caso, no dos líneas. `combustible_prestamos_saldo` lleva los dos sentidos por
+separado a propósito — que nos hayan devuelto lo que prestamos no cancela lo que debemos devolver.
+
+> Estado al 30/09/2026: **le debemos 1.500 L a El Fogón** (US$ 2.184,15). Lo demás está cerrado:
+> 2.000 L a Seagro (31/08) devueltos el 01/09, y 1.000 L a El Fogón (01/09) devueltos el 02/09.
+
+> El mismo `"Stock Inicial"` se usa para los préstamos de **insumos** (23.000 kg de urea de El
+> Fogón, 60 L de Tafir-Oil, silos bolsa). Eso vive en el módulo Insumos y **todavía no se revisó**.
+
 ### Consumo de Gasoil por Área desplegable
 
 El mismo patrón que el Detalle por Servicio, y por el mismo motivo: la tabla resume ocho áreas y

@@ -1408,19 +1408,31 @@ function renderCombustible(){
   const mesV=document.getElementById('cmes').value, mes=mesV==='ALL'?'ALL':parseInt(mesV);
   const tercV=document.getElementById('cterc').value;
   const maqV=document.getElementById('cmaq').value;
+  // Filtro de Movimiento: separa el consumo real de los prestamos y devoluciones de combustible.
+  const tipoV=document.getElementById('ctipo').value;
+  const verConsumo = tipoV==='ALL' || tipoV==='consumo';
+  // Un prestamo no tiene tercero ni maquina, asi que con cualquiera de esos filtros puesto no
+  // corresponde mostrarlo: la tabla quedaria mezclando una seleccion con algo que no la cumple.
+  const verPrestamos = (tipoV==='ALL' || tipoV==='prestamo' || tipoV==='devolucion')
+    && tercV==='ALL' && maqV==='ALL';
 
   // ---- KPI de balance: Ingreso vs Consumo del período (solo filtra por Mes, no por Tercero,
   // para comparar siempre el consumo TOTAL contra lo ingresado, sin importar qué tercero se mire
   // abajo en el detalle) ----
-  let ingresoMes=D.combustible_ingresos, consumoMes=D.combustible, transfMes=D.combustible_transferencias;
+  let ingresoMes=D.combustible_ingresos, consumoMes=D.combustible, transfMes=D.combustible_transferencias,
+      prestMes=D.combustible_prestamos_mov;
   if(mes!=='ALL'){ ingresoMes=ingresoMes.filter(r=>r.mesnum===mes); consumoMes=consumoMes.filter(r=>r.mesnum===mes);
-    transfMes=transfMes.filter(r=>r.mesnum===mes); }
+    transfMes=transfMes.filter(r=>r.mesnum===mes); prestMes=prestMes.filter(r=>r.mesnum===mes); }
   const totIngresoMes=ingresoMes.reduce((s,r)=>s+r.litros,0);
   const totConsumoMes=consumoMes.reduce((s,r)=>s+r.litros,0);
   // Transferencias del periodo, ya NETEADAS con signo en el modelo (ver js/data/combustible.js).
   // No son ni Ingreso ni Consumo, asi que no tienen KPI propio: entran solo en el Balance, que es
   // donde mueven stock. Con un par completo valen 0 y el Balance queda exactamente igual que antes.
   const totTransfMes=transfMes.reduce((s,r)=>s+r.litros,0);
+  // Prestamos que SI mueven stock (los recibidos y las devoluciones que hacemos): entran al Balance
+  // con su signo, igual que las transferencias, y nunca al KPI de Consumo. Un prestamo recibido es
+  // gasoil que esta en el surtidor pero no es nuestro; el Balance lo tiene que ver, el Consumo no.
+  const totPrestMes=prestMes.reduce((s,r)=>s+r.litros,0);
 
   // Stock Inicial del período: para "Toda la Campaña" es el stock de arranque de la campaña
   // (D.stock_inicial_combustible, calculado en buildData desde las filas "Existencia inicial"
@@ -1431,12 +1443,16 @@ function renderCombustible(){
   // Las transferencias viajan por el lado del Ingreso del arrastre porque ya traen su signo: un par
   // completo aporta 0 y una pata suelta aporta su signo real, sin necesidad de un tercer parametro.
   const stockInicioPeriodo = stockInicioDePeriodo(mes, D.stock_inicial_combustible,
-    D.combustible_ingresos.concat(D.combustible_transferencias).map(r=>({mesnum:r.mesnum,cantidad:r.litros})),
+    D.combustible_ingresos.concat(D.combustible_transferencias, D.combustible_prestamos_mov)
+      .map(r=>({mesnum:r.mesnum,cantidad:r.litros})),
     D.combustible.map(r=>({mesnum:r.mesnum,cantidad:r.litros})));
-  const balance=stockInicioPeriodo+totIngresoMes-totConsumoMes+totTransfMes;
+  const balance=stockInicioPeriodo+totIngresoMes-totConsumoMes+totTransfMes+totPrestMes;
   // El pie del Balance solo menciona las transferencias cuando el neto NO es cero, o sea cuando hay
   // una pata sin su contraparte. Mientras cada traslado tenga su vuelta, dice lo mismo de siempre.
-  const pieBalance = totTransfMes ? fmt2(totTransfMes)+' L netos de transferencias' : '';
+  const piezas = [];
+  if(totTransfMes) piezas.push(fmt2(totTransfMes)+' L netos de transferencias');
+  if(totPrestMes) piezas.push(fmt2(totPrestMes)+' L de préstamos');
+  const pieBalance = piezas.join(' · ');
   const balCol=balance>=0?'g':'r';
   document.getElementById('comb-balance').innerHTML=
     `<div class="kpi"><div class="k-lab">Stock Inicial</div><div class="k-val c-g">${fmt2(stockInicioPeriodo)}<small> L</small></div></div>`+
@@ -1516,11 +1532,37 @@ function renderCombustible(){
   rowsC.forEach(r=>{ porVinculo[r.tipoVinculo]=(porVinculo[r.tipoVinculo]||0)+r.n; });
   const ordenVinculo=[VINCULO_OT,VINCULO_CONTRATISTA,VINCULO_OT_NO_DISPONIBLE,VINCULO_LABOR_PROPIA];
   const desglose=ordenVinculo.filter(v=>porVinculo[v]).map(v=>VINCULO_LABEL[v]+': '+porVinculo[v]).join(' · ');
-  document.getElementById('comb-uso-sub').textContent =
-    nMov ? fmtMovimientos(nMov)+' · '+desglose
-         : 'Sin movimientos en el período';
-  const mx=Math.max(1,...rowsC.map(r=>r.litros));
-  document.getElementById('combbody').innerHTML = rowsC.length ? rowsC.map(r=>{
+  // ---- Prestamos y devoluciones como filas de la misma tabla ----
+  // Van con los mismos litros que muestra el panel, pero FUERA del total de Consumo y fuera del
+  // porcentaje: no son combustible gastado. El caso ya viene resuelto y colapsado por comprobante
+  // desde el modelo (D.combustible_prestamos); aca solo se filtra por mes y se presenta.
+  const PREST_LABEL = {recibido:'Préstamo de ', otorgado:'Préstamo a ',
+                       devuelto_por_ellos:'Devolución de ', devuelto_por_nosotros:'Devolución a '};
+  const rowsP = !verPrestamos ? [] : (D.combustible_prestamos||[])
+    .filter(p=>mes==='ALL' || (p.fecha && p.fecha.getMonth()+1===mes))
+    .filter(p=>{
+      const esDev = p.tipo==='devuelto_por_ellos' || p.tipo==='devuelto_por_nosotros';
+      return tipoV==='ALL' || (tipoV==='prestamo' && !esDev) || (tipoV==='devolucion' && esDev);
+    });
+  // Con el filtro de Movimiento puesto en prestamos o devoluciones, el subtitulo deja de hablar de
+  // la atribucion del consumo —que no se esta mostrando— y describe lo que si esta en la tabla.
+  document.getElementById('comb-uso-sub').textContent = !verConsumo
+    ? (rowsP.length ? rowsP.length+' caso(s) · no son consumo: no suman al gasto de la campaña'
+                    : 'Sin préstamos en el período')
+    : (nMov ? fmtMovimientos(nMov)+' · '+desglose : 'Sin movimientos en el período');
+  const mx=Math.max(1,...rowsC.map(r=>r.litros),...rowsP.map(p=>p.litros));
+  const filasPrestamo = rowsP.map(p=>{
+    const esDev = p.tipo==='devuelto_por_ellos' || p.tipo==='devuelto_por_nosotros';
+    const chip = `<span class="chip chip-${esDev?'devolucion':'prestamo'}">${esDev?'devolución':'préstamo'}</span>`;
+    return `<tr class="cu-prestamo"><td class="cu-uso" title="${escAttr(p.obs)}">`+
+      `<span class="ip-caret"> </span> <b>${escHtml((PREST_LABEL[p.tipo]||'')+p.quien)}</b> ${chip}`+
+      `<div class="cu-prest-obs">${ipFecha(p.fecha)} · ${escHtml(p.tipoComp)}`+
+      (p.importe?` · US$ ${fmtUSD(p.importe)}`:'')+`</div></td>`+
+      `<td class="tr mono">1</td><td class="tr mono">${fmt2(p.litros)}</td>`+
+      `<td class="tr"><div class="sopbar"><div style="width:${p.litros/mx*100}%"></div></div></td>`+
+      `<td class="tr mono"><span class="ip-sin">—</span></td></tr>`;
+  }).join('');
+  document.getElementById('combbody').innerHTML = (rowsC.length||rowsP.length) ? (verConsumo?rowsC:[]).map(r=>{
     const clave=r.usoOrigen+'|'+r.usoKey;
     const abierta=combUsoAbierto===clave;
     // Chip del origen de la atribución: los cuatro niveles se distinguen de un vistazo y ninguno
@@ -1536,7 +1578,7 @@ function renderCombustible(){
       `<td class="tr mono">${tot?(r.litros/tot*100).toFixed(1):0}%</td></tr>`;
     if(abierta) html+=combDetalleUso(r);
     return html;
-  }).join('')+combFilaTotal(nMov, tot)
+  }).join('')+filasPrestamo+combFilaTotal(nMov, tot, rowsP, verConsumo)
    : '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px">Sin registros de combustible para el filtro seleccionado</td></tr>';
 }
 // Fila de total al pie del Consumo. Es la suma de lo que se está viendo, no un dato nuevo: con los
@@ -1545,8 +1587,26 @@ function renderCombustible(){
 // sigue mostrando el consumo completo de la campaña, que es lo correcto para un KPI pero deja sin
 // respuesta "cuánto gastó esta máquina". Los valores llegan ya sumados desde renderCombustible;
 // acá no se recalcula nada.
-function combFilaTotal(nMov, litros){
-  return `<tr class="cu-total"><td>Total</td>`+
+function combFilaTotal(nMov, litros, prestamos, verConsumo){
+  // Los prestamos NO se suman al total: el total es de consumo. Se mencionan al lado con su neto
+  // en litros —positivo lo que entro prestado, negativo lo que se devolvio— para que la fila diga
+  // que hay algo mas en la tabla que no esta sumado ahi.
+  const P = prestamos||[];
+  const neto = P.reduce((s,p)=> s + (p.tipo==='recibido' ? p.litros
+    : (p.tipo==='devuelto_por_nosotros' ? -p.litros : 0)), 0);
+  // Con el filtro de Movimiento en "Solo préstamos" o "Solo devoluciones" no hay consumo que
+  // totalizar: la fila pasa a ser el total de lo que si se esta viendo, en vez de repetir ceros.
+  if(!verConsumo){
+    return `<tr class="cu-total"><td>Total préstamos`+
+      (neto?`<span class="cu-tot-n">${fmt2(neto)} L netos al stock</span>`:'')+`</td>`+
+      `<td class="tr mono">${P.length}</td>`+
+      `<td class="tr mono">${fmt2(P.reduce((s,p)=>s+p.litros,0))}</td>`+
+      `<td></td><td class="tr mono">100,0%</td></tr>`;
+  }
+  const nota = P.length
+    ? `<span class="cu-tot-n">${P.length} préstamo(s) aparte`+(neto?`, ${fmt2(neto)} L netos al stock`:'')+`</span>`
+    : '';
+  return `<tr class="cu-total"><td>Total consumo${nota}</td>`+
     `<td class="tr mono">${nMov}</td>`+
     `<td class="tr mono">${fmt2(litros)}</td>`+
     `<td></td><td class="tr mono">100,0%</td></tr>`;

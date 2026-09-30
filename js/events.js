@@ -148,6 +148,7 @@ document.addEventListener('DOMContentLoaded', function(){
   // Máquina: mismo alcance que Mes y Tercero — filtra por movimiento y vuelve a dibujar la tabla
   // de Consumo. La máquina llega resuelta desde el modelo; acá no se interpreta ningún texto.
   document.getElementById('cmaq').addEventListener('change', renderCombustible);
+  document.getElementById('ctipo').addEventListener('change', renderCombustible);
   // Clic en una fila de "Consumo" (Combustible): despliega/pliega los movimientos de ese
   // Uso / Detalle. Delegado sobre el tbody (fijo en el HTML) porque la tabla se redibuja entera en
   // cada cambio de filtro — mismo patrón que el detalle de parcelas de la Auditoría.

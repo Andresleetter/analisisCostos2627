@@ -143,6 +143,16 @@ tr.cu-fila.open td{background:#eef4ea}
 .chip-vinc-contratista{background:#dff0ec;color:var(--u-hrs);margin-left:6px}
 .chip-vinc-ot_no_disponible{background:#fdf7e6;color:#8a5b00;margin-left:6px}
 .chip-vinc-labor_propia{background:#f1efef;color:var(--muted);margin-left:6px}
+/* Prestamos y devoluciones de combustible: filas de la tabla de Consumo que NO son consumo. Se
+   distinguen con fondo propio y no son desplegables (no tienen movimientos que abrir). */
+.chip-prestamo{background:#fdf0e2;color:#8a4b00;margin-left:6px}
+.chip-devolucion{background:#e9eef5;color:#3b5a72;margin-left:6px}
+tr.cu-prestamo td{background:#fbf8f3}
+.cu-prest-obs{font-size:11px;color:var(--muted);margin-top:2px;padding-left:15px}
+/* Nota de la fila de Total: los prestamos quedan fuera de la suma y se avisan aca. Mismo
+   gesto que .sv-tot-n del Detalle por Servicio. */
+.cu-tot-n{display:block;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;
+  letter-spacing:.3px;margin-top:2px}
 /* Fila de total del Consumo: cierra la tabla con la suma de lo que se está viendo. Se separa con
    una línea superior más marcada y no reacciona al hover, para que no se confunda con una fila de
    datos clicable. */

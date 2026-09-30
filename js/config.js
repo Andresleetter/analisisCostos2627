@@ -66,6 +66,19 @@ const OPERATIVAS = ['OPERATIVO','PARCELA ARROZ','PARCELA SOJA','PARCELA SORGO','
 // al inicio), separadas del Ingreso/Consumo porque no son un movimiento sino un saldo de partida.
 const TIPO_INSUMO_COMBUSTIBLE = 'COMBUSTIBLES';
 const MOV_EXISTENCIA_INICIAL = 'Existencia inicial';
+// ---- Prestamos de combustible ----
+// Un prestamo de gasoil no tiene tipo de movimiento propio en Albor: entra como "Stock Inicial"
+// si nos lo prestan y como "Transferencia de Mercaderia" si lo prestamos nosotros. Lo UNICO que
+// distingue un prestamo de una compra o de un consumo es el texto de la observacion, asi que se
+// reconoce por ahi. Tres patrones, excluyentes y evaluados en este orden:
+//  - DEVUELTO_POR_NOSOTROS: "Devolución de Préstamo a El Fogón" — cancela un prestamo RECIBIDO.
+//  - RECIBIDO:  "Préstamo de 1.500 lts de gasoil de El Fogón." — entra stock que hay que devolver.
+//  - OTORGADO:  "Préstamo a Seagro S.A. Ticket 45.731" — sale stock que nos tienen que devolver.
+//  - DEVUELTO_POR_ELLOS: cualquier otra "Devolución de X" — cancela un prestamo OTORGADO.
+const OBS_PRESTAMO_DEVUELTO_POR_NOSOTROS = /devoluci[oó]n\s+de\s+pr[eé]stamo\s+a\b/i;
+const OBS_PRESTAMO_RECIBIDO = /pr[eé]stamo\s+de\b/i;
+const OBS_PRESTAMO_OTORGADO = /pr[eé]stamo\s+a\b/i;
+const OBS_PRESTAMO_DEVOLUCION = /devoluci[oó]n\b/i;
 // ---- Combustible: los CUATRO orígenes posibles del "Uso / Detalle" ----
 // Un movimiento de combustible se atribuye por niveles, y los cuatro resultados son situaciones
 // REALMENTE distintas que nunca deben mezclarse en una sola etiqueta:

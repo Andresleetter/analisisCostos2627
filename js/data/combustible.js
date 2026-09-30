@@ -28,6 +28,31 @@ function maquinaDeObservacion(obs){
   for(const x of COMBUSTIBLE_MAQUINA_VARIANTES){ if(t.includes(' '+x.v+' ')) return {id:x.id, label:x.label}; }
   return null;
 }
+// ---- Prestamo de combustible, deducido de la observacion del movimiento ----
+// Devuelve null cuando la observacion no habla de un prestamo. Nunca se deduce por el tipo de
+// movimiento ni por el importe: el sentido esta escrito y no en otro lado (ver los patrones en
+// config.js). La contraparte se recorta del mismo texto — del ultimo "de" en los prestamos
+// recibidos, porque el texto real es "Préstamo de 1.500 lts de gasoil de El Fogón".
+function clasificarPrestamoCombustible(obs){
+  const t = String(obs||'').trim();
+  if(!t) return null;
+  let tipo = null;
+  if(OBS_PRESTAMO_DEVUELTO_POR_NOSOTROS.test(t)) tipo='devuelto_por_nosotros';
+  else if(OBS_PRESTAMO_RECIBIDO.test(t)) tipo='recibido';
+  else if(OBS_PRESTAMO_OTORGADO.test(t)) tipo='otorgado';
+  else if(OBS_PRESTAMO_DEVOLUCION.test(t)) tipo='devuelto_por_ellos';
+  else return null;
+  let quien = t;
+  if(tipo==='recibido'){
+    const i = t.toLowerCase().lastIndexOf(' de ');
+    quien = i>-1 ? t.slice(i+4) : t;
+  } else {
+    const m = /(?:a|de)\s+(.+)$/i.exec(tipo==='devuelto_por_nosotros' ? t.replace(/.*pr[eé]stamo\s+/i,'') : t.replace(/^\s*\S+\s+/,''));
+    if(m) quien = m[1];
+  }
+  quien = quien.replace(/[-–]?\s*ticket.*$/i,'').replace(/[.,;\s]+$/,'').trim();
+  return {tipo, quien, quienKey: normHdr(quien)};
+}
 function construirCombustible(combustibleRaw, existenciaInicial, indiceOTReferencia){
   // ---- COMBUSTIBLE (litros y contratistas) ----
   // Fuente: consultaInsumos, filtrada a tipoInsumo="COMBUSTIBLES" y ya sin las filas de
@@ -59,6 +84,10 @@ function construirCombustible(combustibleRaw, existenciaInicial, indiceOTReferen
     tercero: String(row['tercero']||'').trim(),
     insumo: String(row['insumo']||'').trim(),
     tipoComp: String(row['descripcion tipo de comprobante']||'').trim(),
+    // Observacion del movimiento: solo se usa para reconocer prestamos (ver mas abajo). El Consumo
+    // sigue rotulandose con la observacion de la OT, nunca con esta.
+    obsMov: String(row['observaciones']||'').replace(/\s+/g,' ').trim(),
+    importe: num(row['importe moneda extranjera']),
     campania: String(row['campania']||'').trim(),
     // parcela = columna `cultivo` de consultaInsumos: el nombre completo del lote/cultivo/campania
     // ("LA TERESA Operativos OPERATIVO 25/26"). Es un dato del MOVIMIENTO, no de la OT. Validado
@@ -83,6 +112,19 @@ function construirCombustible(combustibleRaw, existenciaInicial, indiceOTReferen
   const esTransferencia = r => normHdr(r.tipoComp).startsWith('transferencia');
   combRows.filter(esTransferencia).forEach(r=>{ r.unidades = r.unidadesNetas; });
   const esIngreso = r => normEstadio(r.tipoComp).indexOf('ingreso')>-1;
+
+  // ---- Prestamos: no son consumo, aunque Albor los traiga con el tipo de un consumo ----
+  // El prestamo que nos hacen entra como tipoMovimiento="Stock Inicial" — un tipo que este modulo
+  // no conocia, asi que caia en el saco del Consumo y 1.500 litros que ENTRARON al surtidor se
+  // mostraban como 1.500 litros gastados por Labor Propia, con el signo al reves. Se reconocen por
+  // la observacion y salen de Consumo y de Ingreso: no se compraron ni se usaron, cambiaron de
+  // dueno temporalmente.
+  // Los prestamos que hacemos NOSOTROS ya venian bien: son Transferencias de Mercaderia con sus dos
+  // patas, netean cero y no tocan ningun total. Se siguen tratando como transferencias (no se les
+  // cambia el signo dos veces) y aparecen en el panel solo para que el caso se lea completo.
+  combRows.forEach(r=>{ r.prestamo = clasificarPrestamoCombustible(r.obsMov); });
+  const esPrestamoStock = r => !!r.prestamo && !esTransferencia(r);
+  combRows.filter(esPrestamoStock).forEach(r=>{ r.unidades = r.unidadesNetas; });
 
   // ---- Vinculo con la Orden de Trabajo, y "Uso / Detalle" del combustible ----
   // Un movimiento de combustible trae en `referenciaOrigen` la ORDEN DE TRABAJO que lo genero
@@ -175,8 +217,9 @@ function construirCombustible(combustibleRaw, existenciaInicial, indiceOTReferen
     });
     return Object.values(map).map(c=>({...c,litros:Math.round(c.litros*100)/100})).sort((a,b)=>b.litros-a.litros);
   }
-  const combustible = agruparComb(combRows.filter(r=>!esIngreso(r) && !esTransferencia(r)));
-  const combustible_ingresos = agruparComb(combRows.filter(r=>esIngreso(r) && !esTransferencia(r)));
+  const esConsumo = r => !esIngreso(r) && !esTransferencia(r) && !esPrestamoStock(r);
+  const combustible = agruparComb(combRows.filter(esConsumo));
+  const combustible_ingresos = agruparComb(combRows.filter(r=>esIngreso(r) && !esTransferencia(r) && !esPrestamoStock(r)));
   // Coleccion propia, con la misma forma que Consumo e Ingresos (Mes + Tercero) pero con los litros
   // NETOS. Hoy da 0,00 en 8 movimientos: 2 prestamos (Seagro 2.000 L, El Fogon 1.000 L) y sus 2
   // devoluciones. render.js la suma al Balance y al arrastre mensual; nunca la muestra como consumo.
@@ -240,7 +283,7 @@ function construirCombustible(combustibleRaw, existenciaInicial, indiceOTReferen
       movs:c.movs.slice().sort((a,b)=> (b.fecha-a.fecha) || (b.litros-a.litros))}))
       .sort((a,b)=>b.litros-a.litros);
   }
-  const combustible_uso = agruparPorUso(combRows.filter(r=>!esIngreso(r) && !esTransferencia(r)));
+  const combustible_uso = agruparPorUso(combRows.filter(esConsumo));
   // Maquinas realmente presentes en el consumo, en el orden del catalogo (no alfabetico: el catalogo
   // ya agrupa tractores / maquinaria pesada / vehiculos). Solo se ofrecen las que tienen movimientos:
   // el filtro nunca muestra una opcion que dejaria la tabla vacia.
@@ -248,6 +291,41 @@ function construirCombustible(combustibleRaw, existenciaInicial, indiceOTReferen
   const combustible_maquinas = COMBUSTIBLE_MAQUINAS
     .filter(m=>maquinasConMovimientos.has(m.id))
     .map(m=>({val:m.id, lbl:m.label}));
+
+  // ---- Prestamos de combustible: un renglon por comprobante, y el saldo por contraparte ----
+  // Las Transferencias traen las DOS patas del mismo comprobante (sale de SURTIDOR CENTRAL, entra
+  // a INSUMOS EN DEPOSITOS DE TERCEROS): se colapsan por referencia para que un prestamo sea UN
+  // caso y no dos lineas que parecen dos operaciones.
+  const prestMap = {};
+  combRows.filter(r=>r.prestamo).forEach(r=>{
+    const key = r.referencia || (r.fecha.getTime()+'|'+r.obsMov);
+    if(!prestMap[key]) prestMap[key] = {referencia:r.referencia, fecha:r.fecha, tipo:r.prestamo.tipo,
+      quien:r.prestamo.quien, quienKey:r.prestamo.quienKey, obs:r.obsMov, tipoComp:r.tipoComp,
+      litros:0, importe:0, enStock:!esTransferencia(r)};
+    const p = prestMap[key];
+    // Litros del caso = la pata mas grande en valor absoluto, no la suma: las dos patas de una
+    // transferencia son el mismo gasoil visto desde los dos depositos.
+    p.litros = Math.max(p.litros, Math.abs(r.unidadesNetas));
+    p.importe = Math.max(p.importe, Math.abs(r.importe));
+  });
+  const combustible_prestamos = Object.values(prestMap)
+    .sort((a,b)=> a.fecha-b.fecha || a.quien.localeCompare(b.quien,'es'));
+  // Saldo por contraparte. Los dos sentidos se llevan por separado a proposito: que nos hayan
+  // devuelto lo que les prestamos no cancela lo que nosotros debemos devolver.
+  const salMap = {};
+  combustible_prestamos.forEach(p=>{
+    if(!salMap[p.quienKey]) salMap[p.quienKey]={quien:p.quien, quienKey:p.quienKey,
+      recibido:0, devuelto_por_nosotros:0, otorgado:0, devuelto_por_ellos:0, n:0};
+    const s2 = salMap[p.quienKey]; s2.n++; s2[p.tipo] += p.litros;
+  });
+  const combustible_prestamos_saldo = Object.values(salMap).map(s2=>({...s2,
+    les_debemos: Math.round((s2.recibido - s2.devuelto_por_nosotros)*100)/100,
+    nos_deben:   Math.round((s2.otorgado - s2.devuelto_por_ellos)*100)/100}))
+    .sort((a,b)=>(b.les_debemos+b.nos_deben)-(a.les_debemos+a.nos_deben));
+  // Neto en litros de los prestamos que SI mueven stock (los que no son transferencia). Entra en el
+  // Balance por el mismo lado que las transferencias, con su signo: +1.500 cuando nos prestan.
+  const combustible_prestamos_mov = agruparComb(combRows.filter(esPrestamoStock));
+  const combustible_prestamos_neto = Math.round(combustible_prestamos_mov.reduce((s2,c)=>s2+c.litros,0)*100)/100;
 
   // ---- Stock Inicial de combustible (dinámico) ----
   // Sale de consultaInsumos: filas con tipoMovimiento="Existencia inicial" (stock de arranque
@@ -269,5 +347,7 @@ function construirCombustible(combustibleRaw, existenciaInicial, indiceOTReferen
     combustible_ingresos_litros_total,combustible_ingresos_n_total,
     combustible_uso,combustible_maquinas,
     combustible_transferencias,combustible_transferencias_neto,combustible_transferencias_n,
+    combustible_prestamos,combustible_prestamos_saldo,combustible_prestamos_mov,
+    combustible_prestamos_neto,
     combustible_existencia_inicial,stock_inicial_combustible};
 }
