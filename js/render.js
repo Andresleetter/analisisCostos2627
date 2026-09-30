@@ -1969,6 +1969,21 @@ function svDetalleGasoil(area, ots){
     `</td></tr>`;
 }
 
+// ---- Fila de Total al pie del Consumo de Gasoil por Área ----
+// A diferencia de la del Detalle por Servicio, esta aparece SIEMPRE: acá todo se mide en litros,
+// así que la suma siempre significa algo y no hace falta un filtro que garantice una sola unidad.
+// Reemplaza al KPI de "Litros Consumidos" que estaba arriba de la tabla.
+// Las columnas Servicio y Contratista quedan vacías, igual que en las filas: no hay nada que
+// totalizar ahí. No lleva data-area, así que el clic delegado de #gasbody no la toma.
+function filaTotalGasoil(rows){
+  if(!rows.length) return '';
+  const n=rows.reduce((s,r)=>s+r.n,0), litros=rows.reduce((s,r)=>s+r.litros,0),
+        total=rows.reduce((s,r)=>s+r.total,0);
+  return `<tr class="sv-total"><td colspan="2">Total<span class="sv-tot-n">${rows.length} área(s)</span></td>`+
+    `<td class="tr mono">${n}</td><td class="tr mono">${fmt1(litros)} L</td>`+
+    `<td class="col-contratista"></td><td class="tr mono col-tot">US$ ${fmtUSD(total)}</td></tr>`;
+}
+
 function renderGasoil(){
   const S=serviciosFiltrados();
   const selV=document.getElementById('gmes').value, sel=selV==='ALL'?'ALL':parseInt(selV);
@@ -1982,10 +1997,9 @@ function renderGasoil(){
   // Si el área desplegada desapareció del resultado (cambió Campaña, Mes, Cultivo o Lote), la fila
   // se cierra sola: nunca queda abierto un detalle de un filtro anterior.
   if(gasFilaAbierta && !rows.some(r=>r.area===gasFilaAbierta)) gasFilaAbierta=null;
-  const litros=rows.reduce((s,r)=>s+r.litros,0);
-  // Sin KPI de "Total Gasoil": esa misma cifra ya esta arriba, en el KPI de Costo Combustible, que
-  // aplica los mismos filtros. Se quito a pedido del usuario (22/09/2026) para no repetirla.
-  document.getElementById('gastop').innerHTML=`<div class="sop-kpi"><div class="l">Litros Consumidos</div><div class="v">${fmt1(litros)} L</div></div>`;
+  // Los totales van en la fila de Total al pie de la tabla (filaTotalGasoil), no en un KPI arriba:
+  // el KPI de "Litros Consumidos" se quito a pedido del usuario (30/09/2026). El de "Total Gasoil"
+  // ya se habia quitado el 22/09 porque lo repite el KPI de Costo Combustible de la pestania.
   // El caret ▸/▾ va en la celda de OT, igual que en el Detalle por Servicio, y el clic se atiende
   // delegado sobre #gasbody (js/events.js).
   document.getElementById('gasbody').innerHTML=rows.length?rows.map(r=>{
@@ -1996,7 +2010,7 @@ function renderGasoil(){
     let html=`<tr class="sv-fila${abierta?' open':''}" data-area="${encodeURIComponent(r.area)}"><td></td><td><span class="chip chip-etapa">${escHtml(r.area)}</span></td><td class="tr mono"><span class="ip-caret">${abierta?'▾':'▸'}</span> ${r.n}</td><td class="tr mono">${fmt1(r.litros)} L</td><td class="col-contratista"></td><td class="tr mono col-tot">US$ ${fmtUSD(r.total)}</td></tr>`;
     if(abierta) html+=svDetalleGasoil(r.area, r.ots||[]);
     return html;
-  }).join(''):'<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:16px">Sin consumo de gasoil en el período</td></tr>';
+  }).join('')+filaTotalGasoil(rows):'<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:16px">Sin consumo de gasoil en el período</td></tr>';
 }
 // ---- Trabajos para Terceros ----
 // Sigue los mismos filtros que el resto de la pestania (Campania y Cultivo via serviciosFiltrados,

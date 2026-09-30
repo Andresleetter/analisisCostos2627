@@ -165,12 +165,13 @@
              KPIs de la pestaña. -->
         <th>Servicio</th><th>Estadio</th><th class="tr">OT Conf.</th><th class="tr">Trabajo Ejecutado</th>
         <th>Contratista</th><th class="tr">Costo Total</th></tr></thead><tbody id="gld"></tbody></table></div></div>
+    <!-- Sin KPI de litros arriba de la tabla: el mismo numero esta ahora en la fila de Total, al
+         pie, que es donde se lee junto con las OT y el costo que lo acompanan. -->
     <div class="panel sub"><h3>Consumo de Gasoil por Área</h3>
       <!-- Igual que el Detalle por Servicio: la columna "OT" lleva el caret ▸/▾ y cada área se
            despliega con las OT que la componen, con las MISMAS columnas de aquel desplegable
            (OT · Fecha · Cultivo · Lote · L. Consumidos · Costo Total · Observaciones) — ver
            renderGasoil/svDetalleGasoil en js/render.js. -->
-      <div class="sop-top" id="gastop"></div>
       <!-- Las MISMAS columnas del Detalle por Servicio, con "L. Consumidos" donde aquel pone
            "Trabajo Ejecutado". Servicio y Contratista van VACIAS: asi vienen en las lineas del
            Excel para estas OT —no traen linea de categoria Servicio y el campo contratista esta

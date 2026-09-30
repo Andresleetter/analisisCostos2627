@@ -748,6 +748,12 @@ OT, así que se muestra el hueco tal como está en el Excel. Quien sí queda reg
 
 Se quitaron la barra de **Participación** y la columna **%**: con ocho filas ordenadas por monto el
 peso relativo ya se ve, y la barra era la única columna del módulo que no era un dato de la OT.
+
+**Los totales van al pie, en una fila de Total**, y no en un KPI arriba de la tabla: así se leen en
+la misma línea que las OT y el costo que los acompañan. A diferencia de la fila de Total del
+Detalle por Servicio —que solo aparece con el filtro de Servicio puesto, porque ese panel mezcla
+unidades— esta **está siempre**: acá todo se mide en litros, así que la suma siempre significa
+algo. Servicio y Contratista quedan vacías también en ella.
 Ahora cada área se abre con clic (caret `▸`/`▾` en la celda **OT**) y lista sus OT con las
 **mismas columnas del Detalle por Servicio**: `OT · Fecha · Cultivo · Lote · L. Consumidos ·
 Costo Total · Observaciones`. La única diferencia es la columna de cantidad — donde el otro panel
