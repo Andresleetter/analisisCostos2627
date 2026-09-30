@@ -731,6 +731,32 @@ Es **una por OT**, no un recorte de varias: verificado sobre las **2.042 OT de l
 
 **Los saltos de línea se conservan.** 68 de las 1.415 observaciones cargadas los traen, y son las que más los necesitan: una dosis por renglón (`Cyperex: 0,085 Kg/ha` / `Garant: 0,035 L/ha`) o el presupuesto desglosado (`Monto aprobado 217 hs` / `Metros aprobados 19355mts` / `Hora total: 98,61 hs`…). HTML los colapsaría, así que `obsHtml()` los convierte en `<br>` **después** de escapar, descartando los renglones vacíos y los espacios de los extremos, que es lo único que aporta la sangría del Excel. La celda es la única del desplegable que envuelve en varias líneas; el resto sigue en una sola.
 
+### Consumo de Gasoil por Área desplegable
+
+El mismo patrón que el Detalle por Servicio, y por el mismo motivo: la tabla resume ocho áreas y
+`Operativo` sola se lleva 253 OT y 12.990 litros, así que la fila no dice nada de qué se cargó.
+Ahora cada área se abre con clic (caret `▸`/`▾` en la celda **OT**) y lista sus OT con las
+**mismas columnas del Detalle por Servicio**: `OT · Fecha · Cultivo · Lote · L. Consumidos ·
+Costo Total · Observaciones`. La única diferencia es la columna de cantidad — donde el otro panel
+pone `Trabajo Ejecutado` en la unidad del grupo, acá van los litros, que es lo único que se mide en
+una carga de combustible. Los dos desplegables se leen igual a propósito.
+
+En estas OT el **Lote** suele ser el pseudo-lote del área (`Operativos`, `Secadero Arroz`), y así
+debe verse: es el dato que trae la OT, y en las cargas imputadas a una parcela real —el gasoil de
+las labores propias— muestra la parcela.
+
+**La observación es la columna que justifica el desplegable.** Es el único lugar donde consta qué
+máquina cargó y para qué: `Rolo faca P70 - Tr 04 AC`, `Desalijo de Silo Bolsa (14 Hs) - Tr Deutz`,
+`Logistica - Ford Ranger (107.153 km)`. Las **501 OT de gasoil de la campaña la traen cargada**,
+las 501.
+
+Igual que en el otro panel, el desplegable **no recalcula nada**: concatena los `ots` que
+`construirServicios()` dejó en cada grupo `(mes + área + personal)` y los ordena por fecha. Una OT
+pertenece a un solo grupo, así que no se duplica al unir los grupos de un área. Verificado: las 501
+OT de los desplegables suman **40.156,22 L**, exactamente el `gasoil_litros_total` del KPI, y la
+cantidad de OT de cada detalle coincide con la columna `OT` de su fila. Una sola área abierta a la
+vez, y si un filtro la saca del resultado se cierra sola.
+
 ### Fila de Total del Detalle por Servicio
 
 Al pie de la tabla, y **solo con el filtro de Servicio puesto**. La razón es la unidad: cualquier

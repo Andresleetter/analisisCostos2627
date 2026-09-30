@@ -95,6 +95,15 @@ document.addEventListener('DOMContentLoaded', function(){
     servFilaAbierta = (servFilaAbierta===clave) ? null : clave;
     renderLaborDetalle();
   });
+  // Clic en una fila de "Consumo de Gasoil por Área": mismo patrón que #gld, delegado sobre el
+  // tbody porque la tabla se redibuja entera. Una sola área abierta a la vez.
+  document.getElementById('gasbody').addEventListener('click', function(e){
+    const fila = e.target.closest('tr.sv-fila');
+    if(!fila) return;
+    const area = decodeURIComponent(fila.dataset.area);
+    gasFilaAbierta = (gasFilaAbierta===area) ? null : area;
+    renderGasoil();
+  });
   // ---- Filtro de Campaña del Resumen Ejecutivo ----
   // Los dos selectores (el del Resumen y el de la vista Avance Detallado) comparten un único
   // estado, campaniaResumenActiva, así que cambiar cualquiera de los dos mueve el otro y vuelve a

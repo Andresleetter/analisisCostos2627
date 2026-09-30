@@ -1945,21 +1945,57 @@ function filaTotalServicios(labs, hayFiltro){
 }
 
 // ---- Consumo de Gasoil por Área ----
+// Igual que el Detalle por Servicio: cada área se despliega y muestra las OT que la componen. La
+// clave de la fila abierta es el nombre del área —es la única agrupación de la tabla— y se guarda
+// acá arriba para que sobreviva al redibujado que dispara cada filtro.
+let gasFilaAbierta = null;
+
+// Las OT de un área pueden venir de varios grupos (mes + personal) del modelo; acá se juntan y se
+// ordenan por fecha, que es como se lee un consumo de combustible.
+function svDetalleGasoil(area, ots){
+  const filas=[...ots].sort((a,b)=>(a.fr?a.fr.getTime():0)-(b.fr?b.fr.getTime():0)).map(o=>{
+    const obs=String(o.obs||'').trim();
+    return `<tr><td class="mono"><b>${escHtml(o.ot)}</b></td><td class="mono">${ipFecha(o.fr)}</td>`+
+      `<td>${escHtml(o.cultivo)}</td><td>${escHtml(o.lote)||'<span class="ip-sin">—</span>'}</td>`+
+      `<td class="tr mono">${fmt1(o.litros)} L</td>`+
+      `<td class="tr mono col-tot">US$ ${fmtUSD(o.total)}</td>`+
+      `<td class="sv-obs">${obs?obsHtml(obs):'<span class="ip-sin">—</span>'}</td></tr>`;
+  }).join('');
+  const conObs=ots.filter(o=>String(o.obs||'').trim()).length;
+  return `<tr class="sv-det"><td colspan="6"><div class="sv-det-tit">${ots.length} orden(es) de trabajo · ${escHtml(area)}`+
+    (ots.length?` · ${conObs}/${ots.length} con observación`:'')+`</div>`+
+    `<div class="sv-det-wrap"><table class="sv-ots"><thead><tr><th>OT</th><th>Fecha</th><th>Cultivo</th><th>Lote</th>`+
+    `<th class="tr">L. Consumidos</th><th class="tr">Costo Total</th><th>Observaciones</th></tr></thead><tbody>${filas}</tbody></table></div>`+
+    `</td></tr>`;
+}
+
 function renderGasoil(){
   const S=serviciosFiltrados();
   const selV=document.getElementById('gmes').value, sel=selV==='ALL'?'ALL':parseInt(selV);
   const recs=sel==='ALL'?S.gasoil_sec:S.gasoil_sec.filter(r=>r.mesnum===sel);
   const by={}; recs.forEach(r=>{ const key=r.area;
-    if(!by[key]) by[key]={area:r.area,n:0,litros:0,total:0};
-    const o=by[key]; o.n+=r.n; o.litros+=r.litros; o.total+=r.total; });
+    if(!by[key]) by[key]={area:r.area,n:0,litros:0,total:0,ots:[]};
+    // `ots` se concatena, nunca se recalcula: son las mismas OT que el modelo ya metió en cada
+    // grupo (mes + área + personal), y una OT vive en un solo grupo, así que no se duplica.
+    const o=by[key]; o.n+=r.n; o.litros+=r.litros; o.total+=r.total; o.ots=o.ots.concat(r.ots||[]); });
   const rows=Object.values(by).sort((a,b)=>b.total-a.total);
+  // Si el área desplegada desapareció del resultado (cambió Campaña, Mes, Cultivo o Lote), la fila
+  // se cierra sola: nunca queda abierto un detalle de un filtro anterior.
+  if(gasFilaAbierta && !rows.some(r=>r.area===gasFilaAbierta)) gasFilaAbierta=null;
   const tot=rows.reduce((s,r)=>s+r.total,0), litros=rows.reduce((s,r)=>s+r.litros,0);
   // Sin KPI de "Total Gasoil": esa misma cifra ya esta arriba, en el KPI de Costo Combustible, que
   // aplica los mismos filtros. Se quito a pedido del usuario (22/09/2026) para no repetirla.
   // `tot` sigue usandose mas abajo, para el porcentaje de cada area sobre el total del periodo.
   document.getElementById('gastop').innerHTML=`<div class="sop-kpi"><div class="l">Litros Consumidos</div><div class="v">${fmt1(litros)} L</div></div>`;
   const mx=Math.max(1,...rows.map(r=>r.total));
-  document.getElementById('gasbody').innerHTML=rows.length?rows.map(r=>`<tr><td><b>${r.area}</b></td><td class="tr mono">${r.n}</td><td class="tr mono">${fmt1(r.litros)}</td><td class="tr mono col-tot">US$ ${fmtUSD(r.total)}</td><td class="tr"><div class="sopbar"><div style="width:${r.total/mx*100}%"></div></div></td><td class="tr mono">${tot?(r.total/tot*100).toFixed(1):0}%</td></tr>`).join(''):'<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:16px">Sin consumo de gasoil en el período</td></tr>';
+  // El caret ▸/▾ va en la celda de OT, igual que en el Detalle por Servicio, y el clic se atiende
+  // delegado sobre #gasbody (js/events.js).
+  document.getElementById('gasbody').innerHTML=rows.length?rows.map(r=>{
+    const abierta=gasFilaAbierta===r.area;
+    let html=`<tr class="sv-fila${abierta?' open':''}" data-area="${encodeURIComponent(r.area)}"><td><b>${escHtml(r.area)}</b></td><td class="tr mono"><span class="ip-caret">${abierta?'▾':'▸'}</span> ${r.n}</td><td class="tr mono">${fmt1(r.litros)}</td><td class="tr mono col-tot">US$ ${fmtUSD(r.total)}</td><td class="tr"><div class="sopbar"><div style="width:${r.total/mx*100}%"></div></div></td><td class="tr mono">${tot?(r.total/tot*100).toFixed(1):0}%</td></tr>`;
+    if(abierta) html+=svDetalleGasoil(r.area, r.ots||[]);
+    return html;
+  }).join(''):'<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:16px">Sin consumo de gasoil en el período</td></tr>';
 }
 // ---- Trabajos para Terceros ----
 // Sigue los mismos filtros que el resto de la pestania (Campania y Cultivo via serviciosFiltrados,

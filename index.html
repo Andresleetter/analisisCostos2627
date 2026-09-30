@@ -166,6 +166,10 @@
         <th>Servicio</th><th>Estadio</th><th class="tr">OT Conf.</th><th class="tr">Trabajo Ejecutado</th>
         <th>Contratista</th><th class="tr">Costo Total</th></tr></thead><tbody id="gld"></tbody></table></div></div>
     <div class="panel sub"><h3>Consumo de Gasoil por Área</h3>
+      <!-- Igual que el Detalle por Servicio: la columna "OT" lleva el caret ▸/▾ y cada área se
+           despliega con las OT que la componen, con las MISMAS columnas de aquel desplegable
+           (OT · Fecha · Cultivo · Lote · L. Consumidos · Costo Total · Observaciones) — ver
+           renderGasoil/svDetalleGasoil en js/render.js. -->
       <div class="sop-top" id="gastop"></div>
       <div class="scroll"><table><thead><tr><th>Área</th><th class="tr">OT</th><th class="tr">Litros</th><th class="tr">Total Pagado</th><th class="tr">Participación</th><th class="tr">%</th></tr></thead><tbody id="gasbody"></tbody></table></div></div>
     <!-- Trabajos que la campania hizo PARA un tercero. El dato sale de la observacion de la OT,
