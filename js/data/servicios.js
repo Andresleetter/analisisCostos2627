@@ -162,7 +162,11 @@ function acumularGrupoGasoil(meta, ots){
     // lote: lo necesita filtrarServiciosPorLote, igual que cultivoKey. En las OT de gasoil casi
     // siempre es el pseudo-lote del area (Operativos, Secadero Arroz, PARCELA ARROZ...), que es
     // justamente lo que corresponde mostrar si se filtra por uno de ellos.
-    gmap[key].ots.push({ot:o.ot,cultivo:cult.label,cultivoKey:cult.key,lote:o.lote,litros,total:o.imp}); });
+    // fr/obs: los usa el desplegable del panel (svDetalleGasoil en render.js). La observacion es
+    // lo unico que dice QUE maquina cargo y para que —"Rolo faca P74 y P70 - Tr 04 AC"—, que es
+    // justo lo que no se puede leer en ninguna otra columna de una OT de gasoil.
+    gmap[key].ots.push({ot:o.ot,fr:o.fr,cultivo:cult.label,cultivoKey:cult.key,lote:o.lote,
+      obs:o.obs,litros,total:o.imp}); });
   const gasoil_sec=Object.values(gmap).map(g=>acumularGrupoGasoil(g.meta,g.ots));
   // ---- Trabajos para terceros ----
   // Se arma sobre CONFin entero, no sobre detOT ni gasOT: un traslado para un tercero puede venir
