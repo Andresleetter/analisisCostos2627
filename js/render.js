@@ -1303,6 +1303,11 @@ function alertaSeveridad(a){
   if(!a.atrasada) return null;
   return a.diasTranscurridos>30 ? 'r' : (a.diasTranscurridos>15 ? 'o' : (a.diasTranscurridos>7 ? 'y' : null));
 }
+// dd/mm/aaaa hh:mm, el mismo formato que la chapita de frescura de la cabecera del tablero
+function selloFechaHora(d){
+  const p = n => ('0'+n).slice(-2);
+  return p(d.getDate())+'/'+p(d.getMonth()+1)+'/'+d.getFullYear()+' · '+p(d.getHours())+':'+p(d.getMinutes());
+}
 function alertasDescargarImagen(){
   const filas = alertasAtrasadas();
   if(!filas.length) return;
@@ -1316,7 +1321,9 @@ function alertasDescargarImagen(){
 
   const PAD = 40, ANCHO_TABLA = ALERTAS_IMG_COLS.reduce((s,c)=>s+c.w,0);
   const W = ANCHO_TABLA + PAD*2;
-  const ALTO_CAB = 128, ALTO_TH = 40, ALTO_FILA = 38, ALTO_PIE = 56;
+  // La cabecera mide 160: el bloque de la izquierda termina en 118 (la línea de la tolerancia)
+  // y el de la derecha en 142 (el borde de abajo de la chapita), mas aire antes de la tabla.
+  const ALTO_CAB = 160, ALTO_TH = 40, ALTO_FILA = 38, ALTO_PIE = 56;
   const H = ALTO_CAB + ALTO_TH + filas.length*ALTO_FILA + ALTO_PIE;
 
   // devicePixelRatio fijo en 2: la imagen tiene que salir nitida en cualquier pantalla, no en la
@@ -1355,6 +1362,17 @@ function alertasDescargarImagen(){
   x.fillText(String(filas.length), W-PAD, PAD+44);
   x.fillStyle = GRIS; x.font = F(700, 12);
   x.fillText(filas.length===1 ? 'ORDEN ATRASADA' : 'ÓRDENES ATRASADAS', W-PAD, PAD+64);
+  // La última actualización del dato, como chapita, igual que en la cabecera del tablero. Va
+  // ARRIBA y no solo en el pie: es lo primero que pregunta cualquiera que recibe la imagen suelta
+  // —¿de cuándo es esto?— y al pie, en gris chico, se pasa por alto.
+  const selloDato = 'Actualizado ' + selloFechaHora(D.excel_actualizado);
+  x.font = F(700, 12.5);
+  const anSello = x.measureText(selloDato).width + 26, altoSello = 26;
+  const xSello = W-PAD-anSello, ySello = PAD+76;
+  x.fillStyle = '#EDF3EC';
+  x.beginPath(); x.roundRect(xSello, ySello, anSello, altoSello, 13); x.fill();
+  x.fillStyle = TEAL; x.textAlign = 'center';
+  x.fillText(selloDato, xSello+anSello/2, ySello+17);
   x.textAlign = 'left';
 
   // ---- encabezado de la tabla
@@ -1408,10 +1426,10 @@ function alertasDescargarImagen(){
   // ---- pie: de cuando es el dato. Una imagen que se comparte sobrevive al tablero, asi que tiene
   // que decir a que exportacion corresponde o se discute sobre numeros viejos sin saberlo.
   const fa = D.excel_actualizado;
-  const sello = ('0'+fa.getDate()).slice(-2)+'/'+('0'+(fa.getMonth()+1)).slice(-2)+'/'+fa.getFullYear()
-    +' '+('0'+fa.getHours()).slice(-2)+':'+('0'+fa.getMinutes()).slice(-2);
   x.fillStyle = GRIS; x.font = F(500, 11.5);
-  x.fillText('Datos de Albor al '+sello+' · Desarrollos del Sur S.A.', PAD, y+32);
+  x.fillText('Datos de Albor al '+selloFechaHora(fa)
+    +'  ·  Imagen generada el '+selloFechaHora(new Date())
+    +'  ·  Desarrollos del Sur S.A.', PAD, y+32);
 
   const nombre = 'OT-atrasadas-'+String(D.campania_actual).replace(/\D+/g, '-')+'-'
     + fa.getFullYear()+('0'+(fa.getMonth()+1)).slice(-2)+('0'+fa.getDate()).slice(-2)+'.png';
