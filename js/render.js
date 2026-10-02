@@ -1448,10 +1448,10 @@ function renderCombustible(){
     D.combustible.map(r=>({mesnum:r.mesnum,cantidad:r.litros})));
   const balance=stockInicioPeriodo+totIngresoMes-totConsumoMes+totTransfMes+totPrestMes;
   // El pie del Balance solo menciona las transferencias cuando el neto NO es cero, o sea cuando hay
-  // una pata sin su contraparte. Mientras cada traslado tenga su vuelta, dice lo mismo de siempre.
+  // una pata sin su contraparte. Mientras cada traslado tenga su vuelta, no dice nada. Los
+  // prestamos ya no se mencionan aca: tienen su propia tabla mas abajo.
   const piezas = [];
   if(totTransfMes) piezas.push(fmt2(totTransfMes)+' L netos de transferencias');
-  if(totPrestMes) piezas.push(fmt2(totPrestMes)+' L de préstamos');
   const pieBalance = piezas.join(' · ');
   const balCol=balance>=0?'g':'r';
   document.getElementById('comb-balance').innerHTML=
