@@ -1282,12 +1282,18 @@ function renderAlertas(){
 const ALERTAS_IMG_COLS = [
   {k:'dias',   lbl:'Atraso',      w: 86, al:'c'},
   {k:'ot',     lbl:'OT',          w:104},
-  {k:'serv',   lbl:'Servicio',    w:268},
+  {k:'serv',   lbl:'Servicio',    w:330},
   {k:'lote',   lbl:'Lote',        w: 92},
   {k:'cult',   lbl:'Cultivo',     w:104},
-  {k:'contr',  lbl:'Contratista', w:226},
-  {k:'estado', lbl:'Estado',      w:120},
+  {k:'contr',  lbl:'Contratista', w:248},
   {k:'ft',     lbl:'F. Teórica',  w:116, al:'r'},
+];
+// Las dos secciones de la imagen, en este orden. El Estado dejo de ser una columna —lo dice la
+// seccion y repetirlo en cada fila era ruido— y sus 120 px se repartieron entre Servicio y
+// Contratista, que eran las dos que mas se recortaban.
+const ALERTAS_IMG_SECCIONES = [
+  {estado:'En Ejecución', lbl:'En ejecución'},
+  {estado:'Pendiente',     lbl:'Pendientes'},
 ];
 // Las OT atrasadas que se van a dibujar, con el filtro de Estado de la pantalla aplicado.
 function alertasAtrasadas(){
@@ -1308,9 +1314,26 @@ function selloFechaHora(d){
   const p = n => ('0'+n).slice(-2);
   return p(d.getDate())+'/'+p(d.getMonth()+1)+'/'+d.getFullYear()+' · '+p(d.getHours())+':'+p(d.getMinutes());
 }
-function alertasDescargarImagen(){
+// El logo que se dibuja en la imagen es EL MISMO archivo que usa la cabecera del tablero
+// (img/logo_del_sur.svg), asi que no hay una segunda copia que pueda quedar desactualizada. Se
+// carga una sola vez por sesion: el PNG que lleva adentro pesa 2 MB y no hace falta releerlo en
+// cada descarga. Es del mismo origen, asi que no mancha el canvas y toBlob sigue funcionando.
+let alertasLogo = null;
+function alertasCargarLogo(){
+  if(alertasLogo) return Promise.resolve(alertasLogo);
+  return new Promise(res=>{
+    const img = new Image();
+    // Si el logo no carga, la imagen se genera igual, sin el: una descarga que falla entera por
+    // un adorno seria peor que una descarga sin adorno.
+    img.onload = () => { alertasLogo = img; res(img); };
+    img.onerror = () => res(null);
+    img.src = 'img/logo_del_sur.svg';
+  });
+}
+async function alertasDescargarImagen(){
   const filas = alertasAtrasadas();
   if(!filas.length) return;
+  const logo = await alertasCargarLogo();
   // Los colores salen de las variables CSS, no de literales: si cambia la paleta del tablero, la
   // imagen cambia con ella y no queda una copia desactualizada escondida acá.
   const cs = getComputedStyle(document.documentElement);
@@ -1321,10 +1344,20 @@ function alertasDescargarImagen(){
 
   const PAD = 40, ANCHO_TABLA = ALERTAS_IMG_COLS.reduce((s,c)=>s+c.w,0);
   const W = ANCHO_TABLA + PAD*2;
-  // La cabecera mide 160: el bloque de la izquierda termina en 118 (la línea de la tolerancia)
-  // y el de la derecha en 142 (el borde de abajo de la chapita), mas aire antes de la tabla.
-  const ALTO_CAB = 160, ALTO_TH = 40, ALTO_FILA = 38, ALTO_PIE = 56;
-  const H = ALTO_CAB + ALTO_TH + filas.length*ALTO_FILA + ALTO_PIE;
+  // La cabecera mide 190: el logo y el titulo comparten la primera linea, el numero y la chapita
+  // bajan por la derecha hasta 136, y la bajada cruza entera por abajo a la altura 168.
+  const ALTO_CAB = 190, ALTO_TH = 40, ALTO_FILA = 38, ALTO_PIE = 56, ALTO_SEC = 40;
+  // Solo entran las secciones que tienen filas: con el filtro de Estado puesto, o si no hay
+  // ninguna pendiente atrasada, no se dibuja una banda vacia.
+  const secciones = ALERTAS_IMG_SECCIONES
+    .map(sc => ({...sc, filas: filas.filter(a => a.estado === sc.estado)}))
+    .filter(sc => sc.filas.length);
+  // Una OT con un Estado que no es ninguno de los dos no puede quedar afuera sin que se note: va
+  // en su propia seccion, con el nombre que traiga del Excel.
+  const sueltas = filas.filter(a => !ALERTAS_IMG_SECCIONES.some(sc => sc.estado === a.estado));
+  if(sueltas.length) secciones.push({estado:null, lbl:'Otros estados', filas:sueltas});
+  const H = ALTO_CAB + ALTO_TH + ALTO_PIE
+    + secciones.reduce((t, sc) => t + ALTO_SEC + sc.filas.length*ALTO_FILA, 0);
 
   // devicePixelRatio fijo en 2: la imagen tiene que salir nitida en cualquier pantalla, no en la
   // del que la genera. Un equipo sin HiDPI produciria un PNG borroso al abrirlo en un telefono.
@@ -1347,33 +1380,46 @@ function alertasDescargarImagen(){
 
   x.fillStyle = '#fff'; x.fillRect(0, 0, W, H);
 
-  // ---- cabecera
-  x.fillStyle = TINTA; x.font = F(800, 30);
-  x.fillText('OT Atrasadas', PAD, PAD+30);
+  // ---- cabecera: el logo y el titulo en la primera linea, el numero y la chapita a la derecha,
+  // y la bajada cruzando entera por abajo.
+  let xTit = PAD;
+  if(logo){
+    const altoLogo = 46, anchoLogo = altoLogo * (logo.naturalWidth/logo.naturalHeight);
+    x.drawImage(logo, PAD, PAD, anchoLogo, altoLogo);
+    xTit = PAD + anchoLogo + 24;
+    // la barrita que separa el logo del titulo, igual que en la cabecera del tablero
+    x.strokeStyle = LINEA; x.lineWidth = 2;
+    x.beginPath(); x.moveTo(xTit-13, PAD+3); x.lineTo(xTit-13, PAD+altoLogo-3); x.stroke();
+    x.lineWidth = 1;
+  }
+  x.fillStyle = TINTA; x.font = F(800, 28);
+  x.fillText('OT Atrasadas', xTit, PAD+28);
   const estV = document.getElementById('aestado').value;
   x.fillStyle = GRIS; x.font = F(600, 14);
   x.fillText('Campaña '+D.campania_actual+' · Campo La Teresa'
-    + (estV==='ALL' ? '' : ' · solo '+estV), PAD, PAD+56);
-  x.fillText('Pendientes o en ejecución pasada su fecha teórica, con más de 3 días de tolerancia.',
-    PAD, PAD+78);
+    + (estV==='ALL' ? '' : ' · solo '+estV), xTit, PAD+50);
   // el numero grande, a la derecha
   x.textAlign = 'right';
-  x.fillStyle = SEV_PILL.r; x.font = F(800, 44);
-  x.fillText(String(filas.length), W-PAD, PAD+44);
+  x.fillStyle = SEV_PILL.r; x.font = F(800, 42);
+  x.fillText(String(filas.length), W-PAD, PAD+38);
   x.fillStyle = GRIS; x.font = F(700, 12);
-  x.fillText(filas.length===1 ? 'ORDEN ATRASADA' : 'ÓRDENES ATRASADAS', W-PAD, PAD+64);
+  x.fillText(filas.length===1 ? 'ORDEN ATRASADA' : 'ÓRDENES ATRASADAS', W-PAD, PAD+58);
   // La última actualización del dato, como chapita, igual que en la cabecera del tablero. Va
   // ARRIBA y no solo en el pie: es lo primero que pregunta cualquiera que recibe la imagen suelta
   // —¿de cuándo es esto?— y al pie, en gris chico, se pasa por alto.
   const selloDato = 'Actualizado ' + selloFechaHora(D.excel_actualizado);
   x.font = F(700, 12.5);
   const anSello = x.measureText(selloDato).width + 26, altoSello = 26;
-  const xSello = W-PAD-anSello, ySello = PAD+76;
+  const xSello = W-PAD-anSello, ySello = PAD+70;
   x.fillStyle = '#EDF3EC';
   x.beginPath(); x.roundRect(xSello, ySello, anSello, altoSello, 13); x.fill();
   x.fillStyle = TEAL; x.textAlign = 'center';
   x.fillText(selloDato, xSello+anSello/2, ySello+17);
   x.textAlign = 'left';
+  // la bajada va abajo de todo y a lo ancho: ahi no se pelea ni con el logo ni con la chapita
+  x.fillStyle = GRIS; x.font = F(600, 13.5);
+  x.fillText('Pendientes o en ejecución pasada su fecha teórica, con más de 3 días de tolerancia. '
+    + 'Dentro de cada estado, de la más atrasada a la menos.', PAD, PAD+128);
 
   // ---- encabezado de la tabla
   let y = ALTO_CAB;
@@ -1390,13 +1436,29 @@ function alertasDescargarImagen(){
   x.beginPath(); x.moveTo(PAD, y+ALTO_TH-.5); x.lineTo(W-PAD, y+ALTO_TH-.5); x.stroke();
   y += ALTO_TH;
 
-  // ---- filas
-  filas.forEach(a=>{
+  // ---- las filas, agrupadas por estado
+  secciones.forEach(sc=>{
+    // La banda de la seccion: el estado y cuantas hay. Va con el fondo suave del tablero para que
+    // se lea como un corte y no como una fila mas.
+    x.fillStyle = '#F3F5F2'; x.fillRect(PAD, y, ANCHO_TABLA, ALTO_SEC);
+    const rot = sc.lbl.toUpperCase();
+    x.fillStyle = TEAL; x.font = F(800, 13);
+    x.fillText(rot, PAD+12, y+25);
+    // el ancho se mide con la MISMA fuente con la que se dibujo el rotulo, antes de cambiarla:
+    // medirlo despues da de menos y el conteo se le pega encima a un rotulo largo
+    const anRot = x.measureText(rot).width;
+    x.fillStyle = GRIS; x.font = F(600, 12);
+    x.fillText(sc.filas.length + (sc.filas.length===1 ? ' orden' : ' órdenes'),
+      PAD+12+anRot+16, y+25);
+    x.strokeStyle = LINEA;
+    x.beginPath(); x.moveTo(PAD, y+ALTO_SEC-.5); x.lineTo(W-PAD, y+ALTO_SEC-.5); x.stroke();
+    y += ALTO_SEC;
+  sc.filas.forEach(a=>{
     const sev = alertaSeveridad(a);
     if(sev){ x.fillStyle = SEV_FILA[sev]; x.fillRect(PAD, y, ANCHO_TABLA, ALTO_FILA); }
     const ft = a.ft ? (('0'+a.ft.getDate()).slice(-2)+'/'+('0'+(a.ft.getMonth()+1)).slice(-2)+'/'+a.ft.getFullYear()) : '-';
     const val = {dias:a.diasTranscurridos+'d', ot:'OT '+a.ot, serv:a.serv, lote:a.lote,
-                 cult:a.cult, contr:labelContratista(a.contr), estado:a.estado, ft:ft};
+                 cult:a.cult, contr:labelContratista(a.contr), ft:ft};
     cx = PAD;
     ALERTAS_IMG_COLS.forEach(c=>{
       if(c.k==='dias'){
@@ -1421,6 +1483,7 @@ function alertasDescargarImagen(){
     x.strokeStyle = LINEA;
     x.beginPath(); x.moveTo(PAD, y+ALTO_FILA-.5); x.lineTo(W-PAD, y+ALTO_FILA-.5); x.stroke();
     y += ALTO_FILA;
+  });
   });
 
   // ---- pie: de cuando es el dato. Una imagen que se comparte sobrevive al tablero, asi que tiene
