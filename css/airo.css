@@ -27,7 +27,9 @@
   --fondo:#DAF1DE; --blanco:#FFFFFF; --lateral:#E8F3EA; --suave:#E9F4EB;
   --tinta:#000000; --tinta2:#1E2321; --gris:#44504C; --borde:#D5E8DA; --borde2:#B9D5C3;
   --rosa:#D2EBD9; --pist:#C6E4D1; --almen:#CFE8D7;
-  --bloque:#F5F0E6;  /* el bloque de arriba de cada módulo: lino, cálido sobre el fondo menta */
+  --bloque:#F5F0E6;  /* el bloque de arriba de cada módulo: lino, cálido sobre el fondo menta.
+       Encima van dos difuminados —blanco arriba a la izquierda, menta abajo a la derecha— que
+       le dan la profundidad del Portal sin mover el color base. */
   --sage:#8EB69B;  /* el verde medio, sólo para manchas y rellenos, nunca debajo de texto */
 
   /* Los gráficos tienen paleta propia, la de Airo: rosa, carmín, pistacho, almendra, ámbar.
@@ -177,7 +179,7 @@ body.mg-barra-vuelve .mg-nav .tab{animation:mgCaeTab .34s cubic-bezier(.22,.8,.3
    LA PORTADA · el mismo aire del panel del acceso, con datos reales
    ===================================================================== */
 .mg-hero{position:relative;border-radius:28px;padding:30px clamp(18px,2.6vw,34px) clamp(18px,2.6vw,30px);margin-bottom:26px;overflow:hidden;
-  background:var(--bloque);
+  background:radial-gradient(60% 90% at 12% 10%,rgba(255,255,255,.8),transparent 70%),radial-gradient(60% 90% at 92% 95%,rgba(198,228,209,.6),transparent 70%),var(--bloque);
   animation:mqEntra .7s cubic-bezier(.2,.8,.2,1) both}
 .mg-hero::after{content:"";position:absolute;right:-60px;top:-80px;width:280px;height:280px;border-radius:50%;background:rgba(255,255,255,.35);filter:blur(10px);animation:mgDeriva 18s ease-in-out infinite alternate;pointer-events:none}
 .mg-hero>*{position:relative;z-index:1}
@@ -445,7 +447,7 @@ body.mg-barra-vuelve .mg-nav .tab{animation:mgCaeTab .34s cubic-bezier(.22,.8,.3
 
 /* overflow:clip (no hidden) para que un th pegajoso de adentro siga funcionando */
 .mg-ot-hero{position:relative;overflow:clip;border-radius:28px;padding:30px clamp(18px,2.6vw,34px) clamp(18px,2.6vw,30px);margin-bottom:26px;
-  background:var(--bloque);
+  background:radial-gradient(60% 90% at 12% 10%,rgba(255,255,255,.8),transparent 70%),radial-gradient(60% 90% at 92% 95%,rgba(198,228,209,.6),transparent 70%),var(--bloque);
   animation:mqEntra .7s cubic-bezier(.2,.8,.2,1) both}
 .mg-ot-hero::after{content:"";position:absolute;right:-60px;top:-80px;width:280px;height:280px;border-radius:50%;background:rgba(255,255,255,.35);filter:blur(10px);animation:mgDeriva 18s ease-in-out infinite alternate;pointer-events:none}
 .mg-ot-hero>*{position:relative;z-index:1}
