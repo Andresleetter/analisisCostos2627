@@ -46,7 +46,7 @@ function renderAll(){
     `<div class="kpi"><div class="k-lab">Ha Excedidas Acum.</div><div class="k-val c-r" style="font-size:22px">+${fmt2(D.exc_kpi.ha)}</div></div>`+
     `<div class="kpi"><div class="k-lab">Preparación Repetida</div><div class="k-val c-r">${D.exc_kpi.n_repetidas}</div><div class="k-foot">+${fmt2(D.exc_kpi.ha_repetidas)} ha`+
       `${D.exc_kpi.hay_baseline&&D.exc_kpi.n_nuevas_repetidas?` · ${D.exc_kpi.n_nuevas_repetidas} nuevo(s)`:''}</div></div>`+
-    `<div class="kpi"><div class="k-lab">OT Fuera de RTK</div><div class="k-val c-r">${D.exc_kpi.n_sinrtk}</div></div>`;
+    `<div class="kpi"><div class="k-lab">OT Fuera del Plan</div><div class="k-val c-r">${D.exc_kpi.n_sinrtk}</div></div>`;
   document.getElementById('exc-sub').textContent=D.exceso.length+' lotes';
   let excHtml='';
   D.exceso.forEach(e=>{
@@ -70,7 +70,7 @@ function renderAll(){
     // sigue teniendo las mismas 6 celdas que la cabecera. Es el mismo dato y el mismo formato que
     // ya muestra el panel de labores repetidas, y responde lo primero que se pregunta al ver un
     // sobrepase: si se cargo el dia de la labor o meses despues.
-    culpables.forEach(x=>{ const tag='<span class="tag">superficie sobre RTK</span>';
+    culpables.forEach(x=>{ const tag='<span class="tag">superficie sobre el plan</span>';
       excHtml+=`<tr class="det-over"><td class="dl mono">OT ${x.ot}</td><td>${x.act}</td><td>${x.serv} ${tag}</td><td class="mono">${x.fr?ipFecha(x.fr):'—'}</td><td>${x.estado}</td><td class="tr exd">${fmt2(x.ha)} ha</td></tr>`; });
   });
   document.getElementById('exc').innerHTML=excHtml;
@@ -141,7 +141,7 @@ function renderAll(){
   const selITipo=document.getElementById('itipo'); selITipo.querySelectorAll('option:not([value=ALL])').forEach(o=>o.remove());
   D.insumos_tipos.forEach(t=>{const o=document.createElement('option');o.value=t;o.textContent=t;selITipo.appendChild(o);});
   actualizarFiltroInsumo();
-  document.getElementById('foot').innerHTML='Datos cargados automáticamente desde datosCampania2627.xlsx · solo OT confirmadas en importes · todo importe = Unidades/Dosis × Precio Unitario · litros = Unidades/Dosis · avance por Ha ejecutadas vs plan RTK · planificación desde consultaCultivos (clave de unión: cultivo=actividad + lote normalizado) · sin datos de rendimiento ni presupuesto · no se hallaron OT canceladas.<br>Desarrollos del Sur S.A. · Producción Agrícola-Ganadera · '+fdTxt;
+  document.getElementById('foot').innerHTML='Datos cargados automáticamente desde datosCampania2627.xlsx · solo OT confirmadas en importes · todo importe = Unidades/Dosis × Precio Unitario · litros = Unidades/Dosis · avance por Ha ejecutadas vs plan de cultivo · planificación desde consultaCultivos (clave de unión: cultivo=actividad + lote normalizado) · sin datos de rendimiento ni presupuesto · no se hallaron OT canceladas.<br>Desarrollos del Sur S.A. · Producción Agrícola-Ganadera · '+fdTxt;
   renderCombustible();
   renderG();
   renderInsumos();
@@ -352,7 +352,7 @@ function renderCultivoDetalle(){
     <img class="mapa-thumb" src="${m.src}" data-mapa-alt="Mapa ${m.que} de la Campaña 26/27 (ampliado)"
       alt="Mapa ${m.que} de la Campaña 26/27" tabindex="0" role="button" aria-label="Ampliar ${m.titulo.toLowerCase()}"></div>`).join('');
   document.getElementById('cults').innerHTML=paqueteResumen().cultivos.map(c=>{
-    const plan=c.tiene_rtk?fmt2(c.ha_plan)+' ha':'s/ RTK';
+    const plan=c.tiene_rtk?fmt2(c.ha_plan)+' ha':'s/ plan';
     // Cada etapa muestra su avance y, al lado, las hectáreas ejecutadas de ESA etapa. Las ha salen
     // de e.ha_ejec — la ejecución equivalente que ya calcula data.js (equivalenteLoteEstadio: cada
     // labor capada al plan del lote y promediada por estadio) y que es la misma base del porcentaje.
@@ -485,7 +485,7 @@ function avDivisorTxt(divisores){
 // decir con qué superficie se construyó el aporte.
 function avCadenaHa(l){
   return `<div class="av-lab-cadena">${fmt2(l.ha_ejec)} ha ejecutadas`+
-    ` → <b title="Cada lote entra capado a su plan RTK: esta es la superficie que efectivamente se promedia con las demás labores del lote.">${fmt2(l.ha_computada)}</b> ha que entran al promedio`+
+    ` → <b title="Cada lote entra capado a su plan de cultivo: esta es la superficie que efectivamente se promedia con las demás labores del lote.">${fmt2(l.ha_computada)}</b> ha que entran al promedio`+
     ` → <b>${fmt2(l.aporte_ha)}</b> ha de aporte <span class="ip-sin">· ${escHtml(avDivisorTxt(l.divisores))}</span></div>`;
 }
 
@@ -516,7 +516,7 @@ function renderAvanceDetalladoCultivo(){
   // el cultivo se lea completo; las que no tienen actividad confirmada se muestran como tales. Las
   // que sí la tienen usan el objeto etapa tal cual: mismo % y mismas ha que el Resumen Ejecutivo.
   const etapas=ETAPA_ORDEN.map(k=>({nombre:ETAPA_LABEL[k], e:porEtapa[ETAPA_LABEL[k]]||null}));
-  const plan=c.tiene_rtk?fmt2(c.ha_plan)+' ha planificadas':'sin plan RTK';
+  const plan=c.tiene_rtk?fmt2(c.ha_plan)+' ha planificadas':'sin plan de cultivo';
   const sub=c.incluyeZafrina?plan+' · plan 26/27, incluye Zafriña26':plan;
 
   const bloques=etapas.map(({nombre:nomEtapa,e})=>{
@@ -1236,7 +1236,7 @@ function renderAlertas(){
   const estTxt = estV==='ALL' ? 'Todas' : estV;
   document.getElementById('anote').textContent = estTxt;
   // KPIs con el mismo estilo que el resto del dashboard (.kpi, fondo blanco) — Lotes con Exceso
-  // y OT sin Correspondencia RTK NO se repiten acá: ya se muestran en Control de Hectáreas.
+  // y OT sin Correspondencia en el Plan de Cultivo NO se repiten acá: ya se muestran en Control de Hectáreas.
   document.getElementById('al-kpis').innerHTML=
     `<div class="kpi"><div class="k-lab">OT Atrasadas</div><div class="k-val c-r">${D.n_ot_atrasadas}</div></div>`+
     `<div class="kpi"><div class="k-lab">Pendientes</div><div class="k-val">${D.ot_pend}</div></div>`+

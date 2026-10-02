@@ -385,7 +385,7 @@ function loadData(){
       D.excel_actualizado_esFallback = !modXlsx;
       if(!modXlsx) console.warn('El .xlsx no trae metadata de última modificación (Props.ModifiedDate); se usa el momento de esta descarga como aproximación.');
       var conPlan=D.cultivos.filter(function(c){return c.tiene_rtk;}).length;
-      console.log('Cultivos con plan (RTK) cruzados desde consultaCultivos:', conPlan);
+      console.log('Cultivos con plan de cultivo cruzados desde consultaCultivos:', conPlan);
       if(conPlan===0) console.warn('Advertencia: consultaCultivos no aportó hectáreas planificadas.');
       renderAll();
       ov.style.display='none'; document.getElementById('app').style.display='block';

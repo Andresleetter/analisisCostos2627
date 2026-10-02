@@ -45,7 +45,7 @@ Si el archivo está abierto en Excel al momento de necesitar inspeccionarlo (ej.
    > **Los rótulos visibles de este módulo usan los nombres de la OT.** El panel se llama "Detalle por Servicio" (antes "Detalle por Labor") y sus columnas son **Servicio** y **Estadio** (antes "Labor" y "Etapa"), igual que los campos `servicio` y `estadio` de `consultaOT`. Es un cambio de rótulo: no se tocaron los ids (`glabor`, `gestadio`, `gld`, `gld-sub`), ni las claves internas (`r.labor`, `r.estadio`), ni un solo cálculo. La única cadena de datos que cambió es el marcador de las OT sin estadio cargado, `'(Sin etapa)'` → `'(Sin estadio)'` (`servicios.js`), que se muestra tal cual en el filtro y en la columna. "Detalle de Etapas por Cultivo" (Resumen Ejecutivo) **no** se renombró: es otro módulo y agrupa por las cuatro etapas de `ETAPA_ORDEN`, no por el estadio crudo de la OT.
 3. **Combustible** — Ingreso por proveedor y **Consumo por Uso / Detalle**, con cada movimiento atribuido por niveles (OT vinculada / Solo contratista / OT no disponible / Labor Propia) y filtros de Mes, Tercero y **Máquina**. KPI de Stock Inicial (dinámico) y Balance, con arrastre mes a mes.
 4. **Insumos** — Ingreso/Consumo de insumos no-combustible en **cantidad real** (nunca en dinero), con flujo de Stock dinámico y filtros dependientes Tipo de Insumo → Insumo. Ver sección propia más abajo.
-5. **Control de Hectáreas** — lotes con exceso de superficie vs. RTK (con tolerancia por servicio y sin alertar el sobrepase que la OT declara), labores de preparación repetidas que sumando superan el lote, lotes inhabilitados y OT sin correspondencia en el plan.
+5. **Control de Hectáreas** — lotes con exceso de superficie vs. plan de cultivo (con tolerancia por servicio y sin alertar el sobrepase que la OT declara), labores de preparación repetidas que sumando superan el lote, lotes inhabilitados y OT sin correspondencia en el plan.
 6. **Alertas Operacionales** — OT atrasadas, con filtro por Estado (Pendiente / En Ejecución / Todas) y color por fila según días de atraso.
 7. **Auditoría** — tres sub-módulos dentro de la misma pestaña, con navegación propia: **Infraestructura** (presupuesto vs. ejecución real), **Insumos por Parcela** (qué insumo se aplicó en cada lote, cuánto por hectárea y con qué OT) y **Siembra por Parcela** (cruce de las OT de siembra confirmadas contra el campo `hectareasSembradas` de la parcela, para detectar errores de carga). Última pestaña de la barra. Ver secciones propias más abajo.
 
@@ -170,7 +170,7 @@ período`).
   - `data.js` — **orquestador** del modelo de datos. Conserva la única función pública `buildData(raw, proyecciones, insumos, presupuestoInfra, recetas)`, que ya no calcula nada: prepara las entradas, llama a las funciones de `js/data/` pasándoles explícitamente lo que necesitan, y ensambla el objeto final que consume `render.js`.
   - `js/data/` — el modelo de datos separado por dominio. Cada archivo expone funciones puras (reciben lo que necesitan por parámetro, devuelven colecciones explícitas) y **ninguno toca el DOM**:
     - `ordenes.js` — base compartida de `consultaOT`: normalización de filas, filtro por campaña (más la copia con todas las campañas que usa Servicios), agrupación por OT, modalidad de trabajo (hectáreas/horas/peso), importes, estados y KPIs de OT. Va primero porque todo lo demás depende de sus colecciones.
-    - `cultivos.js` — plan RTK desde `consultaCultivos`, avance de campo por cultivo y etapa (incluida la receta de labores que le pone piso al divisor, `construirRecetaLabores()`), y Control de Hectáreas (excesos con tolerancia por servicio, labores de preparación repetidas que sumando superan el lote, lotes inhabilitados, OT sin correspondencia en el plan).
+    - `cultivos.js` — plan de cultivo desde `consultaCultivos`, avance de campo por cultivo y etapa (incluida la receta de labores que le pone piso al divisor, `construirRecetaLabores()`), y Control de Hectáreas (excesos con tolerancia por servicio, labores de preparación repetidas que sumando superan el lote, lotes inhabilitados, OT sin correspondencia en el plan).
     - `servicios.js` — módulo Servicios completo (`construirServicios()`: detalle por servicio, gasoil, filtros y totales) y el paquete equivalente por cada campaña presente en `consultaOT`.
     - `combustible.js` — consumo e ingresos de gasoil y stock inicial.
     - `insumos.js` — ingresos, consumos y flujo de stock por (Tipo, Insumo, Unidad).
@@ -192,7 +192,7 @@ período`).
 
 **Se aplica a:**
 1. **`consultaOT`** (`data.js`) — filtra por el campo `campania` exacto. Afecta a casi todo lo que depende de las OT: KPIs de OT, Detalle de Etapas por Cultivo, Control de Hectáreas, Alertas, Posibles Problemas, Servicios y Auditoría (todo se construye a partir de `OTS`/`rows`). Todas estas colecciones se arman sobre las OT ya agrupadas por `agruparOTS()`, que además descarta las líneas que no están en el estado de su OT — ver "Agrupación por OT" más abajo.
-2. **`consultaCultivos`** (plan RTK, `data.js`) — esta hoja no trae una columna de texto `campania` propia, pero el campo `nombre` (ej. `"LA TERESA 201 ARROZ 26/27"`) siempre termina en el sufijo de campaña; se extrae con una regex y se descarta toda fila cuyo sufijo no coincida con `CAMPANIA_ACTUAL`. Filas sin sufijo reconocible (formato histórico) pasan sin filtrar, ya que no hay forma de determinar su campaña.
+2. **`consultaCultivos`** (plan de cultivo, `data.js`) — esta hoja no trae una columna de texto `campania` propia, pero el campo `nombre` (ej. `"LA TERESA 201 ARROZ 26/27"`) siempre termina en el sufijo de campaña; se extrae con una regex y se descarta toda fila cuyo sufijo no coincida con `CAMPANIA_ACTUAL`. Filas sin sufijo reconocible (formato histórico) pasan sin filtrar, ya que no hay forma de determinar su campaña.
 
 **NO se aplica a `consultaInsumos`** (ni Combustible ni el módulo Insumos): esta hoja se procesa **completa**, sin recortar por campaña ni por fecha — es una decisión explícita (antes se filtraba y se sacó a pedido), documentada en `loader.js` y `data.js`. Si el año que viene aparecen movimientos de más de una campaña mezclados ahí, van a entrar todos.
 
@@ -220,7 +220,7 @@ La tarjeta muestra la primera fila, no el total.
 
 Es una pregunta que ya surgió, así que queda documentada para no volver a investigarla.
 
-**`consultaCultivos` trae únicamente la campaña vigente.** Verificado contra el `.xlsx`: las 277 filas terminan en el sufijo `26/27`, ninguna en otro. El avance es *hectáreas ejecutadas ÷ hectáreas planificadas*, y el plan RTK es el denominador — sin plan de las campañas anteriores no hay porcentaje que calcular para ellas.
+**`consultaCultivos` trae únicamente la campaña vigente.** Verificado contra el `.xlsx`: las 277 filas terminan en el sufijo `26/27`, ninguna en otro. El avance es *hectáreas ejecutadas ÷ hectáreas planificadas*, y el plan de cultivo es el denominador — sin plan de las campañas anteriores no hay porcentaje que calcular para ellas.
 
 Y sumar sus OT al avance de la campaña vigente **no movería el número**. De las 111 OT de otras campañas, solo 19 llegan a un cultivo de `CULTIVOS` y a una etapa de `ETAPA_ORDEN` (las 59 de ARROZ *Secadero* quedan fuera porque Secadero no es una etapa del ciclo; el resto son MAIZ ZAFRIÑA, AVENA, OPERATIVO o PARCELA). Esas 19 caen sobre lotes que **no existen en el plan 26/27**:
 
@@ -300,13 +300,13 @@ El paquete incluye su **propio** Control de Hectáreas y sus **propias** alertas
 
 **`consultaCultivos` es el padrón físico común.** Sus 277 filas son todas 26/27 (verificado contra el dato), así que el mismo objeto `RTK`/`RTK_TOT` se reutiliza para todas las campañas — no se copia ni se duplica superficie: las hectáreas planificadas por cultivo son idénticas en las cuatro campañas y el total sigue siendo 4.671,25 ha.
 
-**Consecuencia real para campañas anteriores:** los lotes que trabajó 25/26 **no existen** en el padrón 26/27 (SORGO usó 113B, 113C y 111; ARROZ solo "SECADERO ARROZ"), así que su avance da 0 % aunque tenga OT y costo. No es un error de cálculo: es el tope contra el plan del lote aplicado sobre un lote sin plan. El propio dashboard lo explica — con 25/26 seleccionado aparece el problema *"OT sin correspondencia en el plan RTK: 64 OT"*. Para mostrar un avance histórico real haría falta el padrón RTK de esa campaña, que el Excel hoy no trae.
+**Consecuencia real para campañas anteriores:** los lotes que trabajó 25/26 **no existen** en el padrón 26/27 (SORGO usó 113B, 113C y 111; ARROZ solo "SECADERO ARROZ"), así que su avance da 0 % aunque tenga OT y costo. No es un error de cálculo: es el tope contra el plan del lote aplicado sobre un lote sin plan. El propio dashboard lo explica — con 25/26 seleccionado aparece el problema *"OT sin correspondencia en el plan de cultivo: 64 OT"*. Para mostrar un avance histórico real haría falta el plan de cultivo de esa campaña, que el Excel hoy no trae.
 
 **La siembra de Zafriña26 ya no se pliega a Maíz 26/27.** Esa integración se agregó cuando el Resumen Ejecutivo solo podía mostrar 26/27 y era la única forma de ver esa siembra. Con el selector de campaña dejó de corresponder: hacía que el maíz figurara sembrado al 26,3 % en una campaña en la que **todavía no se sembró** — las dos únicas OT de siembra de maíz (1836 y 1837) son de campaña `26`, no hay ninguna de 26/27. Ahora cada campaña se calcula con sus propias OT y ninguna hereda ni presta OT a otra.
 
 Efecto: MAIZ 26/27 pasa a mostrar Preparación de Suelo 100 % y Cuidados 100 %, sin etapa Siembra ("Sin actividad registrada en OT confirmadas"). El avance a nivel cultivo no cambia (sale del estadio más avanzado, Cuidados). ARROZ, SORGO y SOJA quedan idénticos.
 
-Esa siembra sigue visible en la campaña Zafriña26 con sus OT, fechas y costos, pero con **0 ha de avance**: sus lotes (.23C, .23D) no están en el plan RTK de MAIZ (69, 70, 71A, 72A, 73A, SECADERO, PARCELA), así que el tope contra el plan del lote los deja en cero. El mecanismo de plegado sigue en `construirCultivos` (parámetro `rawTodasCampanias`, hoy sin ningún llamador que lo use) por si la regla vuelve a pedirse.
+Esa siembra sigue visible en la campaña Zafriña26 con sus OT, fechas y costos, pero con **0 ha de avance**: sus lotes (.23C, .23D) no están en el plan de cultivo de MAIZ (69, 70, 71A, 72A, 73A, SECADERO, PARCELA), así que el tope contra el plan del lote los deja en cero. El mecanismo de plegado sigue en `construirCultivos` (parámetro `rawTodasCampanias`, hoy sin ningún llamador que lo use) por si la regla vuelve a pedirse.
 
 
 Vista gerencial: `D.resumen` (`js/data/resumen.js`, calculado una sola vez dentro de `buildData()`) alimenta todos los componentes; `render.js` solo pinta, no recalcula.
@@ -317,11 +317,11 @@ Esos servicios se excluyen con `SIEMBRA_SERVICIOS_NO_SIEMBRA` (`config.js`), una
 
 Orden de la pestaña, de arriba hacia abajo:
 1. **KPIs ejecutivos** (`#exec-kpis`, `renderResumenKPIs()`) — **solo 4**, operativos/financieros generales: OT Confirmadas, OT Atrasadas (misma definición exacta que Alertas Operacionales), Costo Ejecutado y Gasto No Agrícola. Cada tarjeta usa un acento de color a la izquierda (`.kpi-g/-y/-o/-r/-gris`) en vez de pintar toda la tarjeta; en escritorio ocupan una sola fila (grilla de 4 columnas, heredada de `.kpis`), 2 por fila en pantallas medianas y apiladas en 1 columna en pantallas muy angostas (`.kpis-exec`, `resumen.css`). **Ya no existen** los KPIs generales de superficie (Hectáreas Planificadas/Ejecutadas/Pendientes, Avance General) — esa información se retiró de esta fila a pedido del usuario porque duplicaba, como un total de campaña, lo que ya se puede leer con más contexto en "Detalle de Etapas por Cultivo".
-2. **Detalle de Etapas por Cultivo** (`#cults`, `renderCultivoDetalle()`) — bloque analítico por cultivo (sin gráficos intermedios): el progreso de Preparación de Suelo/Siembra/Cuidados/Cosecha, y — para el **estadio actual** (el más reciente con actividad confirmada) — Ha Planificadas (el plan RTK no tiene desglose por estadio, así que es siempre la meta de toda la campaña), Ha Ejecutadas y OT Confirmadas/Totales, los tres **del mismo estadio**, nunca mezclados con otro (`c.etapas[].ha_plan/otConfirmadas/otTotales` en `data.js`). Sin ninguna etapa reconocida todavía, se muestra 0 ha / 0 de las OT totales del cultivo, junto con el mensaje "Sin actividad confirmada aún".
+2. **Detalle de Etapas por Cultivo** (`#cults`, `renderCultivoDetalle()`) — bloque analítico por cultivo (sin gráficos intermedios): el progreso de Preparación de Suelo/Siembra/Cuidados/Cosecha, y — para el **estadio actual** (el más reciente con actividad confirmada) — Ha Planificadas (el plan de cultivo no tiene desglose por estadio, así que es siempre la meta de toda la campaña), Ha Ejecutadas y OT Confirmadas/Totales, los tres **del mismo estadio**, nunca mezclados con otro (`c.etapas[].ha_plan/otConfirmadas/otTotales` en `data.js`). Sin ninguna etapa reconocida todavía, se muestra 0 ha / 0 de las OT totales del cultivo, junto con el mensaje "Sin actividad confirmada aún".
 3. **Estado de las Órdenes de Trabajo** (`#resumen-estados-ot`, `renderEstadosOT()`) — barra apilada + leyenda con las categorías reales de `Estado` en `consultaOT` (Confirmado/En Ejecución/Pendiente); cualquier otro valor real se agrupa como "Otros" con el detalle de qué estados incluye, nunca oculto.
 4. **Actividad Operacional por Período** (`#resumen-actividad-mensual`, `renderActividadMensual()`) — columnas con la cantidad de OT Confirmadas por mes (Fecha Real); se rotula explícitamente como "OT" para no confundirse con hectáreas (no todas las OT traen Has. Reales).
 5. **Gastos Operativos** (`#opex-total`/`#opex-rows`, `renderGastosOperativos()`) — misma posición y misma tarjeta (`.panel`) que ocupaba la vieja "Distribución del Gasto: Áreas No Agrícolas" (mismo cálculo, `D.operativas`/`D.oper_costo`/`D.oper_part` sobre `OPERATIVAS` en `config.js`, nunca se inventó una clasificación nueva ni se recalculó nada en `render.js`). Tarjeta con el total y **una sola fila por categoría** (nombre, barra proporcional, importe, % sobre el total operativo y OT, con el botón "Ver detalle" al final de la misma fila) — sin tabla aparte que repita la misma información (se eliminó a pedido del usuario). Cada categoría se puede expandir ("Ver detalle", delegación de evento en `events.js` sobre `#opex-rows`, sin listeners por fila) para ver, debajo de su propia fila, su composición real por Servicio + Contratista (mismos marcadores `'(Labor Propia)'`/`'(Sin contratista)'` que ya usa "Detalle por Servicio" en Servicios). El % de cada categoría (`o.partOperativo`) es sobre el total operativo, no sobre el costo total de toda la campaña; el total general solo se muestra en la tarjeta superior, no se repite al final de las filas. Sin gastos operativos para el alcance actual, muestra el estado vacío explícito (total en US$ 0,00, sin porcentajes inválidos).
-6. **Posibles Problemas en la Campaña** (`#probs`, `renderProblemasResumen()`) — alertas dinámicas con severidad (`critica`/`alta`/`media`/`informativa`, colores `.prob-r/-o/-y/-gris`), ordenadas por severidad y luego por impacto. Reglas: OT atrasadas (misma lógica de Alertas Operacionales), cultivos con avance por debajo del promedio de campaña (desviación relativa, nunca un "atraso agronómico" confirmado), superficie ejecutada por encima del plan, OT sin correspondencia en el plan RTK, cultivos planificados sin ejecución registrada, concentración elevada del gasto en una sola labor, y datos incompletos (OT sin Actividad o sin Fecha Teórica). Los botones "Ver detalle" navegan a la pestaña correspondiente reutilizando `show()` (delegación de evento en `events.js`, sin `onclick` inline). Sin problemas detectados, se muestra un estado positivo explícito, nunca la sección vacía.
+6. **Posibles Problemas en la Campaña** (`#probs`, `renderProblemasResumen()`) — alertas dinámicas con severidad (`critica`/`alta`/`media`/`informativa`, colores `.prob-r/-o/-y/-gris`), ordenadas por severidad y luego por impacto. Reglas: OT atrasadas (misma lógica de Alertas Operacionales), cultivos con avance por debajo del promedio de campaña (desviación relativa, nunca un "atraso agronómico" confirmado), superficie ejecutada por encima del plan, OT sin correspondencia en el plan de cultivo, cultivos planificados sin ejecución registrada, concentración elevada del gasto en una sola labor, y datos incompletos (OT sin Actividad o sin Fecha Teórica). Los botones "Ver detalle" navegan a la pestaña correspondiente reutilizando `show()` (delegación de evento en `events.js`, sin `onclick` inline). Sin problemas detectados, se muestra un estado positivo explícito, nunca la sección vacía.
 
 ### Estadio vacío: respaldo por el servicio de la labor
 
@@ -333,7 +333,7 @@ El caso real es la **OT 4339** (ARROZ, lote 137, "1° Plaina", 20,48 ha, Confirm
 
 **Alcance:** vale únicamente para el avance de cultivos. El campo `estadio` de la OT no se toca, así que Servicios, Combustible, Insumos, Auditoría, Alertas y Control de Hectáreas siguen viendo exactamente lo mismo que antes — para ellos esa OT sigue sin estadio. Verificado con el arnés de regresión: de las 69 claves de `buildData()`, la única que cambió es `cultivos`.
 
-**Efecto en el número:** ARROZ · Preparación de Suelo pasó de 90,1 % (3.506,08 ha) a 90,2 % (3.509,49 ha). Los 20,48 ha de la OT se convierten en 3,41 ha de aporte porque las reglas de siempre siguen aplicando: la OT entra al grupo "1° Plaina" del lote 137, que con ella llega a 87,95 ha —exactamente el plan RTK del lote, o sea que la plaina quedó completa entre la OT 3733 y esta— y ese valor se promedia con las otras 5 labores del lote (`20,48 / 6 = 3,41`).
+**Efecto en el número:** ARROZ · Preparación de Suelo pasó de 90,1 % (3.506,08 ha) a 90,2 % (3.509,49 ha). Los 20,48 ha de la OT se convierten en 3,41 ha de aporte porque las reglas de siempre siguen aplicando: la OT entra al grupo "1° Plaina" del lote 137, que con ella llega a 87,95 ha —exactamente el plan de cultivo del lote, o sea que la plaina quedó completa entre la OT 3733 y esta— y ese valor se promedia con las otras 5 labores del lote (`20,48 / 6 = 3,41`).
 
 ### El divisor del avance: la receta de labores
 
@@ -476,7 +476,7 @@ verdad vale: un cultivo a medio sembrar tiene lotes terminados y lotes que todav
 darle a los dos el mismo trato volvería a mentir, ahora en el otro sentido.
 
 Un lote cuenta como sembrado cuando su siembra cubre `AVANCE_LOTE_SEMBRADO_UMBRAL` (0,995) de su
-plan. No es 1 exacto porque la superficie sembrada casi nunca cae clavada contra el plan RTK — el
+plan. No es 1 exacto porque la superficie sembrada casi nunca cae clavada contra el plan de cultivo — el
 lote 31A de arroz declara 50,39 sobre 52,94 —, y con 0,995 entran los redondeos y queda afuera
 cualquier lote realmente a medio sembrar.
 
@@ -529,7 +529,7 @@ arriba. Cada labor ya tiene ahí su propio sumando, `min(...)/divisor`. `desglos
 ```
 
 1. **`ha_ejec`** — suma cruda de `ha_trab` de sus OT. Es la que cierra con el desplegable de OT.
-2. **`ha_computada`** — cada lote capado a su plan RTK (`min(ejecutadas, plan del lote)`): la superficie que efectivamente se promedia. **Acá no se desglosa cuánto se recortó ni en qué lotes** — ese análisis es el de Control de Hectáreas y repetirlo sería tener el mismo dato en dos lugares. Esta vista solo dice con qué superficie se construyó el aporte.
+2. **`ha_computada`** — cada lote capado a su plan de cultivo (`min(ejecutadas, plan del lote)`): la superficie que efectivamente se promedia. **Acá no se desglosa cuánto se recortó ni en qué lotes** — ese análisis es el de Control de Hectáreas y repetirlo sería tener el mismo dato en dos lugares. Esta vista solo dice con qué superficie se construyó el aporte.
 3. **`aporte_ha`** — dividido por el divisor del lote: la cantidad de labores confirmadas, o la receta
    del cultivo si es mayor (ver **El divisor del avance**). El divisor se rotula: una labor puede tocar lotes con distinta cantidad de labores, así que el modelo guarda todos los divisores que aplicaron (`divisores`) y se muestra el valor exacto cuando hay uno solo ("promediada entre las 3 labores del lote") o el rango cuando hay varios. `divisores = [1]` significa que era la única labor de cada lote y no se promedió nada.
 
@@ -541,7 +541,7 @@ Se reporta **solo cuando la suma supera el plan del lote**. Terminar un lote en 
 
 El listado de excesos de Control de Hectáreas **no puede detectar esto por su propia cuenta**: allá el lote entra con el **máximo** de sus OT (`ha_ot = Math.max(...)`), no con la suma, así que dos cargas de 24,22 ha sobre un lote de 24,22 le dan exceso cero — es el 2° Disco del lote 214. Por eso Control de Hectáreas tiene desde el 18/09/2026 un panel propio para el caso, **Labores de Preparación Repetidas que Superan el Lote** (ver esa sección), que hace la cuenta por suma en vez de por máximo y se limita a Preparación de Suelo. Las dos vistas miran lo mismo desde ángulos distintos: acá se ve qué le hace al avance de la etapa, allá qué superficie se trabajó de más.
 
-Quedan fuera los casos sin plan contra el cual compararse: la siembra de Zafriña26 (comparte el plan de Maíz), los lotes sin plan RTK y los dados de baja (`RTK_LOTE_CANCELADO`), donde cualquier superficie lo superaría.
+Quedan fuera los casos sin plan contra el cual compararse: la siembra de Zafriña26 (comparte el plan de Maíz), los lotes sin plan de cultivo y los dados de baja (`RTK_LOTE_CANCELADO`), donde cualquier superficie lo superaría.
 
 **El costo es información adicional y no pondera nada.** Sale de `o.imp` (el importe total de la OT: Labor Propia + Labor Tercero + Insumos), y el costo de la labor es la suma del de sus OT. El aporte al estadio viene exclusivamente de la ejecución física.
 
@@ -549,7 +549,7 @@ Quedan fuera los casos sin plan contra el cual compararse: la siembra de Zafriñ
 
 ## Control de Hectáreas
 
-Compara la superficie ejecutada de cada lote contra su plan RTK. La superficie sale de
+Compara la superficie ejecutada de cada lote contra su plan de cultivo. La superficie sale de
 `haTrabajada(o)` — Unidades/Dosis de las líneas de **labor** de la OT (`categoria = Servicio`),
 nunca de Has. Reales: ver **Agrupación por OT**. Solo OT Confirmadas: una Pendiente no ejecutó nada,
 así que no puede haber excedido nada.
@@ -612,7 +612,7 @@ auditar desde el modelo aunque el panel no lo liste.
 
 Hoy la regla **no saca ningún caso**, y eso es esperable, no un error: las 12 OT que declaran
 sobrepase en la 26/27 son todas de cultivos `PARCELA` (arroz, soja y sorgo de parcela), y Control de
-Hectáreas solo cubre los cuatro cultivos con plan RTK — ARROZ, SOJA, SORGO y MAIZ. La regla está
+Hectáreas solo cubre los cuatro cultivos con plan de cultivo — ARROZ, SOJA, SORGO y MAIZ. La regla está
 puesta para el día en que una de estas declaraciones caiga sobre un lote con plan.
 
 ### Labores de Preparación Repetidas que Superan el Lote

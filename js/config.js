@@ -685,8 +685,8 @@ const INFRA_MAP = {
 // temporales inventadas — ver comentarios en data.js junto a cada regla que los usa.
 const RESUMEN_DESVIACION_CULTIVO_MEDIA = 20;   // puntos por debajo del avance general -> severidad media
 const RESUMEN_DESVIACION_CULTIVO_ALTA = 40;    // puntos por debajo del avance general -> severidad alta
-const RESUMEN_SOBREEJECUCION_ALTA = 20;        // % de exceso sobre RTK -> severidad alta
-const RESUMEN_SOBREEJECUCION_CRITICA = 50;     // % de exceso sobre RTK -> severidad critica
+const RESUMEN_SOBREEJECUCION_ALTA = 20;        // % de exceso sobre el plan de cultivo -> severidad alta
+const RESUMEN_SOBREEJECUCION_CRITICA = 50;     // % de exceso sobre el plan de cultivo -> severidad critica
 const RESUMEN_SINRTK_ALTA = 20;                // cantidad de OT sin correspondencia -> severidad alta
 const RESUMEN_CONCENTRACION_GASTO = 50;        // % del costo total en una sola labor -> severidad media (umbral base pedido por el usuario)
 const RESUMEN_CONCENTRACION_GASTO_ALTA = 70;   // % del costo total en una sola labor -> severidad alta
