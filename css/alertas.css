@@ -5,3 +5,11 @@
 .al-y{background:#fdf3d9}
 .al-o{background:#fbdec0}
 .al-r{background:#f8d2ce}
+
+/* Boton de descarga de la imagen de atrasadas. Reusa .prob-link (problemas.css), como la barra de
+   accion de Siembra por Parcela: el mismo boton de contorno que ya usa el resto del tablero. Acá
+   solo se lo acomoda en la fila de filtros, pegado al borde derecho, y se le da el estado
+   deshabilitado para cuando no hay ninguna OT atrasada que compartir. */
+.gfilter #al-img{margin:0 0 0 12px;padding:6px 14px;font-size:11.5px;white-space:nowrap}
+.gfilter .fnote + #al-img{margin-left:12px}
+#al-img:disabled{opacity:.45;cursor:not-allowed;background:none;color:var(--teal)}
