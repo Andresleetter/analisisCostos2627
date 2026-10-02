@@ -142,7 +142,7 @@ function construirResumen(ctx){
     const pctMayor = peor ? peor.pdiff : 0;
     const sev = pctMayor>=RESUMEN_SOBREEJECUCION_CRITICA?'critica':(pctMayor>=RESUMEN_SOBREEJECUCION_ALTA?'alta':'media');
     RP.push({id:'crop_overexecution', severidad:sev, titulo:'Superficie ejecutada superior al plan',
-      descripcion:exc_kpi.n+' lote(s) con hectáreas ejecutadas por encima de lo planificado (RTK).',
+      descripcion:exc_kpi.n+' lote(s) con hectáreas ejecutadas por encima de lo planificado (plan de cultivo).',
       metrica:'+'+fmt2(exc_kpi.ha)+' ha',
       contexto: peor ? 'Mayor caso: '+peor.cult+' '+peor.lote+' · +'+fmt2(peor.diff)+' ha sobre '+fmt2(peor.ha_rtk)+' (+'+Math.round(peor.pdiff)+'%)' : '',
       accion:'Ver Control de Hectáreas', destinoTab:4, impacto:exc_kpi.ha});
@@ -159,7 +159,7 @@ function construirResumen(ctx){
   // porque las dos son "un caso nuevo para revisar", aunque se calculen distinto.
   if(exc_kpi.hay_baseline && (exc_kpi.n_nuevos || exc_kpi.n_nuevas_repetidas)){
     const partes=[];
-    if(exc_kpi.n_nuevos) partes.push(exc_kpi.n_nuevos+' lote(s) con superficie sobre RTK (+'+fmt2(exc_kpi.ha_nuevos)+' ha)');
+    if(exc_kpi.n_nuevos) partes.push(exc_kpi.n_nuevos+' lote(s) con superficie sobre el plan de cultivo (+'+fmt2(exc_kpi.ha_nuevos)+' ha)');
     if(exc_kpi.n_nuevas_repetidas) partes.push(exc_kpi.n_nuevas_repetidas+' labor(es) repetida(s) (+'+fmt2(exc_kpi.ha_nuevas_repetidas)+' ha)');
     const total=exc_kpi.n_nuevos+exc_kpi.n_nuevas_repetidas;
     // Severidad por cantidad, no por hectareas: un caso nuevo se revisa igual sea de 1 ha o de 50,
@@ -177,8 +177,8 @@ function construirResumen(ctx){
     const porCultivo={}; sinrtk.forEach(r=>{ porCultivo[r.cult]=(porCultivo[r.cult]||0)+1; });
     const top=Object.entries(porCultivo).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([k,v])=>k+' ('+v+')').join(', ');
     const sev = sinrtk.length>=RESUMEN_SINRTK_ALTA?'alta':'media';
-    RP.push({id:'unmatched_orders', severidad:sev, titulo:'OT sin correspondencia en el plan RTK',
-      descripcion:sinrtk.length+' OT cargadas en lotes que no existen en la planificación RTK.',
+    RP.push({id:'unmatched_orders', severidad:sev, titulo:'OT sin correspondencia en el plan de cultivo',
+      descripcion:sinrtk.length+' OT cargadas en lotes que no existen en el plan de cultivo.',
       metrica:sinrtk.length+' OT', contexto:'Principales cultivos: '+top,
       accion:'Ver Control de Hectáreas', destinoTab:4, impacto:sinrtk.length});
   }
