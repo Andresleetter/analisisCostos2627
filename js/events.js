@@ -165,6 +165,7 @@ document.addEventListener('DOMContentLoaded', function(){
   document.getElementById('itipo').addEventListener('change', function(){ actualizarFiltroInsumo(); renderInsumos(); });
   document.getElementById('iinsumo').addEventListener('change', renderInsumos);
   document.getElementById('aestado').addEventListener('change', renderAlertas);
+  document.getElementById('al-img').addEventListener('click', alertasDescargarImagen);
   // ---- Auditoría: sub-navegación entre Infraestructura e Insumos por Parcela ----
   // Delegada sobre la barra (elemento fijo del HTML). Usa .subtab, no .tab: el listener de módulos
   // de más arriba indexa las .tab contra las .page, y un botón .tab de más rompería ese índice.

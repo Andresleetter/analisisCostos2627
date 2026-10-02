@@ -1242,6 +1242,13 @@ function renderAlertas(){
     `<div class="kpi"><div class="k-lab">Pendientes</div><div class="k-val">${D.ot_pend}</div></div>`+
     `<div class="kpi"><div class="k-lab">En Ejecución</div><div class="k-val c-o">${D.ot_ejec}</div></div>`;
   document.getElementById('al-sub').textContent=alertas.length+' registros';
+  // El boton de la imagen cuenta SOLO las atrasadas del filtro puesto, que es lo que va a
+  // dibujar; con ninguna no hay nada que compartir y queda deshabilitado.
+  const nAtrasadas = alertasAtrasadas().length;
+  const btnImg = document.getElementById('al-img');
+  btnImg.disabled = !nAtrasadas;
+  btnImg.textContent = nAtrasadas ? 'Descargar imagen ('+nAtrasadas+')' : 'Sin atrasadas que compartir';
+  btnImg.title = nAtrasadas ? 'Descarga un PNG con las '+nAtrasadas+' OT atrasadas, para compartir' : '';
   document.getElementById('al').innerHTML = alertas.length ? alertas.map(a=>{
     // Celda de días: SIEMPRE el día real transcurrido (a.diasTranscurridos, sin descontar la
     // tolerancia de 3) — 0d/1d/2d/3d/4d… tal cual, nunca se resta nada acá; la tolerancia solo
@@ -1260,6 +1267,161 @@ function renderAlertas(){
     // una OT sin el campo cargado diga "Sin contratista" y no una celda vacia.
     return `<tr${rowCls}><td>${diasCell}</td><td class="mono">OT ${a.ot}</td><td>${a.act}</td><td>${a.serv}</td><td class="mono">${a.lote}</td><td>${a.cult}</td><td>${escHtml(labelContratista(a.contr))}</td><td>${a.estado}</td><td class="mono">${ft}</td></tr>`;}).join('')
     : '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:16px">Sin OT para el filtro seleccionado</td></tr>';
+}
+
+// ---- Las OT atrasadas como imagen, para compartir ----
+// Se DIBUJA en un <canvas>; no se captura la pantalla. El proyecto no tiene dependencias (ver
+// CLAUDE.md: HTML/CSS/JS plano, sin bundler ni npm) y una captura del DOM saldria distinta en cada
+// equipo — ancho de la ventana, scroll de la tabla, zoom del navegador. Dibujando, la imagen sale
+// identica en cualquier maquina y entra entera, sin recortes.
+//
+// Que entra: las OT ATRASADAS (a.atrasada, o sea mas de 3 dias de tolerancia sobre la Fecha
+// Teorica), de la peor a la menos mala. Respeta el filtro de Estado que este puesto en pantalla y,
+// cuando no es "Todas", lo dice en el subtitulo: la imagen tiene que poder leerse sola, sin el
+// tablero al lado.
+const ALERTAS_IMG_COLS = [
+  {k:'dias',   lbl:'Atraso',      w: 86, al:'c'},
+  {k:'ot',     lbl:'OT',          w:104},
+  {k:'serv',   lbl:'Servicio',    w:268},
+  {k:'lote',   lbl:'Lote',        w: 92},
+  {k:'cult',   lbl:'Cultivo',     w:104},
+  {k:'contr',  lbl:'Contratista', w:226},
+  {k:'estado', lbl:'Estado',      w:120},
+  {k:'ft',     lbl:'F. Teórica',  w:116, al:'r'},
+];
+// Las OT atrasadas que se van a dibujar, con el filtro de Estado de la pantalla aplicado.
+function alertasAtrasadas(){
+  const estV = document.getElementById('aestado').value;
+  return D.alertas
+    .filter(a => a.atrasada && (estV==='ALL' || a.estado===estV))
+    .sort((a,b) => b.diasTranscurridos - a.diasTranscurridos);
+}
+// La severidad es la MISMA escala que pinta la fila de la tabla (ver renderAlertas): <=7 sin
+// color, 8-15 amarillo, 16-30 naranja, >30 rojo. Se define una sola vez acá para que la imagen y
+// la pantalla no puedan separarse.
+function alertaSeveridad(a){
+  if(!a.atrasada) return null;
+  return a.diasTranscurridos>30 ? 'r' : (a.diasTranscurridos>15 ? 'o' : (a.diasTranscurridos>7 ? 'y' : null));
+}
+function alertasDescargarImagen(){
+  const filas = alertasAtrasadas();
+  if(!filas.length) return;
+  // Los colores salen de las variables CSS, no de literales: si cambia la paleta del tablero, la
+  // imagen cambia con ella y no queda una copia desactualizada escondida acá.
+  const cs = getComputedStyle(document.documentElement);
+  const C = n => (cs.getPropertyValue(n).trim() || '#333');
+  const SEV_FILA = {y:'#fdf3d9', o:'#fbdec0', r:'#f8d2ce'};
+  const SEV_PILL = {y:C('--y'), o:C('--o'), r:C('--r')};
+  const TINTA = C('--ink'), GRIS = C('--muted'), LINEA = C('--line'), TEAL = C('--teal');
+
+  const PAD = 40, ANCHO_TABLA = ALERTAS_IMG_COLS.reduce((s,c)=>s+c.w,0);
+  const W = ANCHO_TABLA + PAD*2;
+  const ALTO_CAB = 128, ALTO_TH = 40, ALTO_FILA = 38, ALTO_PIE = 56;
+  const H = ALTO_CAB + ALTO_TH + filas.length*ALTO_FILA + ALTO_PIE;
+
+  // devicePixelRatio fijo en 2: la imagen tiene que salir nitida en cualquier pantalla, no en la
+  // del que la genera. Un equipo sin HiDPI produciria un PNG borroso al abrirlo en un telefono.
+  const DPR = 2;
+  const cv = document.createElement('canvas');
+  cv.width = W*DPR; cv.height = H*DPR;
+  const x = cv.getContext('2d');
+  x.scale(DPR, DPR);
+  const F = (peso, px) => peso+' '+px+'px '+(cs.getPropertyValue('--font-sans').trim()
+    || "system-ui,-apple-system,'Segoe UI',Roboto,sans-serif");
+  // Texto recortado con puntos suspensivos: los nombres de contratista y de servicio no tienen
+  // largo acotado en el Excel y sin esto se pisarian con la columna de al lado.
+  const corta = (txt, max) => {
+    txt = String(txt==null?'':txt);
+    if(x.measureText(txt).width <= max) return txt;
+    let t = txt;
+    while(t.length > 1 && x.measureText(t+'…').width > max) t = t.slice(0, -1);
+    return t+'…';
+  };
+
+  x.fillStyle = '#fff'; x.fillRect(0, 0, W, H);
+
+  // ---- cabecera
+  x.fillStyle = TINTA; x.font = F(800, 30);
+  x.fillText('OT Atrasadas', PAD, PAD+30);
+  const estV = document.getElementById('aestado').value;
+  x.fillStyle = GRIS; x.font = F(600, 14);
+  x.fillText('Campaña '+D.campania_actual+' · Campo La Teresa'
+    + (estV==='ALL' ? '' : ' · solo '+estV), PAD, PAD+56);
+  x.fillText('Pendientes o en ejecución pasada su fecha teórica, con más de 3 días de tolerancia.',
+    PAD, PAD+78);
+  // el numero grande, a la derecha
+  x.textAlign = 'right';
+  x.fillStyle = SEV_PILL.r; x.font = F(800, 44);
+  x.fillText(String(filas.length), W-PAD, PAD+44);
+  x.fillStyle = GRIS; x.font = F(700, 12);
+  x.fillText(filas.length===1 ? 'ORDEN ATRASADA' : 'ÓRDENES ATRASADAS', W-PAD, PAD+64);
+  x.textAlign = 'left';
+
+  // ---- encabezado de la tabla
+  let y = ALTO_CAB;
+  x.fillStyle = GRIS; x.font = F(700, 11.5);
+  let cx = PAD;
+  ALERTAS_IMG_COLS.forEach(c=>{
+    x.textAlign = c.al==='r' ? 'right' : (c.al==='c' ? 'center' : 'left');
+    const tx = c.al==='r' ? cx+c.w-10 : (c.al==='c' ? cx+c.w/2 : cx+2);
+    x.fillText(c.lbl.toUpperCase(), tx, y+25);
+    cx += c.w;
+  });
+  x.textAlign = 'left';
+  x.strokeStyle = LINEA; x.lineWidth = 1;
+  x.beginPath(); x.moveTo(PAD, y+ALTO_TH-.5); x.lineTo(W-PAD, y+ALTO_TH-.5); x.stroke();
+  y += ALTO_TH;
+
+  // ---- filas
+  filas.forEach(a=>{
+    const sev = alertaSeveridad(a);
+    if(sev){ x.fillStyle = SEV_FILA[sev]; x.fillRect(PAD, y, ANCHO_TABLA, ALTO_FILA); }
+    const ft = a.ft ? (('0'+a.ft.getDate()).slice(-2)+'/'+('0'+(a.ft.getMonth()+1)).slice(-2)+'/'+a.ft.getFullYear()) : '-';
+    const val = {dias:a.diasTranscurridos+'d', ot:'OT '+a.ot, serv:a.serv, lote:a.lote,
+                 cult:a.cult, contr:labelContratista(a.contr), estado:a.estado, ft:ft};
+    cx = PAD;
+    ALERTAS_IMG_COLS.forEach(c=>{
+      if(c.k==='dias'){
+        // los dias van en la misma pildora de color que en pantalla
+        const txt = val.dias, an = 44, al = 20;
+        x.fillStyle = sev ? SEV_PILL[sev] : '#EDEDED';
+        const px = cx+c.w/2-an/2, py = y+ALTO_FILA/2-al/2;
+        x.beginPath(); x.roundRect(px, py, an, al, 10); x.fill();
+        x.fillStyle = sev==='y' ? '#5a4500' : (sev ? '#fff' : TINTA);
+        x.font = F(700, 11.5); x.textAlign = 'center';
+        x.fillText(txt, cx+c.w/2, y+ALTO_FILA/2+4);
+      } else {
+        x.fillStyle = c.k==='ot' ? TEAL : TINTA;
+        x.font = F(c.k==='ot' ? 700 : 500, 12.5);
+        x.textAlign = c.al==='r' ? 'right' : 'left';
+        const tx = c.al==='r' ? cx+c.w-10 : cx+2;
+        x.fillText(corta(val[c.k], c.w-12), tx, y+ALTO_FILA/2+4);
+      }
+      cx += c.w;
+    });
+    x.textAlign = 'left';
+    x.strokeStyle = LINEA;
+    x.beginPath(); x.moveTo(PAD, y+ALTO_FILA-.5); x.lineTo(W-PAD, y+ALTO_FILA-.5); x.stroke();
+    y += ALTO_FILA;
+  });
+
+  // ---- pie: de cuando es el dato. Una imagen que se comparte sobrevive al tablero, asi que tiene
+  // que decir a que exportacion corresponde o se discute sobre numeros viejos sin saberlo.
+  const fa = D.excel_actualizado;
+  const sello = ('0'+fa.getDate()).slice(-2)+'/'+('0'+(fa.getMonth()+1)).slice(-2)+'/'+fa.getFullYear()
+    +' '+('0'+fa.getHours()).slice(-2)+':'+('0'+fa.getMinutes()).slice(-2);
+  x.fillStyle = GRIS; x.font = F(500, 11.5);
+  x.fillText('Datos de Albor al '+sello+' · Desarrollos del Sur S.A.', PAD, y+32);
+
+  const nombre = 'OT-atrasadas-'+String(D.campania_actual).replace(/\D+/g, '-')+'-'
+    + fa.getFullYear()+('0'+(fa.getMonth()+1)).slice(-2)+('0'+fa.getDate()).slice(-2)+'.png';
+  cv.toBlob(function(blob){
+    const url = URL.createObjectURL(blob), a = document.createElement('a');
+    a.href = url; a.download = nombre;
+    document.body.appendChild(a); a.click(); a.remove();
+    // el revoke va diferido: Safari cancela la descarga si la URL muere en el mismo tick
+    setTimeout(()=>URL.revokeObjectURL(url), 1000);
+  }, 'image/png');
 }
 
 // ---- Insumos (no combustible): filtros dependientes Tipo de Insumo -> Insumo, + Mes ----
