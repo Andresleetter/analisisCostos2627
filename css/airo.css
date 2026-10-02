@@ -2,13 +2,9 @@
    AIRO · el diseño del Portal del Sur, traído literal a este tablero
    -----------------------------------------------------------------
    Origen: Portal-del-sur/Portal_del_Sur/src/minga.css — estilo "Mostrador" (A),
-   elegido el 2026-09-22. Claro y limpio, tipo producto de software. El armado
-   es el del Portal; la paleta no: acá son los seis verdes de Del Sur,
-   #DAF1DE · #8EB69B · #235347 · #163832 · #0B2B26 · #051F20, de la menta al
-   casi negro. Logo: el isotipo de Desarrollos del Sur.
-
-   Los únicos colores de afuera de la paleta son los de estado —el ámbar del
-   aviso y el rojo del crítico—: un alerta verde dejaría de leerse como alerta.
+   elegido el 2026-09-22. Claro y limpio, tipo producto de software. La
+   repostería es la paleta: blanco azúcar, cacao, rojo carmín, pistacho,
+   almendra. Logo: el isotipo de Desarrollos del Sur, en su verde de marca.
 
    En el Portal este tablero vive embebido dentro de #v-tablero y minga.css lo
    re-tiñe desde afuera. Acá el tablero es la página entera, así que las mismas
@@ -24,34 +20,33 @@
 
 /* ---------- la paleta y las variables del tablero, re-teñidas ---------- */
 :root{
-  --fondo:#DAF1DE; --blanco:#FFFFFF; --lateral:#E8F3EA; --suave:#E9F4EB;
-  --tinta:#000000; --tinta2:#1E2321; --gris:#44504C; --borde:#D5E8DA; --borde2:#B9D5C3;
-  --rosa:#D2EBD9; --pist:#C6E4D1; --almen:#CFE8D7;
-  --bloque:#F5F0E6;  /* el bloque de arriba de cada módulo: lino, cálido sobre el fondo menta.
-       Encima van dos difuminados —blanco arriba a la izquierda, menta abajo a la derecha— que
-       le dan la profundidad del Portal sin mover el color base. */
-  --sage:#8EB69B;  /* el verde medio, sólo para manchas y rellenos, nunca debajo de texto */
-
-  /* Los gráficos tienen paleta propia, la de Airo: rosa, carmín, pistacho, almendra, ámbar.
-     El verde manda en el entorno —fondo, barra, bloques, acentos— pero un dato dibujado
-     necesita tono propio para distinguirse de otro dato, no claridad del mismo verde. */
-  --ch-relleno:#C1272D; --ch-pist:#DDE8D8; --ch-area:#F4D6D0;
-  --ch-carmin:#C1272D; --ch-acento:#A51F25;
-  --acento:#235347; --acento-l:#DAF1DE;
-  --marca:#235347; --marca-osc:#8EB69B;  /* el verde de la marca; su versión clara sobre fondo oscuro */
-  --ok:#235347; --ok-l:#DAF1DE; --warn:#A8742A; --warn-l:#F7EBD8; --crit:#B3261E; --crit-l:#FBE6E3;
+  --fondo:#FBF8F5; --blanco:#FFFFFF; --lateral:#F4EEE9; --suave:#F1ECE8;
+  --tinta:#2A1E1C; --tinta2:#4A3A36; --gris:#786C67;  /* el gris del Portal es #8A7E79: sobre blanco da 3,9:1 y los rótulos
+       secundarios quedan al borde de no leerse. Este es el mismo gris, dos puntos más
+       oscuro, que cruza 4,5:1 — es el único valor de la paleta que no es literal. */ --borde:#EAE1DA; --borde2:#DCD0C7;
+  --rosa:#F4D6D0; --pist:#DDE8D8; --almen:#F2E6D3;
+  --acento:#A51F25; --acento-l:#FBE7E4;
+  --marca:#C1272D; --marca-osc:#F5B82E;  /* rojo carmín de Airo; amarillo sobre fondo oscuro */
+  --ok:#4E7D57; --ok-l:#E6EFE3; --warn:#A8742A; --warn-l:#F7EBD8; --crit:#B3261E; --crit-l:#FBE6E3;
   --fuente:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
 
-  --green:var(--ok); --green-l:#8EB69B; --green-xl:var(--ok-l);
+  /* Los gráficos tienen sus propios tokens. Hoy son los mismos colores que el resto —toda la
+     paleta es la de Airo— pero siguen separados a propósito: si mañana cambia el entorno, un
+     dato dibujado necesita tono propio para distinguirse de otro dato y no tiene por qué
+     seguirlo. */
+  --ch-relleno:#C1272D; --ch-pist:#DDE8D8; --ch-area:#F4D6D0;
+  --ch-carmin:#C1272D; --ch-acento:#A51F25;
+
+  --green:var(--ok); --green-l:#97B79C; --green-xl:var(--ok-l);
   --teal:var(--tinta); --ink:var(--tinta); --muted:var(--gris); --line:var(--borde);
   --bg:var(--fondo); --card:var(--blanco);
-  --g:#235347; --y:#B38A2E; --o:#C17A34; --r:var(--crit);
+  --g:#4E7D57; --y:#B38A2E; --o:#C17A34; --r:var(--crit);
   --font-sans:var(--fuente);
   --radius-lg:16px; --radius-md:14px; --radius-sm:10px; --radius-input:10px; --radius-pill:999px; --radius-bar:99px;
   --shadow-sm:none;
 
   /* medidas de la barra y del riel */
-  --lavado:rgba(244,250,245,.5); --pad:clamp(12px,2.4vw,32px);
+  --lavado:rgba(251,246,241,.5); --pad:clamp(12px,2.4vw,32px);
   --ancho:min(1320px,100vw - 2*var(--pad)); --riel:104px; --alto-barra:118px;
 }
 /* en pantallas grandes el contenido se estira y deja a la izquierda el lugar justo para el riel */
@@ -64,10 +59,10 @@ button{font-family:inherit}
 
 /* ---------- cielo: tres manchas pastel que se mueven muy despacio detrás de todo ---------- */
 .mg-cielo{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none}
-.mg-cielo i{position:absolute;border-radius:50%;filter:blur(70px);opacity:.38;animation:mgDeriva 26s ease-in-out infinite alternate}
-.mg-cielo i:nth-child(1){width:46vw;height:46vw;left:-12vw;top:-18vw;background:#C3E4CE}
-.mg-cielo i:nth-child(2){width:40vw;height:40vw;right:-10vw;top:18vh;background:#8EB69B;animation-duration:32s;animation-delay:-8s}
-.mg-cielo i:nth-child(3){width:36vw;height:36vw;left:30vw;bottom:-22vw;background:#ABD3B9;opacity:.45;animation-duration:38s;animation-delay:-15s}
+.mg-cielo i{position:absolute;border-radius:50%;filter:blur(70px);opacity:.55;animation:mgDeriva 26s ease-in-out infinite alternate}
+.mg-cielo i:nth-child(1){width:46vw;height:46vw;left:-12vw;top:-18vw;background:var(--rosa)}
+.mg-cielo i:nth-child(2){width:40vw;height:40vw;right:-10vw;top:18vh;background:var(--pist);animation-duration:32s;animation-delay:-8s}
+.mg-cielo i:nth-child(3){width:36vw;height:36vw;left:30vw;bottom:-22vw;background:var(--almen);opacity:.8;animation-duration:38s;animation-delay:-15s}
 
 /* ---------- la marca: el isotipo de Del Sur, el nombre y la bajada ---------- */
 /* El isotipo de la casa —el cuadro verde con la cresta blanca— va tal cual viene de marca:
@@ -77,7 +72,7 @@ button{font-family:inherit}
    --k escala el bloque entero de una vez. */
 .mg-marca{--k:1.4;flex:none;display:flex;align-items:center;gap:calc(9px*var(--k))}
 .mg-marca .mg-logo{flex:none;width:calc(40px*var(--k));height:calc(40px*var(--k));border-radius:calc(11px*var(--k));
-  box-shadow:0 12px 22px -14px rgba(11,43,38,.55),inset 0 0 0 1px rgba(5,31,32,.07);
+  box-shadow:0 12px 22px -14px rgba(60,30,30,.5),inset 0 0 0 1px rgba(60,30,30,.08);
   animation:mgSello .6s cubic-bezier(.2,.9,.3,1) both}
 .mg-marca h1{font-size:calc(21px*var(--k));font-weight:800;line-height:1}
 .mg-marca p{font-size:calc(10.5px*var(--k));line-height:1;color:var(--gris);font-weight:500;margin-top:calc(4px*var(--k));letter-spacing:.015em}
@@ -90,16 +85,16 @@ button{font-family:inherit}
   max-width:1320px;margin:12px auto 0;width:calc(100% - 2*var(--pad));
   padding:9px 10px 9px 16px;border:0;border-radius:22px;background:rgba(255,255,255,.72);
   -webkit-backdrop-filter:blur(18px) saturate(1.4);backdrop-filter:blur(18px) saturate(1.4);
-  box-shadow:inset 0 0 0 1px rgba(185,216,195,.9),0 18px 40px -30px rgba(5,31,32,.45)}
+  box-shadow:inset 0 0 0 1px rgba(234,225,218,.9),0 18px 40px -30px rgba(60,30,30,.45)}
 
 /* el menú: un solo panel con la fila de módulos y el glaseado que se desliza */
-.mg-navs{grid-column:2;justify-self:center;align-self:center;display:grid;gap:0;padding:5px;border-radius:20px;background:rgba(233,244,235,.8);min-width:0}
+.mg-navs{grid-column:2;justify-self:center;align-self:center;display:grid;gap:0;padding:5px;border-radius:20px;background:rgba(241,236,232,.8);min-width:0}
 .tabs.mg-nav{position:relative;display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:2px;margin:0;padding:0;background:none;border:0;box-shadow:none;border-radius:14px;width:auto}
 .mg-nav .tab{position:relative;z-index:1;flex:none;display:flex;align-items:center;justify-content:center;gap:8px;border:0;background:none;border-radius:12px;padding:9px 15px;font-size:14px;font-weight:600;color:var(--tinta2);cursor:pointer;white-space:nowrap;transition:color .3s}
 .mg-nav .tab svg{width:18px;height:18px;flex:none}
 .mg-nav .tab:hover{background:none;color:var(--tinta)}
 .mg-nav .tab.active{background:none;color:#fff;box-shadow:none}
-.mg-glaseado{position:absolute;left:0;top:0;border-radius:12px;background:var(--tinta);box-shadow:0 8px 18px -10px rgba(5,31,32,.7);transition:transform .45s cubic-bezier(.3,1.25,.4,1),width .45s cubic-bezier(.3,1.25,.4,1),opacity .25s}
+.mg-glaseado{position:absolute;left:0;top:0;border-radius:12px;background:var(--tinta);box-shadow:0 8px 18px -10px rgba(60,30,30,.7);transition:transform .45s cubic-bezier(.3,1.25,.4,1),width .45s cubic-bezier(.3,1.25,.4,1),opacity .25s}
 .mg-glaseado.apagado{opacity:0}
 /* el contador de problemas es la píldora del Portal (.mg-pend) */
 .mg-nav .tab .badge{min-width:18px;height:18px;padding:0 5px;border-radius:99px;background:var(--ch-carmin);color:#fff;font-size:11px;font-weight:700;display:inline-grid;place-items:center}
@@ -116,7 +111,7 @@ button{font-family:inherit}
 .menu-toggle:focus-visible{outline:2px solid var(--acento);outline-offset:2px}
 
 /* el aviso de datos nuevos, con la píldora oscura de los botones del Portal */
-.aviso-datos{background:var(--tinta);box-shadow:0 18px 40px -18px rgba(5,31,32,.7)}
+.aviso-datos{background:var(--tinta);box-shadow:0 18px 40px -18px rgba(60,30,30,.7)}
 .aviso-datos:hover{background:var(--acento)}
 .aviso-datos:focus-visible{outline:2px solid var(--acento);outline-offset:2px}
 
@@ -126,13 +121,13 @@ button{font-family:inherit}
   .top.mg-barra{position:sticky;top:0;margin:0;width:auto;max-width:none;border-radius:0;
     grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:6px 24px;
     padding:12px max(var(--pad),calc((100% - var(--ancho))/2));
-    background-color:#F2F8F3;
+    background-color:#FBF6F1;
     background-image:url("../img/marca/textura-grano.svg"),linear-gradient(var(--lavado),var(--lavado)),url("../img/marca/textura-topo.svg");
     background-size:160px 160px,auto,960px 320px;background-position:0 0,0 0,50% 0;background-repeat:repeat,no-repeat,repeat;
     -webkit-backdrop-filter:none;backdrop-filter:none;
-    box-shadow:0 1px 0 rgba(185,213,195,.9),0 18px 36px -34px rgba(5,31,32,.5)}
+    box-shadow:0 1px 0 rgba(220,208,199,.9),0 18px 36px -34px rgba(60,30,30,.5)}
   .top.mg-barra .mg-marca{justify-self:start}
-  .mg-navs{grid-column:2;justify-self:center;background:rgba(255,255,255,.66);box-shadow:inset 0 0 0 1px rgba(185,216,195,.9);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+  .mg-navs{grid-column:2;justify-self:center;background:rgba(255,255,255,.66);box-shadow:inset 0 0 0 1px rgba(234,225,218,.9);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
   /* El Portal reparte 9 botones en dos filas de 118 px; acá son 7 en una sola, así que las
      columnas se miden por su contenido y el ancho mínimo solo vuelve cuando sobra lugar. */
   .tabs.mg-nav{grid-auto-columns:auto}
@@ -145,8 +140,8 @@ button{font-family:inherit}
 /* Solo si entra al costado del contenido: lo decide js/airo.js con body.mg-riel. */
 body.mg-riel .mg-barra{position:fixed;left:16px;top:16px;bottom:16px;width:var(--riel);z-index:60;display:flex;flex-direction:column;align-items:stretch;gap:12px;
   padding:16px 8px 12px;border-radius:26px;--lavado:transparent;background-position:0 0,0 0,-120px -30px;
-  box-shadow:inset 0 0 0 1px rgba(185,216,195,.95),0 24px 50px -30px rgba(5,31,32,.5);animation:mgRielEntra .45s cubic-bezier(.22,.8,.3,1) both}
-body.mg-riel .mg-barra .mg-marca{--k:1;flex-direction:column;align-items:center;gap:2px;padding:0 0 12px;margin:0;border-bottom:1px solid rgba(5,31,32,.1)}
+  box-shadow:inset 0 0 0 1px rgba(234,225,218,.95),0 24px 50px -30px rgba(60,30,30,.5);animation:mgRielEntra .45s cubic-bezier(.22,.8,.3,1) both}
+body.mg-riel .mg-barra .mg-marca{--k:1;flex-direction:column;align-items:center;gap:2px;padding:0 0 12px;margin:0;border-bottom:1px solid rgba(60,30,30,.1)}
 body.mg-riel .mg-barra .mg-marca h1{font-size:14px;margin:0;text-align:center;line-height:1.05}
 /* en el riel hay 104 px de ancho: el nombre se parte en dos renglones */
 body.mg-riel .mg-barra .mg-airo span{display:block;margin-left:0}
@@ -179,7 +174,7 @@ body.mg-barra-vuelve .mg-nav .tab{animation:mgCaeTab .34s cubic-bezier(.22,.8,.3
    LA PORTADA · el mismo aire del panel del acceso, con datos reales
    ===================================================================== */
 .mg-hero{position:relative;border-radius:28px;padding:30px clamp(18px,2.6vw,34px) clamp(18px,2.6vw,30px);margin-bottom:26px;overflow:hidden;
-  background:radial-gradient(60% 90% at 12% 10%,rgba(255,255,255,.8),transparent 70%),radial-gradient(60% 90% at 92% 95%,rgba(198,228,209,.6),transparent 70%),var(--bloque);
+  background:radial-gradient(60% 90% at 12% 10%,var(--rosa),transparent 70%),radial-gradient(60% 90% at 92% 95%,var(--pist),transparent 70%),var(--almen);
   animation:mqEntra .7s cubic-bezier(.2,.8,.2,1) both}
 .mg-hero::after{content:"";position:absolute;right:-60px;top:-80px;width:280px;height:280px;border-radius:50%;background:rgba(255,255,255,.35);filter:blur(10px);animation:mgDeriva 18s ease-in-out infinite alternate;pointer-events:none}
 .mg-hero>*{position:relative;z-index:1}
@@ -196,19 +191,19 @@ body.mg-barra-vuelve .mg-nav .tab{animation:mgCaeTab .34s cubic-bezier(.22,.8,.3
 .mq-nodo.on i{background:var(--acento)}
 .mq-via{flex:1;min-width:30px;height:2px;position:relative;background:repeating-linear-gradient(90deg,var(--borde2) 0 3px,transparent 3px 8px)}
 .mq-via b{position:absolute;top:-3px;left:0;width:8px;height:8px;border-radius:50%;background:var(--tinta);animation:mqViaja 1.8s linear infinite}
-.mq-via b.r{background:#235347;animation-delay:.9s}
+.mq-via b.r{background:#C1272D;animation-delay:.9s}
 .mq-via b.d1{animation-delay:.4s}
 .mq-via b.d2{animation-delay:1.3s}
-.mq-via b.v{background:#235347}
+.mq-via b.v{background:#6E9A6A}
 .mq-vivo{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;color:var(--ok);background:var(--ok-l);padding:3px 10px;border-radius:99px}
 .mq-vivo i{width:7px;height:7px;border-radius:50%;background:var(--ok);animation:mqLate 1.4s ease-in-out infinite}
 
 /* las tarjetas grandes y la cinta de órdenes */
 .mg-hero-cuerpo{display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,340px);gap:14px}
 .mg-pulsos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
-.mg-pulso,.mg-cinta-ot{background:rgba(255,255,255,.92);border-radius:20px;box-shadow:0 1px 0 rgba(255,255,255,.6) inset,0 24px 50px -32px rgba(5,31,32,.35);animation:mqEntra .8s cubic-bezier(.2,.8,.2,1) both}
+.mg-pulso,.mg-cinta-ot{background:rgba(255,255,255,.92);border-radius:20px;box-shadow:0 1px 0 rgba(255,255,255,.6) inset,0 24px 50px -32px rgba(60,30,30,.35);animation:mqEntra .8s cubic-bezier(.2,.8,.2,1) both}
 .mg-pulso{position:relative;display:grid;grid-template-rows:auto auto auto 1fr;gap:4px;padding:18px 20px 0;min-height:176px;overflow:hidden;transition:transform .25s cubic-bezier(.2,.8,.2,1),box-shadow .25s}
-.mg-pulso:hover{transform:translateY(-3px);box-shadow:0 1px 0 rgba(255,255,255,.6) inset,0 30px 50px -28px rgba(5,31,32,.42)}
+.mg-pulso:hover{transform:translateY(-3px);box-shadow:0 1px 0 rgba(255,255,255,.6) inset,0 30px 50px -28px rgba(60,30,30,.42)}
 .mg-pulso:nth-child(2){animation-delay:.08s}
 .mg-pulso:nth-child(3){animation-delay:.16s}
 .mg-pulso:nth-child(4){animation-delay:.24s}
@@ -230,7 +225,7 @@ body.mg-barra-vuelve .mg-nav .tab{animation:mgCaeTab .34s cubic-bezier(.22,.8,.3
 .mg-pulso:nth-child(3) .area{fill:#F2E6D3}
 .mg-pulso:nth-child(3) .linea{stroke:var(--ch-carmin)}
 /* el aviso de atrasadas: píldora roja con el punto que late, y lleva a Alertas Operativas */
-.mg-atras{border:0;font-family:inherit;align-self:end;justify-self:start;margin:12px 0 18px;display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700;color:#fff;background:var(--ch-acento);padding:5px 12px;border-radius:99px;cursor:pointer;box-shadow:0 8px 16px -10px rgba(5,31,32,.7)}
+.mg-atras{border:0;font-family:inherit;align-self:end;justify-self:start;margin:12px 0 18px;display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700;color:#fff;background:var(--ch-acento);padding:5px 12px;border-radius:99px;cursor:pointer;box-shadow:0 8px 16px -10px rgba(60,30,30,.7)}
 .mg-atras::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--crit);animation:mqLate 1.6s ease-in-out infinite}
 .mg-atras:hover{background:var(--ch-carmin)}
 .mg-atras:focus-visible{outline:2px solid var(--ch-acento);outline-offset:2px}
@@ -275,7 +270,7 @@ body.mg-barra-vuelve .mg-nav .tab{animation:mgCaeTab .34s cubic-bezier(.22,.8,.3
 
 /* ---- tarjetas: todas como las de la portada ---- */
 #app .panel,#app .kpi,#app .prob,#app .prob-head{background:rgba(255,255,255,.93);border:0;border-radius:22px;
-  box-shadow:0 1px 0 rgba(255,255,255,.6) inset,0 24px 50px -32px rgba(5,31,32,.38)}
+  box-shadow:0 1px 0 rgba(255,255,255,.6) inset,0 24px 50px -32px rgba(60,30,30,.38)}
 #app .panel{padding:24px 26px;margin-bottom:18px}
 #app .panel h3{font-size:17px;font-weight:800;letter-spacing:-.025em;margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 #app .panel h3>span:not(.badge){font-size:12px;font-weight:700;color:var(--gris);background:var(--suave);padding:3px 10px;border-radius:99px;letter-spacing:0}
@@ -287,7 +282,7 @@ body.mg-barra-vuelve .mg-nav .tab{animation:mgCaeTab .34s cubic-bezier(.22,.8,.3
 #app .kpi .k-lab{font-size:12px;letter-spacing:.02em;text-transform:none;font-weight:700;color:var(--gris)}
 #app .kpi .k-val{font-size:clamp(24px,2.5vw,34px);font-weight:800;letter-spacing:-.04em;line-height:1.1;margin:4px 0 2px;color:var(--tinta)}
 #app .kpi .k-foot{font-size:12.5px;color:var(--gris)}
-#app .kpi:hover{transform:translateY(-3px);box-shadow:0 1px 0 rgba(255,255,255,.6) inset,0 30px 50px -28px rgba(5,31,32,.45)}
+#app .kpi:hover{transform:translateY(-3px);box-shadow:0 1px 0 rgba(255,255,255,.6) inset,0 30px 50px -28px rgba(60,30,30,.45)}
 
 /* botones "Ver…" como píldoras */
 #app .prob-link,#app .opex-toggle{border:0!important;background:var(--tinta)!important;color:#fff!important;border-radius:99px!important;padding:7px 14px!important;font:700 12px var(--fuente);cursor:pointer;transition:background .15s,transform .15s}
@@ -297,8 +292,8 @@ body.mg-barra-vuelve .mg-nav .tab{animation:mgCaeTab .34s cubic-bezier(.22,.8,.3
 #app .cults{gap:14px}
 #app .cult-card{position:relative;background:var(--blanco);border:0!important;border-radius:18px!important;padding:18px 18px 16px;overflow:hidden;
   box-shadow:inset 0 0 0 1px var(--borde);transition:transform .25s cubic-bezier(.2,.8,.2,1),box-shadow .25s}
-#app .cult-card:not(.mapa-card)::before{content:"";position:absolute;inset:0 0 auto 0;height:5px;background:var(--mg-cult,var(--ch-relleno))}
-#app .cult-card:hover{transform:translateY(-3px);box-shadow:inset 0 0 0 1px var(--borde2),0 22px 40px -28px rgba(5,31,32,.4)}
+#app .cult-card:not(.mapa-card)::before{content:"";position:absolute;inset:0 0 auto 0;height:5px;background:var(--mg-cult,var(--ch-area))}
+#app .cult-card:hover{transform:translateY(-3px);box-shadow:inset 0 0 0 1px var(--borde2),0 22px 40px -28px rgba(60,30,30,.4)}
 #app .cult-card.mg-c-arroz{--mg-cult:#E3867E}
 #app .cult-card.mg-c-soja{--mg-cult:#8FB38A}
 #app .cult-card.mg-c-sorgo{--mg-cult:#D39A55}
@@ -320,11 +315,11 @@ body.mg-barra-vuelve .mg-nav .tab{animation:mgCaeTab .34s cubic-bezier(.22,.8,.3
 #app .estbar-track{height:18px!important;border-radius:99px!important;display:flex;gap:3px;background:transparent!important;overflow:visible}
 #app .estbar-seg{border-radius:99px;transform-origin:left;animation:mgCreceX 1s .15s cubic-bezier(.3,1,.4,1) both}
 #app .estbar-seg.f-g{background:var(--tinta)!important}
-#app .estbar-seg.f-y{background:#235347!important}
-#app .estbar-seg.f-o{background:var(--ch-relleno)!important}
+#app .estbar-seg.f-y{background:#C1272D!important}
+#app .estbar-seg.f-o{background:var(--rosa)!important}
 #app .estbar-dot.f-g{background:var(--tinta)!important}
-#app .estbar-dot.f-y{background:#235347!important}
-#app .estbar-dot.f-o{background:var(--ch-relleno)!important}
+#app .estbar-dot.f-y{background:#C1272D!important}
+#app .estbar-dot.f-o{background:var(--rosa)!important}
 /* cada estado como cifra grande */
 #app .estbar-legend{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-top:14px}
 #app .estbar-leg{display:grid!important;grid-template-columns:auto 1fr;align-items:center;column-gap:7px;row-gap:2px;background:var(--fondo);border-radius:16px;padding:14px 16px;font-size:12.5px;font-weight:700;color:var(--tinta2)}
@@ -334,7 +329,7 @@ body.mg-barra-vuelve .mg-nav .tab{animation:mgCaeTab .34s cubic-bezier(.22,.8,.3
 
 /* ---- actividad por mes: columnas que crecen, la última encendida ---- */
 #app .colchart-bar{border-radius:10px 10px 4px 4px!important;background:linear-gradient(180deg,#A51F25,#E3867E)!important;transform-origin:bottom;animation:mgCrece .8s cubic-bezier(.3,1.3,.4,1) both}
-#app .colchart-col:last-child .colchart-bar{background:linear-gradient(180deg,var(--acento),#235347)!important}
+#app .colchart-col:last-child .colchart-bar{background:linear-gradient(180deg,var(--acento),#C1272D)!important}
 #app .colchart-col:nth-child(2) .colchart-bar{animation-delay:.05s}
 #app .colchart-col:nth-child(3) .colchart-bar{animation-delay:.1s}
 #app .colchart-col:nth-child(4) .colchart-bar{animation-delay:.15s}
@@ -350,14 +345,14 @@ body.mg-barra-vuelve .mg-nav .tab{animation:mgCaeTab .34s cubic-bezier(.22,.8,.3
 /* ---- gastos: filas limpias, barra gruesa, total como tarjeta ---- */
 #app .opex-total{background:linear-gradient(120deg,var(--acento-l),var(--almen));border:0;border-radius:18px}
 #app .opex-row{border-bottom:1px dashed var(--borde);transition:background .15s;border-radius:12px}
-#app .opex-row:hover{background:rgba(218,241,222,.45)}
+#app .opex-row:hover{background:rgba(251,231,228,.45)}
 #app .opex-bar-track{height:9px!important;border-radius:99px!important;background:var(--suave)!important;overflow:hidden}
-#app .opex-bar-fill{border-radius:99px!important;background:linear-gradient(90deg,#235347,var(--acento))!important;transform-origin:left;animation:mgCreceX 1s .2s cubic-bezier(.3,1,.4,1) both}
+#app .opex-bar-fill{border-radius:99px!important;background:linear-gradient(90deg,#C1272D,var(--acento))!important;transform-origin:left;animation:mgCreceX 1s .2s cubic-bezier(.3,1,.4,1) both}
 #app .opex-cat{font-weight:800}
 
 /* barras chicas de las tablas (gasoil, avance) */
 #app .sopbar,#app .pu-bar{height:8px!important;border-radius:99px!important;background:var(--suave)!important;overflow:hidden}
-#app .sopbar>div,#app .pu-bar>i{border-radius:99px!important;background:linear-gradient(90deg,#8EB69B,#235347)!important;transform-origin:left;animation:mgCreceX 1s .2s cubic-bezier(.3,1,.4,1) both}
+#app .sopbar>div,#app .pu-bar>i{border-radius:99px!important;background:linear-gradient(90deg,#8FB38A,#4E7D57)!important;transform-origin:left;animation:mgCreceX 1s .2s cubic-bezier(.3,1,.4,1) both}
 /* mini-cifras dentro de los paneles (Consumo de Gasoil, Terceros) */
 #app .sop-kpi{background:var(--fondo);border-radius:16px;padding:12px 18px;border:0;box-shadow:inset 0 0 0 1px var(--borde)}
 #app .sop-kpi .l{font-size:11.5px;font-weight:700;letter-spacing:.02em;text-transform:none;color:var(--gris)}
@@ -375,8 +370,8 @@ body.mg-barra-vuelve .mg-nav .tab{animation:mgCaeTab .34s cubic-bezier(.22,.8,.3
 #app .page:not(.mg-en-ot) th{background:transparent!important;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--gris);border-bottom:1.5px solid var(--borde)!important;padding:10px 12px}
 #app .page:not(.mg-en-ot) td{border-bottom:1px dashed var(--borde)!important;padding:11px 12px}
 #app .page:not(.mg-en-ot) tbody tr{transition:background .15s}
-#app .page:not(.mg-en-ot) tbody tr:hover>td{background:rgba(218,241,222,.5)}
-#app .page:not(.mg-en-ot) tr.grp>td{background:rgba(185,216,195,.6)!important;font-weight:700}
+#app .page:not(.mg-en-ot) tbody tr:hover>td{background:rgba(251,231,228,.5)}
+#app .page:not(.mg-en-ot) tr.grp>td{background:rgba(234,225,218,.6)!important;font-weight:700}
 #app .page:not(.mg-en-ot) tr.tot>td{background:var(--suave)!important;border-top:0!important}
 #app td.dl{color:var(--acento);font-weight:600}
 #app .exd{color:var(--crit)}
@@ -385,7 +380,7 @@ body.mg-barra-vuelve .mg-nav .tab{animation:mgCaeTab .34s cubic-bezier(.22,.8,.3
 #app .chip,#app .tag,#app .rc-chip{border-radius:99px!important}
 #app .tag{background:var(--crit-l);color:var(--crit);border:0}
 #app .tag-rep,#app .tag-desc{background:var(--warn-l);color:#7A5316;border:0}
-#app .chip-etapa{background:var(--almen);color:#051F20}
+#app .chip-etapa{background:var(--almen);color:#6B4F13}
 #app .pill{border-radius:99px;padding:3px 9px;display:inline-block;min-width:40px;text-align:center;font-weight:800}
 #app .pill-r{background:var(--crit-l);color:var(--crit)}
 #app .pill-o{background:#F2D9BF;color:#7E4410}
@@ -393,20 +388,20 @@ body.mg-barra-vuelve .mg-nav .tab{animation:mgCaeTab .34s cubic-bezier(.22,.8,.3
 
 /* ---- gasto acumulado: la línea de la portada ---- */
 #app #gacc svg{animation:mgRevela 1.6s .2s cubic-bezier(.4,0,.2,1) both}
-#app #gacc polyline{stroke:#235347!important;stroke-width:3!important;stroke-linejoin:round}
-#app #gacc polygon{fill:rgba(218,241,222,.65)!important}
+#app #gacc polyline{stroke:#C1272D!important;stroke-width:3!important;stroke-linejoin:round}
+#app #gacc polygon{fill:rgba(251,231,228,.65)!important}
 #app #gacc circle{fill:var(--acento)!important;stroke:#fff;stroke-width:2}
 
 /* ---- alertas: el atraso se marca con una franja y un tinte suave, no con la fila entera pintada ---- */
 #app .page:not(.mg-en-ot) tr.al-y,#app .page:not(.mg-en-ot) tr.al-o,#app .page:not(.mg-en-ot) tr.al-r{background:transparent!important}
-#app .page:not(.mg-en-ot) tr.al-y>td{background:rgba(218,241,222,.45)}
-#app .page:not(.mg-en-ot) tr.al-o>td{background:rgba(185,216,195,.4)}
-#app .page:not(.mg-en-ot) tr.al-r>td{background:rgba(201,230,210,.45)}
+#app .page:not(.mg-en-ot) tr.al-y>td{background:rgba(251,231,228,.45)}
+#app .page:not(.mg-en-ot) tr.al-o>td{background:rgba(234,225,218,.4)}
+#app .page:not(.mg-en-ot) tr.al-r>td{background:rgba(248,210,206,.45)}
 #app .page:not(.mg-en-ot) tr.al-y>td:first-child{box-shadow:inset 4px 0 #E3C26A}
 #app .page:not(.mg-en-ot) tr.al-o>td:first-child{box-shadow:inset 4px 0 #D39A55}
-#app .page:not(.mg-en-ot) tr.al-r>td:first-child{box-shadow:inset 4px 0 #235347}
+#app .page:not(.mg-en-ot) tr.al-r>td:first-child{box-shadow:inset 4px 0 #C1272D}
 #app .page:not(.mg-en-ot) tr.dethead>td{background:var(--fondo)!important;color:var(--gris)}
-#app .page:not(.mg-en-ot) tr.det-over>td{background:rgba(218,241,222,.35)!important}
+#app .page:not(.mg-en-ot) tr.det-over>td{background:rgba(251,231,228,.35)!important}
 
 /* ---- pie ---- */
 #app .foot{border-top:0;color:var(--gris);font-size:12px;line-height:1.6;padding:20px 8px 0}
@@ -418,8 +413,8 @@ body.mg-barra-vuelve .mg-nav .tab{animation:mgCaeTab .34s cubic-bezier(.22,.8,.3
 .page.active .kpi:nth-child(4){animation-delay:.12s}
 
 /* ---- la pantalla de carga, con el aire del Portal ---- */
-#overlay{background:rgba(244,250,245,.92)}
-#overlay .box{background:var(--blanco);border-radius:24px;box-shadow:inset 0 0 0 1px var(--borde),0 24px 50px -24px rgba(5,31,32,.4)}
+#overlay{background:rgba(251,246,241,.92)}
+#overlay .box{background:var(--blanco);border-radius:24px;box-shadow:inset 0 0 0 1px var(--borde),0 24px 50px -24px rgba(60,30,30,.4)}
 #overlay h2{font-weight:800;letter-spacing:-.025em;color:var(--tinta)}
 #overlay .spin{border-color:var(--borde);border-top-color:var(--acento)}
 #overlay .retry{background:var(--tinta);border:0;border-radius:99px;color:#fff;font-weight:700}
@@ -447,7 +442,7 @@ body.mg-barra-vuelve .mg-nav .tab{animation:mgCaeTab .34s cubic-bezier(.22,.8,.3
 
 /* overflow:clip (no hidden) para que un th pegajoso de adentro siga funcionando */
 .mg-ot-hero{position:relative;overflow:clip;border-radius:28px;padding:30px clamp(18px,2.6vw,34px) clamp(18px,2.6vw,30px);margin-bottom:26px;
-  background:radial-gradient(60% 90% at 12% 10%,rgba(255,255,255,.8),transparent 70%),radial-gradient(60% 90% at 92% 95%,rgba(198,228,209,.6),transparent 70%),var(--bloque);
+  background:radial-gradient(60% 90% at 12% 10%,var(--rosa),transparent 70%),radial-gradient(60% 90% at 92% 95%,var(--pist),transparent 70%),var(--almen);
   animation:mqEntra .7s cubic-bezier(.2,.8,.2,1) both}
 .mg-ot-hero::after{content:"";position:absolute;right:-60px;top:-80px;width:280px;height:280px;border-radius:50%;background:rgba(255,255,255,.35);filter:blur(10px);animation:mgDeriva 18s ease-in-out infinite alternate;pointer-events:none}
 .mg-ot-hero>*{position:relative;z-index:1}
@@ -461,7 +456,7 @@ body.mg-barra-vuelve .mg-nav .tab{animation:mgCaeTab .34s cubic-bezier(.22,.8,.3
 .mg-ot-hero .kpis,.mg-ot-hero .gkpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:0}
 .mg-ot-hero .kpi,.mg-ot-hero .gkpi{min-height:156px;padding:13px 15px;border-radius:16px;background:rgba(255,255,255,.92);border:0;
   display:flex;flex-direction:column;gap:2px;
-  box-shadow:0 1px 0 rgba(255,255,255,.6) inset,0 24px 50px -32px rgba(5,31,32,.35);
+  box-shadow:0 1px 0 rgba(255,255,255,.6) inset,0 24px 50px -32px rgba(60,30,30,.35);
   animation:mqEntra .8s cubic-bezier(.2,.8,.2,1) both}
 .mg-ot-hero .kpi:nth-child(2),.mg-ot-hero .gkpi:nth-child(2){animation-delay:.08s}
 .mg-ot-hero .kpi:nth-child(3),.mg-ot-hero .gkpi:nth-child(3){animation-delay:.16s}
@@ -484,13 +479,13 @@ body.mg-barra-vuelve .mg-nav .tab{animation:mgCaeTab .34s cubic-bezier(.22,.8,.3
   text-align:left;cursor:pointer;background:var(--blanco);border:1px solid var(--borde);border-radius:12px;padding:8px 12px 8px 14px;transition:border-color .15s,box-shadow .15s,background .15s}
 .mg-sel .t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mg-sel::after{content:"";flex:none;width:7px;height:7px;margin:-4px 2px 0 0;border-right:2px solid var(--gris);border-bottom:2px solid var(--gris);transform:rotate(45deg);transition:transform .2s,margin .2s}
-.mg-sel:hover{border-color:var(--borde2);background:#FAFDFB}
-.mg-sel.abierto,.mg-sel:focus-visible{outline:none;border-color:var(--tinta);box-shadow:0 0 0 4px rgba(5,31,32,.07)}
+.mg-sel:hover{border-color:var(--borde2);background:#FFFDFB}
+.mg-sel.abierto,.mg-sel:focus-visible{outline:none;border-color:var(--tinta);box-shadow:0 0 0 4px rgba(60,30,30,.07)}
 .mg-sel.abierto::after{transform:rotate(-135deg);margin-top:3px}
 .mg-sel:disabled{opacity:.55;cursor:not-allowed}
 .scontr .mg-sel{font-size:12.5px;padding:6px 10px 6px 12px;border-radius:10px}
 .mg-sel-menu{position:fixed;z-index:200;display:flex;flex-direction:column;gap:2px;overflow:auto;overscroll-behavior:contain;max-width:min(440px,calc(100vw - 16px));padding:6px;
-  font-family:var(--fuente);background:var(--blanco);border-radius:14px;box-shadow:inset 0 0 0 1px var(--borde),0 24px 50px -20px rgba(5,31,32,.42);animation:mgMenuEntra .16s ease-out}
+  font-family:var(--fuente);background:var(--blanco);border-radius:14px;box-shadow:inset 0 0 0 1px var(--borde),0 24px 50px -20px rgba(60,30,30,.42);animation:mgMenuEntra .16s ease-out}
 .mg-sel-menu button{flex:none;display:flex;align-items:center;justify-content:space-between;gap:14px;border:0;background:none;font:inherit;font-size:13.5px;font-weight:600;
   color:var(--tinta2);text-align:left;padding:9px 12px;border-radius:9px;cursor:pointer;white-space:nowrap}
 .mg-sel-menu button:hover,.mg-sel-menu button:focus-visible{outline:none;background:var(--suave);color:var(--tinta)}
@@ -505,9 +500,9 @@ body.mg-barra-vuelve .mg-nav .tab{animation:mgCaeTab .34s cubic-bezier(.22,.8,.3
    texto es la píldora de fondo y la flecha, para que se note que se puede tocar. */
 .mg-camp-sel{position:relative;display:inline-flex;align-items:center;vertical-align:baseline}
 .mg-camp-sel .mg-sel{font-size:inherit;font-weight:inherit;letter-spacing:inherit;text-transform:inherit;color:inherit;gap:8px;padding:4px 11px;
-  border:0;border-radius:99px;background:rgba(255,255,255,.75);box-shadow:inset 0 0 0 1px rgba(35,83,71,.18)}
-.mg-camp-sel .mg-sel:hover{background:var(--blanco);box-shadow:inset 0 0 0 1px rgba(35,83,71,.35)}
-.mg-camp-sel .mg-sel.abierto,.mg-camp-sel .mg-sel:focus-visible{background:var(--blanco);box-shadow:inset 0 0 0 1px var(--acento),0 0 0 4px rgba(35,83,71,.1)}
+  border:0;border-radius:99px;background:rgba(255,255,255,.75);box-shadow:inset 0 0 0 1px rgba(165,31,37,.18)}
+.mg-camp-sel .mg-sel:hover{background:var(--blanco);box-shadow:inset 0 0 0 1px rgba(165,31,37,.35)}
+.mg-camp-sel .mg-sel.abierto,.mg-camp-sel .mg-sel:focus-visible{background:var(--blanco);box-shadow:inset 0 0 0 1px var(--acento),0 0 0 4px rgba(165,31,37,.1)}
 .mg-camp-sel .mg-sel::after{width:6px;height:6px;border-color:currentColor}
 .mg-moneda{color:var(--tinta2)}
 .mg-ot-cab .mg-eyebrow{margin-bottom:2px}
@@ -528,7 +523,7 @@ body.mg-barra-vuelve .mg-nav .tab{animation:mgCaeTab .34s cubic-bezier(.22,.8,.3
 .mg-seg-btns{display:inline-flex;gap:3px;padding:3px;border-radius:13px;background:var(--suave);flex-wrap:wrap}
 .mg-seg-btns button{border:0;background:transparent;border-radius:10px;padding:6px 11px;font:700 12.5px var(--fuente);color:var(--tinta2);cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:background .2s,color .2s,box-shadow .2s}
 .mg-seg-btns button:hover{color:var(--tinta);background:rgba(255,255,255,.7)}
-.mg-seg-btns button.on{background:var(--blanco);color:var(--tinta);box-shadow:0 1px 2px rgba(5,31,32,.08),inset 0 0 0 1px var(--borde)}
+.mg-seg-btns button.on{background:var(--blanco);color:var(--tinta);box-shadow:0 1px 2px rgba(60,30,30,.08),inset 0 0 0 1px var(--borde)}
 .mg-seg-btns.chico button{padding:4px 9px;font-size:11.5px}
 .mg-seg-btns button i{width:8px;height:8px;border-radius:3px;display:inline-block}
 
@@ -540,8 +535,8 @@ body.mg-barra-vuelve .mg-nav .tab{animation:mgCaeTab .34s cubic-bezier(.22,.8,.3
 .mg-avance{position:relative;z-index:1;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
 .mg-avance.foco{grid-template-columns:minmax(0,1fr)}
 .mg-av-card{display:flex;flex-direction:column;gap:4px;padding:18px 20px 16px;background:rgba(255,255,255,.92);border-radius:20px;
-  box-shadow:0 1px 0 rgba(255,255,255,.6) inset,0 24px 50px -32px rgba(5,31,32,.35);animation:mqEntra .7s cubic-bezier(.2,.8,.2,1) both;transition:transform .25s cubic-bezier(.2,.8,.2,1),box-shadow .25s}
-.mg-av-card:hover{transform:translateY(-3px);box-shadow:0 1px 0 rgba(255,255,255,.6) inset,0 30px 50px -28px rgba(5,31,32,.42)}
+  box-shadow:0 1px 0 rgba(255,255,255,.6) inset,0 24px 50px -32px rgba(60,30,30,.35);animation:mqEntra .7s cubic-bezier(.2,.8,.2,1) both;transition:transform .25s cubic-bezier(.2,.8,.2,1),box-shadow .25s}
+.mg-av-card:hover{transform:translateY(-3px);box-shadow:0 1px 0 rgba(255,255,255,.6) inset,0 30px 50px -28px rgba(60,30,30,.42)}
 .mg-av-card[hidden]{display:none!important}
 .mg-av-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px}
 .mg-av-nom{font-size:13px;font-weight:800;letter-spacing:.06em}
@@ -599,7 +594,7 @@ body.mg-barra-vuelve .mg-nav .tab{animation:mgCaeTab .34s cubic-bezier(.22,.8,.3
 .mg-actividad{min-width:0}
 .mg-actividad:empty{display:none}
 .mg-act{position:relative;background:rgba(255,255,255,.92);border-radius:20px;padding:18px 20px 12px;
-  box-shadow:0 1px 0 rgba(255,255,255,.6) inset,0 24px 50px -32px rgba(5,31,32,.35);animation:mqEntra .8s .2s cubic-bezier(.2,.8,.2,1) both}
+  box-shadow:0 1px 0 rgba(255,255,255,.6) inset,0 24px 50px -32px rgba(60,30,30,.35);animation:mqEntra .8s .2s cubic-bezier(.2,.8,.2,1) both}
 .mg-act-cab{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .mg-act-cab>div{display:flex;flex-direction:column;gap:4px}
 /* el grupo de botones es hijo directo de .mg-act-cab, así que hay que devolverle la fila: el
@@ -612,7 +607,7 @@ body.mg-barra-vuelve .mg-nav .tab{animation:mgCaeTab .34s cubic-bezier(.22,.8,.3
 .mg-act-graf{padding:14px 22px 0}
 .mg-act-lienzo{position:relative;height:150px}
 .mg-act-lienzo svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible;animation:mgRevela 1.6s .2s cubic-bezier(.4,0,.2,1) both}
-.mg-act-lienzo .area{fill:var(--ch-relleno);opacity:.55;animation:mgAparece 1s .5s both}
+.mg-act-lienzo .area{fill:var(--ch-area);opacity:.55;animation:mgAparece 1s .5s both}
 .mg-act-lienzo .linea{fill:none;stroke:var(--acento);stroke-width:2.4;vector-effect:non-scaling-stroke;stroke-linejoin:round;stroke-linecap:round}
 @keyframes mgAparece{from{opacity:0}}
 .mg-act-pt{position:absolute;width:11px;height:11px;margin:-5.5px 0 0 -5.5px;border-radius:50%;background:var(--blanco);box-shadow:inset 0 0 0 2.5px var(--acento);animation:mgPunto .45s cubic-bezier(.3,1.5,.5,1) both}
@@ -623,7 +618,7 @@ body.mg-barra-vuelve .mg-nav .tab{animation:mgCaeTab .34s cubic-bezier(.22,.8,.3
 .mg-act-meses{position:relative;height:26px;margin-top:6px}
 .mg-act-meses span{position:absolute;top:4px;transform:translateX(-50%);font-size:11.5px;color:var(--gris);white-space:nowrap}
 
-.mg-rank-card{background:rgba(255,255,255,.92);border-radius:20px;padding:18px 20px;box-shadow:0 1px 0 rgba(255,255,255,.6) inset,0 24px 50px -32px rgba(5,31,32,.35);animation:mqEntra .8s cubic-bezier(.2,.8,.2,1) both;min-width:0}
+.mg-rank-card{background:rgba(255,255,255,.92);border-radius:20px;padding:18px 20px;box-shadow:0 1px 0 rgba(255,255,255,.6) inset,0 24px 50px -32px rgba(60,30,30,.35);animation:mqEntra .8s cubic-bezier(.2,.8,.2,1) both;min-width:0}
 .mg-rank-card .eti{font-size:12px;font-weight:700;color:var(--gris);letter-spacing:.02em}
 .mg-rank-cab{display:flex;flex-direction:column;align-items:stretch;gap:8px;margin-bottom:14px}
 .mg-rank-lista{display:grid;gap:4px}
@@ -634,7 +629,7 @@ body.mg-barra-vuelve .mg-nav .tab{animation:mgCaeTab .34s cubic-bezier(.22,.8,.3
 .mg-rank-fila .v{font-size:12.5px;font-weight:800;white-space:nowrap}
 .mg-rank-fila .v em{font-style:normal;font-weight:600;color:var(--gris);margin-left:6px;font-size:11.5px}
 .mg-rank-fila .b{grid-column:2/-1;height:6px;border-radius:99px;background:var(--suave);overflow:hidden}
-.mg-rank-fila .b i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#8EB69B,var(--acento));transform-origin:left;animation:mgCreceX .9s cubic-bezier(.3,1,.4,1) both}
+.mg-rank-fila .b i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#DDE8D8,var(--acento));transform-origin:left;animation:mgCreceX .9s cubic-bezier(.3,1,.4,1) both}
 .mg-rank-mas{font-size:12px;color:var(--gris);margin-top:8px}
 
 /* lo que la portada ya cuenta deja de repetirse abajo: las tarjetas de cultivo (quedan los mapas),
@@ -659,7 +654,7 @@ body.mg-barra-vuelve .mg-nav .tab{animation:mgCaeTab .34s cubic-bezier(.22,.8,.3
 
 /* ---- las tablas: tarjeta blanca, encabezado liviano, nada de filas teñidas ---- */
 #app .page.mg-en-ot .panel{background:rgba(255,255,255,.94);border:0;border-radius:24px;padding:24px 26px 20px;margin-bottom:18px;
-  box-shadow:0 1px 0 rgba(255,255,255,.6) inset,inset 0 0 0 1px var(--borde),0 24px 50px -36px rgba(5,31,32,.32)}
+  box-shadow:0 1px 0 rgba(255,255,255,.6) inset,inset 0 0 0 1px var(--borde),0 24px 50px -36px rgba(60,30,30,.32)}
 #app .page.mg-en-ot .panel h3{font-size:18px;font-weight:800;letter-spacing:-.03em;margin-bottom:16px;gap:12px}
 #app .page.mg-en-ot .panel h3>span:not(.badge){flex:none;font-size:11.5px;font-weight:600;letter-spacing:0;color:var(--tinta2);background:var(--suave);border-radius:99px;padding:3px 11px}
 #app .page.mg-en-ot .panel h3>span:empty{display:none}
@@ -669,11 +664,11 @@ body.mg-barra-vuelve .mg-nav .tab{animation:mgCaeTab .34s cubic-bezier(.22,.8,.3
 #app .page.mg-en-ot td{padding:12px;border-bottom:0;color:var(--tinta2)}
 #app .page.mg-en-ot td.tr,#app .page.mg-en-ot td.mono{white-space:nowrap;font-variant-numeric:tabular-nums}
 /* grupo + detalle (Control de Hectáreas): el grupo es un renglón apenas marcado, el detalle limpio */
-#app .page.mg-en-ot tr.grp td{background:#F2F8F3;border-top:0;border-bottom:0;padding-top:14px;color:var(--tinta);font-weight:700}
-#app .page.mg-en-ot tr.dethead td{background:#F2F8F3;font-size:10.5px;font-weight:600;letter-spacing:.06em;color:var(--gris);padding:0 12px 10px 24px;border-bottom:0}
+#app .page.mg-en-ot tr.grp td{background:#FBF6F1;border-top:0;border-bottom:0;padding-top:14px;color:var(--tinta);font-weight:700}
+#app .page.mg-en-ot tr.dethead td{background:#FBF6F1;font-size:10.5px;font-weight:600;letter-spacing:.06em;color:var(--gris);padding:0 12px 10px 24px;border-bottom:0}
 #app .page.mg-en-ot tr.det td,#app .page.mg-en-ot tr.det-over td{background:transparent;font-size:12px;padding:9px 12px;border-bottom:0}
 #app .page.mg-en-ot td.dl{padding-left:24px;color:var(--acento);font-weight:700}
-#app .page.mg-en-ot tr.neutra.grp td,#app .page.mg-en-ot tr.neutra.dethead td{background:#F1F8F3}
+#app .page.mg-en-ot tr.neutra.grp td,#app .page.mg-en-ot tr.neutra.dethead td{background:#F6F8F4}
 #app .page.mg-en-ot tr.tot td{background:var(--suave);border-top:0;color:var(--tinta)}
 #app .page.mg-en-ot .exd{color:var(--crit)}
 /* las filas no se iluminan al pasar el cursor */
@@ -682,7 +677,7 @@ body.mg-barra-vuelve .mg-nav .tab{animation:mgCaeTab .34s cubic-bezier(.22,.8,.3
 #app .page.mg-en-ot .tag{background:var(--crit-l);color:var(--crit);border:0;font-size:10.5px;font-weight:700;letter-spacing:0;text-transform:none;padding:2px 9px;margin-left:8px;vertical-align:1px;border-radius:99px}
 #app .page.mg-en-ot .tag-rep,#app .page.mg-en-ot .tag-desc{background:var(--warn-l);color:#7A5316;border:0}
 #app .page.mg-en-ot .chip{border-radius:99px;font-size:10px;letter-spacing:0;text-transform:none;padding:2px 8px;vertical-align:1px}
-#app .page.mg-en-ot .chip-etapa{background:var(--almen);color:#051F20}
+#app .page.mg-en-ot .chip-etapa{background:var(--almen);color:#6B4F13}
 /* Alertas: sin filas teñidas; el atraso lo dice la píldora. El color está puesto sobre el <tr>
    (alertas.css), así que no alcanza con limpiar las celdas: hay que apagar también la fila. */
 #app .page.mg-en-ot tr.al-y,#app .page.mg-en-ot tr.al-o,#app .page.mg-en-ot tr.al-r{background:transparent}
