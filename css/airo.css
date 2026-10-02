@@ -1,0 +1,768 @@
+/* =====================================================================
+   AIRO · el diseño del Portal del Sur, traído literal a este tablero
+   -----------------------------------------------------------------
+   Origen: Portal-del-sur/Portal_del_Sur/src/minga.css — estilo "Mostrador" (A),
+   elegido el 2026-09-22. Claro y limpio, tipo producto de software. El armado
+   es el del Portal; la paleta no: acá son los seis verdes de Del Sur,
+   #DAF1DE · #8EB69B · #235347 · #163832 · #0B2B26 · #051F20, de la menta al
+   casi negro. Logo: el isotipo de Desarrollos del Sur.
+
+   Los únicos colores de afuera de la paleta son los de estado —el ámbar del
+   aviso y el rojo del crítico—: un alerta verde dejaría de leerse como alerta.
+
+   En el Portal este tablero vive embebido dentro de #v-tablero y minga.css lo
+   re-tiñe desde afuera. Acá el tablero es la página entera, así que las mismas
+   reglas van con el alcance que corresponde: #app en vez de
+   "#v-tablero:not(.mg-en-ot) #app", y la barra .mg-barra se aplica sobre
+   nuestro header.top, que ahora tiene el mismo armado que el del Portal
+   (marca · menú · frescura).
+
+   Va ÚLTIMO en index.html: pisa a los demás por orden de cascade, no por
+   !important (los !important que hay son los mismos que trae minga.css,
+   porque abajo hay reglas con width/background en línea o más específicas).
+   ===================================================================== */
+
+/* ---------- la paleta y las variables del tablero, re-teñidas ---------- */
+:root{
+  --fondo:#DAF1DE; --blanco:#FFFFFF; --lateral:#E8F3EA; --suave:#E9F4EB;
+  --tinta:#000000; --tinta2:#1E2321; --gris:#44504C; --borde:#D5E8DA; --borde2:#B9D5C3;
+  --rosa:#D2EBD9; --pist:#C6E4D1; --almen:#CFE8D7;
+  --bloque:#F5F0E6;  /* el bloque de arriba de cada módulo: lino, cálido sobre el fondo menta */
+  --sage:#8EB69B;  /* el verde medio, sólo para manchas y rellenos, nunca debajo de texto */
+
+  /* Los gráficos tienen paleta propia, la de Airo: rosa, carmín, pistacho, almendra, ámbar.
+     El verde manda en el entorno —fondo, barra, bloques, acentos— pero un dato dibujado
+     necesita tono propio para distinguirse de otro dato, no claridad del mismo verde. */
+  --ch-relleno:#C1272D; --ch-pist:#DDE8D8; --ch-area:#F4D6D0;
+  --ch-carmin:#C1272D; --ch-acento:#A51F25;
+  --acento:#235347; --acento-l:#DAF1DE;
+  --marca:#235347; --marca-osc:#8EB69B;  /* el verde de la marca; su versión clara sobre fondo oscuro */
+  --ok:#235347; --ok-l:#DAF1DE; --warn:#A8742A; --warn-l:#F7EBD8; --crit:#B3261E; --crit-l:#FBE6E3;
+  --fuente:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+
+  --green:var(--ok); --green-l:#8EB69B; --green-xl:var(--ok-l);
+  --teal:var(--tinta); --ink:var(--tinta); --muted:var(--gris); --line:var(--borde);
+  --bg:var(--fondo); --card:var(--blanco);
+  --g:#235347; --y:#B38A2E; --o:#C17A34; --r:var(--crit);
+  --font-sans:var(--fuente);
+  --radius-lg:16px; --radius-md:14px; --radius-sm:10px; --radius-input:10px; --radius-pill:999px; --radius-bar:99px;
+  --shadow-sm:none;
+
+  /* medidas de la barra y del riel */
+  --lavado:rgba(244,250,245,.5); --pad:clamp(12px,2.4vw,32px);
+  --ancho:min(1320px,100vw - 2*var(--pad)); --riel:104px; --alto-barra:118px;
+}
+/* en pantallas grandes el contenido se estira y deja a la izquierda el lugar justo para el riel */
+@media (min-width:1580px){:root{--ancho:min(1560px,100vw - 272px)}}
+
+html,body{background:var(--fondo)}
+body{font-family:var(--fuente);color:var(--tinta);font-size:14.5px;line-height:1.55;font-variant-numeric:lining-nums tabular-nums;-webkit-font-smoothing:antialiased}
+button{font-family:inherit}
+.wrap{max-width:calc(var(--ancho) + 2*var(--pad));padding:26px var(--pad) 40px}
+
+/* ---------- cielo: tres manchas pastel que se mueven muy despacio detrás de todo ---------- */
+.mg-cielo{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none}
+.mg-cielo i{position:absolute;border-radius:50%;filter:blur(70px);opacity:.38;animation:mgDeriva 26s ease-in-out infinite alternate}
+.mg-cielo i:nth-child(1){width:46vw;height:46vw;left:-12vw;top:-18vw;background:#C3E4CE}
+.mg-cielo i:nth-child(2){width:40vw;height:40vw;right:-10vw;top:18vh;background:#8EB69B;animation-duration:32s;animation-delay:-8s}
+.mg-cielo i:nth-child(3){width:36vw;height:36vw;left:30vw;bottom:-22vw;background:#ABD3B9;opacity:.45;animation-duration:38s;animation-delay:-15s}
+
+/* ---------- la marca: el isotipo de Del Sur, el nombre y la bajada ---------- */
+/* El isotipo de la casa —el cuadro verde con la cresta blanca— va tal cual viene de marca:
+   img/brand/del-sur-isotipo.svg, sin retocarle el color. Lo único que le pone el tablero es el
+   radio y la sombra, para que caiga como el resto de las piezas (los chips, las tarjetas). El
+   verde de marca convive con el carmesí: el mismo par que ya usa la portada (pistacho y rosa).
+   --k escala el bloque entero de una vez. */
+.mg-marca{--k:1.4;flex:none;display:flex;align-items:center;gap:calc(9px*var(--k))}
+.mg-marca .mg-logo{flex:none;width:calc(40px*var(--k));height:calc(40px*var(--k));border-radius:calc(11px*var(--k));
+  box-shadow:0 12px 22px -14px rgba(11,43,38,.55),inset 0 0 0 1px rgba(5,31,32,.07);
+  animation:mgSello .6s cubic-bezier(.2,.9,.3,1) both}
+.mg-marca h1{font-size:calc(21px*var(--k));font-weight:800;line-height:1}
+.mg-marca p{font-size:calc(10.5px*var(--k));line-height:1;color:var(--gris);font-weight:500;margin-top:calc(4px*var(--k));letter-spacing:.015em}
+.mg-airo{font-family:'Syne',var(--fuente);font-weight:800;letter-spacing:.005em}
+.mg-airo span{color:var(--marca);margin-left:.24em}
+@keyframes mgSello{from{transform:scale(.55) rotate(-12deg);opacity:0}}
+
+/* ---------- la barra: flotante arriba, vidrio esmerilado ---------- */
+.top.mg-barra{position:sticky;top:12px;z-index:50;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:8px 18px;
+  max-width:1320px;margin:12px auto 0;width:calc(100% - 2*var(--pad));
+  padding:9px 10px 9px 16px;border:0;border-radius:22px;background:rgba(255,255,255,.72);
+  -webkit-backdrop-filter:blur(18px) saturate(1.4);backdrop-filter:blur(18px) saturate(1.4);
+  box-shadow:inset 0 0 0 1px rgba(185,216,195,.9),0 18px 40px -30px rgba(5,31,32,.45)}
+
+/* el menú: un solo panel con la fila de módulos y el glaseado que se desliza */
+.mg-navs{grid-column:2;justify-self:center;align-self:center;display:grid;gap:0;padding:5px;border-radius:20px;background:rgba(233,244,235,.8);min-width:0}
+.tabs.mg-nav{position:relative;display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:2px;margin:0;padding:0;background:none;border:0;box-shadow:none;border-radius:14px;width:auto}
+.mg-nav .tab{position:relative;z-index:1;flex:none;display:flex;align-items:center;justify-content:center;gap:8px;border:0;background:none;border-radius:12px;padding:9px 15px;font-size:14px;font-weight:600;color:var(--tinta2);cursor:pointer;white-space:nowrap;transition:color .3s}
+.mg-nav .tab svg{width:18px;height:18px;flex:none}
+.mg-nav .tab:hover{background:none;color:var(--tinta)}
+.mg-nav .tab.active{background:none;color:#fff;box-shadow:none}
+.mg-glaseado{position:absolute;left:0;top:0;border-radius:12px;background:var(--tinta);box-shadow:0 8px 18px -10px rgba(5,31,32,.7);transition:transform .45s cubic-bezier(.3,1.25,.4,1),width .45s cubic-bezier(.3,1.25,.4,1),opacity .25s}
+.mg-glaseado.apagado{opacity:0}
+/* el contador de problemas es la píldora del Portal (.mg-pend) */
+.mg-nav .tab .badge{min-width:18px;height:18px;padding:0 5px;border-radius:99px;background:var(--ch-carmin);color:#fff;font-size:11px;font-weight:700;display:inline-grid;place-items:center}
+.mg-nav .tab.active .badge{background:#fff;color:var(--ch-acento)}
+
+/* a la derecha: la frescura del dato, como la píldora de Albor del Portal */
+.mg-barra-der{grid-column:3;flex:none;display:flex;align-items:center;gap:10px}
+.top .t-date.mg-frescura{display:inline-flex;align-items:center;gap:7px;background:var(--blanco);color:var(--tinta2);font-size:12px;font-weight:600;padding:6px 12px;border-radius:99px;cursor:help;box-shadow:inset 0 0 0 1px var(--borde);white-space:nowrap}
+.top .t-date.mg-frescura::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--ok);animation:mqLate 2s ease-in-out infinite}
+.top .t-date.vieja{background:var(--warn-l);color:#7A5316;box-shadow:inset 0 0 0 1px #EBD9BE}
+.top .t-date.vieja::before{background:var(--warn)}
+.menu-toggle{border:0;border-radius:12px;background:var(--suave)}
+.menu-toggle-bars span{background:var(--tinta)}
+.menu-toggle:focus-visible{outline:2px solid var(--acento);outline-offset:2px}
+
+/* el aviso de datos nuevos, con la píldora oscura de los botones del Portal */
+.aviso-datos{background:var(--tinta);box-shadow:0 18px 40px -18px rgba(5,31,32,.7)}
+.aviso-datos:hover{background:var(--acento)}
+.aviso-datos:focus-visible{outline:2px solid var(--acento);outline-offset:2px}
+
+/* ---------- la franja: curvas de nivel y grano de papel, de borde a borde ---------- */
+@media (min-width:761px){
+  .wrap{max-width:calc(var(--ancho) + 2*var(--pad))}
+  .top.mg-barra{position:sticky;top:0;margin:0;width:auto;max-width:none;border-radius:0;
+    grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:6px 24px;
+    padding:12px max(var(--pad),calc((100% - var(--ancho))/2));
+    background-color:#F2F8F3;
+    background-image:url("../img/marca/textura-grano.svg"),linear-gradient(var(--lavado),var(--lavado)),url("../img/marca/textura-topo.svg");
+    background-size:160px 160px,auto,960px 320px;background-position:0 0,0 0,50% 0;background-repeat:repeat,no-repeat,repeat;
+    -webkit-backdrop-filter:none;backdrop-filter:none;
+    box-shadow:0 1px 0 rgba(185,213,195,.9),0 18px 36px -34px rgba(5,31,32,.5)}
+  .top.mg-barra .mg-marca{justify-self:start}
+  .mg-navs{grid-column:2;justify-self:center;background:rgba(255,255,255,.66);box-shadow:inset 0 0 0 1px rgba(185,216,195,.9);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+  /* El Portal reparte 9 botones en dos filas de 118 px; acá son 7 en una sola, así que las
+     columnas se miden por su contenido y el ancho mínimo solo vuelve cuando sobra lugar. */
+  .tabs.mg-nav{grid-auto-columns:auto}
+  .top.mg-barra .mg-marca{--k:1.15}
+  .mg-barra-der{grid-column:3;justify-self:end}
+  .menu-toggle{display:none}
+}
+
+/* ---------- el riel: al bajar, la barra se pliega contra el borde izquierdo ---------- */
+/* Solo si entra al costado del contenido: lo decide js/airo.js con body.mg-riel. */
+body.mg-riel .mg-barra{position:fixed;left:16px;top:16px;bottom:16px;width:var(--riel);z-index:60;display:flex;flex-direction:column;align-items:stretch;gap:12px;
+  padding:16px 8px 12px;border-radius:26px;--lavado:transparent;background-position:0 0,0 0,-120px -30px;
+  box-shadow:inset 0 0 0 1px rgba(185,216,195,.95),0 24px 50px -30px rgba(5,31,32,.5);animation:mgRielEntra .45s cubic-bezier(.22,.8,.3,1) both}
+body.mg-riel .mg-barra .mg-marca{--k:1;flex-direction:column;align-items:center;gap:2px;padding:0 0 12px;margin:0;border-bottom:1px solid rgba(5,31,32,.1)}
+body.mg-riel .mg-barra .mg-marca h1{font-size:14px;margin:0;text-align:center;line-height:1.05}
+/* en el riel hay 104 px de ancho: el nombre se parte en dos renglones */
+body.mg-riel .mg-barra .mg-airo span{display:block;margin-left:0}
+body.mg-riel .mg-barra .mg-marca .mg-logo{width:40px;height:40px;border-radius:11px}
+body.mg-riel .mg-barra .mg-marca p{display:none}
+body.mg-riel .mg-navs{display:flex;flex-direction:column;min-height:0;overflow-y:auto;scrollbar-width:none;padding:4px;border-radius:18px}
+body.mg-riel .tabs.mg-nav{display:flex;flex-direction:column;gap:2px}
+body.mg-riel .mg-nav .tab{flex-direction:column;justify-content:center;gap:4px;padding:9px 2px;font-size:11px;line-height:1.15;white-space:normal;text-align:center}
+body.mg-riel .mg-nav .tab svg{width:20px;height:20px}
+body.mg-riel .mg-nav .tab{animation:mgCaeTab .4s cubic-bezier(.22,.8,.3,1) both}
+body.mg-riel .mg-nav .tab:nth-of-type(2){animation-delay:.05s}
+body.mg-riel .mg-nav .tab:nth-of-type(3){animation-delay:.1s}
+body.mg-riel .mg-nav .tab:nth-of-type(4){animation-delay:.15s}
+body.mg-riel .mg-nav .tab:nth-of-type(5){animation-delay:.2s}
+body.mg-riel .mg-nav .tab:nth-of-type(6){animation-delay:.25s}
+body.mg-riel .mg-nav .tab:nth-of-type(7){animation-delay:.3s}
+body.mg-riel .mg-nav .tab .badge{position:absolute;top:4px;right:6px;transform:scale(.85)}
+body.mg-riel .mg-barra-der{margin-top:auto;flex-direction:column;gap:8px;align-items:center}
+body.mg-riel .t-date.mg-frescura{font-size:10.5px;padding:6px 10px;justify-content:center;flex-wrap:wrap;column-gap:5px;row-gap:1px;line-height:1.25;white-space:normal;text-align:center}
+body.mg-riel.mg-riel-sale .mg-barra{animation:mgRielSale .26s ease-in both}
+body.mg-riel.mg-riel-sale .mg-nav .tab{animation:none}
+body.mg-barra-vuelve .mg-barra{animation:mgBarraVuelve .42s cubic-bezier(.22,.8,.3,1) both}
+body.mg-barra-vuelve .mg-nav .tab{animation:mgCaeTab .34s cubic-bezier(.22,.8,.3,1) both}
+@keyframes mgRielEntra{from{opacity:0;transform:translateX(-28px) scale(.96)}}
+@keyframes mgRielSale{to{opacity:0;transform:translateX(-28px) scale(.96)}}
+@keyframes mgBarraVuelve{from{opacity:0;transform:translateY(-18px)}}
+@keyframes mgCaeTab{from{opacity:0;transform:translateY(-6px)}}
+
+/* =====================================================================
+   LA PORTADA · el mismo aire del panel del acceso, con datos reales
+   ===================================================================== */
+.mg-hero{position:relative;border-radius:28px;padding:30px clamp(18px,2.6vw,34px) clamp(18px,2.6vw,30px);margin-bottom:26px;overflow:hidden;
+  background:var(--bloque);
+  animation:mqEntra .7s cubic-bezier(.2,.8,.2,1) both}
+.mg-hero::after{content:"";position:absolute;right:-60px;top:-80px;width:280px;height:280px;border-radius:50%;background:rgba(255,255,255,.35);filter:blur(10px);animation:mgDeriva 18s ease-in-out infinite alternate;pointer-events:none}
+.mg-hero>*{position:relative;z-index:1}
+.mg-hero-cab{display:flex;align-items:flex-end;justify-content:space-between;gap:20px 40px;flex-wrap:wrap;margin-bottom:24px}
+.mg-eyebrow{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--acento)}
+.mg-hero h2{font-size:clamp(30px,3.6vw,44px);font-weight:700;letter-spacing:-.045em;line-height:1.02;margin:8px 0}
+.mg-hero-sub{font-size:14px;color:var(--tinta2);max-width:62ch}
+
+/* el camino del dato: Albor lo exporta, el Excel lo guarda, el tablero lo lee */
+.mg-flujo{display:flex;align-items:center;gap:8px;min-width:min(380px,100%);background:rgba(255,255,255,.7);padding:8px;border-radius:99px}
+.mg-flujo .mq-nodo{background:var(--blanco)}
+.mq-nodo{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700;color:var(--tinta);background:var(--fondo);padding:6px 12px;border-radius:99px;white-space:nowrap}
+.mq-nodo i{width:8px;height:8px;border-radius:3px;background:var(--borde2)}
+.mq-nodo.on i{background:var(--acento)}
+.mq-via{flex:1;min-width:30px;height:2px;position:relative;background:repeating-linear-gradient(90deg,var(--borde2) 0 3px,transparent 3px 8px)}
+.mq-via b{position:absolute;top:-3px;left:0;width:8px;height:8px;border-radius:50%;background:var(--tinta);animation:mqViaja 1.8s linear infinite}
+.mq-via b.r{background:#235347;animation-delay:.9s}
+.mq-via b.d1{animation-delay:.4s}
+.mq-via b.d2{animation-delay:1.3s}
+.mq-via b.v{background:#235347}
+.mq-vivo{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;color:var(--ok);background:var(--ok-l);padding:3px 10px;border-radius:99px}
+.mq-vivo i{width:7px;height:7px;border-radius:50%;background:var(--ok);animation:mqLate 1.4s ease-in-out infinite}
+
+/* las tarjetas grandes y la cinta de órdenes */
+.mg-hero-cuerpo{display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,340px);gap:14px}
+.mg-pulsos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.mg-pulso,.mg-cinta-ot{background:rgba(255,255,255,.92);border-radius:20px;box-shadow:0 1px 0 rgba(255,255,255,.6) inset,0 24px 50px -32px rgba(5,31,32,.35);animation:mqEntra .8s cubic-bezier(.2,.8,.2,1) both}
+.mg-pulso{position:relative;display:grid;grid-template-rows:auto auto auto 1fr;gap:4px;padding:18px 20px 0;min-height:176px;overflow:hidden;transition:transform .25s cubic-bezier(.2,.8,.2,1),box-shadow .25s}
+.mg-pulso:hover{transform:translateY(-3px);box-shadow:0 1px 0 rgba(255,255,255,.6) inset,0 30px 50px -28px rgba(5,31,32,.42)}
+.mg-pulso:nth-child(2){animation-delay:.08s}
+.mg-pulso:nth-child(3){animation-delay:.16s}
+.mg-pulso:nth-child(4){animation-delay:.24s}
+.mg-cinta-ot{animation-delay:.12s}
+.mg-pulso .eti{padding-right:34px;font-size:12px;font-weight:700;color:var(--gris);letter-spacing:.02em}
+.mg-pulso .val{font-size:clamp(26px,2.6vw,34px);font-weight:800;letter-spacing:-.04em;line-height:1.1;color:var(--tinta)}
+.mg-pulso .val small{font-size:.5em;font-weight:700;color:var(--gris);letter-spacing:0}
+.mg-pulso .pie{font-size:12.5px;color:var(--gris);padding-bottom:18px}
+/* el número va en el verde profundo: el rojo queda sólo para la píldora de atrasadas,
+   que es lo que realmente avisa */
+.mg-pulso.alerta .val{color:var(--ch-carmin)}
+.mg-spark{align-self:end;width:calc(100% + 40px);margin:12px -20px 0;height:58px;display:block}
+.mg-spark rect{fill:var(--ch-relleno);transform-origin:bottom;transform-box:fill-box;animation:mgCrece .7s cubic-bezier(.3,1.3,.4,1) both}
+.mg-spark rect.hoy{fill:var(--ch-acento)}
+/* la variante en línea, para lo que se acumula (el gasto): la tercera tarjeta la lleva en carmín */
+.mg-spark .area{fill:var(--ch-area);opacity:.9;animation:mgAparece 1s .5s both}
+.mg-spark .linea{fill:none;stroke:var(--ch-carmin);stroke-width:2.2;vector-effect:non-scaling-stroke;stroke-linejoin:round}
+.mg-spark.l{animation:mgRevela 1.6s .2s cubic-bezier(.4,0,.2,1) both}
+.mg-pulso:nth-child(3) .area{fill:#F2E6D3}
+.mg-pulso:nth-child(3) .linea{stroke:var(--ch-carmin)}
+/* el aviso de atrasadas: píldora roja con el punto que late, y lleva a Alertas Operativas */
+.mg-atras{border:0;font-family:inherit;align-self:end;justify-self:start;margin:12px 0 18px;display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700;color:#fff;background:var(--ch-acento);padding:5px 12px;border-radius:99px;cursor:pointer;box-shadow:0 8px 16px -10px rgba(5,31,32,.7)}
+.mg-atras::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--crit);animation:mqLate 1.6s ease-in-out infinite}
+.mg-atras:hover{background:var(--ch-carmin)}
+.mg-atras:focus-visible{outline:2px solid var(--ch-acento);outline-offset:2px}
+.mg-pulso.marcha{grid-template-rows:auto auto auto auto 1fr}
+.mg-pulso.marcha .mg-leyenda{padding-bottom:0}
+.mg-seg{display:flex;gap:4px;height:10px;margin:10px 0 8px}
+.mg-seg i{border-radius:99px;background:var(--tinta);transform-origin:left;animation:mgCreceX .9s .3s cubic-bezier(.3,1.2,.4,1) both}
+.mg-seg i+i{background:#E3867E}
+.mg-leyenda{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:12.5px;color:var(--tinta2);padding-bottom:18px}
+.mg-leyenda em{width:9px;height:9px;border-radius:3px;background:var(--tinta)}
+.mg-leyenda em.p{background:#E3867E;margin-left:8px}
+.mg-cinta-ot{display:grid;grid-template-rows:auto 1fr;gap:10px;padding:18px 16px 14px 20px;min-height:0}
+.mg-cinta-cab{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13.5px}
+.mg-cinta-cab .mq-vivo{white-space:nowrap;flex:none}
+.mg-cinta-lista{position:relative;overflow:hidden;min-height:0;height:100%;max-height:300px;-webkit-mask-image:linear-gradient(#000 78%,transparent);mask-image:linear-gradient(#000 78%,transparent)}
+/* .sale: la fila de arriba se va hacia el borde superior y vuelve a entrar al final de la lista
+   (js/airo.js: airoCintaViva). El margen negativo es lo que empuja a las demás hacia arriba. */
+.mg-ot-fila{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1px dashed var(--borde);
+  transition:margin .5s cubic-bezier(.4,0,.2,1),opacity .5s;max-height:80px}
+.mg-ot-fila.sale{margin-top:-58px;opacity:0}
+.mg-ot-fila .num{font-size:11.5px;font-weight:800;color:var(--acento);background:var(--acento-l);padding:4px 8px;border-radius:8px;white-space:nowrap}
+.mg-ot-fila .srv{font-size:13px;font-weight:700;line-height:1.3;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mg-ot-fila .srv em{display:block;font-style:normal;font-weight:500;color:var(--gris);font-size:12px;overflow:hidden;text-overflow:ellipsis}
+.mg-ot-fila .cuando{font-size:11.5px;color:var(--gris);white-space:nowrap}
+/* las cifras de la portada son las mismas del Resumen: la fila de KPI de abajo quedaría repetida */
+#app #exec-kpis{display:none}
+
+/* =====================================================================
+   REDISEÑO · el tablero con el mismo aire que la portada
+   Fondo pastel, tarjetas blancas flotando, cifras grandes, barras gruesas
+   que crecen. (minga.css, bloque "REDISEÑO".)
+   ===================================================================== */
+
+/* ---- un solo fondo ----
+   El pastel lo pone el bloque de arriba de cada módulo (.mg-hero / .mg-ot-hero); la página no
+   lleva ninguno. Antes llevaba el suyo y el bloque quedaba encima: se veían dos cremas, uno
+   apenas más oscuro que el otro, con el corte a la vista. Debajo queda el fondo del cuerpo con
+   el cielo, que es el único que recorre toda la pantalla. */
+#app .page.active{position:relative;background:none;padding:0;border-radius:0}
+#app .gfilter{background:rgba(255,255,255,.7);border:0;box-shadow:none;border-radius:16px}
+#app .gfilter select,#app .scontr select,#app select{border:1px solid var(--borde);border-radius:10px;background:var(--blanco);color:var(--tinta);font-family:inherit}
+
+/* ---- tarjetas: todas como las de la portada ---- */
+#app .panel,#app .kpi,#app .prob,#app .prob-head{background:rgba(255,255,255,.93);border:0;border-radius:22px;
+  box-shadow:0 1px 0 rgba(255,255,255,.6) inset,0 24px 50px -32px rgba(5,31,32,.38)}
+#app .panel{padding:24px 26px;margin-bottom:18px}
+#app .panel h3{font-size:17px;font-weight:800;letter-spacing:-.025em;margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+#app .panel h3>span:not(.badge){font-size:12px;font-weight:700;color:var(--gris);background:var(--suave);padding:3px 10px;border-radius:99px;letter-spacing:0}
+#app .panel h3 .prob-link{margin-left:auto}
+
+/* cifras: grandes, como "230" y "US$ 878.765" */
+#app .kpis,#app .gkpis{gap:14px;margin-bottom:18px}
+#app .kpi{padding:18px 20px;position:relative;overflow:hidden;transition:transform .25s cubic-bezier(.2,.8,.2,1),box-shadow .25s}
+#app .kpi .k-lab{font-size:12px;letter-spacing:.02em;text-transform:none;font-weight:700;color:var(--gris)}
+#app .kpi .k-val{font-size:clamp(24px,2.5vw,34px);font-weight:800;letter-spacing:-.04em;line-height:1.1;margin:4px 0 2px;color:var(--tinta)}
+#app .kpi .k-foot{font-size:12.5px;color:var(--gris)}
+#app .kpi:hover{transform:translateY(-3px);box-shadow:0 1px 0 rgba(255,255,255,.6) inset,0 30px 50px -28px rgba(5,31,32,.45)}
+
+/* botones "Ver…" como píldoras */
+#app .prob-link,#app .opex-toggle{border:0!important;background:var(--tinta)!important;color:#fff!important;border-radius:99px!important;padding:7px 14px!important;font:700 12px var(--fuente);cursor:pointer;transition:background .15s,transform .15s}
+#app .prob-link:hover,#app .opex-toggle:hover{background:var(--acento)!important;transform:translateY(-1px)}
+
+/* ---- cultivos: tarjetas con cabecera de color y barras gruesas ---- */
+#app .cults{gap:14px}
+#app .cult-card{position:relative;background:var(--blanco);border:0!important;border-radius:18px!important;padding:18px 18px 16px;overflow:hidden;
+  box-shadow:inset 0 0 0 1px var(--borde);transition:transform .25s cubic-bezier(.2,.8,.2,1),box-shadow .25s}
+#app .cult-card:not(.mapa-card)::before{content:"";position:absolute;inset:0 0 auto 0;height:5px;background:var(--mg-cult,var(--ch-relleno))}
+#app .cult-card:hover{transform:translateY(-3px);box-shadow:inset 0 0 0 1px var(--borde2),0 22px 40px -28px rgba(5,31,32,.4)}
+#app .cult-card.mg-c-arroz{--mg-cult:#E3867E}
+#app .cult-card.mg-c-soja{--mg-cult:#8FB38A}
+#app .cult-card.mg-c-sorgo{--mg-cult:#D39A55}
+#app .cult-card.mg-c-maiz{--mg-cult:#E3C26A}
+#app .cc-name{font-size:17px;font-weight:800;letter-spacing:-.02em}
+#app .cc-stage{font-size:12.5px;color:var(--gris);margin-bottom:12px}
+#app .cc-stage b{color:var(--acento)}
+#app .et-row{margin-bottom:12px}
+#app .et-lbl{font-size:13px;font-weight:600}
+#app .et-val{font-size:12.5px;font-weight:800}
+#app .bar,#app .et-bar{height:9px!important;border-radius:99px!important;background:var(--suave)!important;overflow:hidden}
+#app .bar-fill{border-radius:99px!important;transform-origin:left;animation:mgCreceX 1s .2s cubic-bezier(.3,1,.4,1) both}
+#app .cc-ha{background:var(--fondo);border-radius:12px;border:0}
+#app .cc-ha div{background:var(--suave)}
+#app .mapa-card{padding:14px!important}
+#app .mapa-card img,#app .mapa-thumb{border-radius:14px}
+
+/* ---- estado de las OT: barra gruesa por tramos ---- */
+#app .estbar-track{height:18px!important;border-radius:99px!important;display:flex;gap:3px;background:transparent!important;overflow:visible}
+#app .estbar-seg{border-radius:99px;transform-origin:left;animation:mgCreceX 1s .15s cubic-bezier(.3,1,.4,1) both}
+#app .estbar-seg.f-g{background:var(--tinta)!important}
+#app .estbar-seg.f-y{background:#235347!important}
+#app .estbar-seg.f-o{background:var(--ch-relleno)!important}
+#app .estbar-dot.f-g{background:var(--tinta)!important}
+#app .estbar-dot.f-y{background:#235347!important}
+#app .estbar-dot.f-o{background:var(--ch-relleno)!important}
+/* cada estado como cifra grande */
+#app .estbar-legend{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-top:14px}
+#app .estbar-leg{display:grid!important;grid-template-columns:auto 1fr;align-items:center;column-gap:7px;row-gap:2px;background:var(--fondo);border-radius:16px;padding:14px 16px;font-size:12.5px;font-weight:700;color:var(--tinta2)}
+#app .estbar-leg b{grid-column:1/-1;font-size:clamp(24px,2.4vw,32px);font-weight:800;letter-spacing:-.04em;color:var(--tinta);margin:0}
+#app .estbar-leg small{grid-column:1/-1;font-size:12px;color:var(--gris);font-weight:600}
+#app .estbar-dot{width:10px;height:10px;border-radius:4px}
+
+/* ---- actividad por mes: columnas que crecen, la última encendida ---- */
+#app .colchart-bar{border-radius:10px 10px 4px 4px!important;background:linear-gradient(180deg,#A51F25,#E3867E)!important;transform-origin:bottom;animation:mgCrece .8s cubic-bezier(.3,1.3,.4,1) both}
+#app .colchart-col:last-child .colchart-bar{background:linear-gradient(180deg,var(--acento),#235347)!important}
+#app .colchart-col:nth-child(2) .colchart-bar{animation-delay:.05s}
+#app .colchart-col:nth-child(3) .colchart-bar{animation-delay:.1s}
+#app .colchart-col:nth-child(4) .colchart-bar{animation-delay:.15s}
+#app .colchart-col:nth-child(5) .colchart-bar{animation-delay:.2s}
+#app .colchart-col:nth-child(6) .colchart-bar{animation-delay:.25s}
+#app .colchart-col:nth-child(7) .colchart-bar{animation-delay:.3s}
+#app .colchart-col:nth-child(8) .colchart-bar{animation-delay:.35s}
+#app .colchart-col:nth-child(9) .colchart-bar{animation-delay:.4s}
+#app .colchart-col:nth-child(10) .colchart-bar{animation-delay:.45s}
+#app .colchart-col:nth-child(n+11) .colchart-bar{animation-delay:.5s}
+#app .colchart-val{font-weight:800}
+
+/* ---- gastos: filas limpias, barra gruesa, total como tarjeta ---- */
+#app .opex-total{background:linear-gradient(120deg,var(--acento-l),var(--almen));border:0;border-radius:18px}
+#app .opex-row{border-bottom:1px dashed var(--borde);transition:background .15s;border-radius:12px}
+#app .opex-row:hover{background:rgba(218,241,222,.45)}
+#app .opex-bar-track{height:9px!important;border-radius:99px!important;background:var(--suave)!important;overflow:hidden}
+#app .opex-bar-fill{border-radius:99px!important;background:linear-gradient(90deg,#235347,var(--acento))!important;transform-origin:left;animation:mgCreceX 1s .2s cubic-bezier(.3,1,.4,1) both}
+#app .opex-cat{font-weight:800}
+
+/* barras chicas de las tablas (gasoil, avance) */
+#app .sopbar,#app .pu-bar{height:8px!important;border-radius:99px!important;background:var(--suave)!important;overflow:hidden}
+#app .sopbar>div,#app .pu-bar>i{border-radius:99px!important;background:linear-gradient(90deg,#8EB69B,#235347)!important;transform-origin:left;animation:mgCreceX 1s .2s cubic-bezier(.3,1,.4,1) both}
+/* mini-cifras dentro de los paneles (Consumo de Gasoil, Terceros) */
+#app .sop-kpi{background:var(--fondo);border-radius:16px;padding:12px 18px;border:0;box-shadow:inset 0 0 0 1px var(--borde)}
+#app .sop-kpi .l{font-size:11.5px;font-weight:700;letter-spacing:.02em;text-transform:none;color:var(--gris)}
+#app .sop-kpi .v{font-size:22px;font-weight:800;letter-spacing:-.035em;color:var(--tinta)}
+
+/* ---- problemas: tarjetas con el color de la gravedad ---- */
+#app .prob-head{padding:18px 22px;align-items:center}
+#app .prob-count{border-radius:18px!important;background:var(--tinta)!important}
+#app .prob{border-left-width:6px!important;overflow:hidden;transition:transform .25s cubic-bezier(.2,.8,.2,1)}
+#app .prob:hover{transform:translateY(-2px)}
+#app .p-title{font-size:16px;font-weight:800;letter-spacing:-.02em}
+
+/* ---- tablas: aire, sin grilla, fila que se ilumina ---- */
+#app .page:not(.mg-en-ot) table{border-collapse:separate;border-spacing:0}
+#app .page:not(.mg-en-ot) th{background:transparent!important;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--gris);border-bottom:1.5px solid var(--borde)!important;padding:10px 12px}
+#app .page:not(.mg-en-ot) td{border-bottom:1px dashed var(--borde)!important;padding:11px 12px}
+#app .page:not(.mg-en-ot) tbody tr{transition:background .15s}
+#app .page:not(.mg-en-ot) tbody tr:hover>td{background:rgba(218,241,222,.5)}
+#app .page:not(.mg-en-ot) tr.grp>td{background:rgba(185,216,195,.6)!important;font-weight:700}
+#app .page:not(.mg-en-ot) tr.tot>td{background:var(--suave)!important;border-top:0!important}
+#app td.dl{color:var(--acento);font-weight:600}
+#app .exd{color:var(--crit)}
+#app td.mono,#app td .mono{font-variant-numeric:tabular-nums}
+#app .scroll{border-radius:14px}
+#app .chip,#app .tag,#app .rc-chip{border-radius:99px!important}
+#app .tag{background:var(--crit-l);color:var(--crit);border:0}
+#app .tag-rep,#app .tag-desc{background:var(--warn-l);color:#7A5316;border:0}
+#app .chip-etapa{background:var(--almen);color:#051F20}
+#app .pill{border-radius:99px;padding:3px 9px;display:inline-block;min-width:40px;text-align:center;font-weight:800}
+#app .pill-r{background:var(--crit-l);color:var(--crit)}
+#app .pill-o{background:#F2D9BF;color:#7E4410}
+#app .pill-y{background:#FBF3DF;color:#6B5313}
+
+/* ---- gasto acumulado: la línea de la portada ---- */
+#app #gacc svg{animation:mgRevela 1.6s .2s cubic-bezier(.4,0,.2,1) both}
+#app #gacc polyline{stroke:#235347!important;stroke-width:3!important;stroke-linejoin:round}
+#app #gacc polygon{fill:rgba(218,241,222,.65)!important}
+#app #gacc circle{fill:var(--acento)!important;stroke:#fff;stroke-width:2}
+
+/* ---- alertas: el atraso se marca con una franja y un tinte suave, no con la fila entera pintada ---- */
+#app .page:not(.mg-en-ot) tr.al-y,#app .page:not(.mg-en-ot) tr.al-o,#app .page:not(.mg-en-ot) tr.al-r{background:transparent!important}
+#app .page:not(.mg-en-ot) tr.al-y>td{background:rgba(218,241,222,.45)}
+#app .page:not(.mg-en-ot) tr.al-o>td{background:rgba(185,216,195,.4)}
+#app .page:not(.mg-en-ot) tr.al-r>td{background:rgba(201,230,210,.45)}
+#app .page:not(.mg-en-ot) tr.al-y>td:first-child{box-shadow:inset 4px 0 #E3C26A}
+#app .page:not(.mg-en-ot) tr.al-o>td:first-child{box-shadow:inset 4px 0 #D39A55}
+#app .page:not(.mg-en-ot) tr.al-r>td:first-child{box-shadow:inset 4px 0 #235347}
+#app .page:not(.mg-en-ot) tr.dethead>td{background:var(--fondo)!important;color:var(--gris)}
+#app .page:not(.mg-en-ot) tr.det-over>td{background:rgba(218,241,222,.35)!important}
+
+/* ---- pie ---- */
+#app .foot{border-top:0;color:var(--gris);font-size:12px;line-height:1.6;padding:20px 8px 0}
+
+/* ---- la entrada de cada pestaña ---- */
+.page.active .kpi,.page.active .panel{animation:mgEntra .55s both cubic-bezier(.2,.8,.2,1)}
+.page.active .kpi:nth-child(2){animation-delay:.04s}
+.page.active .kpi:nth-child(3){animation-delay:.08s}
+.page.active .kpi:nth-child(4){animation-delay:.12s}
+
+/* ---- la pantalla de carga, con el aire del Portal ---- */
+#overlay{background:rgba(244,250,245,.92)}
+#overlay .box{background:var(--blanco);border-radius:24px;box-shadow:inset 0 0 0 1px var(--borde),0 24px 50px -24px rgba(5,31,32,.4)}
+#overlay h2{font-weight:800;letter-spacing:-.025em;color:var(--tinta)}
+#overlay .spin{border-color:var(--borde);border-top-color:var(--acento)}
+#overlay .retry{background:var(--tinta);border:0;border-radius:99px;color:#fff;font-weight:700}
+#overlay .retry:hover{background:var(--acento)}
+
+@keyframes mgDeriva{to{transform:translate(6vw,4vh) scale(1.12)}}
+@keyframes mgEntra{from{opacity:0;transform:translateY(12px)}}
+@keyframes mqEntra{from{opacity:0;transform:translateY(16px) scale(.98)}}
+@keyframes mqLate{50%{transform:scale(1.6);opacity:.35}}
+@keyframes mqViaja{from{left:0;opacity:0}12%{opacity:1}88%{opacity:1}to{left:calc(100% - 8px);opacity:0}}
+@keyframes mgCrece{from{transform:scaleY(0)}}
+@keyframes mgCreceX{from{transform:scaleX(0)}}
+@keyframes mgRevela{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
+
+
+/* =====================================================================
+   O. TRABAJO · Servicios, Control de Hectáreas y Alertas
+   El módulo arranca con un bloque pastel que lleva el título, los filtros y los
+   KPI como tarjetas blancas; abajo, las tablas con el mismo aire que las
+   tarjetas: encabezados livianos, sin líneas entre filas y el color solo en lo
+   que avisa algo (atraso, exceso), en píldoras suaves.
+   (minga.css: .mg-ot-hero y el bloque #v-tablero.mg-en-ot.)
+   ===================================================================== */
+/* el lienzo pastel lo pone el bloque, no la página */
+
+/* overflow:clip (no hidden) para que un th pegajoso de adentro siga funcionando */
+.mg-ot-hero{position:relative;overflow:clip;border-radius:28px;padding:30px clamp(18px,2.6vw,34px) clamp(18px,2.6vw,30px);margin-bottom:26px;
+  background:var(--bloque);
+  animation:mqEntra .7s cubic-bezier(.2,.8,.2,1) both}
+.mg-ot-hero::after{content:"";position:absolute;right:-60px;top:-80px;width:280px;height:280px;border-radius:50%;background:rgba(255,255,255,.35);filter:blur(10px);animation:mgDeriva 18s ease-in-out infinite alternate;pointer-events:none}
+.mg-ot-hero>*{position:relative;z-index:1}
+.mg-ot-cab{margin:0 0 20px}
+.mg-ot-hero .mg-ot-cab h2{font-size:clamp(30px,3.6vw,44px);font-weight:700;letter-spacing:-.045em;line-height:1.02;margin:0 0 8px}
+.mg-ot-hero .mg-ot-cab .mg-sub{color:var(--tinta2);font-size:14px;margin:0}
+.mg-ot-hero .gfilter{background:rgba(255,255,255,.6);border:0;border-radius:18px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.85);margin-bottom:14px;padding:10px 14px}
+.mg-ot-hero .gfilter label,.mg-ot-hero .gfilter .fnote{color:var(--tinta2)}
+
+/* los KPI del módulo, como las tarjetas de la portada: cuatro columnas fijas y el mismo alto */
+.mg-ot-hero .kpis,.mg-ot-hero .gkpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:0}
+.mg-ot-hero .kpi,.mg-ot-hero .gkpi{min-height:156px;padding:13px 15px;border-radius:16px;background:rgba(255,255,255,.92);border:0;
+  display:flex;flex-direction:column;gap:2px;
+  box-shadow:0 1px 0 rgba(255,255,255,.6) inset,0 24px 50px -32px rgba(5,31,32,.35);
+  animation:mqEntra .8s cubic-bezier(.2,.8,.2,1) both}
+.mg-ot-hero .kpi:nth-child(2),.mg-ot-hero .gkpi:nth-child(2){animation-delay:.08s}
+.mg-ot-hero .kpi:nth-child(3),.mg-ot-hero .gkpi:nth-child(3){animation-delay:.16s}
+.mg-ot-hero .kpi:nth-child(4),.mg-ot-hero .gkpi:nth-child(4){animation-delay:.24s}
+.mg-ot-hero .kpi:nth-child(5),.mg-ot-hero .gkpi:nth-child(5){animation-delay:.32s}
+.mg-ot-hero .kpi::before,.mg-ot-hero .gkpi::before{display:none}
+.mg-ot-hero .kpi .k-lab,.mg-ot-hero .gkpi .k-lab{font-size:11.5px;font-weight:700;letter-spacing:.02em;text-transform:none;color:var(--gris);padding-right:28px}
+.mg-ot-hero .kpi .k-val,.mg-ot-hero .gkpi .k-val{font-size:clamp(19px,1.7vw,24px);font-weight:800;letter-spacing:-.035em;line-height:1.15;color:var(--tinta);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:2px 0}
+.mg-ot-hero .kpi .k-foot,.mg-ot-hero .gkpi .k-foot{font-size:11.5px;color:var(--gris)}
+
+
+
+/* ---------- selectores: el nativo queda oculto, el botón y la lista son propios ----------
+   Copiado de minga.css (mgMejorarSelects). El <select> sigue en el DOM y es el que guarda el
+   valor —render.js lo lee y lo escribe igual que siempre—; lo que cambia es lo que se ve y la
+   lista, que va en <body> con position:fixed para que no la recorte ningún panel. */
+.mg-sel-caja{position:relative;display:inline-flex;vertical-align:middle;max-width:100%}
+.mg-sel-caja>select{display:none!important}
+.mg-sel{flex:1;min-width:0;display:inline-flex;align-items:center;justify-content:space-between;gap:12px;font-family:inherit;font-size:13.5px;font-weight:700;color:var(--tinta);
+  text-align:left;cursor:pointer;background:var(--blanco);border:1px solid var(--borde);border-radius:12px;padding:8px 12px 8px 14px;transition:border-color .15s,box-shadow .15s,background .15s}
+.mg-sel .t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mg-sel::after{content:"";flex:none;width:7px;height:7px;margin:-4px 2px 0 0;border-right:2px solid var(--gris);border-bottom:2px solid var(--gris);transform:rotate(45deg);transition:transform .2s,margin .2s}
+.mg-sel:hover{border-color:var(--borde2);background:#FAFDFB}
+.mg-sel.abierto,.mg-sel:focus-visible{outline:none;border-color:var(--tinta);box-shadow:0 0 0 4px rgba(5,31,32,.07)}
+.mg-sel.abierto::after{transform:rotate(-135deg);margin-top:3px}
+.mg-sel:disabled{opacity:.55;cursor:not-allowed}
+.scontr .mg-sel{font-size:12.5px;padding:6px 10px 6px 12px;border-radius:10px}
+.mg-sel-menu{position:fixed;z-index:200;display:flex;flex-direction:column;gap:2px;overflow:auto;overscroll-behavior:contain;max-width:min(440px,calc(100vw - 16px));padding:6px;
+  font-family:var(--fuente);background:var(--blanco);border-radius:14px;box-shadow:inset 0 0 0 1px var(--borde),0 24px 50px -20px rgba(5,31,32,.42);animation:mgMenuEntra .16s ease-out}
+.mg-sel-menu button{flex:none;display:flex;align-items:center;justify-content:space-between;gap:14px;border:0;background:none;font:inherit;font-size:13.5px;font-weight:600;
+  color:var(--tinta2);text-align:left;padding:9px 12px;border-radius:9px;cursor:pointer;white-space:nowrap}
+.mg-sel-menu button:hover,.mg-sel-menu button:focus-visible{outline:none;background:var(--suave);color:var(--tinta)}
+.mg-sel-menu button[aria-selected="true"],.mg-sel-menu button[aria-selected="true"]:hover{background:var(--tinta);color:#fff}
+.mg-sel-menu button[aria-selected="true"]::after{content:"";flex:none;width:9px;height:5px;margin-top:-3px;border-left:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(-45deg)}
+.mg-sel-menu button[aria-selected="true"]:focus-visible{box-shadow:0 0 0 2px var(--acento-l)}
+.mg-sel-menu button:disabled{opacity:.45;cursor:default}
+@keyframes mgMenuEntra{from{opacity:0;transform:translateY(-4px)}}
+
+/* ---------- Campaña: el rótulo es el selector (minga.css: .mg-camp-sel) ---------- */
+/* El select hereda el tamaño, el peso y la versalita del rótulo: lo único que lo distingue del
+   texto es la píldora de fondo y la flecha, para que se note que se puede tocar. */
+.mg-camp-sel{position:relative;display:inline-flex;align-items:center;vertical-align:baseline}
+.mg-camp-sel .mg-sel{font-size:inherit;font-weight:inherit;letter-spacing:inherit;text-transform:inherit;color:inherit;gap:8px;padding:4px 11px;
+  border:0;border-radius:99px;background:rgba(255,255,255,.75);box-shadow:inset 0 0 0 1px rgba(35,83,71,.18)}
+.mg-camp-sel .mg-sel:hover{background:var(--blanco);box-shadow:inset 0 0 0 1px rgba(35,83,71,.35)}
+.mg-camp-sel .mg-sel.abierto,.mg-camp-sel .mg-sel:focus-visible{background:var(--blanco);box-shadow:inset 0 0 0 1px var(--acento),0 0 0 4px rgba(35,83,71,.1)}
+.mg-camp-sel .mg-sel::after{width:6px;height:6px;border-color:currentColor}
+.mg-moneda{color:var(--tinta2)}
+.mg-ot-cab .mg-eyebrow{margin-bottom:2px}
+
+/* el filtro original del Resumen queda oculto (js/airo.js lo marca con [hidden]) y el de Campaña
+   de Servicios también: los dos los maneja el rótulo. Siguen en el HTML porque render.js los lee. */
+#app .gfilter[hidden]{display:none!important}
+#app label[for="gcampania"],#app .mg-sel-caja:has(#gcampania){display:none!important}
+
+
+/* =====================================================================
+   AVANCE POR CULTIVO, ACTIVIDAD POR MES Y QUIÉN HIZO QUÉ
+   Los tres bloques de la portada del Portal (minga.css: .mg-hero-avance,
+   .mg-act y .mg-rank-card). Las cifras salen de lo mismo que ya dibuja el
+   tablero; lo que cambia es cómo se leen.
+   ===================================================================== */
+/* grupos de botones (OT / Hectáreas / Gasto, y el filtro de cultivo) */
+.mg-seg-btns{display:inline-flex;gap:3px;padding:3px;border-radius:13px;background:var(--suave);flex-wrap:wrap}
+.mg-seg-btns button{border:0;background:transparent;border-radius:10px;padding:6px 11px;font:700 12.5px var(--fuente);color:var(--tinta2);cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:background .2s,color .2s,box-shadow .2s}
+.mg-seg-btns button:hover{color:var(--tinta);background:rgba(255,255,255,.7)}
+.mg-seg-btns button.on{background:var(--blanco);color:var(--tinta);box-shadow:0 1px 2px rgba(5,31,32,.08),inset 0 0 0 1px var(--borde)}
+.mg-seg-btns.chico button{padding:4px 9px;font-size:11.5px}
+.mg-seg-btns button i{width:8px;height:8px;border-radius:3px;display:inline-block}
+
+/* ---- avance por cultivo ---- */
+.mg-hero-avance{position:relative;z-index:1;margin-top:22px}
+.mg-hero-avance-cab{display:flex;align-items:center;justify-content:space-between;gap:4px 20px;flex-wrap:wrap;margin-bottom:12px;font-size:13.5px}
+.mg-hero-avance-cab>div:first-child{display:grid;gap:2px}
+.mg-hero-avance-cab span{font-size:12.5px;color:var(--tinta2)}
+.mg-avance{position:relative;z-index:1;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.mg-avance.foco{grid-template-columns:minmax(0,1fr)}
+.mg-av-card{display:flex;flex-direction:column;gap:4px;padding:18px 20px 16px;background:rgba(255,255,255,.92);border-radius:20px;
+  box-shadow:0 1px 0 rgba(255,255,255,.6) inset,0 24px 50px -32px rgba(5,31,32,.35);animation:mqEntra .7s cubic-bezier(.2,.8,.2,1) both;transition:transform .25s cubic-bezier(.2,.8,.2,1),box-shadow .25s}
+.mg-av-card:hover{transform:translateY(-3px);box-shadow:0 1px 0 rgba(255,255,255,.6) inset,0 30px 50px -28px rgba(5,31,32,.42)}
+.mg-av-card[hidden]{display:none!important}
+.mg-av-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px}
+.mg-av-nom{font-size:13px;font-weight:800;letter-spacing:.06em}
+.mg-av-exp{margin-left:auto;width:30px;height:30px;border:0;border-radius:10px;display:grid;place-items:center;background:var(--suave);color:var(--tinta2);cursor:pointer;transition:background .2s,color .2s,transform .2s}
+.mg-av-exp svg{width:15px;height:15px}
+.mg-av-exp:hover{background:var(--tinta);color:#fff;transform:scale(1.06)}
+.mg-av-etapas{display:flex;flex-direction:column;gap:9px;padding-top:12px;border-top:1px dashed var(--borde)}
+.mg-av-et{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 8px;align-items:baseline}
+.mg-av-et .n{font-size:12.5px;color:var(--tinta2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:none;border:0;padding:0;font-family:inherit;text-align:left;cursor:pointer}
+.mg-av-et .n::after{content:" \203A";color:var(--gris);font-weight:800}
+.mg-av-et .n:hover{color:var(--acento)}
+.mg-av-et .v{font-size:12.5px;font-weight:800;white-space:nowrap}
+.mg-av-et .v em{font-style:normal;font-weight:600;color:var(--gris)}
+.mg-av-et .b{grid-column:1/-1;height:8px;border-radius:99px;background:var(--suave);overflow:hidden}
+.mg-av-et .b i{position:relative;display:block;height:100%;border-radius:99px;overflow:hidden;transform-origin:left;animation:mgCreceX .9s .2s cubic-bezier(.3,1.2,.4,1) both}
+.mg-av-et .b i::after{content:"";position:absolute;inset:0;width:45%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);transform:translateX(-120%);animation:mgBrillo 2.8s 1.1s ease-in-out infinite}
+.mg-av-et:nth-child(2) .b i::after{animation-delay:1.5s}
+.mg-av-et:nth-child(3) .b i::after{animation-delay:1.9s}
+.mg-av-et:nth-child(4) .b i::after{animation-delay:2.3s}
+@keyframes mgBrillo{0%{transform:translateX(-120%)}60%,100%{transform:translateX(330%)}}
+.mg-av-vacio{font-size:12.5px;color:var(--gris)}
+.mg-av-pie{margin-top:12px;font-size:12px;color:var(--gris)}
+.mg-av-pie b{color:var(--tinta);font-weight:700;margin-left:4px}
+
+/* los anillos: uno por etapa, el más grande es la primera */
+.mg-anillos{display:flex;align-items:center;gap:14px;margin:-4px 0 12px;min-width:0}
+.mg-anillos-g{position:relative;width:96px;height:96px;flex:none}
+.mg-anillos-g svg{width:100%;height:100%;transform:rotate(-90deg)}
+.mg-anillos-g .pista{fill:none;stroke:var(--suave);stroke-width:6}
+.mg-anillos-g .arco{fill:none;stroke-width:6;stroke-linecap:round;stroke-dashoffset:var(--off);animation:mgAnillo 1.4s cubic-bezier(.3,.9,.3,1) both}
+@keyframes mgAnillo{from{stroke-dashoffset:var(--L)}}
+.mg-anillos-g .c{position:absolute;inset:0;display:grid;place-content:center;text-align:center;line-height:1.1}
+.mg-anillos-g .c b{font-size:19px;font-weight:800;letter-spacing:-.03em}
+.mg-anillos-g .c span{font-size:9.5px;font-weight:700;color:var(--gris);max-width:58px;margin:0 auto}
+.mg-anillos-ley{display:grid;gap:4px;font-size:11.5px;color:var(--tinta2);min-width:0;flex:1}
+.mg-anillos-ley span{display:grid;grid-template-columns:8px minmax(0,1fr) auto;align-items:center;gap:6px}
+.mg-anillos-ley em{font-style:normal;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mg-anillos-ley i{width:8px;height:8px;border-radius:50%}
+.mg-anillos-ley b{font-weight:800}
+/* un cultivo en grande: los anillos a la izquierda y las etapas al lado */
+.mg-av-card.grande{display:grid;grid-template-columns:minmax(230px,300px) minmax(0,1fr);grid-template-areas:"top top" "ani et" "pie et";gap:6px 32px;align-items:start;padding:22px 26px;animation:mgEntra .35s ease-out}
+.mg-av-card.grande:hover{transform:none}
+.mg-av-card.grande .mg-av-top{grid-area:top}
+.mg-av-card.grande .mg-av-nom{font-size:16px}
+.mg-av-card.grande .mg-anillos{grid-area:ani;flex-direction:column;align-items:flex-start;gap:16px}
+.mg-av-card.grande .mg-anillos-g{width:170px;height:170px}
+.mg-av-card.grande .mg-anillos-g .c b{font-size:32px}
+.mg-av-card.grande .mg-anillos-g .c span{font-size:11px;max-width:90px}
+.mg-av-card.grande .mg-anillos-ley{width:100%;font-size:12.5px;gap:6px}
+.mg-av-card.grande .mg-av-etapas{grid-area:et;border-top:0;padding-top:0;gap:12px}
+.mg-av-card.grande .mg-av-pie{grid-area:pie}
+
+/* ---- actividad por mes y quién hizo qué ---- */
+.mg-extra2{position:relative;z-index:1;display:grid;grid-template-columns:minmax(0,1.7fr) minmax(260px,1fr);gap:14px;margin-top:14px}
+.mg-actividad{min-width:0}
+.mg-actividad:empty{display:none}
+.mg-act{position:relative;background:rgba(255,255,255,.92);border-radius:20px;padding:18px 20px 12px;
+  box-shadow:0 1px 0 rgba(255,255,255,.6) inset,0 24px 50px -32px rgba(5,31,32,.35);animation:mqEntra .8s .2s cubic-bezier(.2,.8,.2,1) both}
+.mg-act-cab{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.mg-act-cab>div{display:flex;flex-direction:column;gap:4px}
+/* el grupo de botones es hijo directo de .mg-act-cab, así que hay que devolverle la fila: el
+   selector de arriba lo había puesto en columna junto con el bloque de la cifra. */
+.mg-act-cab>.mg-seg-btns{flex-direction:row;gap:3px;align-self:flex-start;flex-wrap:nowrap;flex:none}
+.mg-act .eti{font-size:12px;font-weight:700;color:var(--gris);letter-spacing:.02em}
+.mg-act .val{font-size:clamp(26px,2.6vw,34px);font-weight:800;letter-spacing:-.04em;line-height:1.1}
+.mg-act .val small{font-size:.42em;font-weight:700;color:var(--gris);letter-spacing:0}
+.mg-act .pie{font-size:12.5px;color:var(--gris)}
+.mg-act-graf{padding:14px 22px 0}
+.mg-act-lienzo{position:relative;height:150px}
+.mg-act-lienzo svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible;animation:mgRevela 1.6s .2s cubic-bezier(.4,0,.2,1) both}
+.mg-act-lienzo .area{fill:var(--ch-relleno);opacity:.55;animation:mgAparece 1s .5s both}
+.mg-act-lienzo .linea{fill:none;stroke:var(--acento);stroke-width:2.4;vector-effect:non-scaling-stroke;stroke-linejoin:round;stroke-linecap:round}
+@keyframes mgAparece{from{opacity:0}}
+.mg-act-pt{position:absolute;width:11px;height:11px;margin:-5.5px 0 0 -5.5px;border-radius:50%;background:var(--blanco);box-shadow:inset 0 0 0 2.5px var(--acento);animation:mgPunto .45s cubic-bezier(.3,1.5,.5,1) both}
+.mg-act-pt b{position:absolute;left:50%;bottom:calc(100% + 5px);transform:translateX(-50%);font-size:11.5px;font-weight:800;color:var(--tinta);white-space:nowrap}
+.mg-act-pt.ult{background:var(--acento)}
+.mg-act-pt.ult::after{content:"";position:absolute;inset:-6px;border-radius:50%;border:2px solid var(--acento);opacity:.5;animation:mqLate 1.8s ease-in-out infinite}
+@keyframes mgPunto{from{transform:scale(0)}}
+.mg-act-meses{position:relative;height:26px;margin-top:6px}
+.mg-act-meses span{position:absolute;top:4px;transform:translateX(-50%);font-size:11.5px;color:var(--gris);white-space:nowrap}
+
+.mg-rank-card{background:rgba(255,255,255,.92);border-radius:20px;padding:18px 20px;box-shadow:0 1px 0 rgba(255,255,255,.6) inset,0 24px 50px -32px rgba(5,31,32,.35);animation:mqEntra .8s cubic-bezier(.2,.8,.2,1) both;min-width:0}
+.mg-rank-card .eti{font-size:12px;font-weight:700;color:var(--gris);letter-spacing:.02em}
+.mg-rank-cab{display:flex;flex-direction:column;align-items:stretch;gap:8px;margin-bottom:14px}
+.mg-rank-lista{display:grid;gap:4px}
+.mg-rank-fila{display:grid;grid-template-columns:22px minmax(0,1fr) auto;grid-template-rows:auto 6px;column-gap:8px;row-gap:5px;align-items:center;border:0;background:none;text-align:left;padding:7px 8px;border-radius:12px;font-family:inherit;transition:background .15s}
+.mg-rank-fila:hover{background:var(--acento-l)}
+.mg-rank-fila .n{font-size:11.5px;font-weight:800;color:var(--gris);text-align:center}
+.mg-rank-fila .t{font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mg-rank-fila .v{font-size:12.5px;font-weight:800;white-space:nowrap}
+.mg-rank-fila .v em{font-style:normal;font-weight:600;color:var(--gris);margin-left:6px;font-size:11.5px}
+.mg-rank-fila .b{grid-column:2/-1;height:6px;border-radius:99px;background:var(--suave);overflow:hidden}
+.mg-rank-fila .b i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#8EB69B,var(--acento));transform-origin:left;animation:mgCreceX .9s cubic-bezier(.3,1,.4,1) both}
+.mg-rank-mas{font-size:12px;color:var(--gris);margin-top:8px}
+
+/* lo que la portada ya cuenta deja de repetirse abajo: las tarjetas de cultivo (quedan los mapas),
+   Estado de las OT y Actividad Operacional por Período. Se siguen dibujando: de ahí salen las cifras. */
+#app .cults .cult-card:not(.mapa-card){display:none}
+#app .resumen-grid-2{display:none}
+#app .opex-panel{margin-top:0}
+
+@media (max-width:1100px){.mg-extra2{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:760px){
+  .mg-avance{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+  .mg-av-card{padding:14px}
+  .mg-av-card.grande{grid-template-columns:minmax(0,1fr);grid-template-areas:"top" "ani" "et" "pie";padding:16px}
+  .mg-av-card.grande .mg-anillos{flex-direction:row;align-items:center}
+  .mg-av-card.grande .mg-anillos-g{width:120px;height:120px}
+}
+@media (prefers-reduced-motion:reduce){
+  .mg-anillos-g .arco,.mg-av-card,.mg-av-et .b i,.mg-av-et .b i::after,
+  .mg-act,.mg-act-lienzo svg,.mg-act-lienzo .area,.mg-act-pt,.mg-act-pt.ult::after,
+  .mg-rank-card,.mg-rank-fila .b i{animation:none}
+}
+
+/* ---- las tablas: tarjeta blanca, encabezado liviano, nada de filas teñidas ---- */
+#app .page.mg-en-ot .panel{background:rgba(255,255,255,.94);border:0;border-radius:24px;padding:24px 26px 20px;margin-bottom:18px;
+  box-shadow:0 1px 0 rgba(255,255,255,.6) inset,inset 0 0 0 1px var(--borde),0 24px 50px -36px rgba(5,31,32,.32)}
+#app .page.mg-en-ot .panel h3{font-size:18px;font-weight:800;letter-spacing:-.03em;margin-bottom:16px;gap:12px}
+#app .page.mg-en-ot .panel h3>span:not(.badge){flex:none;font-size:11.5px;font-weight:600;letter-spacing:0;color:var(--tinta2);background:var(--suave);border-radius:99px;padding:3px 11px}
+#app .page.mg-en-ot .panel h3>span:empty{display:none}
+#app .page.mg-en-ot .scroll{scrollbar-width:thin;scrollbar-color:var(--borde2) transparent;border-radius:14px}
+#app .page.mg-en-ot table{border-collapse:separate;border-spacing:0;font-size:12.5px}
+#app .page.mg-en-ot th{position:sticky;top:0;z-index:1;background:var(--blanco);font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--gris);padding:10px 12px;border-bottom:0}
+#app .page.mg-en-ot td{padding:12px;border-bottom:0;color:var(--tinta2)}
+#app .page.mg-en-ot td.tr,#app .page.mg-en-ot td.mono{white-space:nowrap;font-variant-numeric:tabular-nums}
+/* grupo + detalle (Control de Hectáreas): el grupo es un renglón apenas marcado, el detalle limpio */
+#app .page.mg-en-ot tr.grp td{background:#F2F8F3;border-top:0;border-bottom:0;padding-top:14px;color:var(--tinta);font-weight:700}
+#app .page.mg-en-ot tr.dethead td{background:#F2F8F3;font-size:10.5px;font-weight:600;letter-spacing:.06em;color:var(--gris);padding:0 12px 10px 24px;border-bottom:0}
+#app .page.mg-en-ot tr.det td,#app .page.mg-en-ot tr.det-over td{background:transparent;font-size:12px;padding:9px 12px;border-bottom:0}
+#app .page.mg-en-ot td.dl{padding-left:24px;color:var(--acento);font-weight:700}
+#app .page.mg-en-ot tr.neutra.grp td,#app .page.mg-en-ot tr.neutra.dethead td{background:#F1F8F3}
+#app .page.mg-en-ot tr.tot td{background:var(--suave);border-top:0;color:var(--tinta)}
+#app .page.mg-en-ot .exd{color:var(--crit)}
+/* las filas no se iluminan al pasar el cursor */
+#app .page.mg-en-ot tbody tr:hover>td{background:inherit}
+/* etiquetas: píldoras suaves, en minúscula */
+#app .page.mg-en-ot .tag{background:var(--crit-l);color:var(--crit);border:0;font-size:10.5px;font-weight:700;letter-spacing:0;text-transform:none;padding:2px 9px;margin-left:8px;vertical-align:1px;border-radius:99px}
+#app .page.mg-en-ot .tag-rep,#app .page.mg-en-ot .tag-desc{background:var(--warn-l);color:#7A5316;border:0}
+#app .page.mg-en-ot .chip{border-radius:99px;font-size:10px;letter-spacing:0;text-transform:none;padding:2px 8px;vertical-align:1px}
+#app .page.mg-en-ot .chip-etapa{background:var(--almen);color:#051F20}
+/* Alertas: sin filas teñidas; el atraso lo dice la píldora. El color está puesto sobre el <tr>
+   (alertas.css), así que no alcanza con limpiar las celdas: hay que apagar también la fila. */
+#app .page.mg-en-ot tr.al-y,#app .page.mg-en-ot tr.al-o,#app .page.mg-en-ot tr.al-r{background:transparent}
+#app .page.mg-en-ot tr.al-y td,#app .page.mg-en-ot tr.al-o td,#app .page.mg-en-ot tr.al-r td{background:transparent}
+#app .page.mg-en-ot .pill{display:inline-block;min-width:40px;text-align:center;font-size:11px;font-weight:800;padding:3px 9px;border-radius:99px}
+#app .page.mg-en-ot .pill-r{background:var(--crit-l);color:var(--crit)}
+#app .page.mg-en-ot .pill-o{background:#F2D9BF;color:#7E4410}
+#app .page.mg-en-ot .pill-y{background:#FBF3DF;color:#6B5313}
+/* mini-cifras dentro de los paneles (Consumo de Gasoil, Terceros) */
+#app .page.mg-en-ot .sop-kpi{background:var(--fondo);border:0;border-radius:16px;padding:12px 18px;box-shadow:inset 0 0 0 1px var(--borde)}
+#app .page.mg-en-ot .sop-kpi .l{font-size:11.5px;font-weight:700;letter-spacing:.02em;text-transform:none;color:var(--gris)}
+#app .page.mg-en-ot .sop-kpi .v{font-size:22px;font-weight:800;letter-spacing:-.035em;color:var(--tinta)}
+#app .page.mg-en-ot .sopbar{height:8px;background:var(--suave)}
+#app .page.mg-en-ot .sopbar>div{background:var(--acento)}
+
+@media (max-width:1100px){.mg-ot-hero .kpis,.mg-ot-hero .gkpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (prefers-reduced-motion:reduce){.mg-ot-hero .gkpi{animation:none}}
+@media (max-width:640px){
+  .mg-ot-hero{padding:22px 16px 16px;border-radius:24px}
+  #app .page.mg-en-ot .panel{padding:18px 16px 14px;border-radius:20px}
+  #app .page.mg-en-ot .panel h3{font-size:16px;flex-wrap:wrap}
+}
+@media (prefers-reduced-motion:reduce){.mg-ot-hero,.mg-ot-hero::after,.mg-ot-hero .kpi{animation:none}}
+
+@media (max-width:1100px){
+  .mg-hero-cuerpo{grid-template-columns:minmax(0,1fr)}
+  .mg-cinta-lista{max-height:236px}
+}
+/* entre 761 y 1500 px la fila de 7 módulos no entra cómoda: se achica el botón, no la marca */
+@media (min-width:761px) and (max-width:1500px){
+  .mg-nav .tab{padding:8px 11px;font-size:13px;gap:6px}
+  .mg-nav .tab svg{width:16px;height:16px}
+}
+@media (min-width:1501px){.tabs.mg-nav{grid-auto-columns:minmax(118px,auto)}}
+/* Entre 981 y 1320 la fila de siete módulos va en el medio y ya no deja lugar a los costados:
+   el menú, que va centrado, se montaba encima del nombre por la izquierda y de la frescura por
+   la derecha. En esa franja la marca se queda con el isotipo —que es el logo— y la frescura se
+   calla; el dato sigue en la portada. */
+@media (min-width:981px) and (max-width:1320px){
+  .top.mg-barra .mg-marca>div{display:none}
+  .top .t-date.mg-frescura{display:none}
+}
+/* Por debajo de 981 ni achicando los botones entran los siete al lado de la marca: el menú baja
+   a su propia fila y se desliza, igual que en el teléfono. Así vuelve el nombre entero. */
+@media (min-width:761px) and (max-width:980px){
+  .top.mg-barra{grid-template-columns:auto minmax(0,1fr)}
+  .top.mg-barra .mg-marca{grid-column:1;grid-row:1}
+  .mg-navs{grid-column:1/-1;grid-row:2;justify-self:stretch}
+  .mg-barra-der{grid-column:2;grid-row:1;justify-self:end}
+  .tabs.mg-nav{display:flex;flex-direction:row;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;width:auto;margin:0}
+  .tabs.mg-nav::-webkit-scrollbar{display:none}
+  .mg-nav .tab{flex:none;padding:9px 14px;font-size:13px;white-space:nowrap}
+  .mg-glaseado{display:none}
+  .mg-nav .tab.active{background:var(--tinta);color:#fff}
+}
+
+
+@media (max-width:900px){
+  #app .panel{padding:18px 16px}
+  /* en vez del menú desplegable, las pestañas se deslizan de costado (igual que en el Portal) */
+  .menu-toggle,.menu-backdrop{display:none!important}
+  .tabs.mg-nav{display:flex;flex-direction:row;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;width:auto;margin:0}
+  .tabs.mg-nav::-webkit-scrollbar{display:none}
+  .mg-nav .tab{flex:none;padding:9px 14px;font-size:13px;white-space:nowrap}
+  .mg-glaseado{display:none}
+  .mg-nav .tab.active{background:var(--tinta);color:#fff}
+}
+@media (max-width:760px){
+  .mg-navs{grid-column:1/-1;grid-row:2;justify-self:stretch}
+  .top.mg-barra{grid-template-columns:auto 1fr;padding:10px 12px;border-radius:20px}
+  .mg-marca{--k:1}
+  .mg-barra-der{grid-column:2;grid-row:1;justify-self:end}
+  .mg-hero{padding:22px 16px 16px;border-radius:24px}
+  /* el camino del dato entra entero en el ancho del teléfono */
+  .mg-flujo{min-width:0;width:100%;gap:6px;padding:6px}
+  .mq-nodo{font-size:11.5px;padding:5px 9px;gap:5px}
+  .mg-pulsos{grid-template-columns:minmax(0,1fr)}
+}
+@media (prefers-reduced-motion:reduce){
+  .mg-cielo i,#app #gacc svg,#app .bar-fill,#app .estbar-seg,#app .colchart-bar,
+  #app .opex-bar-fill,#app .sopbar>div,#app .pu-bar>i,.mg-marca .mg-logo,
+  .mg-hero,.mg-hero::after,.mg-pulso,.mg-cinta-ot,.mg-spark rect,.mg-seg i,
+  .mq-via b,.mq-vivo i,.t-date.mg-frescura::before,
+  .page.active .kpi,.page.active .panel{animation:none}
+}
