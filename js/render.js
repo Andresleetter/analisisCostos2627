@@ -1454,11 +1454,8 @@ function renderCombustible(){
   if(totTransfMes) piezas.push(fmt2(totTransfMes)+' L netos de transferencias');
   const pieBalance = piezas.join(' · ');
   const balCol=balance>=0?'g':'r';
-  document.getElementById('comb-balance').innerHTML=
-    `<div class="kpi"><div class="k-lab">Stock Inicial</div><div class="k-val c-g">${fmt2(stockInicioPeriodo)}<small> L</small></div></div>`+
-    `<div class="kpi"><div class="k-lab">Ingreso</div><div class="k-val c-g">${fmt2(totIngresoMes)}<small> L</small></div></div>`+
-    `<div class="kpi"><div class="k-lab">Consumo</div><div class="k-val c-o">${fmt2(totConsumoMes)}<small> L</small></div></div>`+
-    `<div class="kpi"><div class="k-lab">Balance</div><div class="k-val c-${balCol}">${fmt2(balance)}<small> L</small></div><div class="k-foot">${pieBalance}</div></div>`;
+  // El bloque de KPI se pinta al final de la funcion, cuando ya se sabe que quedo seleccionado:
+  // ver combPintarKpis mas abajo.
 
   // ---- Ingresos de Combustible (arriba): solo respeta el filtro de Mes ----
   const byIng={};
@@ -1580,13 +1577,62 @@ function renderCombustible(){
     return html;
   }).join('')+filasPrestamo+combFilaTotal(nMov, tot, rowsP, verConsumo)
    : '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px">Sin registros de combustible para el filtro seleccionado</td></tr>';
+
+  // Los KPI, recien ahora: `tot` y `nMov` son los de la tabla que se acaba de dibujar.
+  combPintarKpis({haySeleccion: tercV!=='ALL' || maqV!=='ALL' || tipoV!=='ALL', verConsumo,
+    stockInicioPeriodo, totIngresoMes, totConsumoMes, balance, balCol, pieBalance,
+    tot, nMov, prestamos: rowsP});
 }
-// Fila de total al pie del Consumo. Es la suma de lo que se está viendo, no un dato nuevo: con los
-// filtros en "Todas" coincide exactamente con el KPI de Consumo, y con un filtro activo (Mes,
-// Tercero o Máquina) es el único lugar donde se lee el total de esa selección — el KPI de arriba
-// sigue mostrando el consumo completo de la campaña, que es lo correcto para un KPI pero deja sin
-// respuesta "cuánto gastó esta máquina". Los valores llegan ya sumados desde renderCombustible;
-// acá no se recalcula nada.
+// El bloque de KPI de Combustible. Cambia de pregunta segun lo que haya filtrado el usuario, que
+// es la razon de que se pinte al final de renderCombustible y no apenas se calcula el balance:
+// antes se pintaba antes de que la tabla filtrara nada y los numeros no se movian.
+//
+//  - Sin seleccion (Tercero, Maquina y Movimiento en "Todas") la pregunta es como quedo el stock
+//    del periodo: Stock Inicial, Ingreso, Consumo y Balance, igual que siempre.
+//  - Con una seleccion la pregunta pasa a ser cuanto consumio ESO, asi que los tres primeros
+//    hablan de la seleccion. El Balance se queda, pero rotulado "del periodo": el stock no se
+//    puede filtrar por tercero ni por maquina —los ingresos no tienen ninguno de los dos— y un
+//    balance de una seleccion no seria un balance de nada.
+//  - Con el Movimiento en prestamos o devoluciones no hay consumo que medir: el bloque pasa a
+//    contar los prestamos, sus litros y su neto al stock.
+function combPintarKpis(o){
+  const kpi = (lab, val, col, pie) =>
+    `<div class="kpi"><div class="k-lab">${lab}</div><div class="k-val c-${col}">${val}</div>`+
+    (pie?`<div class="k-foot">${pie}</div>`:'')+`</div>`;
+  const litros = v => `${fmt2(v)}<small> L</small>`;
+  const balance = kpi('Balance'+(o.haySeleccion?' del período':''), litros(o.balance), o.balCol,
+    o.haySeleccion ? 'del período completo'+(o.pieBalance?' · '+o.pieBalance:'') : o.pieBalance);
+  let html;
+  if(!o.haySeleccion){
+    html = kpi('Stock Inicial', litros(o.stockInicioPeriodo), 'g')
+         + kpi('Ingreso', litros(o.totIngresoMes), 'g')
+         + kpi('Consumo', litros(o.totConsumoMes), 'o')
+         + balance;
+  } else if(!o.verConsumo){
+    const P = o.prestamos||[];
+    const neto = P.reduce((s,p)=> s + (p.tipo==='recibido' ? p.litros
+      : (p.tipo==='devuelto_por_nosotros' ? -p.litros : 0)), 0);
+    html = kpi('Movimientos', String(P.length), 'g', 'de la selección')
+         + kpi('Litros', litros(P.reduce((s,p)=>s+p.litros,0)), 'g')
+         + kpi('Neto al stock', litros(neto), neto>=0?'g':'o', 'lo que entró menos lo que se devolvió')
+         + balance;
+  } else {
+    const pct = o.totConsumoMes ? o.tot/o.totConsumoMes*100 : 0;
+    // Una maquina sola contra el consumo de toda la campaña da decimas: con un decimal quedaria
+    // "0,0%" y parecería cero. Debajo de 0,1 se dice que es menos de 0,1, no se redondea a nada.
+    const pctTxt = (pct > 0 && pct < 0.1) ? '&lt;0,1' : pct.toFixed(1).replace('.', ',');
+    html = kpi('Consumo', litros(o.tot), 'o', 'de la selección')
+         + kpi('Movimientos', String(o.nMov), 'g', 'agrupados en la tabla de abajo')
+         + kpi('% del período', pctTxt+'<small>%</small>', 'g',
+               'de '+fmt2(o.totConsumoMes)+' L consumidos en el período')
+         + balance;
+  }
+  document.getElementById('comb-balance').innerHTML = html;
+}
+// Fila de total al pie del Consumo. Es la suma de lo que se está viendo, no un dato nuevo: lleva
+// los MISMOS `tot` y `nMov` que el KPI de Consumo de arriba, que desde ahora también responde a
+// los filtros de Tercero, Máquina y Movimiento. Los valores llegan ya sumados desde
+// renderCombustible; acá no se recalcula nada.
 function combFilaTotal(nMov, litros, prestamos, verConsumo){
   // Los prestamos NO se suman al total: el total es de consumo. Se mencionan al lado con su neto
   // en litros —positivo lo que entro prestado, negativo lo que se devolvio— para que la fila diga
