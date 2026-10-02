@@ -232,7 +232,7 @@ function renderResumenKPIs(){
     // Solo las OT confirmadas de la campaña seleccionada. El consolidado de todas las campañas
     // (D.costo_total_consolidado) se sigue calculando pero ya no alimenta este KPI: mezclaba
     // campañas dentro de una vista que representa una sola.
-    kpiCard('Costo Ejecutado', 'US$ '+fmtUSD(k.costoEjecutado), '', 'gris'),
+    kpiCard('Costo Ejecutado', '$ '+fmtUSD(k.costoEjecutado), '', 'gris'),
   ].join('');
 }
 
@@ -279,7 +279,7 @@ function renderGastosOperativos(){
   // (NaN/Infinity), estado vacío explícito — nunca se oculta la sección entera.
   if(!list.length || total<=0){
     subCont.textContent='';
-    totalCont.innerHTML=`<div class="ot-lab">Total Gastos Operativos</div><div class="ot-val">US$ 0,00</div>`;
+    totalCont.innerHTML=`<div class="ot-lab">Total Gastos Operativos</div><div class="ot-val">$ 0,00</div>`;
     rowsCont.innerHTML='<div class="resumen-empty">Sin gastos operativos registrados</div>';
     return;
   }
@@ -287,17 +287,17 @@ function renderGastosOperativos(){
   // El costo de referencia es el de la campaña seleccionada (P.costo_total), no D.costo_total: ese
   // es siempre el de CAMPANIA_ACTUAL y dejaba el pie mostrando el total de 26/27 con el selector en
   // otra campaña, junto a un porcentaje que sí era de la campaña elegida.
-  totalCont.innerHTML=`<div class="ot-lab">Total Gastos Operativos</div><div class="ot-val">US$ ${fmtUSD(total)}</div><div class="ot-foot">US$ ${fmtUSD(P.costo_total)} de costo total ejecutado en la campaña</div>`;
+  totalCont.innerHTML=`<div class="ot-lab">Total Gastos Operativos</div><div class="ot-val">$ ${fmtUSD(total)}</div><div class="ot-foot">$ ${fmtUSD(P.costo_total)} de costo total ejecutado en la campaña</div>`;
   const max=Math.max(1,...list.map(o=>o.costo));
   rowsCont.innerHTML=list.map(o=>{
     const detalleHtml = o.detalle.length ? o.detalle.map(d=>
-      `<tr><td>${d.servicio}</td><td>${labelContratista(d.contratista)}</td><td class="tr mono">${d.ot}</td><td class="tr mono">US$ ${fmtUSD(d.costo)}</td></tr>`).join('')
+      `<tr><td>${d.servicio}</td><td>${labelContratista(d.contratista)}</td><td class="tr mono">${d.ot}</td><td class="tr mono">$ ${fmtUSD(d.costo)}</td></tr>`).join('')
       : '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:10px">Sin detalle disponible</td></tr>';
     return `<div class="opex-row">
       <div class="opex-row-main">
         <div class="opex-cat" title="${o.nombre}">${o.nombre}</div>
         <div class="opex-bar-track"><div class="opex-bar-fill" style="width:${(o.costo/max*100).toFixed(1)}%"></div></div>
-        <div class="opex-amt">US$ ${fmtUSD(o.costo)}</div>
+        <div class="opex-amt">$ ${fmtUSD(o.costo)}</div>
         <div class="opex-pct">${fmt1(o.partOperativo)}%</div>
         <div class="opex-ot">${o.otConfirmadas} OT</div>
         <button type="button" class="opex-toggle" aria-expanded="false" aria-label="Ver detalle de ${o.nombre}">Ver detalle</button>
@@ -374,7 +374,7 @@ function renderCultivoDetalle(){
     // detalle de cada etapa (arriba) y "OT conf. / total" se retiró a pedido del usuario — ambas
     // referían siempre al último estadio con actividad, no al cultivo entero, y esa información ya
     // vive donde corresponde: dentro de la fila de su etapa.
-    return `<div class="cult-card">
+    return `<div class="cult-card mg-c-${claseCultivo(c.nombre)}">
       <div class="cc-name">${c.nombre}</div>
       ${c.etapa_actual?`<div class="cc-stage">Etapa actual: <b>${c.etapa_actual}</b></div>`:'<div class="cc-stage cc-stage-muted">Sin actividad confirmada aún</div>'}
       <div class="cc-etapas">${etapasHtml}</div>
@@ -460,7 +460,7 @@ function avTablaOTs(ots, reps){
       `<td>${o.fr?ipFecha(o.fr):guion}</td>`+
       `<td class="mono">${escHtml(o.lote)||guion}${rep}</td>`+
       `<td class="tr mono">${o.cant==null?guion:fmtCantidadUnidad(o.cant,o.unidad)}</td>`+
-      `<td class="tr mono col-tot">US$ ${fmtUSD(o.costo)}</td></tr>`;
+      `<td class="tr mono col-tot">$ ${fmtUSD(o.costo)}</td></tr>`;
     }).join('')+
     `</tbody></table></div>`;
 }
@@ -531,7 +531,7 @@ function renderAvanceDetalladoCultivo(){
       `Aporte <b class="c-${col}">${l.aporte_pct==null?'—':fmt1(l.aporte_pct)+'%'}</b>`,
       // El qué y el cuánto quedan en esta línea; el cómo se llega del trabajo real al aporte va en
       // el renglón de abajo (avCadenaHa), porque son tres cifras encadenadas y no tres datos sueltos.
-      `<b>${l.n_ot}</b> OT · <b>${l.n_lotes}</b> lote(s) · <b>US$ ${fmtUSD(l.costo)}</b>`+
+      `<b>${l.n_ot}</b> OT · <b>${l.n_lotes}</b> lote(s) · <b>$ ${fmtUSD(l.costo)}</b>`+
         // Se avisa en la fila plegada, para no tener que abrir labor por labor buscando dónde se
         // cargó la misma labor dos veces sobre el mismo lote.
         (l.repetidas.length ? ` · <span class="av-rep-aviso" title="Lotes donde esta labor está cargada más de una vez y entre todas superan el plan del lote. Al abrir el detalle se listan sus OT.">${l.repetidas.length} lote(s) donde la repetición pasa el lote</span>` : ''),
@@ -547,11 +547,11 @@ function renderAvanceDetalladoCultivo(){
       ? `<div class="av-total">Total aportes: <b>${fmt1(e.labores.reduce((s,l)=>s+l.aporte_pct,0))}%</b> · ${fmt2(e.labores.reduce((s,l)=>s+l.aporte_ha,0))} ha</div>` : '';
     const sinAp = e.labores_sin_aporte.length ? `<div class="av-sinap">`+
       `<div class="av-sinap-tit">No aportan al avance · ${e.labores_sin_aporte.length} labor(es) · `+
-      `${e.labores_sin_aporte.reduce((s,l)=>s+l.n_ot,0)} OT · US$ ${fmtUSD(e.labores_sin_aporte.reduce((s,l)=>s+l.costo,0))}</div>`+
+      `${e.labores_sin_aporte.reduce((s,l)=>s+l.n_ot,0)} OT · $ ${fmtUSD(e.labores_sin_aporte.reduce((s,l)=>s+l.costo,0))}</div>`+
       e.labores_sin_aporte.map(l=>avFilaLabor(
         nomEtapa+'|sin|'+l.clave, l.nombre, l.nombres,
         'Aporte <b>0%</b>',
-        `<b>${l.n_ot}</b> OT · <b>US$ ${fmtUSD(l.costo)}</b> · <span class="av-motivo">${l.motivos.map(escHtml).join(' · ')}</span>`,
+        `<b>${l.n_ot}</b> OT · <b>$ ${fmtUSD(l.costo)}</b> · <span class="av-motivo">${l.motivos.map(escHtml).join(' · ')}</span>`,
         l.ots)).join('')+`</div>` : '';
     return `<div class="av-est">`+
       `<div class="av-est-head"><div class="av-est-nom">${escHtml(nomEtapa)}</div>`+
@@ -623,8 +623,8 @@ function renderAuditoria(){
   // propia no traen costo cargado). Va atenuado y con un title que lo explica, para que nadie lo
   // lea como "estos puentes salieron gratis".
   const puCeldaCosto = c => c
-    ? `<td class="tr mono">US$ ${fmtUSD(c)}</td>`
-    : `<td class="tr mono"><span class="pu-cero" title="La hoja no trae costo cargado en estas OT: Costo Labor y Costo Insumo vienen en 0. No significa que el trabajo no haya tenido costo.">US$ 0,00</span></td>`;
+    ? `<td class="tr mono">$ ${fmtUSD(c)}</td>`
+    : `<td class="tr mono"><span class="pu-cero" title="La hoja no trae costo cargado en estas OT: Costo Labor y Costo Insumo vienen en 0. No significa que el trabajo no haya tenido costo.">$ 0,00</span></td>`;
   const puCeldaAvance = a => a==null
     ? '<td class="tr"><span class="ip-sin">N/D</span></td>'
     : `<td><div class="pu-av"><span class="pu-bar"><i style="width:${Math.min(100,a)}%"></i></span>`+
@@ -708,8 +708,8 @@ function renderAuditoria(){
   document.getElementById('audit-gastos-sub').textContent = '';
   document.getElementById('audit-gastos').innerHTML = D.auditoria_gastos.map(g=>
     g.nOT
-      ? `<tr><td>${g.trabajo}</td><td class="tr mono">${g.horas?fmt2(g.horas):'-'}</td><td class="tr mono">${g.litros?fmt2(g.litros):'-'}</td><td class="tr mono">US$ ${fmtUSD(g.costo)}</td><td class="tr mono">${g.nOT} (${g.nConfirmadas} conf.)</td></tr>`
-      : `<tr><td>${g.trabajo}</td><td class="tr mono">0,00</td><td class="tr mono">0,00</td><td class="tr mono">US$ 0,00</td><td class="tr" style="color:var(--muted)">Sin ejecución registrada</td></tr>`
+      ? `<tr><td>${g.trabajo}</td><td class="tr mono">${g.horas?fmt2(g.horas):'-'}</td><td class="tr mono">${g.litros?fmt2(g.litros):'-'}</td><td class="tr mono">$ ${fmtUSD(g.costo)}</td><td class="tr mono">${g.nOT} (${g.nConfirmadas} conf.)</td></tr>`
+      : `<tr><td>${g.trabajo}</td><td class="tr mono">0,00</td><td class="tr mono">0,00</td><td class="tr mono">$ 0,00</td><td class="tr" style="color:var(--muted)">Sin ejecución registrada</td></tr>`
   ).join('');
 
   // Ítems sin ninguna OT que matchee van atenuados y con un title que dice por qué: la fila no es
@@ -1064,7 +1064,7 @@ function renderInsumosParcela(){
     const motivos=[];
     if(sinSup) motivos.push('<b>'+fmt(sinSup)+'</b> porque son trabajos donde solo se usan insumos (aplicación con mochila y similares): la orden no registra una superficie trabajada');
     if(otros) motivos.push('<b>'+fmt(otros)+'</b> porque su orden no trae Has. Reales cargadas');
-    aviso.innerHTML = '<b>'+fmt(sinHaMovs.length)+' de '+fmt(movs.length)+' aplicaciones</b> (US$ '+fmtUSD(costoSinHa)+
+    aviso.innerHTML = '<b>'+fmt(sinHaMovs.length)+' de '+fmt(movs.length)+' aplicaciones</b> ($ '+fmtUSD(costoSinHa)+
       ') no tienen hectáreas reales: '+motivos.join('; ')+'. Se muestran igual con su lote, cantidad y costo, '+
       'pero las columnas y KPIs «por hectárea» las dejan fuera — no se las estima ni se las reemplaza por las '+
       'hectáreas planificadas, que son otra magnitud.';
@@ -1080,7 +1080,7 @@ function renderInsumosParcela(){
   });
   const unidadesOrd = [...porUnidad.values()].sort((a,b)=>b.costo-a.costo);
   document.getElementById('ip-unidades').innerHTML = unidadesOrd.length ? unidadesOrd.map(u=>
-    `<tr><td>${u.unidad}</td><td class="tr mono">${u.insumos.size}</td><td class="tr mono qty-unit">${fmtCantidadUnidad(u.cantidad,u.unidad)}</td><td class="tr mono">US$ ${fmtUSD(u.costo)}</td></tr>`
+    `<tr><td>${u.unidad}</td><td class="tr mono">${u.insumos.size}</td><td class="tr mono qty-unit">${fmtCantidadUnidad(u.cantidad,u.unidad)}</td><td class="tr mono">$ ${fmtUSD(u.costo)}</td></tr>`
   ).join('') : '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:16px">Sin aplicaciones para los filtros seleccionados</td></tr>';
 
   // ---- Seguimiento de receta ----
@@ -1147,8 +1147,8 @@ function renderInsumosParcela(){
       `<td>${p.cultivo}</td>`+
       `<td class="tr mono">${p.ha!=null?fmt2(p.ha):'<span class="ip-sin">—</span>'}</td>`+
       `<td class="tr mono">${p.nOT}</td><td class="tr mono">${p.nInsumos}</td>`+
-      `<td class="tr mono col-tot">US$ ${fmtUSD(p.costo)}</td>`+
-      `<td class="tr mono">${ipCelda(p.costoHa, p.ha, v=>'US$ '+fmtUSD(v))}</td></tr>`;
+      `<td class="tr mono col-tot">$ ${fmtUSD(p.costo)}</td>`+
+      `<td class="tr mono">${ipCelda(p.costoHa, p.ha, v=>'$ '+fmtUSD(v))}</td></tr>`;
     if(abierta) html += ipDetalleParcela(p, insumosPorParcela.get(p.parcela));
     return html;
   }).join('') : '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:16px">Sin aplicaciones para los filtros seleccionados</td></tr>';
@@ -1195,7 +1195,7 @@ function ipDetalleParcela(p, listaCompleta){
       `<td class="tr mono qty-unit">${dosisReceta}</td>`+
       `<td class="tr mono">${desvio}</td>`+
       `<td class="tr">${estado}</td>`+
-      `<td class="tr mono">US$ ${fmtUSD(i.costo)}<div class="rc-abs">${ipCelda(i.costo/(p.ha||1), p.ha, v=>'US$ '+fmtUSD(v)+'/ha')}</div></td></tr>`;
+      `<td class="tr mono">$ ${fmtUSD(i.costo)}<div class="rc-abs">${ipCelda(i.costo/(p.ha||1), p.ha, v=>'$ '+fmtUSD(v)+'/ha')}</div></td></tr>`;
   }).join('');
   return html;
 }
@@ -1557,7 +1557,7 @@ function renderCombustible(){
     return `<tr class="cu-prestamo"><td class="cu-uso" title="${escAttr(p.obs)}">`+
       `<span class="ip-caret"> </span> <b>${escHtml((PREST_LABEL[p.tipo]||'')+p.quien)}</b> ${chip}`+
       `<div class="cu-prest-obs">${ipFecha(p.fecha)} · ${escHtml(p.tipoComp)}`+
-      (p.importe?` · US$ ${fmtUSD(p.importe)}`:'')+`</div></td>`+
+      (p.importe?` · $ ${fmtUSD(p.importe)}`:'')+`</div></td>`+
       `<td class="tr mono">1</td><td class="tr mono">${fmt2(p.litros)}</td>`+
       `<td class="tr"><div class="sopbar"><div style="width:${p.litros/mx*100}%"></div></div></td>`+
       `<td class="tr mono"><span class="ip-sin">—</span></td></tr>`;
@@ -1798,10 +1798,10 @@ function renderG(){
     if(resto){ const i=crudos.indexOf(Math.max(...crudos)); red[i]=Math.round((red[i]+resto)*10)/10; }
     return red.map(v=>fmt1(v)+'% del gasto');
   })();
-  const K=[['Gasto Total','US$ '+fmtUSD(gasto),'labor + insumos + combustible'],['Labores Ejecutadas',labs.length,'tipos de labor'],
-    ['Costo Labor','US$ '+fmtUSD(totLabor),pcts[0]],
-    ['Costo Insumos','US$ '+fmtUSD(totIns),pcts[1]],
-    ['Costo Combustible','US$ '+fmtUSD(totComb),pcts[2]]];
+  const K=[['Gasto Total','$ '+fmtUSD(gasto),'labor + insumos + combustible'],['Labores Ejecutadas',labs.length,'tipos de labor'],
+    ['Costo Labor','$ '+fmtUSD(totLabor),pcts[0]],
+    ['Costo Insumos','$ '+fmtUSD(totIns),pcts[1]],
+    ['Costo Combustible','$ '+fmtUSD(totComb),pcts[2]]];
   document.getElementById('gkpis').innerHTML=K.map(k=>`<div class="gkpi"><div class="k-lab">${k[0]}</div><div class="k-val">${k[1]}</div><div class="k-foot">${k[2]}</div></div>`).join('');
   document.getElementById('gnote').textContent='';
   let acc=0; const pts=mt.map(m=>{acc+=m.tot;return{lbl:m.lbl,acc};}); const W=1000,H=200,pad=34,aMax=acc||1;
@@ -1877,7 +1877,7 @@ function svDetalleOTs(l, sinEjec){
     return `<tr><td class="mono"><b>${escHtml(o.ot)}</b></td><td class="mono">${ipFecha(o.fr)}</td>`+
       `<td>${escHtml(o.cultivo)}</td><td>${escHtml(o.lote)||'<span class="ip-sin">—</span>'}</td>`+
       `<td class="tr mono">${ejec}</td>`+
-      `<td class="tr mono col-tot">US$ ${fmtUSD(o.propia+o.tercero+o.insumos)}</td>`+
+      `<td class="tr mono col-tot">$ ${fmtUSD(o.propia+o.tercero+o.insumos)}</td>`+
       `<td class="sv-obs">${obs?obsHtml(obs):'<span class="ip-sin">—</span>'}</td></tr>`;
   }).join('');
   const conObs=ots.filter(o=>String(o.obs||'').trim()).length;
@@ -1949,7 +1949,7 @@ function renderLaborDetalle(){
     // La fila muestra solo el Costo Total (propia + tercero + insumos): las columnas "Labor
     // Tercero" e "Insumos" se quitaron a pedido del usuario. l.terc y l.ins se siguen acumulando
     // porque forman l.tot.
-    let html=`<tr class="sv-fila${abierta?' open':''}" data-fila="${encodeURIComponent(clave)}"><td><span class="lname">${l.labor}</span> ${chip}</td><td><span class="chip chip-etapa">${l.estadio}</span></td><td class="tr mono"><span class="ip-caret">${abierta?'▾':'▸'}</span> ${l.n}</td><td class="tr mono">${ejec}</td><td class="col-contratista" title="${contratistaTxt}">${contratistaTxt}</td><td class="tr mono col-tot">US$ ${fmtUSD(l.tot)}</td></tr>`;
+    let html=`<tr class="sv-fila${abierta?' open':''}" data-fila="${encodeURIComponent(clave)}"><td><span class="lname">${l.labor}</span> ${chip}</td><td><span class="chip chip-etapa">${l.estadio}</span></td><td class="tr mono"><span class="ip-caret">${abierta?'▾':'▸'}</span> ${l.n}</td><td class="tr mono">${ejec}</td><td class="col-contratista" title="${contratistaTxt}">${contratistaTxt}</td><td class="tr mono col-tot">$ ${fmtUSD(l.tot)}</td></tr>`;
     if(abierta) html+=svDetalleOTs(l, sinEjec);
     return html;
   }).join('') : '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:16px">Sin registros para el filtro seleccionado</td></tr>')
@@ -2001,7 +2001,7 @@ function filaTotalServicios(labs, hayFiltro){
   return `<tr class="sv-total"><td colspan="2">Total<span class="sv-tot-n">${labs.length} combinaciones</span></td>`+
     `<td class="tr mono">${t.n}</td><td class="tr mono">${ejec}</td>`+
     `<td class="col-contratista" title="${contr}">${contr}</td>`+
-    `<td class="tr mono col-tot">US$ ${fmtUSD(t.tot)}</td></tr>`;
+    `<td class="tr mono col-tot">$ ${fmtUSD(t.tot)}</td></tr>`;
 }
 
 // ---- Consumo de Gasoil por Área ----
@@ -2018,7 +2018,7 @@ function svDetalleGasoil(area, ots){
     return `<tr><td class="mono"><b>${escHtml(o.ot)}</b></td><td class="mono">${ipFecha(o.fr)}</td>`+
       `<td>${escHtml(o.cultivo)}</td><td>${escHtml(o.lote)||'<span class="ip-sin">—</span>'}</td>`+
       `<td class="tr mono">${fmt1(o.litros)} L</td>`+
-      `<td class="tr mono col-tot">US$ ${fmtUSD(o.total)}</td>`+
+      `<td class="tr mono col-tot">$ ${fmtUSD(o.total)}</td>`+
       `<td class="sv-obs">${obs?obsHtml(obs):'<span class="ip-sin">—</span>'}</td></tr>`;
   }).join('');
   const conObs=ots.filter(o=>String(o.obs||'').trim()).length;
@@ -2041,7 +2041,7 @@ function filaTotalGasoil(rows){
         total=rows.reduce((s,r)=>s+r.total,0);
   return `<tr class="sv-total"><td colspan="2">Total<span class="sv-tot-n">${rows.length} área(s)</span></td>`+
     `<td class="tr mono">${n}</td><td class="tr mono">${fmt1(litros)} L</td>`+
-    `<td class="col-contratista"></td><td class="tr mono col-tot">US$ ${fmtUSD(total)}</td></tr>`;
+    `<td class="col-contratista"></td><td class="tr mono col-tot">$ ${fmtUSD(total)}</td></tr>`;
 }
 
 function renderGasoil(){
@@ -2067,7 +2067,7 @@ function renderGasoil(){
     // Servicio y Contratista van vacias: las OT de gasoil no traen linea de categoria Servicio y
     // el campo contratista esta en blanco en el Excel. Se deja el hueco en vez de rellenarlo con
     // "GASOIL" o "Sin contratista", que serian datos puestos por el dashboard, no por la OT.
-    let html=`<tr class="sv-fila${abierta?' open':''}" data-area="${encodeURIComponent(r.area)}"><td></td><td><span class="chip chip-etapa">${escHtml(r.area)}</span></td><td class="tr mono"><span class="ip-caret">${abierta?'▾':'▸'}</span> ${r.n}</td><td class="tr mono">${fmt1(r.litros)} L</td><td class="col-contratista"></td><td class="tr mono col-tot">US$ ${fmtUSD(r.total)}</td></tr>`;
+    let html=`<tr class="sv-fila${abierta?' open':''}" data-area="${encodeURIComponent(r.area)}"><td></td><td><span class="chip chip-etapa">${escHtml(r.area)}</span></td><td class="tr mono"><span class="ip-caret">${abierta?'▾':'▸'}</span> ${r.n}</td><td class="tr mono">${fmt1(r.litros)} L</td><td class="col-contratista"></td><td class="tr mono col-tot">$ ${fmtUSD(r.total)}</td></tr>`;
     if(abierta) html+=svDetalleGasoil(r.area, r.ots||[]);
     return html;
   }).join('')+filaTotalGasoil(rows):'<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:16px">Sin consumo de gasoil en el período</td></tr>';
@@ -2110,11 +2110,11 @@ function renderTerceros(){
         `<td title="${escHtml(String(r.obs))}">${escHtml(String(r.serv))}`+
         `<div class="terc-obs">${escHtml(String(r.obs))}</div></td>`+
         `<td class="tr mono">${r.horas?fmt1(r.horas):'—'}</td>`+
-        `<td class="tr mono">US$ ${fmtUSD(r.imp)}</td></tr>`;
+        `<td class="tr mono">$ ${fmtUSD(r.imp)}</td></tr>`;
     });
     html+=`<tr class="grp neutra terc-sub"><td><b>${escHtml(String(b.tercero))}</b></td>`+
-      `<td colspan="2">${b.ots.length} OT`+(b.impD?` · US$ ${fmtUSD(b.impD)} a descontar`:'')+`</td>`+
-      `<td class="tr mono">${b.horas?fmt1(b.horas):'—'}</td><td class="tr mono col-tot">US$ ${fmtUSD(b.imp)}</td></tr>`;
+      `<td colspan="2">${b.ots.length} OT`+(b.impD?` · $ ${fmtUSD(b.impD)} a descontar`:'')+`</td>`+
+      `<td class="tr mono">${b.horas?fmt1(b.horas):'—'}</td><td class="tr mono col-tot">$ ${fmtUSD(b.imp)}</td></tr>`;
   });
   document.getElementById('tercbody').innerHTML = html ||
     '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px">Sin OT en el período</td></tr>';

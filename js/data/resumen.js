@@ -208,7 +208,7 @@ function construirResumen(ctx){
         const sev = pct>=RESUMEN_CONCENTRACION_GASTO_ALTA?'alta':'media';
         RP.push({id:'high_cost_concentration', severidad:sev, titulo:'Concentración elevada del gasto en "'+top[0]+'"',
           descripcion:'Una sola labor concentra '+pct+'% del costo ejecutado de la campaña — para revisión, no implica error.',
-          metrica:pct+'%', contexto:'US$ '+fmtUSD(top[1])+' de US$ '+fmtUSD(costo_total)+' del total',
+          metrica:pct+'%', contexto:'$ '+fmtUSD(top[1])+' de $ '+fmtUSD(costo_total)+' del total',
           accion:'Ver Servicios', destinoTab:1, impacto:pct});
       }
     }

@@ -92,6 +92,9 @@ function colorSeveridad(sev){ return SEVERIDAD_COLOR[sev]||'gris'; }
 function labelSeveridad(sev){ return SEVERIDAD_LABEL[sev]||'Info'; }
 function normEstadio(s){ return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim(); }
 function stripAccents(s){ return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
+// Color de la cabecera de cada tarjeta de cultivo (css/airo.css: .mg-c-arroz, -soja, -sorgo, -maiz).
+// Un cultivo que no este en esa lista cae en el rosa por defecto, que es lo que hace la regla CSS.
+function claseCultivo(nombre){ return stripAccents(nombre).toLowerCase().replace(/[^a-z]/g,''); }
 function normHdr(s){ return stripAccents(s).toLowerCase().replace(/\uFEFF/g,'').replace(/\s+/g,' ').trim(); }
 // Arrastre de stock mes a mes, reutilizable (misma logica que ya usaba Combustible antes de
 // refactorizarse para usar esta funcion): para "Toda la Campa\u00F1a" el stock inicial del periodo es
