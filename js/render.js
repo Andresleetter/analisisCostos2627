@@ -2172,14 +2172,18 @@ function renderLaborDetalle(){
   const selV=document.getElementById('gmes').value, sel=selV==='ALL'?'ALL':parseInt(selV);
   const laborV=document.getElementById('glabor').value, estV=document.getElementById('gestadio').value;
   const contV=document.getElementById('gcontratista').value;
-  // La fila de Total aparece SOLO con el filtro de Servicio puesto. Con cualquier otro filtro (o
-  // sin ninguno) la tabla mezcla servicios de unidades distintas y el Trabajo Ejecutado del Total
-  // sale como una lista de magnitudes sueltas —"15.528,63 ha · 167 insumos · 899,28 hrs ·
-  // 639.462,00 kg"—, que no es un total de nada.
-  // Filtrar por Servicio, en cambio, garantiza una unica unidad: verificado contra el dato, en las
-  // 4 campanias NINGUN servicio aparece con mas de una unidad de trabajo (68 servicios en la 26/27,
-  // 0 con unidad mixta), asi que ahi el Total suma una sola magnitud y significa algo.
-  const hayFiltro = laborV!=='ALL';
+  // La fila de Total aparece con CUALQUIER filtro puesto (Mes, Servicio, Estadio o Contratista),
+  // no solo con el de Servicio como hasta el 13/10/2026. El motivo de aquella restriccion era una
+  // sola columna: al mezclar servicios de unidades distintas, el Trabajo Ejecutado del Total salia
+  // como una lista de magnitudes sueltas y no totalizaba nada. Eso se resolvio en la propia fila
+  // (ver filaTotalServicios), asi que ya no hay razon para esconder las otras tres columnas, que
+  // son sumables siempre.
+  //
+  // Sin NINGUN filtro no se muestra: ahi el total de la campania ya esta arriba, en los KPI de la
+  // cabecera, y repetirlo al pie de 134 filas no agrega nada. Con un filtro puesto, en cambio, no
+  // hay ningun otro lugar que diga cuanto suma lo que se esta viendo — que es justamente para lo
+  // que se pide.
+  const hayFiltro = laborV!=='ALL' || estV!=='ALL' || contV!=='ALL' || sel!=='ALL';
   let recs=sel==='ALL'?S.gastos:S.gastos.filter(r=>r.mesnum===sel);
   if(laborV!=='ALL') recs=recs.filter(r=>r.labor===laborV);
   if(estV!=='ALL') recs=recs.filter(r=>r.estadio===estV);
@@ -2247,16 +2251,21 @@ function renderLaborDetalle(){
 //    filas — cada OT pertenece a un único grupo labor+estadio+contratista+unidad (ver el comentario
 //    de agrupación más arriba), así que sumar `n` no cuenta ninguna dos veces.
 //  · Trabajo Ejecutado NO se puede sumar entre unidades distintas: 1.717 ha y 320 hrs no hacen
-//    2.037 de nada. Se acumula por unidad y se muestran las que haya, separadas por punto medio —
-//    con el filtro del ejemplo (todo en ha) sale un único número, que es el caso normal. Los
-//    servicios sin trabajo medible (SERVICIOS_SIN_TRABAJO_EJECUTADO, celda "—") quedan afuera del
-//    acumulado: su superficie no describe ningún trabajo.
+//    2.037 de nada. Se acumula por unidad; con UNA sola en la tabla se muestra ese número, que es
+//    el caso normal al filtrar por Servicio, y con dos o más se muestran todas separadas por punto
+//    medio, porque cada una sí es un subtotal real de lo suyo. Los servicios sin trabajo medible
+//    (SERVICIOS_SIN_TRABAJO_EJECUTADO, celda "—") quedan afuera del acumulado: su superficie no
+//    describe ningún trabajo.
 //  · Contratista no es sumable: con uno solo se repite su nombre, con varios se dice cuántos.
 //
-// `hayFiltro` es lo que decide que aparezca, y hoy vale solo con el filtro de Servicio puesto: es
-// el único que garantiza una sola unidad de trabajo en el acumulado (ver renderLaborDetalle).
+// `hayFiltro` es lo que decide que aparezca y vale con cualquiera de los cuatro filtros de la
+// tabla puesto (ver renderLaborDetalle). Con UNA sola fila se dibuja igual, aunque repita sus
+// cifras: filtrar por Mes y Contratista a la vez deja la tabla en una fila, y es justo cuando se
+// busca el total de lo que se esta viendo. Que el pie aparezca y desaparezca segun cuantas filas
+// quedaron es mas desconcertante que una linea repetida, que ademas se lee distinta (borde verde
+// y la palabra Total).
 function filaTotalServicios(labs, hayFiltro){
-  if(!hayFiltro || labs.length < 2) return '';
+  if(!hayFiltro || !labs.length) return '';
   const CANT = {hrs:'horas', kg:'kg', ins:'ins_lineas', trabajos:'trabajos'};
   const t = {n:0, serv:0, tot:0};
   const porUnidad = {};
@@ -2275,7 +2284,7 @@ function filaTotalServicios(labs, hayFiltro){
     : '<span class="tw-sin">—</span>';
   const contr = contratistas.size===1 ? labelContratista([...contratistas][0])
     : contratistas.size+' contratistas';
-  return `<tr class="sv-total"><td colspan="2">Total<span class="sv-tot-n">${labs.length} combinaciones</span></td>`+
+  return `<tr class="sv-total"><td colspan="2">Total<span class="sv-tot-n">${labs.length} ${labs.length===1?'combinación':'combinaciones'}</span></td>`+
     `<td class="tr mono">${t.n}</td><td class="tr mono">${ejec}</td>`+
     `<td class="col-contratista" title="${contr}">${contr}</td>`+
     `<td class="tr mono col-serv">$ ${fmtUSD(t.serv)}</td>`+
