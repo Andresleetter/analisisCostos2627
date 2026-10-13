@@ -36,7 +36,11 @@
     <div class="brand">
       <div class="logo-box"><img src="img/logo_del_sur.svg" alt="Desarrollos del Sur S.A."></div>
       <div class="b-txt"><h1>Seguimiento de Campaña 26/27</h1>
-        <div class="t-sub">Campo La Teresa</div></div>
+        <!-- La moneda se declara aca, una sola vez para todo el tablero: cada monto lleva un "$"
+             corto y ninguna columna repite "US$" en su encabezado. Antes el simbolo largo iba en
+             cada celda — 268 repeticiones solo en el Detalle por Servicio — para decir algo que no
+             cambia en ninguna pantalla. Todas las cifras del Excel vienen en dolares. -->
+        <div class="t-sub">Campo La Teresa · Datos en Dólares</div></div>
     </div>
     <div class="header-right">
       <button type="button" class="menu-toggle" id="menu-toggle" aria-label="Abrir menú de módulos" aria-expanded="false" aria-controls="tabs-nav">
@@ -172,7 +176,7 @@
              "Costo Servicio" reemplazo al panel aparte de Costo de Servicios (sin insumos), que
              duplicaba esta misma tabla mas abajo (13/10/2026, decision del usuario). -->
         <th>Servicio</th><th>Estadio</th><th class="tr">OT Conf.</th><th class="tr">Trabajo Ejecutado</th>
-        <th>Contratista</th><th class="tr">Costo Servicio<span class="th-um">US$</span></th><th class="tr">Costo Total<span class="th-um">US$</span></th></tr></thead><tbody id="gld"></tbody></table></div></div>
+        <th>Contratista</th><th class="tr">Costo Servicio</th><th class="tr">Costo Total</th></tr></thead><tbody id="gld"></tbody></table></div></div>
     <!-- Sin KPI de litros arriba de la tabla: el mismo numero esta ahora en la fila de Total, al
          pie, que es donde se lee junto con las OT y el costo que lo acompanan. -->
     <div class="panel sub"><h3>Consumo de Gasoil por Área</h3>
@@ -187,7 +191,7 @@
            en blanco—, y se muestran tal cual en lugar de inventarles un valor. El area es el
            estadio de la OT, por eso ocupa esa columna. La barra de Participacion y la columna %
            se quitaron a pedido del usuario. -->
-      <div class="scroll"><table><thead><tr><th>Servicio</th><th>Estadio</th><th class="tr">OT Conf.</th><th class="tr">L. Consumidos</th><th>Contratista</th><th class="tr">Costo Total<span class="th-um">US$</span></th></tr></thead><tbody id="gasbody"></tbody></table></div></div>
+      <div class="scroll"><table><thead><tr><th>Servicio</th><th>Estadio</th><th class="tr">OT Conf.</th><th class="tr">L. Consumidos</th><th>Contratista</th><th class="tr">Costo Total</th></tr></thead><tbody id="gasbody"></tbody></table></div></div>
     <!-- Trabajos que la campania hizo PARA un tercero. El dato sale de la observacion de la OT,
          que es el unico lugar donde consta: el contratista dice quien ejecuto, no para quien. Va
          debajo del gasoil porque la mayoria son traslados y logistica, el mismo tipo de trabajo. -->
@@ -201,7 +205,7 @@
         <label for="terctercero">Tercero</label>
         <select id="terctercero"><option value="ALL">Todos</option></select>
       </div>
-      <div class="scroll"><table><thead><tr><th>Tercero / OT</th><th>Fecha</th><th>Trabajo</th><th class="tr">Horas</th><th class="tr">Costo<span class="th-um">US$</span></th></tr></thead><tbody id="tercbody"></tbody></table></div></div>
+      <div class="scroll"><table><thead><tr><th>Tercero / OT</th><th>Fecha</th><th>Trabajo</th><th class="tr">Horas</th><th class="tr">Costo</th></tr></thead><tbody id="tercbody"></tbody></table></div></div>
   </section>
 
   <!-- TAB 3: Combustible -->

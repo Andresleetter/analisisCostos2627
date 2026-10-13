@@ -903,17 +903,28 @@ una fila, por el problema de unidades mezcladas que se explica más abajo).
 > del Costo Total con el que hay que compararla. La columna hace lo mismo en el lugar donde sirve.
 > Con el panel se fueron `renderServiciosSinInsumos()` y `filaTotalServiciosSinInsumos()`.
 
-### Las tablas de Servicios no repiten "US$" ni la unidad
+### La moneda se declara una vez, en el encabezado
 
-Dos recortes de ancho, los dos del 13/10/2026 y por el mismo motivo: los nombres de servicio son
-largos (`Reparacion de Camino retro excavadora x Hs`) y se partían en dos renglones.
+El subtítulo del header dice **«Campo La Teresa · Datos en Dólares»**, y esa es la única vez que el
+tablero nombra la moneda. A partir de ahí cada monto lleva un `$` corto y **ninguna columna repite
+la unidad en su encabezado**.
 
-- **El "US$" salió de las celdas y subió al encabezado**, en una segunda línea gris debajo del
-  título de la columna (`.th-um`). Una tabla de 134 filas con dos columnas de plata repetía el
-  símbolo 268 veces para decir algo que no cambia. Los cinco KPI de la cabecera **sí** lo conservan:
-  ahí hay lugar y son las cifras que se leen sueltas, fuera de toda columna.
-- **La pastilla de unidad salió de la columna Servicio.** La unidad ya la dice "Trabajo Ejecutado"
-  en la misma fila, con su propio color. `U_TRABAJO` sigue en uso para ese rótulo.
+Antes el símbolo largo iba en cada celda: solo el Detalle por Servicio, con 134 filas y dos columnas
+de plata, lo repetía **268 veces** para decir algo que no cambia en ninguna pantalla. Los nombres de
+servicio son largos (`Reparacion de Camino retro excavadora x Hs`) y se partían en dos renglones por
+ese ancho.
+
+Hubo un paso intermedio que duró poco: el `US$` subió al encabezado de cada columna, en una segunda
+línea gris (`.th-um`). Resolvía el ancho de la celda pero alargaba el encabezado y seguía repitiendo
+la moneda una vez por columna. Con el header diciéndolo, esa clase se fue.
+
+El cambio es de **todo el tablero**, no solo de Servicios: `US$ ` → `$ ` en las 23 líneas de
+`render.js` que lo imprimían, en los siete módulos. Verificado pestaña por pestaña: cero `US$` en
+pantalla. En los comentarios del código sí quedó la forma larga, que ahí es prosa.
+
+**La pastilla de unidad también salió de la columna Servicio** (mismo día, mismo motivo): la unidad
+ya la dice "Trabajo Ejecutado" en la misma fila, con su propio color. `U_TRABAJO` sigue en uso para
+ese rótulo.
 
 ### El ancho de la página
 
