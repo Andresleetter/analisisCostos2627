@@ -111,9 +111,11 @@ global del módulo — US$ 51.518,95 en la 26/27, un 3,6% del gasto. Por eso el 
 diferencia sin sumar los dos paneles a mano.
 
 La corrección: el Gasto Total suma las cuatro patas (labor propia, labor de terceros, insumos y
-combustible), hay un KPI propio de **Costo Combustible**, y el gráfico de **Gasto Acumulado de
-Campaña** también cuenta el gasoil (`monthTotals`) — sin eso, el último punto del gráfico habría
-quedado en 1.394k contra un KPI de 1.446k, que es el mismo problema mudado de lugar.
+combustible) y hay un KPI propio de **Costo Combustible**. El gráfico de **Gasto Acumulado de
+Campaña** también se corrigió para contar el gasoil (`monthTotals`) — sin eso, su último punto
+habría quedado en 1.394k contra un KPI de 1.446k, que es el mismo problema mudado de lugar. Ese
+gráfico se quitó el 13/10/2026 (ver *Costo de Servicios (sin insumos)*, más abajo) y con él
+`monthTotals`, que no tenía otro consumidor.
 
 El combustible se lee de `gasoil_sec` con los **mismos filtros** que usa `renderGasoil`, así que el
 KPI dice exactamente lo que suma el panel de Consumo de Gasoil por Área que está más abajo.
@@ -659,7 +661,7 @@ distintos del mismo número: son dos preguntas distintas sobre los mismos datos.
 
 ### Filtro de Cultivo
 
-Va al lado de Mes y tiene **el mismo alcance**: KPIs, gasto acumulado, Detalle por Servicio y Consumo de Gasoil por Área quedan todos expresados sobre `Campaña + Mes + Cultivo`. **No es un filtro visual**: `filtrarServiciosPorCultivo()` (`servicios.js`) vuelve a sumar cada grupo sobre sus propias OT de ese cultivo, con las mismas funciones que usó la construcción del módulo (`acumularGrupoServicio` / `acumularGrupoGasoil`) — no hay una segunda forma de calcular un total. Con `Todos` devuelve el paquete original **sin recalcular nada**.
+Va al lado de Mes y tiene **el mismo alcance**: KPIs, Detalle por Servicio, Costo de Servicios (sin insumos) y Consumo de Gasoil por Área quedan todos expresados sobre `Campaña + Mes + Cultivo`. **No es un filtro visual**: `filtrarServiciosPorCultivo()` (`servicios.js`) vuelve a sumar cada grupo sobre sus propias OT de ese cultivo, con las mismas funciones que usó la construcción del módulo (`acumularGrupoServicio` / `acumularGrupoGasoil`) — no hay una segunda forma de calcular un total. Con `Todos` devuelve el paquete original **sin recalcular nada**.
 
 El cultivo de una OT es el campo **`actividad`** de `consultaOT` (`o.act`), el mismo que ya usa el avance de campo del Resumen Ejecutivo. **No** se usa la columna `cultivo` del Excel: esa trae el nombre completo de la parcela (`"LA TERESA 211 ARROZ 26/27"`), no el cultivo. La clave se normaliza con `normHdr()`, así que `ARROZ`, `Arroz` y `" arroz "` son un único cultivo.
 
@@ -669,7 +671,7 @@ Las opciones se recalculan por campaña, en este orden: `Todos`, después los pr
 
 ### Filtro de Lote
 
-Va **después de Cultivo** y es el mismo mecanismo un nivel más abajo: `filtrarServiciosPorLote()` (`servicios.js`) vuelve a sumar cada grupo sobre sus propias OT de ese lote, con las mismas funciones de siempre. KPIs, gasto acumulado, Detalle por Servicio y Consumo de Gasoil quedan expresados sobre `Campaña + Mes + Cultivo + Lote`. Con `Todos` devuelve el paquete original sin recalcular nada.
+Va **después de Cultivo** y es el mismo mecanismo un nivel más abajo: `filtrarServiciosPorLote()` (`servicios.js`) vuelve a sumar cada grupo sobre sus propias OT de ese lote, con las mismas funciones de siempre. KPIs, Detalle por Servicio, Costo de Servicios (sin insumos) y Consumo de Gasoil quedan expresados sobre `Campaña + Mes + Cultivo + Lote`. Con `Todos` devuelve el paquete original sin recalcular nada.
 
 Los dos filtros **componen**: se aplica primero Cultivo y después Lote, y el resultado es el mismo en cualquier orden. Verificado contra el dato: la suma de los **183 lotes** de la 26/27 da el total del módulo (`US$ 1.512.585`, con 22 centésimos de diferencia por el redondeo por grupo que ya arrastran todas las vistas), y no hay ninguna OT sin lote.
 
@@ -864,6 +866,50 @@ La columna muestra la cantidad ejecutada en la unidad propia de cada trabajo, **
 | `trabajos` | cantidad de trabajos | `SERVICIOS_CAMION_GRUA` (ver abajo) |
 
 Los servicios de `SERVICIOS_SIN_TRABAJO_EJECUTADO` muestran "—".
+
+### Costo de Servicios (sin insumos)
+
+Panel pegado debajo del Detalle por Servicio. Lee **exactamente las mismas filas** (`S.gastos`) con
+otra cuenta: una fila por servicio con **labor propia + labor de terceros**, sin insumos.
+
+Por qué hacía falta: el Detalle de arriba muestra un **Costo Total** que suma las tres patas
+(propia + tercero + insumos), así que una fila cara no distingue entre un servicio caro y uno barato
+que aplicó mucho producto. **Siembra** encabeza esa tabla con US$ 759.134,00, de los cuales
+US$ 588.930,45 son semilla y tratamiento: la labor son US$ 170.203,55, y ese es el número que este
+panel pone adelante.
+
+**El gasoil tampoco entra.** Vive en OT de carga propias, agrupadas por área y sin línea de
+servicio, así que no hay forma de repartirlo por servicio sin inventar el reparto (ver *Consumo de
+Gasoil por Área*). La consecuencia útil es que el **Total de esta tabla es, exactamente, el KPI
+"Costo Labor"** de la cabecera — los dos salen de sumar las mismas dos patas sobre las mismas filas,
+así que el panel cierra contra un número que ya está en pantalla (US$ 925.009,69 en la 26/27).
+
+Sigue los filtros de la **barra** (Campaña, Mes, Cultivo y Lote, vía `serviciosFiltrados`) y **no**
+los del Detalle por Servicio (Servicio / Estadio / Contratista): esos tres son del panel de arriba, y
+aplicarlos acá dejaría dos tablas pegadas respondiendo a filtros distintos sin que se vea cuál manda
+en cada una.
+
+Una fila por **servicio + unidad de trabajo**. La unidad entra en la clave por el mismo motivo que
+en `renderLaborDetalle`: si un servicio apareciera medido en dos unidades, la columna "Trabajo
+Ejecutado" tendría que elegir una. Hoy no ocurre — verificado sobre el dato, 77 servicios en la
+26/27 y ninguno con unidad mixta —, así que en la práctica es una fila por servicio.
+
+Las filas con **Costo Servicio en 0,00 se muestran igual**, no se esconden: son los trabajos donde
+todo el gasto fue de insumos (las dos aplicaciones con mochila) o donde no hubo gasto alguno
+(`CONSTRUCCION PUENTES LABOR PROPIA`, 15 OT). Ese 0,00 explícito es justo el dato que el panel viene
+a dar.
+
+**La fila de Total aparece siempre**, a diferencia de la del Detalle por Servicio (que necesita el
+filtro de Servicio puesto). Puede hacerlo porque las dos columnas que suma son sumables en cualquier
+combinación: cada OT pertenece a un único grupo servicio+unidad, así que `n` no cuenta ninguna dos
+veces, y los costos están todos en dólares. **"Trabajo Ejecutado" es la excepción**: 15.528,63 ha más
+899,28 hrs no hacen 16.427,91 de nada, así que con una sola unidad en la tabla se muestra la suma y
+con dos o más queda en "—", con el motivo en el `title`.
+
+Reemplazó al gráfico de **Gasto Acumulado de Campaña**, que se quitó a pedido del usuario
+(13/10/2026) — el panel nuevo quedó arriba, junto al Detalle por Servicio, y no en el lugar que
+ocupaba el gráfico al final de la pestaña.
+
 
 ### Trabajos para Terceros
 
