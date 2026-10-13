@@ -75,9 +75,9 @@ document.addEventListener('DOMContentLoaded', function(){
   // Filtros propios de Trabajos para Terceros: solo re-renderizan ese panel.
   document.getElementById('tercmes').addEventListener('change', renderTerceros);
   document.getElementById('terctercero').addEventListener('change', renderTerceros);
-  // Cultivo tiene el mismo alcance que Mes (KPIs, Detalle por Servicio, Costo de Servicios sin
-  // insumos y Gasoil por Área), así que dispara el mismo render completo. No repuebla los demás
-  // filtros: elegir un cultivo no reinicia Servicio/Estadio/Contratista.
+  // Cultivo tiene el mismo alcance que Mes (KPIs, Detalle por Servicio y Gasoil por Área), así que
+  // dispara el mismo render completo. No repuebla los demás filtros: elegir un cultivo no reinicia
+  // Servicio/Estadio/Contratista.
   // Cultivo repuebla la lista de Lotes antes de dibujar (cascada Cultivo -> Lote).
   document.getElementById('gcultivo').addEventListener('change', cambiarCultivoServicios);
   document.getElementById('glote').addEventListener('change', renderG);

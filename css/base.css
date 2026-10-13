@@ -30,7 +30,12 @@
 }
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:var(--font-sans);background:var(--bg);color:var(--ink);line-height:1.4;-webkit-font-smoothing:antialiased}
-.wrap{max-width:1220px;margin:0 auto;padding:22px 26px 60px}
+/* 1220px dejaba casi 700px de margen muerto en un monitor de 1920 y obligaba al Detalle por
+   Servicio —siete columnas desde que se agrego Costo Servicio— a scrollear en horizontal dentro de
+   su panel. 1560px es el ancho que hace entrar esas siete columnas sin scroll y sigue dejando
+   margen a los lados; no estira a pantalla completa a proposito, porque las tablas de texto largo
+   (observaciones de OT) se vuelven ilegibles cuando la linea pasa de ~1600px. */
+.wrap{max-width:1560px;margin:0 auto;padding:22px 26px 60px}
 #app{display:none}
 /* !important: sin esto, una regla posterior con la misma especificidad (ej. .kpis{display:grid})
    puede ganarle a .hidden en el cascade y el bloque queda visible pese a la clase. */

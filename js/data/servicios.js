@@ -241,7 +241,7 @@ function acumularGrupoGasoil(meta, ots){
 // Devuelve el MISMO paquete con `gastos` y `gasoil_sec` recalculados sobre las OT del cultivo
 // elegido. No es un filtro visual: los grupos se vuelven a sumar con las mismas funciones
 // (acumularGrupoServicio / acumularGrupoGasoil) sobre el subconjunto de sus propias OT, asi que
-// los KPIs, el Detalle por Servicio y el Costo de Servicios sin insumos quedan todos expresados sobre
+// los KPIs, el acumulado del modulo y el Detalle por Servicio quedan todos expresados sobre
 // Campaña + Cultivo. Con 'ALL' devuelve el paquete original SIN TOCARLO: no se recalcula nada y
 // los numeros son, byte a byte, los de siempre.
 // Los agregados de campania completa que viaja en el paquete (gasto_total, gmes, glit,
@@ -267,7 +267,7 @@ function filtrarServiciosPorCultivo(S, cultivoKey){
 // ---- Filtro de Lote del modulo Servicios ----
 // Mismo mecanismo y mismo alcance que filtrarServiciosPorCultivo, un nivel mas abajo: NO esconde
 // filas ya sumadas, vuelve a sumar cada grupo sobre sus propias OT de ese lote con las mismas
-// funciones del modelo, asi que KPIs, Detalle por Servicio, Costo de Servicios sin insumos y Gasoil
+// funciones del modelo, asi que KPIs, Detalle por Servicio y Consumo de Gasoil
 // quedan todos expresados sobre Campania + Cultivo + Lote. Con 'ALL' devuelve el paquete intacto.
 //
 // Se aplica DESPUES del de Cultivo (ver serviciosFiltrados en render.js) y los dos componen sin
