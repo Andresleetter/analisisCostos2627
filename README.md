@@ -827,30 +827,35 @@ vez, y si un filtro la saca del resultado se cierra sola.
 
 ### Fila de Total del Detalle por Servicio
 
-Al pie de la tabla, y **solo con el filtro de Servicio puesto**. La razón es la unidad: cualquier
-otra vista de la tabla mezcla servicios medidos en magnitudes distintas, y el Trabajo Ejecutado del
-Total sale como una lista de cosas sueltas —`15.528,63 ha · 167 insumos utilizados · 899,28 hrs ·
-639.462,00 kg`—, que no es el total de nada. Sin ningún filtro, además, repetiría los KPI de la
-pestaña.
+Al pie de la tabla, con **cualquiera de los cuatro filtros puesto** — Mes, Servicio, Estadio o
+Contratista. Con el filtro puesto es el único lugar donde se lee ese subtotal: `Agro Continental
+S.A.` son 33 combinaciones, 937 OT y $ 528.745,05 de servicio sobre $ 1.675.203,78 de total, y esa
+suma no está en ninguna otra parte del tablero.
 
-**Filtrar por Servicio garantiza una sola unidad.** Verificado contra el dato: en las **4 campañas**,
-ningún servicio aparece con más de una unidad de trabajo — 68 servicios en la 26/27, **0 con unidad
-mixta**. Probados los 68 uno por uno en pantalla, los 30 que tienen dos o más combinaciones muestran
-el Total con **una única magnitud** y ninguno con separador de unidades.
+**Sin ningún filtro no aparece**, porque ahí el total de la campaña ya está arriba en los KPI y
+repetirlo al pie de 134 filas no agrega nada.
 
-Tampoco aparece con **una sola fila**, donde repetiría la misma cifra dos veces.
+Hasta el 13/10/2026 aparecía **solo con el filtro de Servicio**. El motivo era una sola columna: al
+mezclar servicios de unidades distintas, el Trabajo Ejecutado del Total salía como una lista de
+cosas sueltas y no totalizaba nada. Filtrar por Servicio garantizaba una sola unidad — verificado
+contra el dato: en las 4 campañas ningún servicio aparece con más de una unidad de trabajo (68 en
+la 26/27, **0 con unidad mixta**). Pero esa restricción escondía también las otras tres columnas,
+que son sumables siempre, así que se levantó y el problema se resolvió donde estaba, en la celda.
 
-Con el filtro puesto es el único lugar donde se lee ese subtotal: `1° Disco` son 3 combinaciones,
-111 OT y 2.874,34 ha por US$ 94.853,22, y esa suma no está en ninguna otra parte del dashboard.
+**Con una sola fila se dibuja igual**, aunque repita sus cifras. Filtrar por Mes y Contratista a la
+vez deja la tabla en una fila, y es justo cuando se busca el total de lo que se está viendo; que el
+pie aparezca y desaparezca según cuántas filas quedaron es más desconcertante que una línea
+repetida, que además se lee distinta (borde verde y la palabra Total).
 
 Qué se puede sumar y qué no:
 
-- **OT Conf. y Costo Total** se suman directo. Ninguna OT se duplica entre
-  filas: cada una pertenece a un único grupo labor + estadio + contratista + unidad.
-- **Trabajo Ejecutado** se acumula por unidad y no se convierte nunca entre magnitudes. Con la regla
-  de arriba hoy siempre sale una sola, pero el acumulado por unidad se conserva: si algún día un
-  servicio llegara con dos, el Total las muestra separadas en vez de sumar peras con manzanas. Los
-  servicios sin trabajo medible (`SERVICIOS_SIN_TRABAJO_EJECUTADO`) quedan fuera del acumulado.
+- **OT Conf., Costo Servicio y Costo Total** se suman directo. Ninguna OT se duplica entre filas:
+  cada una pertenece a un único grupo labor + estadio + contratista + unidad.
+- **Trabajo Ejecutado** se acumula por unidad y no se convierte nunca entre magnitudes. Con una
+  sola unidad sale un único número, que es el caso normal al filtrar por Servicio; con dos o más se
+  muestran todas separadas por punto medio (`20.028,64 ha · 787,40 hrs · 558.752,00 kg ·
+  11 trabajos`), porque cada una sí es el subtotal real de lo suyo. Los servicios sin trabajo
+  medible (`SERVICIOS_SIN_TRABAJO_EJECUTADO`) quedan fuera del acumulado.
 - **Contratista no es sumable**: con uno solo se repite su nombre, con varios se dice cuántos.
 
 ### Unidades de "Trabajo Ejecutado"
