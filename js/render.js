@@ -1624,18 +1624,6 @@ function renderInsumos(){
   ).join('') : '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:16px">Sin consumo de insumos en el período</td></tr>';
 }
 
-// Total por mes del modulo Servicios. `tot` cuenta las CUATRO patas del gasto: labor propia, labor
-// de terceros, insumos y combustible — lo mismo que el KPI de Gasto Total (ver renderG). El gasoil
-// entra por gasoil_sec, que es la misma coleccion que dibuja el panel de Consumo de Gasoil por Area.
-//
-// Antes el acumulado dejaba el gasoil afuera, y entonces el ultimo punto del grafico (1.394k) no
-// coincidia con el total de la campania. Ahora los dos dicen la misma cifra.
-// `ot` y `horas` NO suman las OT de gasoil: son ordenes de carga de combustible, no de labor, y el
-// KPI que las cuenta se llama "OT Confirmadas con labor".
-function monthTotals(S){ const t={}; S.meses.forEach(m=>t[m.k]={k:m.k,lbl:m.lbl,tot:0,ot:0,horas:0});
-  S.gastos.forEach(r=>{const o=t[r.mesnum]; if(o){o.tot+=r.propia+r.tercero+r.insumos;o.ot+=r.n;o.horas+=(r.esH?r.horas:0);}});
-  (S.gasoil_sec||[]).forEach(r=>{const o=t[r.mesnum]; if(o) o.tot+=r.total;});
-  return S.meses.map(m=>t[m.k]); }
 // ---- Combustible: balance Ingreso vs Consumo + consumo por Uso / Detalle ----
 // Qué fila del Consumo está desplegada (clave usoOrigen|usoKey, ver renderCombustible). Vive acá
 // y no en el DOM porque la tabla se regenera completa en cada cambio de filtro — mismo patrón que
@@ -2036,7 +2024,7 @@ function cambiarCampaniaServicios(){ poblarFiltrosServicios(); renderG(); }
 function renderG(){
   const S=serviciosFiltrados();
   const selV=document.getElementById('gmes').value, sel=selV==='ALL'?'ALL':parseInt(selV);
-  const mt=monthTotals(S); const recs=sel==='ALL'?S.gastos:S.gastos.filter(r=>r.mesnum===sel);
+  const recs=sel==='ALL'?S.gastos:S.gastos.filter(r=>r.mesnum===sel);
   const by={}; recs.forEach(r=>{ if(!by[r.labor])by[r.labor]={labor:r.labor,esH:r.esH,n:0,ha:0,horas:0,prop:0,terc:0,ins:0};
     const o=by[r.labor];o.n+=r.n;o.ha+=r.ha;o.horas+=r.horas;o.prop+=r.propia;o.terc+=r.tercero;o.ins+=r.insumos; });
   const labs=Object.values(by).map(o=>({...o,tot:o.prop+o.terc+o.ins})).sort((a,b)=>b.tot-a.tot);
@@ -2093,15 +2081,10 @@ function renderG(){
     ['Costo Combustible','US$ '+fmtUSD(totComb),pcts[2]]];
   document.getElementById('gkpis').innerHTML=K.map(k=>`<div class="gkpi"><div class="k-lab">${k[0]}</div><div class="k-val">${k[1]}</div><div class="k-foot">${k[2]}</div></div>`).join('');
   document.getElementById('gnote').textContent='';
-  let acc=0; const pts=mt.map(m=>{acc+=m.tot;return{lbl:m.lbl,acc};}); const W=1000,H=200,pad=34,aMax=acc||1;
-  const xs=i=>pad+i*(W-2*pad)/Math.max(pts.length-1,1), ys=v=>H-24-(v/aMax)*(H-50);
-  const poly=pts.map((p,i)=>xs(i).toFixed(0)+','+ys(p.acc).toFixed(0)).join(' ');
-  const area=pad+','+(H-24)+' '+poly+' '+xs(pts.length-1).toFixed(0)+','+(H-24);
-  const dots=pts.map((p,i)=>`<circle cx="${xs(i).toFixed(0)}" cy="${ys(p.acc).toFixed(0)}" r="4" fill="var(--green)"/><text x="${xs(i).toFixed(0)}" y="${(ys(p.acc)-9).toFixed(0)}" text-anchor="middle" style="font-size:11px;font-weight:700;fill:var(--teal)">${fmt(p.acc/1000)}k</text><text x="${xs(i).toFixed(0)}" y="${H-6}" text-anchor="middle" style="font-size:11px;fill:var(--muted)">${p.lbl}</text>`).join('');
-  document.getElementById('gacc').innerHTML=`<svg width="100%" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet"><polygon points="${area}" fill="rgba(90,160,44,.12)"/><polyline points="${poly}" fill="none" stroke="var(--green)" stroke-width="2.5"/>${dots}</svg>`;
   renderLaborDetalle();
   renderGasoil();
   renderTerceros();
+  renderServiciosSinInsumos();
 }
 
 // Qué fila del Detalle por Servicio está desplegada. Vive acá y no en el DOM porque la tabla se
@@ -2291,6 +2274,104 @@ function filaTotalServicios(labs, hayFiltro){
     `<td class="tr mono">${t.n}</td><td class="tr mono">${ejec}</td>`+
     `<td class="col-contratista" title="${contr}">${contr}</td>`+
     `<td class="tr mono col-tot">US$ ${fmtUSD(t.tot)}</td></tr>`;
+}
+
+// ---- Costo de Servicios (sin insumos) ----
+// Panel pegado al Detalle por Servicio: lee exactamente las MISMAS filas (S.gastos) con otra cuenta.
+// Ocupa el lugar que dejo el grafico de Gasto Acumulado de Campania, que se quito el 13/10/2026 por
+// decision del usuario.
+//
+// Responde algo que el resto de la pestania no podia: cuanto costo el SERVICIO, sin la plata de los
+// insumos que la OT consumio. El Detalle de arriba muestra un Costo Total que suma las tres patas
+// (propia + tercero + insumos), asi que una fila cara no distingue entre un servicio caro y uno
+// barato que aplico mucho producto — Siembra encabeza esa tabla con US$ 759.134,00, de los cuales
+// US$ 588.930,45 son semilla y tratamiento y solo US$ 170.203,55 son la labor.
+//
+// Costo Servicio = labor propia + labor de terceros. NO entra el gasoil: vive en OT de carga
+// propias, agrupadas por area y sin linea de servicio, asi que no hay forma de repartirlo por
+// servicio sin inventar el reparto (ver el panel de Consumo de Gasoil por Area). Por eso el Total
+// de esta tabla es, exactamente, el KPI "Costo Labor" de la cabecera: los dos salen de sumar las
+// mismas dos patas sobre las mismas filas.
+//
+// Sigue los filtros de la BARRA (Campania, Mes, Cultivo y Lote, via serviciosFiltrados) y no los
+// del Detalle por Servicio (Servicio / Estadio / Contratista): esos tres son del panel de arriba, y
+// aplicarlos aca dejaria dos tablas pegadas respondiendo a filtros distintos sin que se vea cual
+// manda en cada una.
+//
+// Una fila por servicio + unidad de trabajo. La unidad entra en la clave por el mismo motivo que en
+// renderLaborDetalle: si un servicio apareciera medido en dos unidades, la columna Trabajo Ejecutado
+// tendria que elegir una. Hoy no ocurre (verificado sobre el dato: 77 servicios en la 26/27, ninguno
+// con unidad mixta), asi que en la practica es una fila por servicio.
+//
+// Las filas con Costo Servicio en 0,00 se muestran igual, no se esconden: son los trabajos donde
+// todo el gasto fue de insumos (las dos aplicaciones con mochila) o donde no hubo gasto alguno
+// (CONSTRUCCION PUENTES LABOR PROPIA, 15 OT), y ese 0,00 explicito es justo el dato que este panel
+// viene a dar.
+function renderServiciosSinInsumos(){
+  const S=serviciosFiltrados();
+  const selV=document.getElementById('gmes').value, sel=selV==='ALL'?'ALL':parseInt(selV);
+  const recs=sel==='ALL'?S.gastos:S.gastos.filter(r=>r.mesnum===sel);
+  const by={};
+  recs.forEach(r=>{ const key=r.labor+'|'+r.unidadTrabajo;
+    if(!by[key]) by[key]={labor:r.labor,unidadTrabajo:r.unidadTrabajo,n:0,ha:0,horas:0,kg:0,
+      ins_lineas:0,trabajos:0,serv:0};
+    const o=by[key]; o.n+=r.n; o.ha+=r.ha; o.horas+=r.horas; o.kg+=r.kg; o.ins_lineas+=r.ins_lineas;
+    o.trabajos+=(r.trabajos||0);
+    // La UNICA cuenta propia de este panel: se suman las dos patas de labor y se deja r.insumos
+    // afuera. Nada se recalcula — propia y tercero ya vienen resueltos por OT desde el modelo.
+    o.serv+=r.propia+r.tercero; });
+  const rows=Object.values(by).sort((a,b)=>b.serv-a.serv || a.labor.localeCompare(b.labor,'es'));
+  const nServ=new Set(rows.map(r=>r.labor)).size;
+  document.getElementById('gsi-sub').textContent = rows.length ? nServ+' servicio(s)' : '';
+  document.getElementById('gsibody').innerHTML = (rows.length ? rows.map(l=>{
+    // Mismas reglas de presentacion que el Detalle por Servicio: la celda de trabajo ejecutado la
+    // arma celdaTrabajoEjecutado() y el chip de unidad solo existe para las tres unidades medidas.
+    const sinEjec=servicioEnLista(l.labor, SERVICIOS_SIN_TRABAJO_EJECUTADO);
+    const ejec=celdaTrabajoEjecutado(l.unidadTrabajo,{ha:l.ha,horas:l.horas,kg:l.kg,
+      ins:l.ins_lineas,trabajos:l.trabajos},sinEjec);
+    const u=U_TRABAJO[l.unidadTrabajo];
+    const chip=(sinEjec||!u)?'':`<span class="chip ${u.chip}">${u.txt}</span>`;
+    return `<tr><td><span class="lname">${escHtml(l.labor)}</span> ${chip}</td>`+
+      `<td class="tr mono">${l.n}</td><td class="tr mono">${ejec}</td>`+
+      `<td class="tr mono col-tot">US$ ${fmtUSD(l.serv)}</td></tr>`;
+  }).join('') : '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:16px">Sin servicios para el filtro seleccionado</td></tr>')
+    + filaTotalServiciosSinInsumos(rows, nServ);
+}
+
+// ---- Fila de Total al pie de Costo de Servicios (sin insumos) ----
+// El total en plata es el numero que justifica el panel, asi que aparece SIEMPRE que haya filas, a
+// diferencia de la del Detalle por Servicio (que necesita el filtro de Servicio puesto). Puede
+// hacerlo porque las dos columnas que suma son sumables en cualquier combinacion: cada OT pertenece
+// a un unico grupo servicio+unidad, asi que `n` no cuenta ninguna dos veces, y los costos estan
+// todos en dolares.
+//
+// Trabajo Ejecutado es la excepcion y por eso no se suma a la fuerza: 15.528,63 ha mas 899,28 hrs no
+// hacen 16.427,91 de nada. Con UNA sola unidad en la tabla se muestra la suma, que ahi si significa
+// algo; con dos o mas queda en "—" y el title dice por que. Los servicios sin trabajo medible
+// (SERVICIOS_SIN_TRABAJO_EJECUTADO) quedan fuera del acumulado: su superficie no describe ningun
+// trabajo. Es el mismo criterio de filaTotalServicios.
+function filaTotalServiciosSinInsumos(rows, nServ){
+  if(!rows.length) return '';
+  const CANT={hrs:'horas', kg:'kg', ins:'ins_lineas', trabajos:'trabajos'};
+  const porUnidad={};
+  let n=0, serv=0;
+  rows.forEach(l=>{ n+=l.n; serv+=l.serv;
+    if(servicioEnLista(l.labor, SERVICIOS_SIN_TRABAJO_EJECUTADO)) return;
+    const u=l.unidadTrabajo;
+    porUnidad[u]=(porUnidad[u]||0)+(l[CANT[u]||'ha']||0); });
+  const unidades=Object.keys(porUnidad);
+  let ejec;
+  if(unidades.length===1){
+    const v=porUnidad[unidades[0]];
+    ejec=celdaTrabajoEjecutado(unidades[0], {ha:v, horas:v, kg:v, ins:v, trabajos:v}, false);
+  } else if(!unidades.length){
+    ejec='<span class="tw-sin">—</span>';
+  } else {
+    ejec=`<span class="tw-sin" title="La tabla mezcla ${unidades.length} unidades de trabajo (${unidades.join(', ')}): no son sumables entre si">—</span>`;
+  }
+  return `<tr class="sv-total"><td>Total<span class="sv-tot-n">${nServ} servicio(s)</span></td>`+
+    `<td class="tr mono">${n}</td><td class="tr mono">${ejec}</td>`+
+    `<td class="tr mono col-tot">US$ ${fmtUSD(serv)}</td></tr>`;
 }
 
 // ---- Consumo de Gasoil por Área ----
