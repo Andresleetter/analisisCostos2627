@@ -30,6 +30,16 @@
 .qty-unit{white-space:nowrap}
 .ldt th{font-size:10px} .ldt td{padding:9px 8px} .ldt .lname{font-weight:700;color:var(--ink);font-size:12.5px}
 .col-tot{font-weight:800}
+/* "Costo Servicio" va al lado de "Costo Total" y la diferencia entre las dos son los insumos. Se
+   distingue en peso y color: el Total es la cifra que cierra la fila (negrita fuerte, tinta plena)
+   y el Servicio es la que se lee contra ella, asi que va un escalon mas abajo. No lleva color
+   propio — un tercer color en la fila competiria con los chips de unidad. */
+.col-serv{font-weight:700;color:var(--muted)}
+/* "US$" del encabezado de las columnas de plata. El simbolo salio de cada celda (una tabla de 134
+   filas repetia "US$" 268 veces y le comia ancho a los nombres de servicio, que son largos) y se
+   dice UNA vez arriba, como la unidad de una columna. Va en bloque propio debajo del titulo para
+   no alargar el encabezado a lo ancho, y en gris, porque es la unidad y no el nombre. */
+.th-um{display:block;font-weight:700;color:var(--muted);opacity:.75;letter-spacing:.3px}
 /* Unidad de la columna "Trabajo Ejecutado" (ha / hrs / kg). Antes iba en un <small> gris claro que
    quedaba casi ilegible al lado del numero; ahora va al mismo tamaño que el resto de la tabla y en
    negrita, para que la unidad se lea de un vistazo sin competir con el valor. El color es el MISMO

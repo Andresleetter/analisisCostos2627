@@ -2084,7 +2084,6 @@ function renderG(){
   renderLaborDetalle();
   renderGasoil();
   renderTerceros();
-  renderServiciosSinInsumos();
 }
 
 // Qué fila del Detalle por Servicio está desplegada. Vive acá y no en el DOM porque la tabla se
@@ -2125,8 +2124,9 @@ function celdaTrabajoEjecutado(unidadTrabajo, v, sinEjec){
 // Desplegable de una fila: las OT individuales que la componen. NO vuelve a leer consultaOT ni
 // recalcula nada — recorre `l.ots`, el resumen que construirServicios() (js/data/servicios.js)
 // dejó guardado sobre las OT YA agrupadas por agruparOTS(), así que una OT con varias líneas
-// (servicio + labor + insumos) aparece una sola vez. El costo total de cada OT es su aporte real
-// al grupo: Labor Propia + Labor Tercero + Insumos, sin redondear antes de sumar.
+// (servicio + labor + insumos) aparece una sola vez. Cada OT trae las dos cifras de su fila, con el
+// mismo corte: Costo Servicio es Labor Propia + Labor Tercero y Costo Total le suma los Insumos,
+// sin redondear antes de sumar.
 // La observacion de la OT en HTML. 68 de las 1.415 observaciones cargadas traen saltos de linea y
 // son las que mas los necesitan: una dosis por renglon ("Cyperex: 0,085 Kg/ha / Garant: 0,035 L/ha")
 // o el presupuesto desglosado ("Monto aprobado 217 hs / Metros aprobados 19355mts / Hora total...").
@@ -2149,14 +2149,15 @@ function svDetalleOTs(l, sinEjec){
     return `<tr><td class="mono"><b>${escHtml(o.ot)}</b></td><td class="mono">${ipFecha(o.fr)}</td>`+
       `<td>${escHtml(o.cultivo)}</td><td>${escHtml(o.lote)||'<span class="ip-sin">—</span>'}</td>`+
       `<td class="tr mono">${ejec}</td>`+
-      `<td class="tr mono col-tot">US$ ${fmtUSD(o.propia+o.tercero+o.insumos)}</td>`+
+      `<td class="tr mono col-serv">${fmtUSD(o.propia+o.tercero)}</td>`+
+      `<td class="tr mono col-tot">${fmtUSD(o.propia+o.tercero+o.insumos)}</td>`+
       `<td class="sv-obs">${obs?obsHtml(obs):'<span class="ip-sin">—</span>'}</td></tr>`;
   }).join('');
   const conObs=ots.filter(o=>String(o.obs||'').trim()).length;
-  return `<tr class="sv-det"><td colspan="6"><div class="sv-det-tit">${ots.length} orden(es) de trabajo · ${escHtml(l.labor)} · ${escHtml(l.estadio)}`+
+  return `<tr class="sv-det"><td colspan="7"><div class="sv-det-tit">${ots.length} orden(es) de trabajo · ${escHtml(l.labor)} · ${escHtml(l.estadio)}`+
     (ots.length?` · ${conObs}/${ots.length} con observación`:'')+`</div>`+
     `<div class="sv-det-wrap"><table class="sv-ots"><thead><tr><th>OT</th><th>Fecha</th><th>Cultivo</th><th>Lote</th>`+
-    `<th class="tr">Trabajo Ejecutado</th><th class="tr">Costo Total</th><th>Observaciones</th></tr></thead><tbody>${filas}</tbody></table></div>`+
+    `<th class="tr">Trabajo Ejecutado</th><th class="tr">Costo Servicio<span class="th-um">US$</span></th><th class="tr">Costo Total<span class="th-um">US$</span></th><th>Observaciones</th></tr></thead><tbody>${filas}</tbody></table></div>`+
     `</td></tr>`;
 }
 // ---- Detalle por Servicio: filtros de Servicio, Estadio y Contratista, afectan SOLO esta tabla ----
@@ -2209,22 +2210,26 @@ function renderLaborDetalle(){
     // que usa cada OT del desplegable.
     const sinEjec=servicioEnLista(l.labor, SERVICIOS_SIN_TRABAJO_EJECUTADO);
     const ejec=celdaTrabajoEjecutado(l.unidadTrabajo,{ha:l.ha,horas:l.horas,kg:l.kg,ins:l.ins_lineas,trabajos:l.trabajos},sinEjec);
-    // El chip de unidad de la columna Servicio solo existe para las tres unidades MEDIDAS: sin
-    // trabajo ejecutado no hay unidad que rotular, y 'ins'/'trabajos' son conteos, no unidades.
-    const u=U_TRABAJO[l.unidadTrabajo];
-    const chip=(sinEjec||!u)?'':`<span class="chip ${u.chip}">${u.txt}</span>`;
+    // Sin chip de unidad en la columna Servicio: la unidad ya la dice "Trabajo Ejecutado" en la
+    // misma fila (ha / hrs / kg / insumos utilizados / trabajos), asi que la pastilla repetia el
+    // dato y le robaba ancho al nombre del servicio, que es largo ("Reparacion de Camino retro
+    // excavadora x Hs") y venia partiendose en dos renglones. Se quito el 13/10/2026 a pedido del
+    // usuario. U_TRABAJO sigue en uso: lo lee celdaTrabajoEjecutado() para el rotulo de color de
+    // esa otra columna.
     const contratistaTxt=labelContratista(l.contratista);
     // La fila es desplegable: el caret ▸/▾ va en la celda de "OT Conf." (no hay columna extra de
     // "Ver detalle") y el clic se atiende delegado sobre #gld, ver js/events.js.
     const clave=claveFilaServicio(l);
     const abierta=servFilaAbierta===clave;
-    // La fila muestra solo el Costo Total (propia + tercero + insumos): las columnas "Labor
-    // Tercero" e "Insumos" se quitaron a pedido del usuario. l.terc y l.ins se siguen acumulando
-    // porque forman l.tot.
-    let html=`<tr class="sv-fila${abierta?' open':''}" data-fila="${encodeURIComponent(clave)}"><td><span class="lname">${l.labor}</span> ${chip}</td><td><span class="chip chip-etapa">${l.estadio}</span></td><td class="tr mono"><span class="ip-caret">${abierta?'▾':'▸'}</span> ${l.n}</td><td class="tr mono">${ejec}</td><td class="col-contratista" title="${contratistaTxt}">${contratistaTxt}</td><td class="tr mono col-tot">US$ ${fmtUSD(l.tot)}</td></tr>`;
+    // Dos columnas de plata y la diferencia entre ellas son los insumos: "Costo Servicio" es la
+    // labor (propia + tercero) y "Costo Total" es esa labor mas los insumos de la OT. Leerlas
+    // juntas es lo que distingue un servicio caro de uno barato que aplico mucho producto.
+    // El desglose propia/tercero sigue sin mostrarse (se quito a pedido del usuario el 24/09/2026):
+    // l.prop y l.terc se acumulan igual porque forman estas dos cifras.
+    let html=`<tr class="sv-fila${abierta?' open':''}" data-fila="${encodeURIComponent(clave)}"><td><span class="lname">${l.labor}</span></td><td><span class="chip chip-etapa">${l.estadio}</span></td><td class="tr mono"><span class="ip-caret">${abierta?'▾':'▸'}</span> ${l.n}</td><td class="tr mono">${ejec}</td><td class="col-contratista" title="${contratistaTxt}">${contratistaTxt}</td><td class="tr mono col-serv">${fmtUSD(l.prop+l.terc)}</td><td class="tr mono col-tot">${fmtUSD(l.tot)}</td></tr>`;
     if(abierta) html+=svDetalleOTs(l, sinEjec);
     return html;
-  }).join('') : '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:16px">Sin registros para el filtro seleccionado</td></tr>')
+  }).join('') : '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:16px">Sin registros para el filtro seleccionado</td></tr>')
     + filaTotalServicios(labs, hayFiltro);
 }
 
@@ -2238,7 +2243,7 @@ function renderLaborDetalle(){
 // se despliega.
 //
 // Qué se puede sumar y qué no:
-//  · OT Conf. y Costo Total se suman directo. Las OT no se duplican entre
+//  · OT Conf., Costo Servicio y Costo Total se suman directo. Las OT no se duplican entre
 //    filas — cada OT pertenece a un único grupo labor+estadio+contratista+unidad (ver el comentario
 //    de agrupación más arriba), así que sumar `n` no cuenta ninguna dos veces.
 //  · Trabajo Ejecutado NO se puede sumar entre unidades distintas: 1.717 ha y 320 hrs no hacen
@@ -2253,11 +2258,11 @@ function renderLaborDetalle(){
 function filaTotalServicios(labs, hayFiltro){
   if(!hayFiltro || labs.length < 2) return '';
   const CANT = {hrs:'horas', kg:'kg', ins:'ins_lineas', trabajos:'trabajos'};
-  const t = {n:0, tot:0};
+  const t = {n:0, serv:0, tot:0};
   const porUnidad = {};
   const contratistas = new Set();
   labs.forEach(l=>{
-    t.n += l.n; t.tot += l.tot;
+    t.n += l.n; t.serv += l.prop + l.terc; t.tot += l.tot;
     contratistas.add(l.contratista);
     if(servicioEnLista(l.labor, SERVICIOS_SIN_TRABAJO_EJECUTADO)) return;
     const u = l.unidadTrabajo;
@@ -2273,105 +2278,8 @@ function filaTotalServicios(labs, hayFiltro){
   return `<tr class="sv-total"><td colspan="2">Total<span class="sv-tot-n">${labs.length} combinaciones</span></td>`+
     `<td class="tr mono">${t.n}</td><td class="tr mono">${ejec}</td>`+
     `<td class="col-contratista" title="${contr}">${contr}</td>`+
-    `<td class="tr mono col-tot">US$ ${fmtUSD(t.tot)}</td></tr>`;
-}
-
-// ---- Costo de Servicios (sin insumos) ----
-// Panel pegado al Detalle por Servicio: lee exactamente las MISMAS filas (S.gastos) con otra cuenta.
-// Ocupa el lugar que dejo el grafico de Gasto Acumulado de Campania, que se quito el 13/10/2026 por
-// decision del usuario.
-//
-// Responde algo que el resto de la pestania no podia: cuanto costo el SERVICIO, sin la plata de los
-// insumos que la OT consumio. El Detalle de arriba muestra un Costo Total que suma las tres patas
-// (propia + tercero + insumos), asi que una fila cara no distingue entre un servicio caro y uno
-// barato que aplico mucho producto — Siembra encabeza esa tabla con US$ 759.134,00, de los cuales
-// US$ 588.930,45 son semilla y tratamiento y solo US$ 170.203,55 son la labor.
-//
-// Costo Servicio = labor propia + labor de terceros. NO entra el gasoil: vive en OT de carga
-// propias, agrupadas por area y sin linea de servicio, asi que no hay forma de repartirlo por
-// servicio sin inventar el reparto (ver el panel de Consumo de Gasoil por Area). Por eso el Total
-// de esta tabla es, exactamente, el KPI "Costo Labor" de la cabecera: los dos salen de sumar las
-// mismas dos patas sobre las mismas filas.
-//
-// Sigue los filtros de la BARRA (Campania, Mes, Cultivo y Lote, via serviciosFiltrados) y no los
-// del Detalle por Servicio (Servicio / Estadio / Contratista): esos tres son del panel de arriba, y
-// aplicarlos aca dejaria dos tablas pegadas respondiendo a filtros distintos sin que se vea cual
-// manda en cada una.
-//
-// Una fila por servicio + unidad de trabajo. La unidad entra en la clave por el mismo motivo que en
-// renderLaborDetalle: si un servicio apareciera medido en dos unidades, la columna Trabajo Ejecutado
-// tendria que elegir una. Hoy no ocurre (verificado sobre el dato: 77 servicios en la 26/27, ninguno
-// con unidad mixta), asi que en la practica es una fila por servicio.
-//
-// Las filas con Costo Servicio en 0,00 se muestran igual, no se esconden: son los trabajos donde
-// todo el gasto fue de insumos (las dos aplicaciones con mochila) o donde no hubo gasto alguno
-// (CONSTRUCCION PUENTES LABOR PROPIA, 15 OT), y ese 0,00 explicito es justo el dato que este panel
-// viene a dar.
-function renderServiciosSinInsumos(){
-  const S=serviciosFiltrados();
-  const selV=document.getElementById('gmes').value, sel=selV==='ALL'?'ALL':parseInt(selV);
-  const recs=sel==='ALL'?S.gastos:S.gastos.filter(r=>r.mesnum===sel);
-  const by={};
-  recs.forEach(r=>{ const key=r.labor+'|'+r.unidadTrabajo;
-    if(!by[key]) by[key]={labor:r.labor,unidadTrabajo:r.unidadTrabajo,n:0,ha:0,horas:0,kg:0,
-      ins_lineas:0,trabajos:0,serv:0};
-    const o=by[key]; o.n+=r.n; o.ha+=r.ha; o.horas+=r.horas; o.kg+=r.kg; o.ins_lineas+=r.ins_lineas;
-    o.trabajos+=(r.trabajos||0);
-    // La UNICA cuenta propia de este panel: se suman las dos patas de labor y se deja r.insumos
-    // afuera. Nada se recalcula — propia y tercero ya vienen resueltos por OT desde el modelo.
-    o.serv+=r.propia+r.tercero; });
-  const rows=Object.values(by).sort((a,b)=>b.serv-a.serv || a.labor.localeCompare(b.labor,'es'));
-  const nServ=new Set(rows.map(r=>r.labor)).size;
-  document.getElementById('gsi-sub').textContent = rows.length ? nServ+' servicio(s)' : '';
-  document.getElementById('gsibody').innerHTML = (rows.length ? rows.map(l=>{
-    // Mismas reglas de presentacion que el Detalle por Servicio: la celda de trabajo ejecutado la
-    // arma celdaTrabajoEjecutado() y el chip de unidad solo existe para las tres unidades medidas.
-    const sinEjec=servicioEnLista(l.labor, SERVICIOS_SIN_TRABAJO_EJECUTADO);
-    const ejec=celdaTrabajoEjecutado(l.unidadTrabajo,{ha:l.ha,horas:l.horas,kg:l.kg,
-      ins:l.ins_lineas,trabajos:l.trabajos},sinEjec);
-    const u=U_TRABAJO[l.unidadTrabajo];
-    const chip=(sinEjec||!u)?'':`<span class="chip ${u.chip}">${u.txt}</span>`;
-    return `<tr><td><span class="lname">${escHtml(l.labor)}</span> ${chip}</td>`+
-      `<td class="tr mono">${l.n}</td><td class="tr mono">${ejec}</td>`+
-      `<td class="tr mono col-tot">US$ ${fmtUSD(l.serv)}</td></tr>`;
-  }).join('') : '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:16px">Sin servicios para el filtro seleccionado</td></tr>')
-    + filaTotalServiciosSinInsumos(rows, nServ);
-}
-
-// ---- Fila de Total al pie de Costo de Servicios (sin insumos) ----
-// El total en plata es el numero que justifica el panel, asi que aparece SIEMPRE que haya filas, a
-// diferencia de la del Detalle por Servicio (que necesita el filtro de Servicio puesto). Puede
-// hacerlo porque las dos columnas que suma son sumables en cualquier combinacion: cada OT pertenece
-// a un unico grupo servicio+unidad, asi que `n` no cuenta ninguna dos veces, y los costos estan
-// todos en dolares.
-//
-// Trabajo Ejecutado es la excepcion y por eso no se suma a la fuerza: 15.528,63 ha mas 899,28 hrs no
-// hacen 16.427,91 de nada. Con UNA sola unidad en la tabla se muestra la suma, que ahi si significa
-// algo; con dos o mas queda en "—" y el title dice por que. Los servicios sin trabajo medible
-// (SERVICIOS_SIN_TRABAJO_EJECUTADO) quedan fuera del acumulado: su superficie no describe ningun
-// trabajo. Es el mismo criterio de filaTotalServicios.
-function filaTotalServiciosSinInsumos(rows, nServ){
-  if(!rows.length) return '';
-  const CANT={hrs:'horas', kg:'kg', ins:'ins_lineas', trabajos:'trabajos'};
-  const porUnidad={};
-  let n=0, serv=0;
-  rows.forEach(l=>{ n+=l.n; serv+=l.serv;
-    if(servicioEnLista(l.labor, SERVICIOS_SIN_TRABAJO_EJECUTADO)) return;
-    const u=l.unidadTrabajo;
-    porUnidad[u]=(porUnidad[u]||0)+(l[CANT[u]||'ha']||0); });
-  const unidades=Object.keys(porUnidad);
-  let ejec;
-  if(unidades.length===1){
-    const v=porUnidad[unidades[0]];
-    ejec=celdaTrabajoEjecutado(unidades[0], {ha:v, horas:v, kg:v, ins:v, trabajos:v}, false);
-  } else if(!unidades.length){
-    ejec='<span class="tw-sin">—</span>';
-  } else {
-    ejec=`<span class="tw-sin" title="La tabla mezcla ${unidades.length} unidades de trabajo (${unidades.join(', ')}): no son sumables entre si">—</span>`;
-  }
-  return `<tr class="sv-total"><td>Total<span class="sv-tot-n">${nServ} servicio(s)</span></td>`+
-    `<td class="tr mono">${n}</td><td class="tr mono">${ejec}</td>`+
-    `<td class="tr mono col-tot">US$ ${fmtUSD(serv)}</td></tr>`;
+    `<td class="tr mono col-serv">${fmtUSD(t.serv)}</td>`+
+    `<td class="tr mono col-tot">${fmtUSD(t.tot)}</td></tr>`;
 }
 
 // ---- Consumo de Gasoil por Área ----
@@ -2388,14 +2296,14 @@ function svDetalleGasoil(area, ots){
     return `<tr><td class="mono"><b>${escHtml(o.ot)}</b></td><td class="mono">${ipFecha(o.fr)}</td>`+
       `<td>${escHtml(o.cultivo)}</td><td>${escHtml(o.lote)||'<span class="ip-sin">—</span>'}</td>`+
       `<td class="tr mono">${fmt1(o.litros)} L</td>`+
-      `<td class="tr mono col-tot">US$ ${fmtUSD(o.total)}</td>`+
+      `<td class="tr mono col-tot">${fmtUSD(o.total)}</td>`+
       `<td class="sv-obs">${obs?obsHtml(obs):'<span class="ip-sin">—</span>'}</td></tr>`;
   }).join('');
   const conObs=ots.filter(o=>String(o.obs||'').trim()).length;
   return `<tr class="sv-det"><td colspan="6"><div class="sv-det-tit">${ots.length} orden(es) de trabajo · ${escHtml(area)}`+
     (ots.length?` · ${conObs}/${ots.length} con observación`:'')+`</div>`+
     `<div class="sv-det-wrap"><table class="sv-ots"><thead><tr><th>OT</th><th>Fecha</th><th>Cultivo</th><th>Lote</th>`+
-    `<th class="tr">L. Consumidos</th><th class="tr">Costo Total</th><th>Observaciones</th></tr></thead><tbody>${filas}</tbody></table></div>`+
+    `<th class="tr">L. Consumidos</th><th class="tr">Costo Total<span class="th-um">US$</span></th><th>Observaciones</th></tr></thead><tbody>${filas}</tbody></table></div>`+
     `</td></tr>`;
 }
 
@@ -2411,7 +2319,7 @@ function filaTotalGasoil(rows){
         total=rows.reduce((s,r)=>s+r.total,0);
   return `<tr class="sv-total"><td colspan="2">Total<span class="sv-tot-n">${rows.length} área(s)</span></td>`+
     `<td class="tr mono">${n}</td><td class="tr mono">${fmt1(litros)} L</td>`+
-    `<td class="col-contratista"></td><td class="tr mono col-tot">US$ ${fmtUSD(total)}</td></tr>`;
+    `<td class="col-contratista"></td><td class="tr mono col-tot">${fmtUSD(total)}</td></tr>`;
 }
 
 function renderGasoil(){
@@ -2437,7 +2345,7 @@ function renderGasoil(){
     // Servicio y Contratista van vacias: las OT de gasoil no traen linea de categoria Servicio y
     // el campo contratista esta en blanco en el Excel. Se deja el hueco en vez de rellenarlo con
     // "GASOIL" o "Sin contratista", que serian datos puestos por el dashboard, no por la OT.
-    let html=`<tr class="sv-fila${abierta?' open':''}" data-area="${encodeURIComponent(r.area)}"><td></td><td><span class="chip chip-etapa">${escHtml(r.area)}</span></td><td class="tr mono"><span class="ip-caret">${abierta?'▾':'▸'}</span> ${r.n}</td><td class="tr mono">${fmt1(r.litros)} L</td><td class="col-contratista"></td><td class="tr mono col-tot">US$ ${fmtUSD(r.total)}</td></tr>`;
+    let html=`<tr class="sv-fila${abierta?' open':''}" data-area="${encodeURIComponent(r.area)}"><td></td><td><span class="chip chip-etapa">${escHtml(r.area)}</span></td><td class="tr mono"><span class="ip-caret">${abierta?'▾':'▸'}</span> ${r.n}</td><td class="tr mono">${fmt1(r.litros)} L</td><td class="col-contratista"></td><td class="tr mono col-tot">${fmtUSD(r.total)}</td></tr>`;
     if(abierta) html+=svDetalleGasoil(r.area, r.ots||[]);
     return html;
   }).join('')+filaTotalGasoil(rows):'<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:16px">Sin consumo de gasoil en el período</td></tr>';
@@ -2480,11 +2388,11 @@ function renderTerceros(){
         `<td title="${escHtml(String(r.obs))}">${escHtml(String(r.serv))}`+
         `<div class="terc-obs">${escHtml(String(r.obs))}</div></td>`+
         `<td class="tr mono">${r.horas?fmt1(r.horas):'—'}</td>`+
-        `<td class="tr mono">US$ ${fmtUSD(r.imp)}</td></tr>`;
+        `<td class="tr mono">${fmtUSD(r.imp)}</td></tr>`;
     });
     html+=`<tr class="grp neutra terc-sub"><td><b>${escHtml(String(b.tercero))}</b></td>`+
-      `<td colspan="2">${b.ots.length} OT`+(b.impD?` · US$ ${fmtUSD(b.impD)} a descontar`:'')+`</td>`+
-      `<td class="tr mono">${b.horas?fmt1(b.horas):'—'}</td><td class="tr mono col-tot">US$ ${fmtUSD(b.imp)}</td></tr>`;
+      `<td colspan="2">${b.ots.length} OT`+(b.impD?` · ${fmtUSD(b.impD)} a descontar`:'')+`</td>`+
+      `<td class="tr mono">${b.horas?fmt1(b.horas):'—'}</td><td class="tr mono col-tot">${fmtUSD(b.imp)}</td></tr>`;
   });
   document.getElementById('tercbody').innerHTML = html ||
     '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px">Sin OT en el período</td></tr>';
