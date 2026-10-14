@@ -1606,20 +1606,92 @@ Se descartan además las filas de `consultaCultivos` con plan ≤ 0,01 ha: son m
 
 Se evalúan en este orden (`clasificarSiembra`); el orden importa porque "supera la parcela" es el único caso *imposible*, y por lo tanto un error de carga seguro y no una diferencia de criterio:
 
-| Diagnóstico | Significa |
-|---|---|
-| **Supera la parcela** | La parcela declara más hectáreas sembradas que las que tiene. Hay que corregirlo en Albor. |
-| **Sin OT de siembra** | La parcela declara siembra pero no existe ninguna OT de siembra para ese lote. |
-| **OT sin confirmar** | Hay OT de siembra abiertas: hasta que no se confirmen, su superficie no se puede acreditar. Se reporta aunque los dos números den 0, porque acá el 0 no es "coincide" sino "falta cerrar". |
-| **Falta cargar** | Las OT confirman siembra y la parcela sigue en cero. |
-| **Coincide** | Los dos números dan lo mismo (tolerancia 0,01 ha). |
-| **Difiere de la OT** | No coinciden. Puede ser siembra parcial ya cargada, o falta completarla. |
+| Diagnóstico | Comparación | Significa |
+|---|---|---|
+| **Supera la parcela** | vs. plan | La parcela declara más hectáreas sembradas que las que tiene. Imposible: hay que corregirlo en Albor. |
+| **Sin OT de siembra** | carga | La parcela declara siembra pero no existe ninguna OT de siembra para ese lote. |
+| **OT sin confirmar** | carga | Hay OT de siembra abiertas: hasta que no se confirmen, su superficie no se puede acreditar. |
+| **Falta cargar** | carga | Las OT confirman siembra y la parcela sigue en cero. |
+| **Parcela declara de más** | carga | La parcela declara MÁS que lo que confirman las OT. Sobra superficie cargada a mano que ninguna orden respalda. |
+| **Parcela declara de menos** | carga | Las OT confirman MÁS de lo que declara la parcela. Hay trabajo confirmado que la parcela todavía no refleja. |
+| **Siembra de menos `N` ha** | vs. plan | Las dos fuentes dicen lo mismo, pero ese número no cubre el plan del lote: falta sembrar. |
+| **Siembra de más `N` ha** | vs. plan | Las labores suman MÁS hectáreas que las que tiene el lote. Imposible: hay que revisar las `Unidades/Dosis` de esas OT. |
+| **Coincide** | las dos | Las dos fuentes dan lo mismo **y** ese número cubre el plan. |
 
 Los chips de estado reutilizan `.rc-est` del Seguimiento de Receta para no inventar un vocabulario visual nuevo: ámbar = hay que corregir, azul = falta completar, verde = coincide, gris = todavía no hay con qué comparar.
+
+### Son dos comparaciones encadenadas
+
+El panel nació para auditar **carga** — que las dos fuentes digan lo mismo — y esa sigue siendo la
+primera pregunta. Pero que coincidan no dice nada sobre si el lote se terminó de sembrar, así que
+hay una segunda:
+
+1. **Sembrado (OT) ↔ Declarado (parcela).** Si no coinciden, es un desvío de carga y se nombra por
+   su dirección: *Parcela declara de más* (superficie cargada a mano que ninguna OT respalda) o
+   *Parcela declara de menos* (trabajo confirmado que la parcela no refleja). Antes las dos caían
+   bajo un único «Difiere de la OT» y había que mirar el signo de la columna Diferencia para saber
+   de cuál se trataba.
+2. **Ese número ↔ el Plan del lote.** Solo se evalúa si el punto 1 dio bien, y también tiene dos
+   direcciones: **Siembra de menos** (el sembrado no llega al plan) y **Siembra de más** (las
+   labores suman más superficie de la que el lote tiene, que es imposible y por eso va en ámbar).
+   Las dos llevan las hectáreas en el propio chip: la columna Diferencia es la de la *otra*
+   comparación y en estos casos marca `0,00`.
+
+**Los nombres distinguen el eje.** Lo que empieza con *«Parcela declara…»* es carga: alguien escribió
+un número que no se corresponde con las OT. Lo que empieza con *«Siembra de…»* es el campo: se sembró
+menos o más superficie que la que el lote tiene. Mirando el chip se sabe, sin abrir nada, si hay que
+corregir Albor o ir a ver el lote.
+
+El orden importa: un problema de **carga** pesa más que uno de **avance**. El primero es un dato mal
+cargado; el segundo es trabajo que todavía no se hizo.
+
+Hoy son **13 parcelas y 37,93 ha** sin sembrar que el panel daba por buenas. El caso que lo destapó
+es el lote **31A**: OT y parcela dicen `50,39` las dos sobre un plan de `52,94`, y el panel lo
+rotulaba «Coincide» — cierto, pero contesta otra pregunta.
+
+> **El cap no tapa el exceso.** `sembradas` sigue capada al plan —es la que se compara contra el
+> campo de la parcela y la que suman los totales—, pero el modelo guarda además `sembradas_crudo`,
+> la suma sin capar, y de ahí sale **Siembra de más**. Sin eso el cap convertía un exceso en un
+> empate. Hoy no hay ninguna parcela en ese estado: verificado sobre el `.xlsx`, **0 de 107**. El
+> exceso de superficie *facturada* es otra cosa y lo sigue reportando Control de Hectáreas.
+
+### Las parcelas que no coinciden se marcan y van primero
+
+El chip de Diagnóstico está en la **última** columna, y hoy 106 de 107 parcelas dicen «Coincide».
+Encontrar la que falla era recorrer la tabla entera hasta el final de cada fila, así que la fila
+lleva además una marca propia: **borde ámbar a la izquierda y el fondo apenas teñido**, visible
+antes de leer ninguna columna. Es el mismo ámbar del chip «hay que corregir», para que la fila y su
+diagnóstico se lean como lo mismo. Las que coinciden **no** llevan marca: lo normal no se señaliza.
+
+El `hover` y la fila abierta le ganan a la marca — son estado de la interacción, no del dato, y si
+la marca les ganara la fila no respondería visualmente al clic.
+
+**El orden de la tabla pone primero todas las que no coinciden**, cualquiera sea su diagnóstico, y
+recién después las que sí. Antes ordenaba solo por el tamaño de la diferencia, y eso dejaba hundido
+un desvío de tipo «OT sin confirmar» o «Sin OT de siembra», que puede tener diferencia `0,00` — el
+problema ahí no es el número, es que todavía no hay con qué compararlo. Dentro de cada grupo sigue
+mandando la diferencia más grande y, a igualdad, el lote.
 
 ### Detalle desplegable y link a Albor
 
 **Clic en una fila** despliega las OT que la componen, agrupadas por labor: número de OT, fecha real, contratista y hectáreas. Las OT **sin confirmar** van en su propio bloque al final — no suman superficie, pero explican por qué una parcela puede figurar corta. Mismo patrón delegado (`auditSiembraAbierta`, listener sobre `#sb-filas`) que los demás desplegables del dashboard: una fila abierta a la vez. Una parcela sin ninguna OT (hoy, el lote 13) no lleva `.sb-fila` y no responde al clic, porque no hay nada que mostrar.
+
+Debajo de la siembra, el mismo desplegable trae la **preparación de suelo del lote**: una fila por
+labor, con su superficie trabajada, la cantidad de OT y la última fecha. Es **contexto, no**
+**auditoría** — no entra en ningún diagnóstico ni en ningún total del panel —, y sirve para leer una
+parcela corta: si el suelo se preparó entero y la siembra no llegó, falta sembrar; si la preparación
+tampoco cubrió el lote, el atraso viene de antes.
+
+El lote **31A** es el ejemplo: sembró 50,39 de un plan de 52,94, y la preparación muestra `1° Disco`
+y `Taipa Sin Implemento` sobre las **52,94 ha completas**, pero `1° Plaina` y `Fumigacion Imperator`
+sobre **50,39** — las mismas que se sembraron. El lote se discó entero y se terminó solo en parte.
+
+Se agrupa por labor y **no** se listan las OT una por una: un lote llega a seis o siete labores de
+preparación y el detalle por OT convertía el desplegable en una página. La superficie sale de
+`haSembradaDeOT()`, la **misma** función con que se mide la siembra (`Unidades/Dosis` de las líneas
+de labor, nunca `Has. Reales`). Las labores medidas **por hora** —`Corte de tranca retropala x Hs` y
+similares— se listan con su cantidad de OT pero sin hectáreas: la celda queda en `—`, porque un
+`0,00` se leería como «no trabajó nada».
 
 Arriba de todo, en su propia barra (`#sb-acciones`), hay un botón **"Cargar hectáreas sembradas en Albor ↗"** que abre `ALBOR_CULTIVOS_URL` (`config.js`) = `https://prodato.alboragro.com/5/Cultivos`, la pantalla donde se cargan las hectáreas sembradas — o sea, donde se corrige lo que esta tabla señala. Reusa el botón de contorno `.prob-link` de Posibles Problemas para no inventar un estilo nuevo. Empezó siendo un link dentro del párrafo del aviso y **quedaba invisible**; leer la tabla y ir a corregir es la secuencia natural, así que el acceso va antes del texto, no enterrado en él. Es un link externo de sola navegación: **el dashboard no consulta la API de Albor**.
 

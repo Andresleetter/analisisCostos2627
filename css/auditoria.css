@@ -133,6 +133,26 @@ tr.detcols td:first-child{padding-left:22px}
 #sb-aviso b{color:var(--ink)}
 
 /* Fila clicable de Siembra por Parcela: mismo tratamiento que tr.pu-fila. */
+/* Parcela que no coincide: borde ambar a la izquierda y un fondo apenas tenido. Mismo ambar que
+   .rc-e-sobre, el chip de "hay que corregir", para que la fila y su diagnostico se lean como lo
+   mismo. Tenue a proposito — son filas de una tabla larga, no una alerta; lo que tiene que lograr
+   es que se encuentren al pasar la vista, no gritar. El borde va en la primera celda porque un
+   border-left sobre el <tr> no lo pintan todos los navegadores con border-collapse. */
+#sb-filas tr.sb-dif>td{background:#fbfaf7}
+#sb-filas tr.sb-dif>td:first-child{box-shadow:inset 3px 0 0 var(--line)}
+/* Cada marca toma el color de su propio chip de diagnostico (.rc-e-sobre / .rc-e-bajo / .rc-e-sin),
+   para que la tabla no tenga dos codigos de color para lo mismo: ambar lo que hay que corregir,
+   azul lo que falta completar, gris lo que todavia no se puede comparar. */
+#sb-filas tr.sb-dif-corregir>td:first-child{box-shadow:inset 3px 0 0 #d9a441}
+#sb-filas tr.sb-dif-corregir>td{background:#fdf9f1}
+#sb-filas tr.sb-dif-completar>td:first-child{box-shadow:inset 3px 0 0 #4a93b5}
+#sb-filas tr.sb-dif-completar>td{background:#f4f9fb}
+#sb-filas tr.sb-dif-sincomparar>td:first-child{box-shadow:inset 3px 0 0 #b9b4b4}
+#sb-filas tr.sb-dif-sincomparar>td{background:#f8f7f7}
+/* El hover y la fila abierta siguen mandando sobre la marca: son estado de la interaccion, no del
+   dato, y si la marca les ganara la fila no responderia visualmente al clic. */
+#sb-filas tr.sb-dif.sb-fila:hover>td{background:#f2f6ef}
+#sb-filas tr.sb-dif.sb-fila.open>td{background:#eef4ea}
 tr.sb-fila{cursor:pointer}
 tr.sb-fila:hover td{background:#f2f6ef}
 tr.sb-fila.open td{background:#eef4ea}

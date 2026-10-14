@@ -382,6 +382,32 @@ function construirAuditoriaSiembra(OTS, proyecciones){
     g.labores[labor].ots.push({ot:o.ot, ha, fecha:o.fr, contratista:o.contr, estado:o.estado});
   });
 
+  // ---- Preparacion de suelo del lote ----
+  // Contexto, no auditoria: una parcela a medio sembrar se lee distinto segun si el suelo estaba
+  // preparado entero o solo en la parte que se sembro. Por eso viaja en el desplegable de la fila y
+  // no en una columna — no entra en ningun diagnostico ni en ningun total del panel.
+  //
+  // Se agrupa por labor y no se listan las OT una por una: un lote llega a seis labores de
+  // preparacion (disco, plaina, taipa...) y el detalle por OT convertia el desplegable en una
+  // pagina. Lo que se necesita saber es que labores se hicieron y sobre cuanta superficie.
+  //
+  // La superficie sale de haSembradaDeOT(), la MISMA funcion con que se mide la siembra: son las
+  // Unidades/Dosis de las lineas de labor, no Has. Reales. Solo acumulan superficie las OT medidas
+  // en hectareas; las que van por hora (ej. "Pasada retro excavadora x Hs") se cuentan igual porque
+  // son trabajo hecho sobre el lote, pero no suman ha — por eso cada labor lleva su propio n_ot.
+  const ESTADIO_PREP = ETAPA_ORDEN[0];
+  const prep = {};
+  OTS.filter(o=>normEstadio(o.estadio)===ESTADIO_PREP && o.estado==='Confirmado').forEach(o=>{
+    const k = clave(o.act, o.lote);
+    if(!prep[k]) prep[k] = {};
+    const labor = o.serv || '(sin labor)';
+    if(!prep[k][labor]) prep[k][labor] = {nombre:labor, ha:0, n_ot:0, n_ha:0, ultima:null};
+    const l = prep[k][labor];
+    l.n_ot++;
+    if(o.modalidad==='hectareas'){ l.ha += haSembradaDeOT(o); l.n_ha++; }
+    if(o.fr && (!l.ultima || o.fr > l.ultima)) l.ultima = o.fr;
+  });
+
   // ---- Cruce ----
   const filas = Object.keys(parcelas).concat(Object.keys(porLote))
     .filter((k,i,a)=>a.indexOf(k)===i)
@@ -399,22 +425,51 @@ function construirAuditoriaSiembra(OTS, proyecciones){
       // sembradas de hoy la suma de Unidades/Dosis no supera el plan en NINGUNA, y en los lotes
       // completos da exactamente el plan (ej. 203: 83,98 + 1,77 = 85,75). Se capa igual por si el
       // dato cambia; ese excedente ya lo reporta el Control de Hectareas, no esta auditoria.
+      // sembradas_crudo = la suma tal cual, sin capar. `sembradas` sigue capada al plan porque es
+      // la que se compara contra el campo de la parcela y la que suman los totales; el crudo existe
+      // solo para poder ver el exceso, que el cap borraba. Hoy no hay ninguna parcela por encima de
+      // su plan (verificado sobre el .xlsx), pero cuando la haya el panel tiene que decirlo en vez
+      // de mostrar un empate que no es tal.
+      const sembradas_crudo = labores.length ? Math.round(labores.reduce((t,l)=>t+l.ha,0)*100)/100 : 0;
       const sembradas = labores.length
         ? Math.min(labores.reduce((t,l)=>t+l.ha,0), p.plan||Infinity)
         : 0;
       const dif = p.declaradas - sembradas;
+      // Lo que le falta al lote para estar sembrado entero. Es la SEGUNDA comparacion del panel:
+      // la primera cruza las dos fuentes entre si (OT contra el campo de la parcela) y esta cruza
+      // ese numero, ya acordado, contra el plan. Que las dos fuentes coincidan no dice nada sobre
+      // si el lote se termino: el 31A declara 50,39 ha en las dos y su plan es 52,94.
+      const falta_plan = p.plan ? Math.max(0, Math.round((p.plan - sembradas)*100)/100) : 0;
+      // El otro lado del mismo eje: lo que se sembro POR ENCIMA del plan del lote.
+      const exceso_plan = p.plan ? Math.max(0, Math.round((sembradas_crudo - p.plan)*100)/100) : 0;
       return {lote, cultivo:p.cultivo, plan:p.plan, declaradas:p.declaradas, sembradas,
-        dif, labores, sinConfirmar:g.sinConfirmar,
+        sembradas_crudo, dif, falta_plan, exceso_plan, labores, sinConfirmar:g.sinConfirmar,
+        // Preparacion de suelo del lote, ordenada por superficie trabajada.
+        preparacion: Object.values(prep[k]||{})
+          .map(l=>({...l, ha:Math.round(l.ha*100)/100}))
+          .sort((a,b)=>b.ha-a.ha || a.nombre.localeCompare(b.nombre,'es')),
         // n_labores > 1 marca los lotes sembrados en dos etapas con labores distintas: es donde
         // aparece el desvio, porque el campo de la parcela suma una de las dos OT de mas.
         n_labores: labores.length,
         // Total de OT de siembra confirmadas del lote — lo usa el render para decidir si la fila
         // se puede desplegar.
         n_ots: labores.reduce((t,l)=>t+l.ots.length, 0),
-        estado: clasificarSiembra(p, sembradas, labores, g.sinConfirmar)};
+        estado: clasificarSiembra(p, sembradas, labores, g.sinConfirmar, sembradas_crudo)};
     })
     .filter(f=>f.declaradas>0 || f.sembradas>0 || f.sinConfirmar.length)
-    .sort((a,b)=>Math.abs(b.dif)-Math.abs(a.dif) || a.lote.localeCompare(b.lote,'es'));
+    // Primero TODAS las que no coinciden, despues las que si. Ordenar solo por el tamanio de la
+    // diferencia no alcanzaba: un desvio de tipo 'sin_confirmar' o 'sin_ot' puede tener dif 0,00 y
+    // quedaba hundido entre un centenar de filas identicas en verde. El estado manda.
+    //
+    // Dentro de cada grupo pesa la hectarea en juego, venga de la comparacion que venga: para un
+    // desvio de carga es |dif| (OT contra parcela) y para uno de avance es falta_plan o
+    // exceso_plan (sembrado contra plan, en cualquiera de sus dos direcciones). Sin esto las 13
+    // `siembra_menos` quedaban ordenadas por lote, porque su dif es 0,00 — y entonces la que
+    // tiene 0,23 ha pendientes salia antes que la de 5,87.
+    .sort((a,b)=>(a.estado==='ok')-(b.estado==='ok')
+      || Math.max(Math.abs(b.dif), b.falta_plan, b.exceso_plan)
+         - Math.max(Math.abs(a.dif), a.falta_plan, a.exceso_plan)
+      || a.lote.localeCompare(b.lote,'es'));
 
   const desvios = filas.filter(f=>f.estado!=='ok');
   return {
@@ -429,7 +484,12 @@ function construirAuditoriaSiembra(OTS, proyecciones){
     // Desglose por tipo de problema, para el subtitulo del panel.
     n_supera_plan: filas.filter(f=>f.estado==='supera_plan').length,
     n_sin_cargar: filas.filter(f=>f.estado==='sin_cargar').length,
-    n_difiere: filas.filter(f=>f.estado==='difiere').length,
+    // Las dos direcciones del desvio de carga, juntas y por separado.
+    n_difiere: filas.filter(f=>f.estado==='declara_mas'||f.estado==='declara_menos').length,
+    n_declara_mas: filas.filter(f=>f.estado==='declara_mas').length,
+    n_declara_menos: filas.filter(f=>f.estado==='declara_menos').length,
+    n_siembra_menos: filas.filter(f=>f.estado==='siembra_menos').length,
+    n_siembra_mas: filas.filter(f=>f.estado==='siembra_mas').length,
     n_sin_confirmar: filas.filter(f=>f.estado==='sin_confirmar').length,
     n_sin_ot: filas.filter(f=>f.estado==='sin_ot').length,
   };
@@ -437,7 +497,7 @@ function construirAuditoriaSiembra(OTS, proyecciones){
 // Clasificacion del desvio de una parcela. El orden importa: "supera_plan" se evalua primero
 // porque es el unico caso IMPOSIBLE (mas sembrado que la superficie de la parcela) y por lo tanto
 // un error de carga seguro, no una diferencia de criterio.
-function clasificarSiembra(p, sembradas, labores, sinConfirmar){
+function clasificarSiembra(p, sembradas, labores, sinConfirmar, sembradas_crudo){
   // 1. IMPOSIBLE: la parcela declara mas superficie sembrada que la que tiene. Es error de carga
   //    seguro, no una diferencia de criterio, asi que gana sobre cualquier otra clasificacion.
   if(p.plan && p.declaradas > p.plan + 0.01) return 'supera_plan';
@@ -448,6 +508,24 @@ function clasificarSiembra(p, sembradas, labores, sinConfirmar){
   if(!labores.length && sinConfirmar.length) return 'sin_confirmar';
   // 4. La OT confirma superficie sembrada y la parcela sigue en cero.
   if(sembradas > 0 && p.declaradas <= 0.01) return 'sin_cargar';
-  if(Math.abs(p.declaradas - sembradas) <= 0.01) return 'ok';
-  return 'difiere';
+  // 5. Las dos fuentes NO dicen lo mismo: es el desvio de carga que este panel vino a detectar.
+  //    Se separa por DIRECCION porque no se corrigen igual y no significan lo mismo: si la parcela
+  //    declara de mas, sobra superficie cargada a mano que ninguna OT respalda; si declara de
+  //    menos, hay trabajo confirmado que la parcela todavia no refleja. Un solo rotulo "Difiere"
+  //    obligaba a mirar el signo de la columna Diferencia para saber de cual de las dos se trata.
+  if(p.declaradas - sembradas > 0.01) return 'declara_mas';
+  if(sembradas - p.declaradas > 0.01) return 'declara_menos';
+  // 6. Las dos fuentes coinciden — y recien ahi tiene sentido la segunda pregunta: ese numero en
+  //    el que coinciden, ¿cubre el lote entero? Las dos direcciones del eje:
+  //      · siembra_mas  = las labores suman MAS que el plan del lote.
+  //      · siembra_menos = no llegan al plan: el lote esta a medio sembrar y hasta ahora figuraba
+  //        como "Coincide", que es cierto pero contesta otra cosa. Hoy son 13 parcelas y 37,93 ha
+  //        (ej. el 31A: OT y parcela dicen 50,39 sobre un plan de 52,94).
+  //    "de mas" se evalua primero por el mismo criterio que 'supera_plan': pasarse de la superficie
+  //    del lote es imposible y por lo tanto un error, mientras que faltar es trabajo pendiente.
+  //    Las dos van al final a proposito: cualquier problema de CARGA pesa mas que uno de avance,
+  //    porque el primero es un dato mal cargado y el segundo es trabajo que todavia no se hizo.
+  if(p.plan && sembradas_crudo > p.plan + 0.01) return 'siembra_mas';
+  if(p.plan && sembradas < p.plan - 0.01) return 'siembra_menos';
+  return 'ok';
 }
