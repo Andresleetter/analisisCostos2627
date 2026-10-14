@@ -1,8 +1,9 @@
 {
  "_comentario": "Foto de Control de Hectareas de la exportacion ANTERIOR. Solo sirve para marcar que casos aparecieron con la subida actual (ver construirControlHectareas en cultivos.js). Se regenera con scratchpad/baseline.mjs en cada subida de datos, ANTES de commitear el xlsx.",
- "exportacion_base": "2026-10-07 11:41",
- "commit_base": "dffb681",
+ "exportacion_base": "2026-10-13 14:02",
+ "commit_base": "d6d9c35",
  "lotes": [
+  "ARROZ|.07A",
   "ARROZ|.27G",
   "ARROZ|.27H",
   "ARROZ|.27J/K",
@@ -26,6 +27,13 @@
   "SORGO|.92/93"
  ],
  "repetidas": [
+  "ARROZ|.03A|Fumigacion Imperator",
+  "ARROZ|.03B|Fumigacion Imperator",
+  "ARROZ|.04|Fumigacion Imperator",
+  "ARROZ|.05A|Fumigacion Imperator",
+  "ARROZ|.05B|Fumigacion Imperator",
+  "ARROZ|.11A|Fumigacion Imperator",
+  "ARROZ|.11C|Fumigacion Imperator",
   "ARROZ|.27G|1° Disco",
   "ARROZ|.27G|Fumigacion Dron",
   "ARROZ|.27H|1° Disco",
