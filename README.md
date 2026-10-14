@@ -852,10 +852,19 @@ Qué se puede sumar y qué no:
 - **OT Conf., Costo Servicio y Costo Total** se suman directo. Ninguna OT se duplica entre filas:
   cada una pertenece a un único grupo labor + estadio + contratista + unidad.
 - **Trabajo Ejecutado** se acumula por unidad y no se convierte nunca entre magnitudes. Con una
-  sola unidad sale un único número, que es el caso normal al filtrar por Servicio; con dos o más se
-  muestran todas separadas por punto medio (`20.028,64 ha · 787,40 hrs · 558.752,00 kg ·
-  11 trabajos`), porque cada una sí es el subtotal real de lo suyo. Los servicios sin trabajo
-  medible (`SERVICIOS_SIN_TRABAJO_EJECUTADO`) quedan fuera del acumulado.
+  sola unidad sale un único número, que es el caso normal al filtrar por Servicio. **Con dos o más,
+  la celda queda vacía** y el `title` dice cuáles son y que hay que filtrar por Servicio para ver el
+  total de una sola.
+
+  Vacía y **no** `—`: el guion es el símbolo que ya usan las *filas* para «este servicio no registra
+  trabajo medible», que es una afirmación sobre el dato. En el Total no hay nada que afirmar sobre el
+  dato — simplemente no existe un total único que escribir —, y reusar el mismo símbolo para las dos
+  cosas le daría a esa fila un sentido que no tiene.
+
+  Listar las magnitudes separadas por punto medio se probó y se quitó el 14/10/2026: no totalizaba
+  nada y la columna crecía a lo ancho de tres (`4.116,08 ha · 202,51 hrs · 7 trabajos`), empujando al
+  resto de la tabla. Los servicios sin trabajo medible (`SERVICIOS_SIN_TRABAJO_EJECUTADO`) quedan
+  fuera del acumulado.
 - **Contratista no es sumable**: con uno solo se repite su nombre, con varios se dice cuántos.
 
 ### Unidades de "Trabajo Ejecutado"
@@ -933,10 +942,16 @@ ese rótulo.
 
 ### El ancho de la página
 
-`.wrap` pasó de **1220px a 1560px** (`base.css`). Con 1220 quedaban casi 700px de margen muerto en
-un monitor de 1920 y el Detalle por Servicio —siete columnas desde que se agregó Costo Servicio—
-scrolleaba en horizontal dentro de su panel. No se estira a pantalla completa a propósito: las
-observaciones de OT se vuelven ilegibles cuando la línea pasa de ~1600px.
+`.wrap` son **1220px** (`base.css`), el ancho de siempre.
+
+El 13/10/2026 se subió a **1560px** porque el Detalle por Servicio, con siete columnas desde que se
+agregó Costo Servicio, no entraba y scrolleaba en horizontal dentro de su panel. Al día siguiente
+volvió a 1220 al quitar las dos cosas que lo ensanchaban: el `US$` repetido en cada celda (que subió
+al header del tablero) y el Trabajo Ejecutado del Total cuando mezcla unidades.
+
+Verificado a 1220, con y sin filtros: ni la tabla de siete columnas ni el desplegable de ocho parten
+una sola celda en dos renglones — ni los nombres largos de servicio (`Reparacion de Camino retro
+excavadora x Hs`), ni los contratistas, ni los montos.
 
 ### Trabajos para Terceros
 

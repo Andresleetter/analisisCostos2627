@@ -2251,11 +2251,12 @@ function renderLaborDetalle(){
 //    filas — cada OT pertenece a un único grupo labor+estadio+contratista+unidad (ver el comentario
 //    de agrupación más arriba), así que sumar `n` no cuenta ninguna dos veces.
 //  · Trabajo Ejecutado NO se puede sumar entre unidades distintas: 1.717 ha y 320 hrs no hacen
-//    2.037 de nada. Se acumula por unidad; con UNA sola en la tabla se muestra ese número, que es
-//    el caso normal al filtrar por Servicio, y con dos o más se muestran todas separadas por punto
-//    medio, porque cada una sí es un subtotal real de lo suyo. Los servicios sin trabajo medible
-//    (SERVICIOS_SIN_TRABAJO_EJECUTADO, celda "—") quedan afuera del acumulado: su superficie no
-//    describe ningún trabajo.
+//    2.037 de nada. Con UNA sola unidad se muestra ese número, que es el caso normal al filtrar
+//    por Servicio; con dos o más la celda queda en "—" y el title dice por qué. Listarlas
+//    separadas por punto medio se probó y se quitó el 14/10/2026: no totalizaba nada y la columna
+//    crecía a lo ancho de tres magnitudes, empujando al resto de la tabla. Los servicios sin
+//    trabajo medible (SERVICIOS_SIN_TRABAJO_EJECUTADO) quedan afuera del acumulado: su superficie
+//    no describe ningún trabajo.
 //  · Contratista no es sumable: con uno solo se repite su nombre, con varios se dice cuántos.
 //
 // `hayFiltro` es lo que decide que aparezca y vale con cualquiera de los cuatro filtros de la
@@ -2277,15 +2278,32 @@ function filaTotalServicios(labs, hayFiltro){
     const u = l.unidadTrabajo;
     porUnidad[u] = (porUnidad[u]||0) + (l[CANT[u]||'ha']||0);
   });
+  // Con UNA sola unidad se muestra la suma. Con dos o mas, la celda queda VACIA: 4.116,08 ha +
+  // 202,51 hrs + 7 trabajos no hacen 4.325,59 de nada, y listarlas una al lado de la otra ademas
+  // ensanchaba la columna a lo ancho de tres magnitudes, empujando al resto de la tabla.
+  //
+  // Vacia y no "—" (decision del usuario, 14/10/2026). El guion es el simbolo que ya usan las FILAS
+  // para "este servicio no registra trabajo medible" (ver celdaTrabajoEjecutado), que es una
+  // afirmacion sobre el dato; aca no hay nada que afirmar sobre el dato, simplemente no existe un
+  // total unico que escribir. Reusar el mismo simbolo para las dos cosas le daria a la fila de
+  // Total un sentido que no tiene.
+  //
+  // El porque no se pierde: viaja en el title de la celda, que no ocupa ancho. Los subtotales por
+  // unidad siguen disponibles filtrando por Servicio, que garantiza una sola unidad.
   const unidades = Object.keys(porUnidad);
-  const ejec = unidades.length
-    ? unidades.map(u=>celdaTrabajoEjecutado(u, {ha:porUnidad[u], horas:porUnidad[u], kg:porUnidad[u],
-        ins:porUnidad[u], trabajos:porUnidad[u]}, false)).join('<span class="sv-tot-sep">·</span>')
-    : '<span class="tw-sin">—</span>';
+  let ejec = '', ejecTitle = '';
+  if(unidades.length===1){
+    const v = porUnidad[unidades[0]];
+    ejec = celdaTrabajoEjecutado(unidades[0], {ha:v, horas:v, kg:v, ins:v, trabajos:v}, false);
+  } else if(!unidades.length){
+    ejecTitle = 'Ninguno de estos servicios registra trabajo ejecutado medible';
+  } else {
+    ejecTitle = `Lo que se está viendo mezcla ${unidades.length} unidades de trabajo (${unidades.join(', ')}) y no son sumables entre sí. Filtre por Servicio para ver el total de una sola unidad.`;
+  }
   const contr = contratistas.size===1 ? labelContratista([...contratistas][0])
     : contratistas.size+' contratistas';
   return `<tr class="sv-total"><td colspan="2">Total<span class="sv-tot-n">${labs.length} ${labs.length===1?'combinación':'combinaciones'}</span></td>`+
-    `<td class="tr mono">${t.n}</td><td class="tr mono">${ejec}</td>`+
+    `<td class="tr mono">${t.n}</td><td class="tr mono"${ejecTitle?` title="${escAttr(ejecTitle)}"`:''}>${ejec}</td>`+
     `<td class="col-contratista" title="${contr}">${contr}</td>`+
     `<td class="tr mono col-serv">$ ${fmtUSD(t.serv)}</td>`+
     `<td class="tr mono col-tot">$ ${fmtUSD(t.tot)}</td></tr>`;

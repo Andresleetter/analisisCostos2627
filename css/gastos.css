@@ -133,8 +133,6 @@ tr.sv-total>td{background:#eef4ea;border-top:2px solid var(--green);border-botto
   font-weight:800;padding-top:10px;padding-bottom:10px}
 .sv-tot-n{display:block;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;
   letter-spacing:.3px;margin-top:2px}
-/* Separador entre unidades cuando el total mezcla ha / hrs / kg: no son sumables entre sí. */
-.sv-tot-sep{color:var(--muted);font-weight:400;margin:0 6px}
 
 /* ---- Combustible · Consumo por Uso / Detalle ---- */
 /* Fila clicable que despliega los movimientos del uso. Mismos tonos y mismo caret (.ip-caret) que
