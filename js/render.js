@@ -745,9 +745,22 @@ const SB_DIAG = {
   ok:            {label:'Coincide',            cls:'rc-e-segun', ayuda:'La parcela declara la misma superficie que confirman las OT.'},
   supera_plan:   {label:'Supera la parcela',   cls:'rc-e-sobre', ayuda:'La parcela declara MÁS hectáreas sembradas que las que tiene. Es imposible: hay que corregirlo en Albor.'},
   sin_cargar:    {label:'Falta cargar',        cls:'rc-e-bajo',  ayuda:'Las OT confirman siembra pero la parcela sigue en cero.'},
-  difiere:       {label:'Difiere de la OT',    cls:'rc-e-bajo',  ayuda:'La parcela y las OT confirmadas no coinciden. Puede ser siembra parcial ya cargada, o falta completarla.'},
+  // Las dos direcciones del desvio de carga. Se nombran por lo que hay que hacer con cada una, no
+  // por el signo: "declara de mas" es superficie cargada a mano que ninguna OT respalda y "declara
+  // de menos" es trabajo confirmado que la parcela todavia no refleja.
+  declara_mas:   {label:'Parcela declara de más',  cls:'rc-e-sobre', ayuda:'La parcela declara MÁS hectáreas sembradas que las que confirman las OT. Sobra superficie cargada a mano que ninguna orden respalda.'},
+  declara_menos: {label:'Parcela declara de menos',cls:'rc-e-bajo',  ayuda:'Las OT confirman MÁS superficie sembrada que la que declara la parcela. Hay trabajo confirmado que la parcela todavía no refleja.'},
+  // Se conserva como respaldo: si algun dia apareciera un estado sin entrada propia, la fila cae
+  // aca en vez de romperse (ver el fallback de renderAuditoriaSiembra).
+  difiere:       {label:'Difiere de la OT',    cls:'rc-e-bajo',  ayuda:'La parcela y las OT confirmadas no coinciden.'},
   sin_confirmar: {label:'OT sin confirmar',    cls:'rc-e-sobre', ayuda:'Hay OT de siembra abiertas: hasta que no se confirmen, su superficie no se puede acreditar.'},
   sin_ot:        {label:'Sin OT de siembra',   cls:'rc-e-sin',   ayuda:'La parcela declara siembra pero no existe ninguna OT de siembra para ese lote.'},
+  // Las dos direcciones del eje "vs. plan", cuando las dos fuentes ya coincidieron entre si.
+  // "de menos" es avance pendiente (azul, falta completar) y "de mas" es imposible —no se puede
+  // sembrar mas superficie de la que el lote tiene— y por eso va en ambar, como 'supera_plan'.
+  // El label de las dos se completa con las hectareas en renderAuditoriaSiembra.
+  siembra_menos: {label:'Siembra de menos',    cls:'rc-e-bajo',  ayuda:'La OT y la parcela dicen lo mismo, pero esa superficie no cubre el plan del lote: queda sin sembrar la diferencia.'},
+  siembra_mas:   {label:'Siembra de más',      cls:'rc-e-sobre', ayuda:'Las labores de siembra suman MÁS hectáreas que las que tiene el lote. Es imposible: hay que revisar las Unidades/Dosis de esas OT.'},
 };
 // Lote desplegado en la tabla de Siembra por Parcela. Vive fuera del render para sobrevivir al
 // redibujado, mismo patron que combUsoAbierto / auditPuentesHorasAbierto. null = todo plegado.
@@ -772,6 +785,10 @@ function renderAuditoriaSiembra(){
     '«Declarado (parcela)» es el campo <i>hectareasSembradas</i> de la parcela, que <b>ningún otro '+
     'módulo del dashboard usa</b>: entra únicamente acá, para poder detectar diferencias de carga. '+
     'Nada de lo que se ve en el resto del dashboard depende de ella. '+
+    '<b>Son dos comparaciones encadenadas:</b> primero las dos fuentes entre sí — tienen que decir '+
+    'lo mismo —, y después ese número contra el <b>plan</b> del lote, que es lo que dice si la '+
+    'siembra se terminó. Una parcela puede tener las dos fuentes de acuerdo y aun así estar a medio '+
+    'sembrar. '+
     '<b>Clic en una fila</b> para ver las OT que la componen.';
 
   const chip = (n, label, cls) => `<div class="rc-chip ${cls}"><span class="rc-n">${n}</span><span class="rc-l">${label}</span></div>`;
@@ -789,6 +806,11 @@ function renderAuditoriaSiembra(){
 
   document.getElementById('sb-filas').innerHTML = A.filas.length ? A.filas.map(f=>{
     const d = SB_DIAG[f.estado] || SB_DIAG.difiere;
+    // Las dos del eje "vs. plan" llevan la cifra en el propio chip: sin ella la fila no dice CUANTO
+    // falta o sobra — la columna Diferencia es la de la OTRA comparacion (OT contra parcela) y en
+    // estos casos marca 0,00.
+    const dLabel = f.estado==='siembra_menos' ? d.label+' '+fmt2(f.falta_plan)+' ha'
+      : (f.estado==='siembra_mas' ? d.label+' '+fmt2(f.exceso_plan)+' ha' : d.label);
     // Las labores son la prueba visible de la causa: cuando un lote se sembró en dos etapas con
     // labores distintas, cada OT sembró una PARTE y entre las dos cubren el lote una sola vez — pero
     // el campo de la parcela cuenta el lote completo y encima le suma una de las dos OT.
@@ -804,17 +826,28 @@ function renderAuditoriaSiembra(){
     // Solo se puede desplegar una fila que tenga OT confirmadas o alguna OT abierta: si no hay
     // ninguna (ej. el lote 13, que declara siembra sin OT), no hay nada que mostrar y la fila no
     // responde al clic.
-    const desplegable = f.n_ots > 0 || f.sinConfirmar.length > 0;
+    const desplegable = f.n_ots > 0 || f.sinConfirmar.length > 0 || f.preparacion.length > 0;
     const abierta = desplegable && auditSiembraAbierta === f.lote;
     const caret = desplegable ? `<span class="ip-caret">${abierta?'▾':'▸'}</span> ` : '<span class="ip-caret"></span> ';
-    let html = `<tr class="${desplegable?'sb-fila':''}${abierta?' open':''}" data-lote="${escAttr(f.lote)}">`+
+    // Marca de fila: la parcela que NO coincide se distingue del resto antes de leer ninguna
+    // columna. El chip de Diagnostico solo se ve al llegar a la ultima columna, y con 106 de 107
+    // parcelas en verde encontrar la que falla era cuestion de recorrer la tabla entera. La clase
+    // va en la fila entera, no en una celda, para que se vea igual con la tabla scrolleada en
+    // horizontal. 'ok' no lleva marca: lo normal no se senaliza.
+    // El borde de la fila toma el color de su propio chip: ambar lo que hay que corregir, azul lo
+    // que falta completar, gris lo que todavia no se puede comparar. Si la fila y el chip se
+    // pintaran distinto, la tabla tendria dos codigos de color para lo mismo.
+    const MARCA = {'rc-e-sobre':' sb-dif sb-dif-corregir', 'rc-e-bajo':' sb-dif sb-dif-completar',
+      'rc-e-sin':' sb-dif sb-dif-sincomparar'};
+    const marca = f.estado==='ok' ? '' : (MARCA[d.cls] || ' sb-dif sb-dif-sincomparar');
+    let html = `<tr class="${desplegable?'sb-fila':''}${abierta?' open':''}${marca}" data-lote="${escAttr(f.lote)}">`+
       `<td class="mono">${caret}${escHtml(f.lote)}</td><td>${escHtml(f.cultivo)||sinDato}</td>`+
       `<td class="tr mono">${f.plan?fmt2(f.plan):sinDato}</td>`+
       `<td class="tr mono">${f.sembradas?fmt2(f.sembradas):sinDato}</td>`+
       `<td class="tr mono">${f.declaradas?fmt2(f.declaradas):sinDato}</td>`+
       `<td class="tr mono ${difCls}">${Math.abs(f.dif)<=0.01?'0,00':(f.dif>0?'+':'')+fmt2(f.dif)}</td>`+
       `<td>${labores}${aviso2}</td>`+
-      `<td><span class="rc-est ${d.cls}" title="${escHtml(d.ayuda)}">${d.label}</span></td></tr>`;
+      `<td><span class="rc-est ${d.cls}" title="${escHtml(d.ayuda)}">${dLabel}</span></td></tr>`;
     if(abierta) html += siembraDetalle(f);
     return html;
   }).join('') : '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:16px">Todavía no hay siembra cargada en la campaña</td></tr>';
@@ -836,6 +869,28 @@ function siembraDetalle(f){
       `<td class="tr mono">${fmt2(o.ha)}</td><td colspan="4"></td></tr>`
     ).join('');
   });
+  // ---- Preparacion de suelo ----
+  // Va despues de la siembra porque es contexto, no el sujeto de la auditoria: sirve para leer una
+  // parcela corta — si el suelo se preparo entero y la siembra no llego, falta sembrar; si la
+  // preparacion tampoco cubrio el lote, el atraso viene de antes.
+  // Una fila por labor, con su superficie y la ultima fecha. Las labores por hora no suman ha (la
+  // celda queda vacia) pero igual se listan con su cantidad de OT: son trabajo hecho sobre el lote.
+  if(f.preparacion.length){
+    const totalHa = f.preparacion.reduce((s,l)=>s+l.ha,0);
+    const totalOT = f.preparacion.reduce((s,l)=>s+l.n_ot,0);
+    html += `<tr class="dethead"><td colspan="8">${ETAPA_LABEL[ETAPA_ORDEN[0]]} · ${f.preparacion.length} labor(es) · ${totalOT} OT`+
+      (totalHa ? ` · ${fmt2(totalHa)} ha` : '')+`</td></tr>`;
+    html += `<tr class="detcols"><td>Labor</td><td>Última fecha</td><td>OT</td><td class="tr">Hectáreas</td><td colspan="4"></td></tr>`;
+    html += f.preparacion.map(l=>
+      `<tr class="det"><td class="dl">${escHtml(l.nombre.trim())}</td>`+
+      `<td>${l.ultima?ipFecha(l.ultima):sinDato}</td>`+
+      `<td class="mono">${l.n_ot}</td>`+
+      // Sin ha: la labor se mide por hora y no acredita superficie. Se dice por que, en vez de
+      // mostrar un 0,00 que se leeria como "no trabajo nada".
+      `<td class="tr mono">${l.n_ha ? fmt2(l.ha) : '<span class="ip-sin" title="Labor medida por hora: no acredita superficie">—</span>'}</td>`+
+      `<td colspan="4"></td></tr>`
+    ).join('');
+  }
   if(f.sinConfirmar.length){
     html += `<tr class="dethead"><td colspan="8">Sin confirmar · ${f.sinConfirmar.length} OT</td></tr>`;
     html += `<tr class="detcols"><td>OT</td><td>Servicio</td><td>Estado</td><td class="tr">Has. Reales</td><td colspan="4"></td></tr>`;
