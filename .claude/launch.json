@@ -1,0 +1,13 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "tablero",
+      "runtimeExecutable": "C:\\Program Files\\nodejs\\node.exe",
+      "runtimeArgs": [
+        "C:/Users/ANDRES~1.GOM/AppData/Local/Temp/claude/C--Users-andres-gomez-Documents-analisisCostos2627/8f3e8f70-ea97-4110-a816-615f500e1bfc/scratchpad/static.mjs"
+      ],
+      "port": 8123
+    }
+  ]
+}

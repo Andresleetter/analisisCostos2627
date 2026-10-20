@@ -1,0 +1,390 @@
+/* ================== REDISEÑO · ESTRUCTURA Y LENGUAJE VISUAL ==================
+   Esta hoja cambia CÓMO se ve el tablero, nunca QUÉ muestra. No toca una clase que render.js no
+   emita ya, no agrega ni quita columnas, filas, paneles ni cifras: todo lo de acá es layout,
+   superficie, tipografía y estado.
+
+   El modelo es el Portal del Sur (Airo, "estilo Mostrador"), para que las dos herramientas se
+   lean como la misma casa. Lo que se trae de ahí:
+
+   1. CIELO PASTEL. Tres manchas difusas que derivan muy despacio detrás de todo. Acá se dibujan
+      con un pseudo-elemento de <body>, sin agregar markup.
+   2. BARRA FLOTANTE, SIN COLUMNA LATERAL. El encabezado es una pastilla translúcida con blur que
+      flota sobre el contenido, y los módulos son un grupo de píldoras debajo. (El diseño anterior
+      que probé tenía navegación lateral; el portal resolvió lo mismo arriba, y mandan las dos
+      puertas iguales.)
+   3. ANILLO, NO BORDE. Las tarjetas no llevan `border`: llevan `inset 0 0 0 1px` más una sombra
+      larguísima y casi invisible. No suma 1px a la caja, no corta el radio y deja la tarjeta
+      apoyada sobre la crema sin ensuciarla.
+   4. LOS KPI VIVEN EN UN BLOQUE PASTEL. La fila de KPI se convierte en el "hero" del portal: un
+      bloque de 28px de radio con degradados rosa/pistacho/almendra, y adentro las tarjetas
+      blancas flotando. Sin tocar el HTML: el contenedor .kpis ES el bloque.
+   5. TABLAS SIN REJILLA. Ni líneas entre filas ni filas teñidas: el color queda solo en lo que
+      avisa algo, y en píldoras suaves. Solo hay línea donde empieza una sección.
+
+   Se carga la última: es la capa que define el resultado final. */
+
+:root{
+  --barra-max:1320px;
+  --barra-top:12px;
+}
+
+/* ================================================================
+   1. CIELO: tres manchas pastel detrás de todo
+   ================================================================
+   Van en un pseudo-elemento fijo de <body> para no agregar elementos al documento. Es puramente
+   decorativo (pointer-events:none, fuera del flujo) y queda detrás de todo con z-index:-1. */
+body::before{
+  content:"";
+  position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:
+    radial-gradient(42vw 42vw at 6% -6%, var(--c-rosa), transparent 68%),
+    radial-gradient(38vw 38vw at 96% 22%, var(--c-pist), transparent 68%),
+    radial-gradient(34vw 34vw at 46% 112%, var(--c-almen), transparent 68%);
+  opacity:.55;
+  filter:blur(40px);
+  animation:cielo 30s ease-in-out infinite alternate;
+}
+@keyframes cielo{to{transform:translate(4vw,3vh) scale(1.1)}}
+:root[data-theme="dark"] body::before{opacity:.5}
+
+/* ================================================================
+   2. BARRA FLOTANTE
+   ================================================================ */
+.top{
+  position:sticky;top:var(--barra-top);z-index:50;
+  max-width:var(--barra-max);
+  margin:0 auto var(--sp-6);
+  padding:var(--sp-2) var(--sp-3) var(--sp-2) var(--sp-5);
+  border:0;
+  border-radius:var(--radius-lg);
+  background:color-mix(in srgb, var(--card) 74%, transparent);
+  -webkit-backdrop-filter:blur(18px) saturate(1.4);
+  backdrop-filter:blur(18px) saturate(1.4);
+  box-shadow:var(--ring-1), 0 18px 40px -30px rgba(60,30,30,.45);
+  gap:var(--sp-4);
+  min-height:64px;
+  transition:padding var(--dur-3) var(--ease), box-shadow var(--dur-3) var(--ease);
+}
+.top.scrolled{
+  padding-top:var(--sp-1);padding-bottom:var(--sp-1);
+  box-shadow:var(--ring-2), 0 22px 44px -26px rgba(60,30,30,.5);
+}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  .top{background:var(--card)}
+}
+
+/* El título del encabezado va en la misma familia que todo lo demás, con el peso y el tracking
+   apretado de los titulares del portal. Syne queda reservada para una marca denominativa corta
+   (la palabra AIRO); una frase larga en Syne 800 se come el encabezado entero. */
+.brand h1{font-weight:800;font-size:var(--fs-lg);color:var(--ink);letter-spacing:var(--ls-tight)}
+.brand .t-sub{font-size:var(--fs-xs);color:var(--muted);font-weight:500}
+.brand .b-txt{border-left:0;padding-left:0}
+.brand{gap:var(--sp-3)}
+.brand .logo-box{background:transparent;padding:0}
+.brand img{height:40px}
+.top.scrolled .brand img{height:34px}
+.top.scrolled .brand .b-txt{padding-left:0}
+
+/* La píldora de fecha, con el punto latiendo del portal. */
+.top .t-date{
+  background:var(--card);color:var(--ink-soft);
+  font-size:var(--fs-xs);font-weight:600;letter-spacing:0;
+  padding:var(--sp-2) var(--sp-3);
+  border:0;box-shadow:var(--ring-1);
+}
+.top .t-date::before{
+  content:"";display:inline-block;width:7px;height:7px;border-radius:50%;
+  background:var(--g);margin-right:7px;vertical-align:1px;
+  animation:latido 2s ease-in-out infinite;
+}
+.top .t-date.vieja{background:var(--tint-y);color:var(--on-tint-y)}
+.top .t-date.vieja::before{background:var(--y)}
+@keyframes latido{50%{transform:scale(1.5);opacity:.35}}
+
+/* ================================================================
+   3. MÓDULOS: grupo de píldoras
+   ================================================================ */
+.tabs{
+  width:fit-content;max-width:100%;
+  flex-wrap:wrap;
+  gap:var(--sp-1);
+  padding:var(--sp-1);
+  margin:0 auto var(--sp-6);
+  border:0;border-radius:var(--radius-md);
+  background:color-mix(in srgb, var(--surface-3) 80%, transparent);
+  -webkit-backdrop-filter:blur(12px);
+  backdrop-filter:blur(12px);
+  box-shadow:var(--ring-1);
+}
+.tab{
+  flex:none;
+  border-radius:var(--radius-sm);
+  padding:var(--sp-2) var(--sp-4);
+  font-size:var(--fs-sm);font-weight:600;letter-spacing:0;
+  color:var(--ink-soft);
+  transition:background-color var(--dur-2) var(--ease), color var(--dur-2) var(--ease),
+             box-shadow var(--dur-2) var(--ease);
+}
+.tab:hover{background:var(--surface-2);color:var(--ink)}
+.tab:active{transform:none}
+.tab.active{background:var(--ink);color:var(--card);box-shadow:0 8px 18px -10px rgba(42,30,28,.7)}
+.tab .badge{background:var(--acento);color:var(--on-acento);font-weight:700}
+.tab.active .badge{background:var(--card);color:var(--acento)}
+
+/* ================================================================
+   4. BLOQUE PASTEL CON LOS KPI
+   ================================================================
+   El contenedor de KPI deja de ser una grilla suelta y pasa a ser el bloque de portada del
+   portal: degradados pastel, 28px de radio, y adentro las tarjetas blancas flotando. */
+.kpis,.gkpis{
+  gap:var(--sp-3);
+  padding:var(--sp-5);
+  border:0;border-radius:var(--radius-xl);
+  margin-bottom:var(--sp-6);
+  background:
+    radial-gradient(60% 90% at 12% 10%, var(--c-rosa), transparent 70%),
+    radial-gradient(60% 90% at 92% 95%, var(--c-pist), transparent 70%),
+    var(--c-almen);
+  overflow:hidden;
+}
+.kpi,.gkpi{
+  position:relative;overflow:hidden;
+  border:0;border-radius:var(--radius-md);
+  background:color-mix(in srgb, var(--card) 92%, transparent);
+  box-shadow:0 1px 0 rgba(255,255,255,.6) inset, 0 24px 50px -32px rgba(60,30,30,.35);
+  padding:var(--sp-5) var(--sp-5) var(--sp-4);
+  transition:transform var(--dur-2) var(--ease), box-shadow var(--dur-2) var(--ease);
+}
+.kpi:hover,.gkpi:hover{
+  transform:translateY(-3px);background:var(--card);
+  box-shadow:0 1px 0 rgba(255,255,255,.6) inset, 0 30px 50px -28px rgba(60,30,30,.42);
+}
+/* Cinta de color arriba de cada tarjeta: es la misma de la portada del portal. */
+.kpi::after,.gkpi::after{
+  content:"";position:absolute;left:0;right:0;top:0;height:4px;
+  background:linear-gradient(90deg, var(--c-rosa), var(--c-almen), var(--c-pist));
+}
+.kpi .k-lab,.gkpi .k-lab{
+  font-size:var(--fs-2xs);font-weight:700;color:var(--muted);
+  text-transform:none;letter-spacing:.02em;
+}
+.kpi .k-val,.gkpi .k-val{
+  font-size:var(--fs-2xl);font-weight:800;letter-spacing:var(--ls-tighter);
+  line-height:var(--lh-tight);color:var(--ink);margin-top:var(--sp-1);
+}
+.kpis-exec .k-val{font-size:var(--fs-2xl)}
+.kpi .k-foot,.gkpi .k-foot{font-size:var(--fs-xs);color:var(--muted)}
+/* El acento de severidad pasa a teñir la cinta superior: con la tarjeta flotando sobre pastel,
+   un borde izquierdo se perdía. */
+.kpi-acc{border-left:0}
+.kpi-g::after{background:var(--g)} .kpi-y::after{background:var(--y)}
+.kpi-o::after{background:var(--o)} .kpi-r::after{background:var(--r)}
+.kpi-gris::after{background:var(--line-strong)}
+
+/* ================================================================
+   5. TARJETAS
+   ================================================================ */
+.panel{
+  border:0;
+  border-radius:var(--radius-lg);
+  background:var(--card);
+  box-shadow:var(--shadow-2);
+  padding:var(--sp-6);
+  margin-bottom:var(--sp-4);
+}
+.panel h3{
+  font-size:var(--fs-lg);font-weight:700;letter-spacing:var(--ls-tight);
+  color:var(--ink);
+  border-bottom:0;padding-bottom:0;
+  margin-bottom:var(--sp-4);
+  gap:var(--sp-3);
+}
+/* La nota del título va en una píldora, como las fichas del portal. */
+.panel h3 span{
+  flex:none;
+  font-family:var(--font-sans);font-size:var(--fs-2xs);font-weight:600;letter-spacing:0;
+  color:var(--ink-soft);background:var(--surface-3);
+  border-radius:var(--radius-pill);padding:3px 11px;
+  text-align:center;
+}
+.panel h3 span:empty{display:none}
+/* El panel anidado deja de ser tarjeta dentro de tarjeta: es una sección separada por aire. */
+.panel.sub{
+  background:transparent;border:0;box-shadow:none;border-radius:0;
+  padding:var(--sp-6) 0 0;margin-bottom:0;
+  border-top:1px solid var(--line);
+}
+.panel.sub:first-of-type{border-top:0;padding-top:0}
+.panel.sub h3{font-size:var(--fs-md)}
+.panel.hero-panel{box-shadow:var(--ring-2), 0 24px 50px -36px rgba(60,30,30,.4)}
+.panel.hero-panel h3{font-size:var(--fs-lg)}
+
+/* ================================================================
+   6. TABLAS: sin rejilla
+   ================================================================ */
+th{
+  position:sticky;top:0;z-index:2;
+  background:var(--card);
+  font-size:var(--fs-3xs);font-weight:700;letter-spacing:var(--ls-caps);
+  color:var(--muted);
+  padding:var(--sp-2) var(--sp-3);
+  border-bottom:1px solid var(--line);
+}
+td{
+  padding:var(--sp-3);
+  border-bottom:0;
+  color:var(--ink-soft);
+}
+td.mono,td.tr,.col-tot,.ldt .lname{color:var(--ink)}
+/* Las filas no se iluminan al pasar el cursor: no son clicables. Las que sí lo son (desplegables
+   de Servicios, Combustible, Auditoría) conservan su propio hover, definido en sus hojas. */
+.scroll tbody tr:hover>td{background:transparent}
+
+/* Grupo y detalle: el grupo es un renglón apenas marcado; el detalle va limpio. */
+tr.grp td{background:var(--tint-r-soft);border-top:1px solid var(--line);border-bottom:0;
+  padding-top:var(--sp-4);color:var(--ink);font-weight:700}
+tr.dethead td{background:var(--tint-r-soft);font-size:var(--fs-3xs);font-weight:600;
+  letter-spacing:var(--ls-caps);color:var(--muted);padding:0 var(--sp-3) var(--sp-2) var(--sp-6);
+  border-bottom:1px solid var(--line)}
+tr.det td,tr.det-over td{background:transparent;font-size:var(--fs-sm);
+  padding:var(--sp-2) var(--sp-3);border-bottom:0}
+tr.neutra.grp td,tr.neutra.dethead td{background:var(--tint-brand-soft)}
+tr.tot td{background:var(--surface-3);border-top:1px solid var(--line-strong);color:var(--ink)}
+td.dl{padding-left:var(--sp-6);color:var(--acento);font-weight:700}
+.exd{color:var(--r)}
+
+/* Etiquetas y chips: píldoras suaves, en minúscula. */
+.tag{background:var(--tint-r);color:var(--r);font-size:var(--fs-3xs);font-weight:700;
+  letter-spacing:0;text-transform:none;padding:2px 9px;margin-left:var(--sp-2);vertical-align:1px}
+.tag-rep{background:var(--tint-y);color:var(--on-tint-y)}
+.tag-desc{background:var(--tint-y);color:var(--on-tint-y);border:0}
+.tag-nuevo{background:var(--tint-g);color:var(--on-tint-g);border:0}
+.chip{border-radius:var(--radius-pill);font-size:var(--fs-3xs);letter-spacing:0;
+  text-transform:none;padding:2px 9px;vertical-align:1px;font-weight:700}
+.au-est,.rc-est,.pill{font-size:var(--fs-2xs);letter-spacing:0}
+
+/* Alertas: la fila no se tiñe, el atraso lo dice la píldora. */
+tr.al-y td,tr.al-o td,tr.al-r td{background:transparent}
+.pill{display:inline-block;min-width:40px;text-align:center;font-weight:800;padding:3px 9px}
+.pill-r{background:var(--tint-r);color:var(--r)}
+.pill-o{background:var(--tint-o);color:var(--on-tint-o)}
+.pill-y{background:var(--tint-y);color:var(--on-tint-y)}
+
+/* ================================================================
+   7. CONTROLES
+   ================================================================ */
+.gfilter{
+  border:0;border-radius:var(--radius-md);
+  background:color-mix(in srgb, var(--card) 86%, transparent);
+  -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+  box-shadow:var(--ring-1);
+  padding:var(--sp-3) var(--sp-4);
+  margin-bottom:var(--sp-5);
+}
+.gfilter label,.scontr label{font-size:var(--fs-2xs);font-weight:700;letter-spacing:.02em;
+  text-transform:none;color:var(--muted)}
+.gfilter select,.scontr select{
+  border:1px solid var(--line);border-radius:var(--radius-input);
+  background-color:var(--card);color:var(--ink);font-weight:600;font-size:var(--fs-sm);
+}
+.gfilter select:hover,.scontr select:hover{border-color:var(--line-strong)}
+.gfilter .fnote{font-size:var(--fs-xs)}
+
+.prob-link,.opex-toggle{
+  border:0;box-shadow:var(--ring-2);
+  background:var(--card);color:var(--ink);
+  border-radius:var(--radius-pill);font-weight:700;
+}
+.prob-link:hover,.opex-toggle:hover{background:var(--ink);color:var(--card);box-shadow:none}
+
+/* ================================================================
+   8. PIEZAS MENORES
+   ================================================================ */
+/* Tarjetas de cultivo: sin relleno propio, el panel ya es la superficie. */
+.cult-card{background:transparent;border:0;box-shadow:var(--ring-1);
+  border-radius:var(--radius-md);padding:var(--sp-4)}
+.cult-card:hover{box-shadow:var(--ring-2);background:var(--surface-1)}
+
+/* Problemas: tarjetas con el color de la gravedad en una barra fina a la izquierda. */
+.prob{border:0;border-left:3px solid var(--green-l);box-shadow:var(--shadow-2);
+  border-radius:var(--radius-md);padding:var(--sp-4) var(--sp-5)}
+.prob:hover{transform:none;box-shadow:var(--shadow-3)}
+.prob-count{border-radius:var(--radius-md);background:var(--ink);color:var(--card)}
+.prob-count b{font-size:var(--fs-3xl);font-weight:800;letter-spacing:var(--ls-tighter)}
+.prob-head .ph-t{font-size:var(--fs-xl);font-weight:800;letter-spacing:var(--ls-tight);color:var(--ink)}
+.p-met{color:var(--ink);font-weight:800;letter-spacing:var(--ls-tight)}
+.p-cat{letter-spacing:.02em;text-transform:none;font-size:var(--fs-3xs);padding:2px 10px}
+
+/* Barras: gruesas y completamente redondeadas, como las del portal. */
+.bar,.opex-bar-track,.sopbar,.pu-bar{height:8px;background:var(--surface-3)}
+.estbar-track{height:20px;border-radius:var(--radius-pill);background:var(--surface-3)}
+.colchart-bar{border-radius:var(--radius-sm) var(--radius-sm) 4px 4px}
+
+/* Mini-cifras dentro de los paneles (Gasoil por Área, Terceros). */
+.sop-kpi{background:var(--bg);border:0;box-shadow:var(--ring-1);
+  border-radius:var(--radius-md);padding:var(--sp-3) var(--sp-5)}
+.sop-kpi .l{font-size:var(--fs-xs);font-weight:700;letter-spacing:.02em;text-transform:none;color:var(--muted)}
+.sop-kpi .v{font-size:var(--fs-xl);font-weight:800;letter-spacing:var(--ls-tighter);color:var(--ink)}
+
+/* Caret de los desplegables: toma el acento al abrir, como el chevron del portal. */
+.ip-caret{color:var(--muted);transition:color var(--dur-2) var(--ease)}
+tr.open .ip-caret{color:var(--acento)}
+
+/* Sub-navegación de los módulos: el mismo grupo de píldoras que la barra de módulos, un escalón
+   más chico y sobre el fondo de la página en vez de sobre una tarjeta — así se lee como lo que es,
+   una navegación secundaria, y no como otra barra de módulos. */
+.subtabs{background:color-mix(in srgb, var(--card) 70%, transparent);
+  -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+  border:0;box-shadow:var(--ring-1);
+  padding:var(--sp-1);border-radius:var(--radius-md);gap:var(--sp-1);
+  width:fit-content;max-width:100%;margin-bottom:var(--sp-5);flex-wrap:wrap}
+.subtab{display:flex;align-items:center;gap:var(--sp-2);
+  border-radius:var(--radius-sm);padding:var(--sp-2) var(--sp-4);
+  font-size:var(--fs-sm);font-weight:600;color:var(--ink-soft)}
+.subtab:hover{background:var(--surface-2);color:var(--ink)}
+.subtab.active{background:var(--ink);color:var(--card)}
+/* El badge de una sub-pestaña: mismo gesto que el de los módulos. */
+.subtab .badge{background:var(--acento);color:var(--on-acento);font-size:var(--fs-3xs);font-weight:700;
+  padding:1px 8px;border-radius:var(--radius-pill)}
+.subtab.active .badge{background:var(--card);color:var(--acento)}
+
+/* Avisos y recuadros informativos. */
+.ip-aviso,.rc-nodisp{border:0;box-shadow:inset 0 0 0 1px var(--border-y);border-radius:var(--radius-md)}
+.errbanner{border:0;box-shadow:inset 0 0 0 1px var(--r);border-radius:var(--radius-md)}
+.rc-chip{border:0;box-shadow:var(--ring-1);border-radius:var(--radius-sm);background:var(--surface-1)}
+.rc-con{box-shadow:inset 0 0 0 1px var(--border-g)}
+.rc-sobre{box-shadow:inset 0 0 0 1px var(--border-y)}
+.rc-tol{box-shadow:inset 0 0 0 1px var(--border-g-soft)}
+
+/* Overlay de carga y lightbox. */
+#overlay{background:var(--bg)}
+#overlay .retry{border-radius:var(--radius-sm);background:var(--ink);color:var(--card)}
+#overlay .retry:hover{background:var(--teal-hover)}
+.mapa-card{border-radius:var(--radius-md)}
+
+/* El pie, discreto y centrado. */
+.foot{margin-top:var(--sp-10);font-size:var(--fs-2xs);color:var(--muted)}
+
+/* El aviso flotante de datos nuevos, con la forma de los botones del portal. */
+.aviso-datos{background:var(--ink);color:var(--card);box-shadow:var(--shadow-4)}
+.aviso-datos:hover{background:var(--teal-hover)}
+.aviso-datos-cta{background:color-mix(in srgb, var(--card) 18%, transparent)}
+
+/* ================================================================
+   9. RESPONSIVE
+   ================================================================ */
+@media(max-width:900px){
+  .top{top:var(--sp-2);padding:var(--sp-3) var(--sp-3) var(--sp-3) var(--sp-4)}
+  .tabs{width:auto;margin-bottom:0}
+  .tabs.open{margin-bottom:var(--sp-5)}
+  /* Las barras de secciones se apilan (auditoria.css) y ahí un ancho "a medida" deja un bloque
+     angosto y dentado: a lo ancho se lee como la lista de secciones que es. */
+  .subtabs{width:auto}
+  .subtab{justify-content:flex-start}
+  .kpis,.gkpis{padding:var(--sp-4);border-radius:var(--radius-lg)}
+  .panel{padding:var(--sp-5) var(--sp-4);border-radius:var(--radius-md)}
+}
+@media(max-width:480px){
+  .kpis,.gkpis{padding:var(--sp-3)}
+  .brand img{height:32px}
+}

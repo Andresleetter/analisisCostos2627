@@ -36,81 +36,7 @@ function renderAll(){
   // que la carga inicial y el cambio de filtro no pueden desincronizarse.
   poblarFiltrosCampaniaResumen();
   renderResumenModulo();
-  // TAB3 control ha
-  document.getElementById('ha-kpis').innerHTML=
-    `<div class="kpi"><div class="k-lab">Lotes con Exceso</div><div class="k-val c-r">${D.exc_kpi.n}</div>`+
-      // Pie con los casos que aparecieron en esta subida de datos (ver exceso-baseline.json). Sin
-      // baseline el pie no se dibuja: no se puede afirmar que no hay novedades si no hubo con que
-      // comparar.
-      `${D.exc_kpi.hay_baseline&&D.exc_kpi.n_nuevos?`<div class="k-foot">${D.exc_kpi.n_nuevos} nuevo(s)</div>`:''}</div>`+
-    `<div class="kpi"><div class="k-lab">Ha Excedidas Acum.</div><div class="k-val c-r" style="font-size:22px">+${fmt2(D.exc_kpi.ha)}</div></div>`+
-    `<div class="kpi"><div class="k-lab">Preparación Repetida</div><div class="k-val c-r">${D.exc_kpi.n_repetidas}</div><div class="k-foot">+${fmt2(D.exc_kpi.ha_repetidas)} ha`+
-      `${D.exc_kpi.hay_baseline&&D.exc_kpi.n_nuevas_repetidas?` · ${D.exc_kpi.n_nuevas_repetidas} nuevo(s)`:''}</div></div>`+
-    `<div class="kpi"><div class="k-lab">OT Fuera del Plan</div><div class="k-val c-r">${D.exc_kpi.n_sinrtk}</div></div>`;
-  document.getElementById('exc-sub').textContent=D.exceso.length+' lotes';
-  let excHtml='';
-  D.exceso.forEach(e=>{
-    // tag "nuevo": este lote no estaba en exceso en la exportacion anterior. Va en la fila del
-    // grupo y no en la de la OT porque lo nuevo es el HALLAZGO, no la orden.
-    const tagNuevo = e.nuevo ? ' <span class="tag tag-nuevo">nuevo</span>' : '';
-    excHtml+=`<tr class="grp"><td>${e.cult}</td><td class="mono">${e.lote}${tagNuevo}</td><td class="tr">${fmt2(e.ha_rtk)}</td><td class="tr">${fmt2(e.ha_ot)}</td><td class="tr exd">+${fmt2(e.diff)}</td><td class="tr exd">+${Math.round(e.pdiff)}%</td></tr>`;
-    // Solo se listan las OT que SOBREPASAN el lote. Las que quedan dentro del plan son correctas y
-    // no explican nada del exceso: eran 74 de las 95 filas del detalle, tres cuartas partes del
-    // panel dedicadas a decir que todo estaba bien. Las toleradas (pasan el plan pero dentro de
-    // TOLERANCIA_EXCESO_SERVICIO) tampoco se listan, porque justamente lo que dice la tolerancia es
-    // que estan bien. Nada desaparece en silencio: el encabezado dice cuantas quedaron afuera y por
-    // que, para que se pueda pedir el detalle completo si hace falta.
-    const culpables=e.dets.filter(x=>x.over), toleradas=e.dets.filter(x=>x.tolerado);
-    // Las OT que declaran su propio sobrepase en la observacion no se cuentan como exceso, pero se
-    // nombran: si desaparecieran sin rastro pareceria que el control no las vio.
-    const declaradas=e.dets.filter(x=>x.declarado);
-    const ocultas=e.dets.length-culpables.length;
-    excHtml+=`<tr class="dethead"><td colspan="6">${culpables.length} de ${e.n_ot} OT</td></tr>`;
-    // Fecha real de la OT: el servicio deja de ocupar dos columnas para hacerle lugar, asi la fila
-    // sigue teniendo las mismas 6 celdas que la cabecera. Es el mismo dato y el mismo formato que
-    // ya muestra el panel de labores repetidas, y responde lo primero que se pregunta al ver un
-    // sobrepase: si se cargo el dia de la labor o meses despues.
-    culpables.forEach(x=>{ const tag='<span class="tag">superficie sobre el plan</span>';
-      excHtml+=`<tr class="det-over"><td class="dl mono">OT ${x.ot}</td><td>${x.act}</td><td>${x.serv} ${tag}</td><td class="mono">${x.fr?ipFecha(x.fr):'—'}</td><td>${x.estado}</td><td class="tr exd">${fmt2(x.ha)} ha</td></tr>`; });
-  });
-  document.getElementById('exc').innerHTML=excHtml;
-  // ---- Labores repetidas que sumando pasan el lote ----
-  // Mismo formato que el panel de exceso (fila de grupo + detalle de OT), porque responde la misma
-  // pregunta con otra cuenta: alli el lote entra con su OT mas grande, aca con la SUMA de las OT
-  // de una misma labor. La fecha va en el detalle: dos pasadas separadas por meses es la firma de
-  // que la labor se rehizo, y es lo primero que se quiere ver.
-  document.getElementById('rep-sub').textContent = D.repetidas.length
-    ? D.repetidas.length+' caso(s) · +'+fmt2(D.exc_kpi.ha_repetidas)+' ha'
-    : '';
-  let repHtml='';
-  D.repetidas.forEach(r=>{
-    const tagRepNuevo = r.nuevo ? ' <span class="tag tag-nuevo">nuevo</span>' : '';
-    repHtml+=`<tr class="grp"><td>${r.cult}</td><td class="mono">${escHtml(String(r.lote))}${tagRepNuevo}</td><td>${escHtml(String(r.serv))}</td>`+
-      `<td class="tr">${fmt2(r.ha_rtk)}</td><td class="tr">${fmt2(r.suma)}</td>`+
-      `<td class="tr exd">+${fmt2(r.exceso)}</td><td class="tr exd">+${Math.round(r.pdiff)}%</td></tr>`;
-    repHtml+=`<tr class="dethead"><td colspan="7">${r.n_ot} OT</td></tr>`;
-    r.dets.forEach(x=>{
-      repHtml+=`<tr class="det-over"><td class="dl mono">OT ${x.ot}</td><td>${escHtml(String(x.act))}</td>`+
-        `<td colspan="2">${escHtml(String(x.serv))}</td><td>${x.fr?ipFecha(x.fr):'—'}</td>`+
-        `<td>${escHtml(String(x.estado))}</td><td class="tr exd">${fmt2(x.ha)} ha</td></tr>`; });
-  });
-  document.getElementById('rep').innerHTML = repHtml ||
-    '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:16px">Sin casos</td></tr>';
-  document.getElementById('cancel-sub').textContent=D.cancelados.length+' lote(s)';
-  let cancelHtml='';
-  D.cancelados.forEach(e=>{
-    cancelHtml+=`<tr class="grp"><td>${e.cult}</td><td class="mono">${e.lote}</td></tr>`;
-    if(!e.n_ot){
-      cancelHtml+=`<tr class="dethead"><td colspan="2">Sin OT</td></tr>`;
-    } else {
-      cancelHtml+=`<tr class="dethead"><td colspan="2">${e.n_ot} OT</td></tr>`;
-      e.dets.forEach(x=>{ cancelHtml+=`<tr class="det"><td class="dl mono">OT ${x.ot}</td><td>${x.act} · ${x.serv} · ${x.estado}</td></tr>`; });
-    }
-  });
-  document.getElementById('cancel').innerHTML=cancelHtml;
-  document.getElementById('sinrtk-sub').textContent=D.sinrtk.length+' OT';
-  document.getElementById('sinrtk').innerHTML=D.sinrtk.map(r=>
-    `<tr><td class="mono">OT ${r.ot}</td><td>${r.cult}</td><td class="mono">${r.lote}</td><td>${r.act}</td><td>${r.serv}</td><td class="tr mono">${fmt2(r.ha)}</td><td>${r.estado}</td></tr>`).join('');
+  renderControlHectareas();
   renderAlertas();
   // filtro de Campaña de Servicios: opciones dinámicas desde consultasOT (D.campanias_ot), con la
   // campaña vigente (D.campania_actual) preseleccionada si existe en el dato. Se puebla una sola
@@ -2542,4 +2468,123 @@ function restaurarModuloDeURL(){
   const i = tabs.findIndex(t => t.dataset.mod === mod);
   if(i < 0) return;
   show(i, tabs[i]);
+}
+
+// Búsqueda por palabras en cualquier orden; lotes admiten .032B / 32b.
+function coincideControlHa(valor, consulta, lote=false){
+  const normalizar=v=>String(lote?normLote(v):v).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+  const texto=normalizar(valor);
+  return normalizar(consulta).split(/\s+/).every(p=>texto.includes(p));
+}
+function filtrarControlHectareas(datos, servicio, lote){
+  const porLote=r=>coincideControlHa(r.lote,lote,true);
+  const porServicio=r=>coincideControlHa(r.serv,servicio);
+  const exceso=datos.exceso.filter(porLote).map(e=>{
+    const dets=e.dets.filter(porServicio), culpables=dets.filter(x=>x.over);
+    if(!culpables.length) return null;
+    const ha_ot=Math.max(...culpables.map(x=>x.ha)), diff=ha_ot-e.ha_rtk;
+    return {...e,dets,n_ot:dets.length,ha_ot,diff,pdiff:diff/e.ha_rtk*100};
+  }).filter(Boolean).sort((a,b)=>b.diff-a.diff);
+  const repetidas=datos.repetidas.filter(r=>porLote(r)&&porServicio(r));
+  const cancelados=datos.cancelados.filter(porLote).map(e=>{
+    const dets=e.dets.filter(porServicio);
+    return {...e,dets,n_ot:dets.length};
+  }).filter(e=>!servicio.trim()||e.n_ot);
+  const sinrtk=datos.sinrtk.filter(r=>porLote(r)&&porServicio(r));
+  return {exceso,repetidas,cancelados,sinrtk,exc_kpi:{...datos.exc_kpi,
+    n:exceso.length,ha:exceso.reduce((s,e)=>s+e.diff,0),n_nuevos:exceso.filter(e=>e.nuevo).length,
+    n_repetidas:repetidas.length,ha_repetidas:repetidas.reduce((s,e)=>s+e.exceso,0),
+    n_nuevas_repetidas:repetidas.filter(e=>e.nuevo).length,n_sinrtk:sinrtk.length}};
+}
+function renderControlHectareas(){
+  renderControlHectareasDatos(D);
+}
+function renderControlHectareasDatos(datos){
+  const servicio=document.getElementById('ha-servicio').value;
+  const lote=document.getElementById('ha-lote').value;
+  const filas=[...datos.exceso.flatMap(e=>e.dets.map(x=>({...x,lote:e.lote}))),
+    ...datos.repetidas,...datos.cancelados.flatMap(e=>e.dets.length?e.dets.map(x=>({...x,lote:e.lote})):[{lote:e.lote,serv:''}]),...datos.sinrtk];
+  const opciones=(id,valores)=>{
+    document.getElementById(id).innerHTML=[...new Set(valores.filter(Boolean))]
+      .sort((a,b)=>a.localeCompare(b,'es',{numeric:true}))
+      .map(v=>'<option value="'+escHtml(String(v))+'"></option>').join('');
+  };
+  opciones('ha-servicios',filas.filter(r=>coincideControlHa(r.lote,lote,true)&&coincideControlHa(r.serv,servicio)).map(r=>r.serv));
+  opciones('ha-lotes',filas.filter(r=>coincideControlHa(r.serv,servicio)&&coincideControlHa(r.lote,lote,true)).map(r=>r.lote));
+  const D=filtrarControlHectareas(datos,servicio,lote);
+  // TAB3 control ha
+  document.getElementById('ha-kpis').innerHTML=
+    `<div class="kpi"><div class="k-lab">Lotes con Exceso</div><div class="k-val c-r">${D.exc_kpi.n}</div>`+
+      // Pie con los casos que aparecieron en esta subida de datos (ver exceso-baseline.json). Sin
+      // baseline el pie no se dibuja: no se puede afirmar que no hay novedades si no hubo con que
+      // comparar.
+      `${D.exc_kpi.hay_baseline&&D.exc_kpi.n_nuevos?`<div class="k-foot">${D.exc_kpi.n_nuevos} nuevo(s)</div>`:''}</div>`+
+    `<div class="kpi"><div class="k-lab">Ha Excedidas Acum.</div><div class="k-val c-r" style="font-size:22px">+${fmt2(D.exc_kpi.ha)}</div></div>`+
+    `<div class="kpi"><div class="k-lab">Preparación Repetida</div><div class="k-val c-r">${D.exc_kpi.n_repetidas}</div><div class="k-foot">+${fmt2(D.exc_kpi.ha_repetidas)} ha`+
+      `${D.exc_kpi.hay_baseline&&D.exc_kpi.n_nuevas_repetidas?` · ${D.exc_kpi.n_nuevas_repetidas} nuevo(s)`:''}</div></div>`+
+    `<div class="kpi"><div class="k-lab">OT Fuera del Plan</div><div class="k-val c-r">${D.exc_kpi.n_sinrtk}</div></div>`;
+  document.getElementById('exc-sub').textContent=D.exceso.length+' lotes';
+  let excHtml='';
+  D.exceso.forEach(e=>{
+    // tag "nuevo": este lote no estaba en exceso en la exportacion anterior. Va en la fila del
+    // grupo y no en la de la OT porque lo nuevo es el HALLAZGO, no la orden.
+    const tagNuevo = e.nuevo ? ' <span class="tag tag-nuevo">nuevo</span>' : '';
+    excHtml+=`<tr class="grp"><td>${e.cult}</td><td class="mono">${e.lote}${tagNuevo}</td><td class="tr">${fmt2(e.ha_rtk)}</td><td class="tr">${fmt2(e.ha_ot)}</td><td class="tr exd">+${fmt2(e.diff)}</td><td class="tr exd">+${Math.round(e.pdiff)}%</td></tr>`;
+    // Solo se listan las OT que SOBREPASAN el lote. Las que quedan dentro del plan son correctas y
+    // no explican nada del exceso: eran 74 de las 95 filas del detalle, tres cuartas partes del
+    // panel dedicadas a decir que todo estaba bien. Las toleradas (pasan el plan pero dentro de
+    // TOLERANCIA_EXCESO_SERVICIO) tampoco se listan, porque justamente lo que dice la tolerancia es
+    // que estan bien. Nada desaparece en silencio: el encabezado dice cuantas quedaron afuera y por
+    // que, para que se pueda pedir el detalle completo si hace falta.
+    const culpables=e.dets.filter(x=>x.over), toleradas=e.dets.filter(x=>x.tolerado);
+    // Las OT que declaran su propio sobrepase en la observacion no se cuentan como exceso, pero se
+    // nombran: si desaparecieran sin rastro pareceria que el control no las vio.
+    const declaradas=e.dets.filter(x=>x.declarado);
+    const ocultas=e.dets.length-culpables.length;
+    excHtml+=`<tr class="dethead"><td colspan="6">${culpables.length} de ${e.n_ot} OT</td></tr>`;
+    // Fecha real de la OT: el servicio deja de ocupar dos columnas para hacerle lugar, asi la fila
+    // sigue teniendo las mismas 6 celdas que la cabecera. Es el mismo dato y el mismo formato que
+    // ya muestra el panel de labores repetidas, y responde lo primero que se pregunta al ver un
+    // sobrepase: si se cargo el dia de la labor o meses despues.
+    culpables.forEach(x=>{ const tag='<span class="tag">superficie sobre el plan</span>';
+      excHtml+=`<tr class="det-over"><td class="dl mono">OT ${x.ot}</td><td>${x.act}</td><td>${x.serv} ${tag}</td><td class="mono">${x.fr?ipFecha(x.fr):'—'}</td><td>${x.estado}</td><td class="tr exd">${fmt2(x.ha)} ha<br><span title="Exceso de esta OT respecto al plan del lote">+${fmt2((x.ha-e.ha_rtk)/e.ha_rtk*100)}%</span></td></tr>`; });
+  });
+  document.getElementById('exc').innerHTML=excHtml || '<tr><td colspan="6">Sin casos para estos filtros</td></tr>';
+  // ---- Labores repetidas que sumando pasan el lote ----
+  // Mismo formato que el panel de exceso (fila de grupo + detalle de OT), porque responde la misma
+  // pregunta con otra cuenta: alli el lote entra con su OT mas grande, aca con la SUMA de las OT
+  // de una misma labor. La fecha va en el detalle: dos pasadas separadas por meses es la firma de
+  // que la labor se rehizo, y es lo primero que se quiere ver.
+  document.getElementById('rep-sub').textContent = D.repetidas.length
+    ? D.repetidas.length+' caso(s) · +'+fmt2(D.exc_kpi.ha_repetidas)+' ha'
+    : '';
+  let repHtml='';
+  D.repetidas.forEach(r=>{
+    const tagRepNuevo = r.nuevo ? ' <span class="tag tag-nuevo">nuevo</span>' : '';
+    repHtml+=`<tr class="grp"><td>${r.cult}</td><td class="mono">${escHtml(String(r.lote))}${tagRepNuevo}</td><td>${escHtml(String(r.serv))}</td>`+
+      `<td class="tr">${fmt2(r.ha_rtk)}</td><td class="tr">${fmt2(r.suma)}</td>`+
+      `<td class="tr exd">+${fmt2(r.exceso)}</td><td class="tr exd">+${Math.round(r.pdiff)}%</td></tr>`;
+    repHtml+=`<tr class="dethead"><td colspan="7">${r.n_ot} OT</td></tr>`;
+    r.dets.forEach(x=>{
+      repHtml+=`<tr class="det-over"><td class="dl mono">OT ${x.ot}</td><td>${escHtml(String(x.act))}</td>`+
+        `<td colspan="2">${escHtml(String(x.serv))}</td><td>${x.fr?ipFecha(x.fr):'—'}</td>`+
+        `<td>${escHtml(String(x.estado))}</td><td class="tr exd">${fmt2(x.ha)} ha</td></tr>`; });
+  });
+  document.getElementById('rep').innerHTML = repHtml ||
+    '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:16px">Sin casos</td></tr>';
+  document.getElementById('cancel-sub').textContent=D.cancelados.length+' lote(s)';
+  let cancelHtml='';
+  D.cancelados.forEach(e=>{
+    cancelHtml+=`<tr class="grp"><td>${e.cult}</td><td class="mono">${e.lote}</td></tr>`;
+    if(!e.n_ot){
+      cancelHtml+=`<tr class="dethead"><td colspan="2">Sin OT</td></tr>`;
+    } else {
+      cancelHtml+=`<tr class="dethead"><td colspan="2">${e.n_ot} OT</td></tr>`;
+      e.dets.forEach(x=>{ cancelHtml+=`<tr class="det"><td class="dl mono">OT ${x.ot}</td><td>${x.act} · ${x.serv} · ${x.estado}</td></tr>`; });
+    }
+  });
+  document.getElementById('cancel').innerHTML=cancelHtml || '<tr><td colspan="2">Sin casos para estos filtros</td></tr>';
+  document.getElementById('sinrtk-sub').textContent=D.sinrtk.length+' OT';
+  document.getElementById('sinrtk').innerHTML=D.sinrtk.map(r=>
+    `<tr><td class="mono">OT ${r.ot}</td><td>${r.cult}</td><td class="mono">${r.lote}</td><td>${r.act}</td><td>${r.serv}</td><td class="tr mono">${fmt2(r.ha)}</td><td>${r.estado}</td></tr>`).join('') || '<tr><td colspan="7">Sin casos para estos filtros</td></tr>';
 }

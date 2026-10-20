@@ -1,0 +1,124 @@
+/* ================== CAPA DE ACABADO ==================
+   Lo que no pertenece a ningún módulo: el conmutador de tema, el estado del encabezado al
+   hacer scroll, el acabado transversal de controles (selects, barras de scroll, cabeceras de
+   tabla pegajosas) y la hoja de impresión.
+   Se carga DESPUÉS de las hojas de módulo a propósito: acá hay refinamientos que tienen que
+   ganarle a reglas más viejas sin subir la especificidad a golpe de !important. */
+
+/* ---------- Conmutador de tema ----------
+   Tres estados reales (auto / claro / oscuro) en un solo botón que cicla, no un interruptor de
+   dos: "auto" tiene que existir para que quien usa el sistema en oscuro no vea el tablero en
+   blanco al entrar. El icono lo pinta el propio botón con ::before y el rótulo accesible lo
+   mantiene js/ui.js en aria-label. */
+.theme-toggle{
+  display:inline-flex;align-items:center;justify-content:center;gap:var(--sp-2);
+  height:40px;min-width:40px;padding:0 var(--sp-3);
+  border:1px solid var(--line);border-radius:var(--radius-sm);
+  background:var(--card);color:var(--muted);
+  font-family:inherit;font-size:var(--fs-xs);font-weight:700;
+  cursor:pointer;flex-shrink:0;
+  transition:color var(--dur-2) var(--ease), border-color var(--dur-2) var(--ease),
+             background-color var(--dur-2) var(--ease), transform var(--dur-1) var(--ease);
+}
+.theme-toggle:hover{color:var(--teal);border-color:var(--line-strong);background:var(--surface-2)}
+.theme-toggle:active{transform:scale(.96)}
+.theme-toggle .tt-ico{width:16px;height:16px;display:block;flex:0 0 auto}
+.theme-toggle .tt-txt{display:none}
+@media(min-width:1100px){ .theme-toggle .tt-txt{display:inline} }
+
+/* ---------- Encabezado pegajoso ----------
+   El tablero se lee hacia abajo durante minutos; perder de vista la fecha del dato y el acceso
+   a los módulos obliga a volver arriba todo el tiempo. Pegado arriba, y al hacer scroll se
+   compacta y gana sombra para despegarse del contenido que pasa por debajo. */
+.top{
+  position:sticky;top:0;z-index:40;
+  background:color-mix(in srgb, var(--card) 88%, transparent);
+  -webkit-backdrop-filter:saturate(180%) blur(14px);
+  backdrop-filter:saturate(180%) blur(14px);
+  box-shadow:var(--shadow-1);
+  transition:padding var(--dur-3) var(--ease), box-shadow var(--dur-3) var(--ease),
+             border-radius var(--dur-3) var(--ease);
+}
+.top.scrolled{
+  padding-top:var(--sp-3);padding-bottom:var(--sp-3);
+  box-shadow:var(--shadow-2);
+  border-radius:var(--radius-md);
+}
+.top.scrolled .brand img{height:38px}
+.top.scrolled .brand .b-txt{padding-left:var(--sp-4)}
+/* Navegador sin backdrop-filter (o con él desactivado): fondo sólido, nunca semitransparente,
+   para que el contenido no se lea a través del encabezado. */
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  .top{background:var(--card)}
+}
+
+/* El logo es un SVG vectorial de una tinta sobre fondo claro; en modo oscuro se le levanta
+   apenas el brillo para que el verde no se apague contra la superficie. */
+:root[data-theme="dark"] .brand img{filter:brightness(1.12) saturate(1.05)}
+
+/* ---------- Selects: un solo acabado para los 24 ----------
+   Se le saca la flecha nativa (distinta en cada sistema operativo) y se dibuja una propia con
+   el color del tema. El padding derecho deja lugar a la flecha sin pisar el texto. */
+.gfilter select,.scontr select{
+  appearance:none;-webkit-appearance:none;-moz-appearance:none;
+  padding-right:34px;
+  background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),
+                   linear-gradient(135deg,currentColor 50%,transparent 50%);
+  background-position:calc(100% - 17px) calc(50% + 1px),calc(100% - 12px) calc(50% + 1px);
+  background-size:5px 5px,5px 5px;
+  background-repeat:no-repeat;
+  transition:border-color var(--dur-2) var(--ease), box-shadow var(--dur-2) var(--ease),
+             background-color var(--dur-2) var(--ease);
+}
+.gfilter select:hover,.scontr select:hover{border-color:var(--line-strong)}
+.gfilter select:focus-visible,.scontr select:focus-visible{
+  outline:none;border-color:var(--teal);box-shadow:var(--ring);
+}
+
+/* ---------- Barras de scroll ----------
+   Las tablas largas viven dentro de .scroll; la barra nativa de Windows es un bloque gris que
+   corta la tarjeta por la mitad. */
+.scroll{scrollbar-width:thin;scrollbar-color:var(--line-strong) transparent;overscroll-behavior:contain}
+.scroll::-webkit-scrollbar{width:10px;height:10px}
+.scroll::-webkit-scrollbar-track{background:transparent}
+.scroll::-webkit-scrollbar-thumb{
+  background:var(--line-strong);border-radius:var(--radius-pill);
+  border:3px solid var(--card);background-clip:padding-box;
+}
+.scroll::-webkit-scrollbar-thumb:hover{background:var(--muted);background-clip:padding-box;border:3px solid var(--card)}
+
+/* ---------- Cabecera de tabla pegajosa ----------
+   Dentro de un .scroll de 560px de alto, a la fila 40 ya no se sabe qué columna es cuál. */
+.scroll table th{
+  position:sticky;top:0;z-index:2;
+  background:var(--card);
+  /* El borde inferior de un th sticky no viaja con él en varios motores: se dibuja con sombra. */
+  box-shadow:inset 0 -2px 0 var(--line);
+  border-bottom:0;
+}
+/* Cabeceras internas de los desplegables: no se pegan (están dentro de una fila de detalle). */
+.scroll .sv-ots th,.scroll .opex-detail-table th{position:static;box-shadow:none;border-bottom:1px solid var(--line)}
+
+/* ---------- Números ----------
+   Cifras tabulares en todo lo que es dato: sin esto, una columna de importes baila de fila en
+   fila porque el 1 es más angosto que el 8. .mono ya lo hacía; se extiende a KPI y totales. */
+.k-val,.gkpi .k-val,.sop-kpi .v,.opex-amt,.opex-pct,.av-est-val,.av-lab-ap b,.rc-n,.prob-count b,
+.estbar-leg b,.colchart-val,.opex-total .ot-val,.p-met{
+  font-variant-numeric:tabular-nums;
+  font-feature-settings:'tnum' 1;
+}
+
+/* ---------- Impresión ----------
+   El tablero se imprime y se pega en informes. Fuera cromos de interfaz, todo en claro, y las
+   tarjetas sin sombra para que no salgan cajas grises. */
+@media print{
+  :root{--bg:#fff;--card:#fff}
+  .tabs,.theme-toggle,.menu-toggle,.aviso-datos,.prob-link,.opex-toggle,.skip-link{display:none!important}
+  .top{position:static;box-shadow:none;backdrop-filter:none}
+  .panel,.kpi,.gkpi{box-shadow:none;break-inside:avoid}
+  .scroll{max-height:none;overflow:visible}
+  .page{display:block!important}
+  /* Al imprimir se muestran TODAS las pestañas, incluidas las que nunca llegaron a entrar en
+     pantalla: sin esto saldrían en blanco, porque su .reveal todavía está en opacity:0. */
+  .reveal{opacity:1!important;transform:none!important}
+}

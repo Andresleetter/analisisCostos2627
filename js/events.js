@@ -1,5 +1,13 @@
 // ================== EVENTOS ==================
 document.addEventListener('DOMContentLoaded', function(){
+  ['ha-servicio','ha-lote'].forEach(id=>document.getElementById(id).addEventListener('input',()=>{
+    if(D) renderControlHectareas();
+  }));
+  document.getElementById('ha-limpiar').addEventListener('click',()=>{
+    document.getElementById('ha-servicio').value='';
+    document.getElementById('ha-lote').value='';
+    if(D) renderControlHectareas();
+  });
   // Menú hamburguesa (solo visible en móvil, ver tabs.css): reutiliza los mismos botones .tab de
   // #tabs-nav, nunca duplica la navegación — la barra pasa de fila horizontal a panel desplegable.
   const menuToggle = document.getElementById('menu-toggle');
