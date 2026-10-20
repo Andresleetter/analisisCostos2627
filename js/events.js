@@ -1,11 +1,16 @@
 // ================== EVENTOS ==================
 document.addEventListener('DOMContentLoaded', function(){
-  ['ha-servicio','ha-lote'].forEach(id=>document.getElementById(id).addEventListener('input',()=>{
+  ['ha-buscar-servicio','ha-buscar-lote'].forEach(id=>document.getElementById(id).addEventListener('input',()=>{
+    if(D) renderControlHectareas();
+  }));
+  ['ha-servicio','ha-lote'].forEach(id=>document.getElementById(id).addEventListener('change',()=>{
     if(D) renderControlHectareas();
   }));
   document.getElementById('ha-limpiar').addEventListener('click',()=>{
     document.getElementById('ha-servicio').value='';
     document.getElementById('ha-lote').value='';
+    document.getElementById('ha-buscar-servicio').value='';
+    document.getElementById('ha-buscar-lote').value='';
     if(D) renderControlHectareas();
   });
   // Menú hamburguesa (solo visible en móvil, ver tabs.css): reutiliza los mismos botones .tab de

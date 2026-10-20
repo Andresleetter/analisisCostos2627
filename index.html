@@ -276,11 +276,11 @@
   <section class="page">
     <div class="gfilter ha-filtros">
       <label for="ha-servicio">Servicio</label>
-      <input type="search" id="ha-servicio" list="ha-servicios" placeholder="Buscar servicio…" aria-describedby="ha-ayuda" autocomplete="off">
-      <datalist id="ha-servicios"></datalist>
+      <select id="ha-servicio"><option value="">Todos los servicios</option></select>
+      <input type="search" id="ha-buscar-servicio" placeholder="Buscar servicio…" aria-label="Buscar servicio" autocomplete="off">
       <label for="ha-lote">Lote</label>
-      <input type="search" id="ha-lote" list="ha-lotes" placeholder="Buscar lote…" aria-describedby="ha-ayuda" autocomplete="off">
-      <datalist id="ha-lotes"></datalist>
+      <select id="ha-lote"><option value="">Todos los lotes</option></select>
+      <input type="search" id="ha-buscar-lote" placeholder="Buscar lote…" aria-label="Buscar lote" autocomplete="off">
       <button type="button" id="ha-limpiar">Limpiar filtros</button>
       <span class="fnote" id="ha-ayuda">Buscá por palabras, sin importar acentos o mayúsculas. Los filtros se combinan y actualizan las tablas y los indicadores.</span>
     </div>
