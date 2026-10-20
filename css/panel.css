@@ -7,7 +7,6 @@
 .c-g{color:var(--g)} .c-y{color:var(--y)} .c-o{color:var(--o)} .c-r{color:var(--r)} .c-gris{color:var(--muted)}
 .f-g{background:var(--g)} .f-y{background:var(--y)} .f-o{background:var(--o)} .f-r{background:var(--r)} .f-gris{background:var(--muted)}
 
-.ha-filtros{flex-wrap:wrap;gap:10px}
-.ha-filtros input{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--ink);min-width:0;max-width:100%}
+.ha-filtros input{font-family:inherit;font-size:13.5px;padding:8px 14px;border:1.5px solid var(--line);border-radius:var(--radius-input);background:#fcfdfb;color:var(--teal);min-width:0;max-width:100%}
 .ha-filtros button{font:inherit;padding:8px 12px;cursor:pointer;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--ink)}
 .ha-filtros .fnote{flex-basis:100%}

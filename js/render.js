@@ -2476,9 +2476,9 @@ function coincideControlHa(valor, consulta, lote=false){
   const texto=normalizar(valor);
   return normalizar(consulta).split(/\s+/).every(p=>texto.includes(p));
 }
-function filtrarControlHectareas(datos, servicio, lote){
-  const porLote=r=>coincideControlHa(r.lote,lote,true);
-  const porServicio=r=>coincideControlHa(r.serv,servicio);
+function filtrarControlHectareas(datos, servicio, lote, servicioElegido="", loteElegido=""){
+  const porLote=r=>(!loteElegido||r.lote===loteElegido)&&coincideControlHa(r.lote,lote,true);
+  const porServicio=r=>(!servicioElegido||r.serv===servicioElegido)&&coincideControlHa(r.serv,servicio);
   const exceso=datos.exceso.filter(porLote).map(e=>{
     const dets=e.dets.filter(porServicio), culpables=dets.filter(x=>x.over);
     if(!culpables.length) return null;
@@ -2489,7 +2489,7 @@ function filtrarControlHectareas(datos, servicio, lote){
   const cancelados=datos.cancelados.filter(porLote).map(e=>{
     const dets=e.dets.filter(porServicio);
     return {...e,dets,n_ot:dets.length};
-  }).filter(e=>!servicio.trim()||e.n_ot);
+  }).filter(e=>(!servicio.trim()&&!servicioElegido)||e.n_ot);
   const sinrtk=datos.sinrtk.filter(r=>porLote(r)&&porServicio(r));
   return {exceso,repetidas,cancelados,sinrtk,exc_kpi:{...datos.exc_kpi,
     n:exceso.length,ha:exceso.reduce((s,e)=>s+e.diff,0),n_nuevos:exceso.filter(e=>e.nuevo).length,
@@ -2502,16 +2502,20 @@ function renderControlHectareas(){
 function renderControlHectareasDatos(datos){
   const servicio=document.getElementById('ha-servicio').value;
   const lote=document.getElementById('ha-lote').value;
+  const buscarServicio=document.getElementById('ha-buscar-servicio').value;
+  const buscarLote=document.getElementById('ha-buscar-lote').value;
   const filas=[...datos.exceso.flatMap(e=>e.dets.map(x=>({...x,lote:e.lote}))),
     ...datos.repetidas,...datos.cancelados.flatMap(e=>e.dets.length?e.dets.map(x=>({...x,lote:e.lote})):[{lote:e.lote,serv:''}]),...datos.sinrtk];
-  const opciones=(id,valores)=>{
-    document.getElementById(id).innerHTML=[...new Set(valores.filter(Boolean))]
+  const opciones=(id,valores,seleccion,titulo)=>{
+    const select=document.getElementById(id);
+    select.innerHTML='<option value="">'+titulo+'</option>'+[...new Set([...valores,seleccion].filter(Boolean))]
       .sort((a,b)=>a.localeCompare(b,'es',{numeric:true}))
-      .map(v=>'<option value="'+escHtml(String(v))+'"></option>').join('');
+      .map(v=>'<option value="'+escHtml(String(v))+'">'+escHtml(String(v))+'</option>').join('');
+    select.value=seleccion;
   };
-  opciones('ha-servicios',filas.filter(r=>coincideControlHa(r.lote,lote,true)&&coincideControlHa(r.serv,servicio)).map(r=>r.serv));
-  opciones('ha-lotes',filas.filter(r=>coincideControlHa(r.serv,servicio)&&coincideControlHa(r.lote,lote,true)).map(r=>r.lote));
-  const D=filtrarControlHectareas(datos,servicio,lote);
+  opciones('ha-servicio',filas.filter(r=>(!lote||r.lote===lote)&&coincideControlHa(r.serv,buscarServicio)).map(r=>r.serv),servicio,'Todos los servicios');
+  opciones('ha-lote',filas.filter(r=>(!servicio||r.serv===servicio)&&coincideControlHa(r.lote,buscarLote,true)).map(r=>r.lote),lote,'Todos los lotes');
+  const D=filtrarControlHectareas(datos,buscarServicio,buscarLote,servicio,lote);
   // TAB3 control ha
   document.getElementById('ha-kpis').innerHTML=
     `<div class="kpi"><div class="k-lab">Lotes con Exceso</div><div class="k-val c-r">${D.exc_kpi.n}</div>`+
