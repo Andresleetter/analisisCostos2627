@@ -1,0 +1,4 @@
+# Cloudflare Pages: la SPA usa rutas reales (/mis-tareas, /tareas/nueva), no
+# hash. Sin esto, recargar o entrar directo a una ruta devuelve 404 en vez de
+# cargar la app. El 200 es un rewrite, no una redirección: la URL no cambia.
+/*  /index.html  200
