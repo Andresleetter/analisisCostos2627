@@ -1,16 +1,61 @@
 // ================== EVENTOS ==================
 document.addEventListener('DOMContentLoaded', function(){
-  ['ha-buscar-servicio','ha-buscar-lote'].forEach(id=>document.getElementById(id).addEventListener('input',()=>{
-    if(D) renderControlHectareas();
-  }));
-  ['ha-servicio','ha-lote'].forEach(id=>document.getElementById(id).addEventListener('change',()=>{
-    if(D) renderControlHectareas();
-  }));
+  function cerrarSelectorHa(selector, devolverFoco=false){
+    selector.querySelector('.ha-selector-menu').hidden=true;
+    const boton=selector.querySelector('.ha-selector-toggle');
+    boton.setAttribute('aria-expanded','false');
+    selector.querySelector('input').value='';
+    if(devolverFoco) boton.focus();
+  }
+  document.querySelectorAll('.ha-selector').forEach(selector=>{
+    const nombre=selector.dataset.filtro;
+    const boton=selector.querySelector('.ha-selector-toggle');
+    const menu=selector.querySelector('.ha-selector-menu');
+    const buscador=selector.querySelector('input');
+    const abrir=()=>{
+      document.querySelectorAll('.ha-selector').forEach(otro=>cerrarSelectorHa(otro));
+      menu.hidden=false;
+      boton.setAttribute('aria-expanded','true');
+      renderOpcionesSelectorHa(nombre);
+      buscador.focus();
+    };
+    boton.addEventListener('click',()=>menu.hidden?abrir():cerrarSelectorHa(selector));
+    boton.addEventListener('keydown',e=>{
+      if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();abrir();}
+    });
+    buscador.addEventListener('input',()=>renderOpcionesSelectorHa(nombre));
+    selector.addEventListener('click',e=>{
+      const opcion=e.target.closest('[data-ha-value]');
+      if(!opcion) return;
+      document.getElementById('ha-'+nombre).value=opcion.dataset.haValue;
+      cerrarSelectorHa(selector,true);
+      if(D) renderControlHectareas();
+    });
+    selector.addEventListener('keydown',e=>{
+      if(menu.hidden) return;
+      if(e.key==='Escape'){e.preventDefault();e.stopPropagation();cerrarSelectorHa(selector,true);return;}
+      const opciones=[...selector.querySelectorAll('[data-ha-value]')];
+      const indice=opciones.indexOf(document.activeElement);
+      if(e.key==='ArrowDown'||e.key==='ArrowUp'){
+        e.preventDefault();
+        const siguiente=indice<0?(e.key==='ArrowDown'?0:opciones.length-1):indice+(e.key==='ArrowDown'?1:-1);
+        (opciones[siguiente]||buscador).focus();
+      }
+      if(e.key==='Enter'&&e.target===buscador){e.preventDefault();if(opciones[0]) opciones[0].click();}
+    });
+    selector.addEventListener('focusout',e=>{
+      if(!selector.contains(e.relatedTarget)) cerrarSelectorHa(selector);
+    });
+  });
+  document.addEventListener('click',e=>{
+    document.querySelectorAll('.ha-selector').forEach(selector=>{
+      if(!selector.contains(e.target)) cerrarSelectorHa(selector);
+    });
+  });
   document.getElementById('ha-limpiar').addEventListener('click',()=>{
+    document.querySelectorAll('.ha-selector').forEach(selector=>cerrarSelectorHa(selector));
     document.getElementById('ha-servicio').value='';
     document.getElementById('ha-lote').value='';
-    document.getElementById('ha-buscar-servicio').value='';
-    document.getElementById('ha-buscar-lote').value='';
     if(D) renderControlHectareas();
   });
   // Menú hamburguesa (solo visible en móvil, ver tabs.css): reutiliza los mismos botones .tab de

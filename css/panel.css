@@ -8,5 +8,16 @@
 .f-g{background:var(--g)} .f-y{background:var(--y)} .f-o{background:var(--o)} .f-r{background:var(--r)} .f-gris{background:var(--muted)}
 
 .ha-filtros input{font-family:inherit;font-size:13.5px;padding:8px 14px;border:1.5px solid var(--line);border-radius:var(--radius-input);background:#fcfdfb;color:var(--teal);min-width:0;max-width:100%}
-.ha-filtros button{font:inherit;padding:8px 12px;cursor:pointer;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--ink)}
+.ha-filtros #ha-limpiar{font:inherit;padding:8px 12px;cursor:pointer;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--ink)}
 .ha-filtros .fnote{flex-basis:100%}
+
+.ha-selector{position:relative;max-width:100%;min-width:200px}
+.ha-selector-toggle{width:100%;text-align:left;position:relative;padding-right:34px!important;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:380px}
+.ha-selector-toggle::after{content:"▾";position:absolute;right:12px}
+.ha-selector-menu{position:absolute;top:calc(100% + 4px);left:0;width:max(100%,280px);max-width:calc(100vw - 64px);z-index:30;background:var(--card);border:1px solid var(--line);border-radius:var(--radius-input);box-shadow:var(--shadow-sm);padding:8px}
+.ha-selector-menu[hidden]{display:none}
+.ha-selector-menu input{width:100%;box-sizing:border-box;margin-bottom:6px}
+.ha-selector-opciones{max-height:240px;overflow-y:auto}
+.ha-selector-opciones button{display:block;width:100%;border:0;background:transparent;color:var(--ink);text-align:left;font:inherit;font-size:13px;padding:9px 10px;cursor:pointer;white-space:normal}
+.ha-selector-opciones button:hover,.ha-selector-opciones button:focus-visible,.ha-selector-opciones button[aria-pressed="true"]{background:var(--line);outline:2px solid var(--green);outline-offset:-2px}
+.ha-selector-estado{display:block;color:var(--muted);font-size:12px}
