@@ -2502,8 +2502,6 @@ function renderControlHectareas(){
 function renderControlHectareasDatos(datos){
   const servicio=document.getElementById('ha-servicio').value;
   const lote=document.getElementById('ha-lote').value;
-  const buscarServicio=document.getElementById('ha-buscar-servicio').value;
-  const buscarLote=document.getElementById('ha-buscar-lote').value;
   const filas=[...datos.exceso.flatMap(e=>e.dets.map(x=>({...x,lote:e.lote}))),
     ...datos.repetidas,...datos.cancelados.flatMap(e=>e.dets.length?e.dets.map(x=>({...x,lote:e.lote})):[{lote:e.lote,serv:''}]),...datos.sinrtk];
   const opciones=(id,valores,seleccion,titulo)=>{
@@ -2512,10 +2510,12 @@ function renderControlHectareasDatos(datos){
       .sort((a,b)=>a.localeCompare(b,'es',{numeric:true}))
       .map(v=>'<option value="'+escHtml(String(v))+'">'+escHtml(String(v))+'</option>').join('');
     select.value=seleccion;
+    document.getElementById(id.replace('ha-','ha-toggle-')).textContent=seleccion||titulo;
+    renderOpcionesSelectorHa(id.replace('ha-',''));
   };
-  opciones('ha-servicio',filas.filter(r=>(!lote||r.lote===lote)&&coincideControlHa(r.serv,buscarServicio)).map(r=>r.serv),servicio,'Todos los servicios');
-  opciones('ha-lote',filas.filter(r=>(!servicio||r.serv===servicio)&&coincideControlHa(r.lote,buscarLote,true)).map(r=>r.lote),lote,'Todos los lotes');
-  const D=filtrarControlHectareas(datos,buscarServicio,buscarLote,servicio,lote);
+  opciones('ha-servicio',filas.filter(r=>(!lote||r.lote===lote)).map(r=>r.serv),servicio,'Todos los servicios');
+  opciones('ha-lote',filas.filter(r=>(!servicio||r.serv===servicio)).map(r=>r.lote),lote,'Todos los lotes');
+  const D=filtrarControlHectareas(datos,'','',servicio,lote);
   // TAB3 control ha
   document.getElementById('ha-kpis').innerHTML=
     `<div class="kpi"><div class="k-lab">Lotes con Exceso</div><div class="k-val c-r">${D.exc_kpi.n}</div>`+
@@ -2533,7 +2533,7 @@ function renderControlHectareasDatos(datos){
     // tag "nuevo": este lote no estaba en exceso en la exportacion anterior. Va en la fila del
     // grupo y no en la de la OT porque lo nuevo es el HALLAZGO, no la orden.
     const tagNuevo = e.nuevo ? ' <span class="tag tag-nuevo">nuevo</span>' : '';
-    excHtml+=`<tr class="grp"><td>${e.cult}</td><td class="mono">${e.lote}${tagNuevo}</td><td class="tr">${fmt2(e.ha_rtk)}</td><td class="tr">${fmt2(e.ha_ot)}</td><td class="tr exd">+${fmt2(e.diff)}</td><td class="tr exd">+${Math.round(e.pdiff)}%</td></tr>`;
+    excHtml+=`<tr class="grp"><td colspan="2">${e.cult}</td><td class="mono">${e.lote}${tagNuevo}</td><td class="tr">${fmt2(e.ha_rtk)}</td><td class="tr">${fmt2(e.ha_ot)}</td><td class="tr exd">+${fmt2(e.diff)}</td><td class="tr exd">+${Math.round(e.pdiff)}%</td></tr>`;
     // Solo se listan las OT que SOBREPASAN el lote. Las que quedan dentro del plan son correctas y
     // no explican nada del exceso: eran 74 de las 95 filas del detalle, tres cuartas partes del
     // panel dedicadas a decir que todo estaba bien. Las toleradas (pasan el plan pero dentro de
@@ -2545,15 +2545,13 @@ function renderControlHectareasDatos(datos){
     // nombran: si desaparecieran sin rastro pareceria que el control no las vio.
     const declaradas=e.dets.filter(x=>x.declarado);
     const ocultas=e.dets.length-culpables.length;
-    excHtml+=`<tr class="dethead"><td colspan="6">${culpables.length} de ${e.n_ot} OT</td></tr>`;
-    // Fecha real de la OT: el servicio deja de ocupar dos columnas para hacerle lugar, asi la fila
-    // sigue teniendo las mismas 6 celdas que la cabecera. Es el mismo dato y el mismo formato que
-    // ya muestra el panel de labores repetidas, y responde lo primero que se pregunta al ver un
-    // sobrepase: si se cargo el dia de la labor o meses despues.
+    excHtml+=`<tr class="dethead"><td colspan="7">${culpables.length} de ${e.n_ot} OT</td></tr>`;
+    // Cabecera propia del detalle: las hectáreas y el porcentaje ocupan columnas separadas.
+    excHtml+=`<tr class="detcols"><td>OT</td><td>Actividad</td><td>Servicio</td><td>Fecha</td><td>Estado</td><td class="tr">Ha OT</td><td class="tr">% Exceso OT</td></tr>`;
     culpables.forEach(x=>{ const tag='<span class="tag">superficie sobre el plan</span>';
-      excHtml+=`<tr class="det-over"><td class="dl mono">OT ${x.ot}</td><td>${x.act}</td><td>${x.serv} ${tag}</td><td class="mono">${x.fr?ipFecha(x.fr):'—'}</td><td>${x.estado}</td><td class="tr exd">${fmt2(x.ha)} ha<br><span title="Exceso de esta OT respecto al plan del lote">+${fmt2((x.ha-e.ha_rtk)/e.ha_rtk*100)}%</span></td></tr>`; });
+      excHtml+=`<tr class="det-over"><td class="dl mono">OT ${x.ot}</td><td>${x.act}</td><td>${x.serv} ${tag}</td><td class="mono">${x.fr?ipFecha(x.fr):'—'}</td><td>${x.estado}</td><td class="tr exd">${fmt2(x.ha)} ha</td><td class="tr exd" title="Exceso de esta OT respecto al plan del lote">+${fmt2((x.ha-e.ha_rtk)/e.ha_rtk*100)}%</td></tr>`; });
   });
-  document.getElementById('exc').innerHTML=excHtml || '<tr><td colspan="6">Sin casos para estos filtros</td></tr>';
+  document.getElementById('exc').innerHTML=excHtml || '<tr><td colspan="7">Sin casos para estos filtros</td></tr>';
   // ---- Labores repetidas que sumando pasan el lote ----
   // Mismo formato que el panel de exceso (fila de grupo + detalle de OT), porque responde la misma
   // pregunta con otra cuenta: alli el lote entra con su OT mas grande, aca con la SUMA de las OT
@@ -2591,4 +2589,14 @@ function renderControlHectareasDatos(datos){
   document.getElementById('sinrtk-sub').textContent=D.sinrtk.length+' OT';
   document.getElementById('sinrtk').innerHTML=D.sinrtk.map(r=>
     `<tr><td class="mono">OT ${r.ot}</td><td>${r.cult}</td><td class="mono">${r.lote}</td><td>${r.act}</td><td>${r.serv}</td><td class="tr mono">${fmt2(r.ha)}</td><td>${r.estado}</td></tr>`).join('') || '<tr><td colspan="7">Sin casos para estos filtros</td></tr>';
+}
+
+// El texto buscado acota las opciones del desplegable; solo elegir una aplica el filtro.
+function renderOpcionesSelectorHa(nombre){
+  const select=document.getElementById('ha-'+nombre);
+  const consulta=document.getElementById('ha-buscar-'+nombre).value;
+  const opciones=[...select.options].filter(o=>!consulta.trim()||coincideControlHa(o.textContent,consulta,nombre==='lote'));
+  document.getElementById('ha-opciones-'+nombre).innerHTML=opciones.map(o=>
+    '<button type="button" data-ha-value="'+escHtml(o.value)+'" aria-pressed="'+(o.value===select.value)+'">'+escHtml(o.textContent)+'</button>').join('');
+  document.getElementById('ha-estado-'+nombre).textContent=opciones.length?'':'Sin coincidencias';
 }
