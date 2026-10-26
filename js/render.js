@@ -1794,6 +1794,27 @@ function renderCombustible(){
   combPintarKpis({haySeleccion: tercV!=='ALL' || maqV!=='ALL' || tipoV!=='ALL', verConsumo,
     stockInicioPeriodo, totIngresoMes, totConsumoMes, balance, balCol, pieBalance,
     tot, nMov, prestamos: rowsP});
+  combArmarReporte();
+}
+// Encabezado del reporte impreso de Combustible. No calcula NADA: pone en palabras lo que esta
+// elegido en los selectores —que en papel salen como cajas sin texto legible— y sella la hoja con
+// la fecha del archivo de datos y la de impresion. Se rearma en cada render para que no pueda
+// quedar describiendo un filtro distinto del que muestran las tablas, y otra vez justo antes de
+// imprimir (ver el beforeprint en js/events.js) para que la hora de impresion sea la real.
+function combArmarReporte(){
+  const filtros=document.getElementById('comb-rep-filtros');
+  if(!filtros) return;
+  const texto = id => { const s=document.getElementById(id);
+    return (s && s.selectedIndex>=0) ? s.options[s.selectedIndex].text : '—'; };
+  filtros.textContent='Mes: '+texto('cmes')+'   ·   Tercero: '+texto('cterc')
+    +'   ·   Máquina: '+texto('cmaq')+'   ·   Movimiento: '+texto('ctipo');
+  // La misma fecha de archivo que muestra la chapita del encabezado (D.excel_actualizado), no la
+  // Fecha Teorica de las OT: lo que interesa en un reporte es de que exportacion salio.
+  const hm = d => ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
+  const fa=D.excel_actualizado, ahora=new Date();
+  document.getElementById('comb-rep-pie').textContent=
+    'Campaña 26/27 · Campo La Teresa · cantidades en litros · datos del archivo al '
+    +ipFecha(fa)+' '+hm(fa)+' · impreso el '+ipFecha(ahora)+' '+hm(ahora);
 }
 // El bloque de KPI de Combustible. Cambia de pregunta segun lo que haya filtrado el usuario, que
 // es la razon de que se pinte al final de renderCombustible y no apenas se calcula el balance:

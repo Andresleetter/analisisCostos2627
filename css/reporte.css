@@ -1,0 +1,45 @@
+/* ================== IMPRESIÓN ==================
+   La hoja de papel. Va ÚLTIMA en index.html a propósito: acá hay reglas que tienen que ganarle a
+   las de los módulos sin subir la especificidad a golpe de !important, y con la misma
+   especificidad gana la última hoja cargada.
+
+   Nota para quien venga después: css/ui.css tiene un bloque @media print casi igual. Esa hoja hoy
+   NO está enlazada desde index.html —es parte del rediseño en curso— así que no se carga y no
+   imprime nada. Cuando el rediseño entre, hay que quedarse con UNA de las dos, no con las dos. */
+
+/* El encabezado del reporte de Combustible solo existe en papel: en pantalla la fila de filtros ya
+   dice lo mismo, y además se puede tocar. Lo enciende el @media print de más abajo. */
+.rep-cab{display:none}
+
+@media print{
+  /* Fuera los cromos de interfaz: no se pueden tocar en una hoja y solo ocupan lugar. */
+  .tabs,.menu-toggle,.aviso-datos,.prob-link,.opex-toggle,.skip-link{display:none!important}
+  .top{position:static;box-shadow:none;backdrop-filter:none}
+  .panel,.kpi,.gkpi{box-shadow:none;break-inside:avoid}
+  /* Las tablas largas viven dentro de un .scroll con alto máximo: en papel eso recortaría el
+     reporte a lo que entra en la ventana. */
+  .scroll{max-height:none;overflow:visible}
+  /* Se imprime SOLO la pestaña que se está mirando; sin esto salen los siete módulos seguidos. */
+  .page{display:block!important}
+  .page:not(.active){display:none!important}
+
+  /* Las barras de participación son un fondo de color, y el navegador no imprime fondos salvo que
+     se le pida: sin esto la columna sale en blanco y la tabla pierde la comparación de un vistazo. */
+  .sopbar,.sopbar>div{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  /* Una tabla que no entra en una hoja sigue en la siguiente sin cabecera: ahí deja de saberse qué
+     es cada columna. Con esto la cabecera se repite en cada hoja y ninguna fila se parte al medio. */
+  thead{display:table-header-group}
+  tr{break-inside:avoid}
+
+  /* ---- Reporte de Combustible ----
+     Los cuatro selectores se reemplazan por el encabezado del reporte, que dice con palabras lo
+     que está elegido. En papel un <select> es una caja gris: ocupa lugar y no se lee. */
+  #pg-combustible .gfilter{display:none}
+  /* El triangulito de desplegar es una invitación a hacer clic: en papel no lleva a ningún lado.
+     Se oculta con visibility y no con display para que las filas no se corran 11px a la izquierda. */
+  .ip-caret{visibility:hidden}
+  .rep-cab{display:block;margin:0 0 14px;padding-bottom:10px;border-bottom:2px solid var(--teal)}
+  .rep-cab h2{margin:0 0 6px;font-size:19px;font-weight:800;letter-spacing:-.02em}
+  .rep-cab p{margin:2px 0;font-size:12px;color:#444}
+  .rep-cab .rep-filtros{font-weight:700;color:#000}
+}

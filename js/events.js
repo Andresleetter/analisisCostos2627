@@ -224,6 +224,13 @@ document.addEventListener('DOMContentLoaded', function(){
   document.getElementById('iinsumo').addEventListener('change', renderInsumos);
   document.getElementById('aestado').addEventListener('change', renderAlertas);
   document.getElementById('al-img').addEventListener('click', alertasDescargarImagen);
+  // Reporte de Combustible: el boton solo abre el dialogo de impresion del navegador — la hoja la
+  // arma el @media print de css/ui.css sobre lo que ya esta en pantalla, asi que el reporte sale
+  // siempre con los filtros que el usuario tiene puestos. El beforeprint va aparte y no sobra:
+  // atrapa tambien el Ctrl+P y la impresion desde el menu, y es lo que deja la hora de impresion
+  // al dia en las dos vias.
+  document.getElementById('comb-print').addEventListener('click', () => window.print());
+  window.addEventListener('beforeprint', combArmarReporte);
   // ---- Auditoría: sub-navegación entre Infraestructura e Insumos por Parcela ----
   // Delegada sobre la barra (elemento fijo del HTML). Usa .subtab, no .tab: el listener de módulos
   // de más arriba indexa las .tab contra las .page, y un botón .tab de más rompería ese índice.

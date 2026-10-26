@@ -21,6 +21,9 @@
 <link rel="stylesheet" href="css/alertas.css">
 <link rel="stylesheet" href="css/auditoria.css">
 <link rel="stylesheet" href="css/footer.css">
+<!-- Ultima a proposito: la hoja de impresion necesita ganarle a las de modulo por orden de
+     carga, sin subir especificidad. Ver css/reporte.css. -->
+<link rel="stylesheet" href="css/reporte.css">
 </head>
 <body>
 
@@ -209,7 +212,7 @@
   </section>
 
   <!-- TAB 3: Combustible -->
-  <section class="page">
+  <section class="page" id="pg-combustible">
     <div class="gfilter">
       <label for="cmes">Mes</label>
       <select id="cmes"><option value="ALL">Toda la Campaña</option></select>
@@ -232,6 +235,16 @@
         <option value="prestamo">Solo préstamos</option>
         <option value="devolucion">Solo devoluciones</option>
       </select>
+      <button type="button" class="prob-link" id="comb-print">Imprimir reporte</button>
+    </div>
+    <!-- Encabezado del reporte. En pantalla no se ve: existe para el papel, donde los cuatro
+         selectores de arriba salen como cajas que no dicen qué está elegido y la hoja termina
+         sin decir de qué recorte de datos habla. Lo llena combArmarReporte() en js/render.js,
+         que es quien sabe qué quedó seleccionado. -->
+    <div class="rep-cab" id="comb-reporte">
+      <h2>Reporte de Combustible</h2>
+      <p class="rep-filtros" id="comb-rep-filtros"></p>
+      <p class="rep-pie" id="comb-rep-pie"></p>
     </div>
     <div class="kpis" id="comb-balance"></div>
     <div class="panel sub"><h3>Ingresos</h3>
