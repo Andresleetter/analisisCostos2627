@@ -106,10 +106,17 @@ function trabajosCamionGruaDeLinea(linea){
     // Se exige que sea linea de labor a proposito: hay 62 lineas de INSUMO en "Kilos" (fertilizantes
     // y similares) que no son trabajos medidos por peso y no deben cambiar de formula de costo — hoy
     // daria lo mismo, pero deja el alcance acotado si el dato cambia.
+    // A las dos familias de fletes se suma una tercera via: SERVICIOS_DOSIS_EN_PESO (config.js),
+    // para los servicios cuya cantidad es un peso aunque unidadMedida diga otra cosa. Hoy es la
+    // urea, que viene rotulada "Litros" y trae kilos — ver el comentario de esa lista.
+    // El costo NO cambia al entrar por esta via: la formula pasa de ud x pu a ta x pu, y en las 75
+    // lineas de urea del export unidadesDosis y totalAplicado son identicos (US$ 68.380,00 con las
+    // dos). Verificado antes de aplicar el cambio.
     const UNIDADES_PESO=['dosis','kilos'];
     out.forEach(r=>{
       const esLaborLinea = r.tipo==='Labor Propia' || r.tipo==='Labor Tercero';
-      r.esPeso = esLaborLinea && UNIDADES_PESO.includes(r.unidad.toLowerCase());
+      r.esPeso = esLaborLinea && (UNIDADES_PESO.includes(r.unidad.toLowerCase())
+        || servicioEnLista(r.serv, SERVICIOS_DOSIS_EN_PESO));
       r.imp=(r.esPeso?r.ta:r.ud)*r.pu; r.esHoras=r.unidad.toLowerCase()==='horas'; });
     return out;
   }

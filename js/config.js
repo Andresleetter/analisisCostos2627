@@ -436,6 +436,27 @@ const CAMION_GRUA_BLOQUE_HORAS = 6;
 // unidadMedida === "General", que convertiría la excepción en una regla global. La unidad se usa
 // solo como control de consistencia (ver avisos en construirBaseOT). Al ser comparación exacta y no
 // parcial, "Camion", "Grua", "Camioneta" o "Camion + otro servicio" NO entran acá.
+// Servicios cuya linea de labor trae una CANTIDAD EN PESO aunque unidadMedida diga otra cosa.
+//
+// El caso que lo motivo (26/10/2026): "Fertilización al Voleo Urea >50kg/ha". Su OT trae dos
+// filas — la de categoria=Insumo en "Kilos" y la de categoria=Servicio en "LITROS" — y las dos
+// llevan el mismo unidadesDosis, que son los kilos de urea esparcidos. Como la superficie del
+// modelo sale de la fila de Servicio y "Litros" no estaba contemplado, esos kilos entraban como
+// HECTAREAS: la OT 6374 declaraba 2.555 ha sobre el lote .73A, que tiene 23,81.
+//
+// El efecto no era cosmetico. En la exportacion del 26/10 los lotes en exceso del Control de
+// Hectareas saltaron de 22 a 89 — 67 lotes marcados por un error de unidad, no por un sobrepase
+// real. Era, de lejos, el numero mas visible del tablero.
+//
+// Por que una lista por nombre y no una regla por unidad: "Litros" NO siempre miente. Medido
+// sobre el export de hoy, de los 29 servicios cuya dosis SI es la superficie (ratio contra Has.
+// Reales entre 0,9 y 1,1), tres vienen rotulados en Litros. Tratar "Litros" como peso romperia
+// esos tres. La comparacion es por prefijo normalizado, igual que SERVICIOS_SIN_TRABAJO_EJECUTADO.
+//
+// Como se detecta uno nuevo: en la linea de categoria=Servicio, dividir unidadesDosis por
+// hectareasReales. Si da ~1 la dosis es la superficie; si da 100 o mas, es otra magnitud y el
+// servicio va en esta lista. La urea da 107,3.
+const SERVICIOS_DOSIS_EN_PESO = ['fertilizacion al voleo urea'];
 const SERVICIOS_CAMION_GRUA = [
   {servicio:'Camion + grua por dia <6hs', horasDelTramo:1},
   {servicio:'Camion + grua por dia >6hs', horasDelTramo:CAMION_GRUA_BLOQUE_HORAS},
