@@ -402,7 +402,14 @@ tr.al-y td,tr.al-o td,tr.al-r td{background:transparent}
 /* ================================================================
    7. CONTROLES
    ================================================================ */
+/* El z-index NO es decorativo: .gfilter lleva backdrop-filter (abajo), y un backdrop-filter crea
+   contexto de apilado. Eso encerraba el z-index:30 del menu desplegable de Servicio/Lote
+   (panel.css:17) DENTRO de la fila de filtros, que al tener z-index:auto y venir primera en el
+   HTML quedaba por debajo de todo lo que sigue: el menu abierto se veia tapado por las tarjetas
+   de KPI y por la cabecera pegajosa de la tabla. Con la fila en su propia capa, el menu vuelve a
+   salir por encima. */
 .gfilter{
+  position:relative;z-index:20;
   border:0;border-radius:var(--radius-md);
   background:color-mix(in srgb, var(--card) 86%, transparent);
   -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
@@ -876,6 +883,15 @@ th{
   font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);
   border-bottom:1.5px solid var(--line)!important;padding:10px 12px;
 }
+/* ...pero la cabecera que se PEGA arriba del .scroll no puede ser transparente: las filas le
+   pasan por debajo y se leen las dos encima. El transparent de arriba viene de Airo, donde la
+   tabla va sobre una tarjeta blanca; aca ui.css le pone fondo a .scroll table th y este archivo,
+   que carga despues y usa !important, se lo borraba. Se devuelve el fondo con la misma arma y
+   mas especificidad. */
+.scroll table th{background:var(--card)!important}
+/* Las cabeceras internas de los desplegables no se pegan (ui.css las deja estaticas), asi que no
+   necesitan tapar nada y pueden seguir sin fondo. */
+.scroll .sv-ots th,.scroll .opex-detail-table th{background:transparent!important}
 td{border-bottom:1px dashed var(--line)!important;padding:11px 12px}
 tr.grp>td{background:var(--surface-2)!important;font-weight:700}
 tr.tot>td{background:var(--surface-3)!important;border-top:0!important}
