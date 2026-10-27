@@ -111,16 +111,6 @@
   </header>
 
   <div class="menu-backdrop" id="menu-backdrop" hidden></div>
-  <nav class="tabs" id="tabs-nav">
-    <button class="tab active" data-mod="resumen">Resumen Ejecutivo <span class="badge" id="b-prob">0</span></button>
-    <button class="tab" data-mod="servicios">Servicios</button>
-    <button class="tab" data-mod="combustible">Combustible</button>
-    <button class="tab" data-mod="insumos">Insumos</button>
-    <button class="tab" data-mod="hectareas">Control de Hectáreas <span class="badge" id="b-exc">0</span></button>
-    <button class="tab" data-mod="alertas">Alertas Operativas <span class="badge" id="b-al">0</span></button>
-    <button class="tab" data-mod="auditoria">Auditoría</button>
-  </nav>
-
   <!-- TAB 1: Resumen Ejecutivo -->
   <section class="page active">
 
@@ -133,13 +123,45 @@
          en la campaña vigente, nunca recuerda la última elección.
          No lleva .fnote: su texto cambiaría de largo con cada campaña y reacomodaría el select en
          cada cambio (ver CLAUDE.md). El contexto de la campaña va en el pie de los KPIs. -->
-    <div class="gfilter">
-      <label for="rescampania">Campaña</label>
-      <select id="rescampania"></select>
-    </div>
+    <!-- La portada del Resumen tiene la forma del hero de Airo (#mg-hero, shell.html:139-170):
+         primero la fila de filtros, despues el encabezado grande — versalitas, saludo y linea de
+         frescura — y abajo las cifras.
+         Dos piezas de Airo NO estan, porque copiarlas seria inventar datos:
+         - el nombre en el saludo ("Buenas tardes, Andres."): aca no hay sesion ni usuario. Queda
+           el saludo a secas, que es lo que el propio Airo hace en su otra vista (minga.js:932).
+         - la cadena "Albor -> n8n -> Airo": este tablero lee un .xlsx exportado, no Albor en vivo.
+           Dibujar ese flujo mostraria una tuberia que no existe. -->
+    <section class="hero">
+      <div class="gfilter">
+        <label for="rescampania">Campaña</label>
+        <select id="rescampania"></select>
+        <!-- Airo cierra su fila de filtros con el total a la derecha ("2.940 ordenes"). -->
+        <p class="gfilter-cuenta" id="res-cuenta"></p>
+      </div>
 
-    <!-- 1. Estado general de la campaña -->
-    <div class="kpis kpis-exec" id="exec-kpis"></div>
+      <div class="hero-cab">
+        <div>
+          <p class="eyebrow" id="hero-eyebrow">Campo La Teresa · Valores en Dólares</p>
+          <h2 id="hero-hola">Hola.</h2>
+          <p class="hero-sub" id="hero-sub"></p>
+        </div>
+      </div>
+
+      <!-- 1. Estado general de la campaña.
+           Las tarjetas y la cinta comparten una grilla de dos columnas, como .mg-hero-cuerpo en
+           Airo (minga.css:231): las cifras a la izquierda en dos columnas, la cinta de ordenes
+           a la derecha en una columna fija. -->
+      <div class="hero-cuerpo">
+        <div class="kpis kpis-exec" id="exec-kpis"></div>
+        <!-- Airo rotula su cinta "de Albor" con un punto en vivo. Acá NO: este tablero lee el
+             .xlsx exportado, no Albor en tiempo real, así que decir eso seria mentir sobre de
+             donde salen los datos. En su lugar va cuantas ordenes se estan listando. -->
+        <div class="cinta-ot">
+          <div class="cinta-cab"><b>Últimas órdenes confirmadas</b><span class="cinta-n" id="cinta-n"></span></div>
+          <div class="cinta-lista" id="cinta-lista"></div>
+        </div>
+      </div>
+    </section>
 
     <!-- 2. Detalle de Etapas por Cultivo: primer bloque analítico tras los KPIs. El Mapa de
          Siembra vive DENTRO de esta misma cuadrícula (.cults), como una tarjeta más al final —
@@ -148,20 +170,52 @@
          aparte (ver README.md). No hay markup fijo acá para la imagen: se pierde cada vez que
          render.js reescribe #cults, por eso el listener de events.js está delegado sobre #cults
          (elemento estable), no atado directo a la imagen. -->
-    <div class="panel"><h3>Detalle de Etapas por Cultivo
-      <!-- Única puerta de entrada a la vista "Avance Detallado" (más abajo): esa vista explica de
-           dónde sale el porcentaje de cada etapa de este mismo bloque, así que el acceso va acá y no
-           como una pestaña más del menú. Reutiliza .prob-link, el mismo botón-píldora de "Ver
-           detalle" de Posibles Problemas. -->
-      <button type="button" class="prob-link" id="ver-avance-detallado">Ver desglose detallado →</button></h3>
+    <!-- La puerta de entrada a "Avance Detallado" (más abajo) ya no está acá: vive dentro de la
+         tarjeta del cultivo que se pone en foco, abajo a la izquierda, y abre el desglose de ESE
+         cultivo. Un acceso general no tenía a qué cultivo llevar — abría al último mirado — y esa
+         vista es siempre de un cultivo. La arma renderCultivoDetalle() en js/render.js. -->
+    <div class="panel"><h3>Detalle de Etapas por Cultivo</h3>
+      <!-- Cabecera al modo de Airo (.mg-hero-avance-cab, shell.html:182): de un lado qué se está
+           mirando, del otro las píldoras para mirar un cultivo solo. Las píldoras las llena
+           renderCultivoDetalle(), que es quien sabe qué cultivos tiene la campaña elegida. -->
+      <div class="cults-cab">
+        <p class="cults-sub">Cada etapa contra el Plan de Cultivo</p>
+        <div class="segbtns" id="cult-foco" role="group" aria-label="Ver avance de"></div>
+      </div>
       <div class="cults" id="cults"></div></div>
 
-    <!-- 3. Ejecución operacional -->
-    <div class="resumen-grid-2">
-      <div class="panel"><h3>Estado de las Órdenes de Trabajo <span id="resumen-ot-sub"></span></h3>
-        <div id="resumen-estados-ot"></div></div>
-      <div class="panel"><h3>Actividad Operacional por Período</h3>
-        <div id="resumen-actividad-mensual"></div></div>
+    <!-- 3. Ejecución operacional.
+         "Estado de las Órdenes de Trabajo" se retiró: sus tres cifras ya están arriba, en las
+         tarjetas de portada — confirmadas en la suya, y En Ejecución + Pendientes en "Órdenes en
+         marcha ahora", con su barra de dos tramos. Era el mismo dato dos veces.
+         La actividad queda sola, a todo el ancho, así que ya no necesita el envoltorio de dos
+         columnas. -->
+    <!-- Los dos van lado a lado, como .mg-extra2 en Airo (minga.css:1188): la actividad
+         ocupa 1,7 partes y el ranking 1. Debajo de 1100px se apilan. -->
+    <div class="resumen-par">
+    <div class="panel"><h3>Actividad por Mes
+      <!-- Qué medir, con el mismo grupo segmentado que las píldoras de cultivo. Los botones los
+           pinta renderActividadMensual() para que el elegido salga marcado sin duplicar el
+           estado entre el HTML y el JS. -->
+      <div class="segbtns" id="act-medir" role="group" aria-label="Qué medir"></div></h3>
+      <!-- La cifra grande del período y el pico, como en la cabecera de .mg-act de Airo: antes
+           esa misma información iba en una nota chica debajo del gráfico. -->
+      <div class="lchart-cab" id="act-cab"></div>
+      <div id="resumen-actividad-mensual"></div></div>
+
+    <!-- "Quién hizo qué": el mismo trabajo confirmado, agrupado por contratista, por servicio o
+         por lote (.mg-rank en Airo). Los dos grupos de botones los pinta renderRanking(). -->
+    <div class="panel"><h3>Quién hizo qué · campaña</h3>
+      <!-- Los dos grupos van juntos debajo del título y alineados a la izquierda, como
+           .mg-rank-cab en Airo (minga.css:993). Con el primero empujado al extremo derecho del
+           título y el segundo pegado a la izquierda, los dos escalones no se leían como dos
+           decisiones de la misma lista. -->
+      <div class="rank-cab">
+        <div class="segbtns" id="rank-dim" role="group" aria-label="Agrupar por"></div>
+        <div class="segbtns segbtns-chico" id="rank-med" role="group" aria-label="Medir por"></div>
+      </div>
+      <div class="rank-lista" id="rank-lista"></div>
+    </div>
     </div>
 
     <!-- 4. Gastos Operativos: MISMA posición/estilo de tarjeta que el viejo panel "Distribución
@@ -176,13 +230,9 @@
       <div id="opex-rows"></div>
     </div>
 
-    <!-- 5. Posibles problemas en la campaña -->
-    <div class="prob-head">
-      <div class="prob-count"><b id="prob-n">0</b><span>Problemas</span></div>
-      <div><div class="ph-t">Posibles Problemas en la Campaña</div>
-        <div class="ph-s">Desviaciones detectadas automáticamente a partir de los datos actuales — señalan puntos para revisión de gestión, no confirman necesariamente un problema físico en el campo.</div></div>
-    </div>
-    <div class="probs" id="probs"></div>
+    <!-- "Posibles Problemas en la Campaña" se retiró del tablero a pedido. El modelo las sigue
+         calculando (resumen.problemas, js/data/resumen.js): no se borró ninguna regla, solo dejó
+         de mostrarse. -->
   </section>
 
   <!-- TAB 2 -->

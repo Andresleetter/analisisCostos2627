@@ -16,6 +16,14 @@ function renderAll(){
   // semana largo puede encenderla sin que haya ningun problema, y por eso avisa en vez de alarmar.
   const t_date=document.getElementById('t-date');
   t_date.textContent=faTxt;
+  // El encabezado de la portada, al modo de Airo: saludo segun la hora y debajo de donde vienen
+  // los datos. Airo dice "Buenas tardes, <nombre>" porque tiene sesion; aca no hay usuario, asi
+  // que va el saludo solo — que es lo que el propio Airo hace en su otra vista (minga.js:932).
+  const hr=new Date().getHours();
+  const hola=document.getElementById('hero-hola');
+  if(hola) hola.textContent=(hr<12?'Buenos días':(hr<20?'Buenas tardes':'Buenas noches'))+'.';
+  const hsub=document.getElementById('hero-sub');
+  if(hsub) hsub.textContent='Datos del archivo de campaña · última actualización '+faTxt;
   const horasDato=(Date.now()-fa.getTime())/3600000;
   t_date.classList.toggle('vieja', horasDato>24);
   t_date.title = horasDato>24
@@ -133,60 +141,363 @@ function cambiarCampaniaResumen(valor){
 function renderResumenModulo(){
   renderResumenKPIs();
   renderCultivoDetalle();
-  renderEstadosOT();
   renderActividadMensual();
+  renderRanking();
   renderGastosOperativos();
-  renderProblemasResumen();
   poblarFiltroAvanceDetallado();
   renderAvanceDetalladoCultivo();
 }
 
-function kpiCard(lab,val,foot,col){
-  return `<div class="kpi kpi-acc kpi-${col}"><div class="k-lab">${lab}</div><div class="k-val">${val}</div><div class="k-foot">${foot}</div></div>`;
+function kpiCard(lab,val,foot,col,extra){
+  return `<div class="kpi kpi-acc kpi-${col}"><div class="k-lab">${lab}</div><div class="k-val">${val}</div><div class="k-foot">${foot}</div>${extra||''}</div>`;
 }
 
-// ---- 1. Estado general de la campaña: fila de KPIs operativos/financieros ----
-// Las hectáreas planificadas/ejecutadas y el avance general se retiraron de esta fila a pedido
-// del usuario — esa información vive ahora en "Detalle de Etapas por Cultivo" (por cultivo y por
-// estadio, ver renderCultivoDetalle()), no como un total general de campaña.
+// ---- Los graficos chicos del pie de las tarjetas de portada (.mg-spark en Airo) ----
+// Los tres dibujan SOLO series que ya existen; ninguno inventa ni rellena huecos. El viewBox es
+// de 100x58 con preserveAspectRatio="none" para que estire a lo ancho de la tarjeta sin deformar
+// el alto, que es lo que hace Airo con width:calc(100% + 40px).
+// Si la serie viene vacia o con un solo punto, devuelven '' y la tarjeta queda sin grafico: es
+// preferible a dibujar una linea recta que sugiere una tendencia que no se midio.
+function sparkBarras(serie,valorDe,titulo){
+  if(!serie||serie.length<2) return '';
+  const max=Math.max(...serie.map(valorDe)); if(!max) return '';
+  const an=100/serie.length, hueco=Math.min(3,an*0.22);
+  const barras=serie.map((d,i)=>{
+    const h=Math.max(1.5,valorDe(d)/max*52);
+    const ultima=i===serie.length-1;
+    return `<rect class="${ultima?'hoy':''}" x="${(i*an+hueco/2).toFixed(2)}" y="${(58-h).toFixed(2)}" width="${(an-hueco).toFixed(2)}" height="${h.toFixed(2)}" rx="1.2" style="animation-delay:${(i*0.04).toFixed(2)}s"><title>${titulo(d)}</title></rect>`;
+  }).join('');
+  return `<svg class="spark" viewBox="0 0 100 58" preserveAspectRatio="none" aria-hidden="true">${barras}</svg>`;
+}
+function sparkLinea(serie,valorDe,titulo){
+  if(!serie||serie.length<2) return '';
+  const vals=serie.map(valorDe), max=Math.max(...vals); if(!max) return '';
+  const pts=vals.map((v,i)=>[(i*(100/(vals.length-1))).toFixed(2),(56-v/max*48).toFixed(2)]);
+  const linea=pts.map(p=>p.join(',')).join(' ');
+  const area=`0,58 ${linea} 100,58`;
+  const puntas=serie.map((d,i)=>`<title>${titulo(d)}</title>`).join('');
+  return `<svg class="spark l" viewBox="0 0 100 58" preserveAspectRatio="none" aria-hidden="true">${puntas}
+    <polygon class="area" points="${area}"></polygon><polyline class="linea" points="${linea}"></polyline></svg>`;
+}
+// Acumulado de una serie: cada punto es el total hasta ese mes, no lo del mes. Es lo que Airo
+// grafica en las tarjetas de "cargadas" y "gasto" (acum(), minga.js): una curva que solo sube,
+// que es como se lee un total de campaña. La de "confirmadas" NO se acumula — son barras por mes.
+function acumSerie(serie, valorDe){
+  let t=0;
+  return (serie||[]).map(d=>{ t+=valorDe(d)||0; return {...d, acum:t}; });
+}
 function renderResumenKPIs(){
   const P=paqueteResumen(), k=P.resumen.kpis;
   const atrasCol = k.otAtrasadas>0 ? (k.otAtrasadas>10?'r':'o') : 'g';
+  const mens=P.resumen.actividadMensual||[], carg=P.resumen.cargadasMensual||[];
+  const cuenta=document.getElementById('res-cuenta');
+  if(cuenta) cuenta.textContent=fmt(P.total_ot)+' órdenes en la campaña';
+  // "En marcha ahora" es lo que todavia no se confirmo: En Ejecucion + Pendiente. Sale de
+  // resumen.estadosOT, el mismo conteo por estado que usaba el panel "Estado de las Órdenes de
+  // Trabajo" antes de retirarse — por eso el modelo lo sigue exponiendo aunque ya no haya panel.
+  // Un estado que no exista en el dato da 0, no rompe.
+  const nEstado=e=>{ const x=(P.resumen.estadosOT||[]).find(s=>s.estado===e); return x?x.n:0; };
+  const ejec=nEstado('En Ejecución'), pend=nEstado('Pendiente'), marcha=ejec+pend;
+  // Las cuatro tarjetas de Airo (minga.js:1852-1862), en su orden: confirmadas, cargadas, gasto y
+  // las que estan en marcha. Las atrasadas ya no son una tarjeta propia — van donde Airo las pone,
+  // como el pie de "en marcha", que es el bloque que habla de lo que todavia no se cerro.
   document.getElementById('exec-kpis').innerHTML=[
-    kpiCard('OT Confirmadas', k.otConfirmadas, 'de '+P.total_ot, 'g'),
-    kpiCard('OT Atrasadas', k.otAtrasadas, '', atrasCol),
+    kpiCard('Órdenes confirmadas', fmt(k.otConfirmadas), 'de '+fmt(P.total_ot)+' órdenes cargadas', 'g',
+      sparkBarras(mens, d=>d.otConfirmadas, d=>d.lbl+': '+d.otConfirmadas+' OT confirmadas')),
+    kpiCard('Órdenes cargadas', fmt(P.total_ot), fmt(k.otConfirmadas)+' ya confirmadas', 'g',
+      sparkLinea(acumSerie(carg, d=>d.otCargadas), d=>d.acum,
+        d=>'hasta '+d.lbl+': '+fmt(d.acum)+' OT cargadas')),
     // Solo las OT confirmadas de la campaña seleccionada. El consolidado de todas las campañas
     // (D.costo_total_consolidado) se sigue calculando pero ya no alimenta este KPI: mezclaba
     // campañas dentro de una vista que representa una sola.
-    kpiCard('Costo Ejecutado', '$ '+fmtUSD(k.costoEjecutado), '', 'gris'),
+    kpiCard('Gasto confirmado', '$ '+fmtUSD(k.costoEjecutado),
+      'ejecutado en '+fmt(k.otConfirmadas)+' órdenes confirmadas', 'gris',
+      sparkLinea(acumSerie(mens, d=>d.costo), d=>d.acum,
+        d=>'hasta '+d.lbl+': $ '+fmtUSD(d.acum))),
+    kpiCard('Órdenes en marcha ahora', fmt(marcha), segEnMarcha(ejec, pend), 'y',
+      botonAtrasadas(k.otAtrasadas, atrasCol)),
   ].join('');
+  renderCintaOT(P.resumen.ultimasConfirmadas||[]);
+}
+// La barra de dos tramos de la tarjeta "en marcha" (.mg-seg, minga.css:252-256): que parte de lo
+// que esta abierto ya se empezo y que parte ni arranco. Los tramos se reparten por flex, asi que
+// no hay que calcular porcentajes; el 0.01 es para que un tramo vacio no desaparezca del todo y
+// la barra siga leyendose como dos cosas.
+function segEnMarcha(ejec, pend){
+  if(!ejec && !pend) return 'Nada abierto en este momento';
+  return `<span class="kpi-seg"><i style="flex:${ejec||0.01}"></i><i style="flex:${pend||0.01}"></i></span>`+
+    `<span class="kpi-leyenda"><em></em>${fmt(ejec)} en ejecución<em class="p"></em>${fmt(pend)} pendientes</span>`;
+}
+// El pie de esa misma tarjeta: el boton que lleva a Alertas Operativas, o la frase de que no hay
+// nada atrasado. Es la unica tarjeta de la portada que lleva a otro lado, igual que en Airo.
+// Navega por data-mod y no por indice de pestaña: si mañana se reordenan, sigue yendo al mismo
+// modulo (mismo criterio que recordarModuloEnURL).
+function botonAtrasadas(n, col){
+  if(!n) return '<span class="kpi-leyenda kpi-sin-atraso">Ninguna atrasada</span>';
+  return `<button type="button" class="kpi-atras c-${col}" data-mod="alertas">`+
+    `${fmt(n)} atrasada${n===1?'':'s'} · ver</button>`;
+}
+// Cuanto hace de una fecha, en palabras. Es la unica cuenta que hace la cinta, y se hace contra
+// el DIA (no el instante): si no, una OT de ayer a la tarde podia decir "hoy" a la mañana
+// siguiente segun la hora en que se abriera el tablero.
+function haceTxt(f){
+  const dia0 = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const dias = Math.round((dia0(new Date()) - dia0(f)) / 86400000);
+  if(dias <= 0) return 'hoy';
+  if(dias === 1) return 'ayer';
+  return dias < 60 ? 'hace '+dias+' días' : ipFecha(f);
+}
+// La cinta de ultimas ordenes confirmadas (.mg-cinta-ot en Airo). No decide NADA: la lista llega
+// ya recortada y ordenada desde el modelo (resumen.ultimasConfirmadas, ver js/data/resumen.js).
+// Aca solo se la pinta.
+function renderCintaOT(lista){
+  const cont=document.getElementById('cinta-lista');
+  if(!cont) return;
+  const n=document.getElementById('cinta-n');
+  if(n) n.textContent = lista.length ? 'las '+lista.length+' más recientes' : '';
+  if(!lista.length){
+    cont.innerHTML='<p class="cinta-vacio">Sin órdenes confirmadas en esta campaña.</p>';
+    return;
+  }
+  cont.innerHTML=lista.map(o=>{
+    // El renglon de abajo solo nombra lo que la OT trae: un lote vacio o un contratista vacio
+    // (Labor Propia) no dejan un separador suelto colgando.
+    // El lote se omite cuando repite la Actividad. Pasa de verdad: las OT de Camion + grua
+    // traen act y lote con el mismo texto ('PARCELA ARROZ'), y el renglon quedaba diciendo
+    // 'PARCELA ARROZ · lote PARCELA ARROZ'. No se corrige el dato, solo no se lo repite.
+    const pie=[o.act, (o.lote && o.lote!==o.act)?'lote '+o.lote:'', o.contr]
+      .filter(Boolean).map(escHtml).join(' · ');
+    const ayuda=['OT '+o.ot, o.serv, o.act, o.lote?'lote '+o.lote:'', o.contr,
+      o.imp?'$ '+fmtUSD(o.imp):''].filter(Boolean).join(' · ');
+    return `<div class="ot-fila" title="${escAttr(ayuda)}">`+
+      `<span class="num">OT ${escHtml(o.ot)}</span>`+
+      `<span class="srv">${escHtml(o.serv)}<em>${pie}</em></span>`+
+      `<span class="cuando">${haceTxt(o.fr)}</span></div>`;
+  }).join('');
+  cintaGirar(cont);
+}
+// La cinta gira sola: cada 3,2 s la primera fila se desliza hacia arriba y se vuelve a encolar al
+// final (.mg-ot-fila.sale en Airo, minga.css:266 / minga.js:1088). No entra ni sale ningun dato:
+// es la MISMA lista rotando, asi que lo que se ve siempre salio del modelo.
+//
+// Se frena sola cuando no corresponde moverse:
+//   - con la pestaña del navegador en segundo plano (document.hidden): animar ahi gasta bateria
+//     y nadie lo ve;
+//   - con el Resumen cerrado, por lo mismo;
+//   - con el puntero encima o con el foco adentro: si alguien esta leyendo o tabulando una fila,
+//     moverla es quitarsela de las manos.
+// Con menos de 6 filas no arranca: con pocas, el giro se nota como un parpadeo y no como una
+// cinta. Y con "reducir movimiento" activado no se mueve nunca.
+let cintaReloj = null;
+function cintaGirar(cont){
+  clearInterval(cintaReloj);
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  if(cont.children.length <= 5) return;
+  cintaReloj = setInterval(()=>{
+    if(document.hidden) return;
+    const pagina = cont.closest('.page');
+    if(pagina && !pagina.classList.contains('active')) return;
+    if(cont.matches(':hover') || cont.contains(document.activeElement)) return;
+    const pri = cont.firstElementChild;
+    if(!pri) return;
+    pri.classList.add('sale');
+    // 520 ms: un pelo mas que los 500 de la transicion, para que la fila termine de salir antes
+    // de reaparecer abajo.
+    setTimeout(()=>{ pri.classList.remove('sale'); cont.appendChild(pri); }, 520);
+  }, 3200);
 }
 
-// ---- 2. Ejecución operacional: estado de las OT (barra apilada + leyenda), categorías reales
-// (ver resumen.estadosOT del paquete de campaña — "Otros" solo aparece si hay algún estado real distinto de
-// los 3 conocidos, con el detalle de cuáles). ----
-function renderEstadosOT(){
-  const P=paqueteResumen(), list=P.resumen.estadosOT;
-  const cont=document.getElementById('resumen-estados-ot');
-  document.getElementById('resumen-ot-sub').textContent=P.total_ot+' OT totales';
-  if(!list.length){ cont.innerHTML='<div class="resumen-empty">Sin OT registradas.</div>'; return; }
-  const ESTADO_COL={'Confirmado':'g','En Ejecución':'y','Pendiente':'o','Otros':'gris'};
-  const bar=list.map(e=>`<div class="estbar-seg f-${ESTADO_COL[e.estado]||'gris'}" style="width:${e.pct}%" title="${e.estado}: ${e.n} (${e.pct}%)"></div>`).join('');
-  const legend=list.map(e=>`<div class="estbar-leg"><span class="estbar-dot f-${ESTADO_COL[e.estado]||'gris'}"></span>${e.estado}<b>${e.n}</b><small>${e.pct}%</small>${e.detalle?` <span title="${e.detalle}">(?)</span>`:''}</div>`).join('');
-  cont.innerHTML=`<div class="estbar-track">${bar}</div><div class="estbar-legend">${legend}</div>`;
+// ---- Las cifras cuentan desde cero al aparecer (mgAnimarCifras, minga.js:292) ----
+// Recorre los nodos de TEXTO de los elementos que llevan numeros y los reescribe interpolando de
+// 0 al valor real en 850 ms. No toca el DOM mas alla del texto: no envuelve nada en spans, asi
+// que no rompe ninguna tabla ni ningun title.
+//
+// Lo que NO se anima, a proposito:
+//   - lo que esta oculto (getClientRects vacio): contaria sin que nadie lo vea y al mostrarse ya
+//     estaria quieto;
+//   - las fechas (12/03/2026) y los rangos con barra: no son cantidades, y verlas contar es raro;
+//   - los nombres de lote (.52A, 2° Disco): son codigos con digitos, no medidas.
+// Y con "reducir movimiento" no se anima nada: se deja el texto real.
+const CIFRAS_VIVAS = '.kpi .k-val, .sop-kpi .v, .opex-total, .opex-amt, .opex-pct, .opex-ot,' +
+  ' .panel td.tr, .et-val, .cc-ha b, .av-est-val, .lchart-pt b, .rc-n';
+const CIFRAS_NUM = /\d{1,3}(?:\.\d{3})+(?:,\d+)?|\d+(?:[.,]\d+)?/g;
+let cifrasEnCurso = [];
+// Parte un texto en los numeros que contiene, guardando de cada uno donde empieza, su valor y con
+// cuantos decimales venia escrito — para reconstruirlo igual, con los mismos puntos de miles.
+function cifrasPartes(txt){
+  const partes=[]; let m; CIFRAS_NUM.lastIndex=0;
+  while((m=CIFRAS_NUM.exec(txt))){
+    const t=m[0];
+    const dec=(t.split(',')[1]||'').length;
+    partes.push({i:m.index, t, dec, v:parseFloat(t.replace(/\./g,'').replace(',','.'))||0});
+  }
+  return partes;
 }
+const cifrasTexto = (v,q) => v.toLocaleString('es-AR',{minimumFractionDigits:q.dec,maximumFractionDigits:q.dec});
+function animarCifras(raiz){
+  // lo que haya quedado a medias de una animacion anterior vuelve a su texto real antes de empezar
+  cifrasEnCurso.forEach(x=>{ x.n.textContent=x.orig; });
+  cifrasEnCurso=[];
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const items=[];
+  (raiz||document).querySelectorAll(CIFRAS_VIVAS).forEach(el=>{
+    if(items.length>1500 || !el.getClientRects().length) return;
+    const w=document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    for(let n; (n=w.nextNode());){
+      const orig=n.textContent;
+      if(/\d\s*[\/°]\s*\d|\d{1,2}\/\d{1,2}\/\d{4}/.test(orig)) continue;
+      if(n.parentElement && n.parentElement.closest('.ot-fila .num, .cinta-cab, .et-lbl')) continue;
+      const partes=cifrasPartes(orig);
+      if(partes.some(q=>q.v>0)) items.push({n, orig, partes});
+    }
+  });
+  if(!items.length) return;
+  cifrasEnCurso=items;
+  const dur=850, t0=performance.now();
+  const paso=t=>{
+    if(cifrasEnCurso!==items) return;   // empezo otra animacion: esta se abandona
+    const p=Math.min(1,Math.max(0,(t-t0)/dur)), e=1-Math.pow(1-p,3);
+    items.forEach(x=>{
+      if(p>=1){ x.n.textContent=x.orig; return; }
+      let out='', k=0;
+      x.partes.forEach(q=>{ out+=x.orig.slice(k,q.i)+cifrasTexto(q.v*e,q); k=q.i+q.t.length; });
+      x.n.textContent=out+x.orig.slice(k);
+    });
+    if(p<1) requestAnimationFrame(paso); else cifrasEnCurso=[];
+  };
+  requestAnimationFrame(paso);
+  // Red de seguridad: si la pestaña se va a segundo plano, requestAnimationFrame deja de correr y
+  // las cifras quedarian congeladas a mitad de camino. Pasado el tiempo de la animacion, se
+  // escribe el valor real pase lo que pase.
+  setTimeout(()=>{ if(cifrasEnCurso===items){ items.forEach(x=>{ x.n.textContent=x.orig; }); cifrasEnCurso=[]; } }, dur+1200);
+}
+// Al cambiar de modulo se espera a que el nuevo termine de dibujarse antes de contar.
+let cifrasPendientes=null;
+function animarCifrasPronto(raiz){ clearTimeout(cifrasPendientes); cifrasPendientes=setTimeout(()=>animarCifras(raiz), 40); }
 
-// ---- 3b. Ejecución operacional: actividad por mes (OT confirmadas, Fecha Real) ----
+// ---- 3. Ejecución operacional: actividad por mes (OT confirmadas, Fecha Real) ----
+// Grafico de LINEA, con la figura de .mg-act-graf de Airo (minga.js:1898, minga.css:503-514): un
+// SVG estirado al ancho del panel con el area debajo, y encima los puntos en posicion porcentual
+// —no dentro del SVG— para que el circulito y su cifra no se deformen con el estirado.
+//
+// La escala de y deja un 10% de aire arriba (el maximo no toca el borde, asi la cifra del pico
+// entra) y arranca en 90: y = 90 - v/max*76. Es la misma de Airo.
+// La serie es la que ya calcula el modelo (resumen.actividadMensual); aca no se agrupa nada.
+// Qué mide el gráfico. Solo dos opciones, y las dos salen de la MISMA serie que ya calcula el
+// modelo sobre las OT confirmadas (resumen.actividadMensual): el conteo y el importe. No hay una
+// tercera de hectáreas a propósito — no todas las OT traen superficie, así que una curva de ha
+// dejaría meses en cero donde sí hubo actividad (ver el comentario de la serie en
+// js/data/resumen.js). Si alguna vez se agrega, tiene que ser con esa salvedad resuelta, no
+// mostrando ceros.
+const ACT_MEDIDAS = {
+  ot:    {rot:'OT',    valor:m=>m.otConfirmadas, txt:v=>fmt(v),         largo:v=>fmt(v).length,   unidad:'OT confirmadas en el período'},
+  gasto: {rot:'Gasto', valor:m=>m.costo,         txt:v=>'$ '+fmtUSD(v), largo:v=>fmt(v).length+2, unidad:'de gasto confirmado en el período'},
+};
+let actMedida = 'ot';
 function renderActividadMensual(){
   const list=paqueteResumen().resumen.actividadMensual;
   const cont=document.getElementById('resumen-actividad-mensual');
+  const botones=document.getElementById('act-medir');
+  if(botones) botones.innerHTML=Object.keys(ACT_MEDIDAS).map(k=>
+    `<button type="button" data-act="${k}" class="${k===actMedida?'on':''}">${ACT_MEDIDAS[k].rot}</button>`).join('');
   if(!list.length){ cont.innerHTML='<div class="resumen-empty">Sin fechas válidas para graficar actividad mensual.</div>'; return; }
-  const max=Math.max(1,...list.map(m=>m.otConfirmadas));
-  cont.innerHTML=`<div class="colchart">${list.map(m=>{
-    const h=Math.round(m.otConfirmadas/max*100);
-    return `<div class="colchart-col"><div class="colchart-bar-wrap"><div class="colchart-bar" style="height:${h}%" title="${m.lbl}: ${m.otConfirmadas} OT confirmadas"></div></div>
-      <div class="colchart-val">${m.otConfirmadas}</div><div class="colchart-lbl">${m.lbl}</div></div>`;
-  }).join('')}</div><div class="colchart-note">OT confirmadas por mes (Fecha Real) — no representa hectáreas</div>`;
+  const M=ACT_MEDIDAS[actMedida]||ACT_MEDIDAS.ot;
+  const n=list.length, vals=list.map(M.valor);
+  const max=Math.max(1,...vals);
+  // Con un solo mes no hay linea que trazar: el punto va al medio y se dibuja solo.
+  const x=i=> n===1 ? 50 : i/(n-1)*100;
+  const y=v=> 90 - v/max*76;
+  const d='M'+vals.map((v,i)=>x(i).toFixed(2)+' '+y(v).toFixed(2)).join(' L');
+  const area=d+' L'+x(n-1).toFixed(2)+' 100 L'+x(0).toFixed(2)+' 100Z';
+  const pico=vals.indexOf(Math.max(...vals));
+  const total=vals.reduce((s,v)=>s+v,0);
+  // La cifra encima de cada punto solo se escribe si entra. El ancho disponible por punto es el
+  // del lienzo dividido los tramos; la cifra se estima en 7px por caracter (11,5px en negrita).
+  // Con el gasto los rotulos son mucho mas largos que con el conteo, asi que en una pantalla
+  // angosta se omiten y el valor queda en el title del punto, que es donde se puede leer sin
+  // que se pisen unos con otros.
+  const anchoPaso = (cont.clientWidth||600) / Math.max(1,n-1);
+  const masLargo = Math.max(...vals.map(v=>M.largo(v)));
+  const conCifra = masLargo*7 + 8 <= anchoPaso;
+  const puntos=list.map((m,i)=>{
+    const v=vals[i];
+    return `<span class="lchart-pt${i===pico&&v?' pico':''}" style="left:${x(i).toFixed(2)}%;top:${y(v).toFixed(2)}%;animation-delay:${Math.min(300+i*40,1200)}ms"`+
+      ` title="${escAttr(m.lbl+': '+M.txt(v))}">${conCifra?'<b>'+M.txt(v)+'</b>':''}</span>`;
+  }).join('');
+  const meses=list.map((m,i)=>`<span style="left:${x(i).toFixed(2)}%">${escHtml(m.lbl)}</span>`).join('');
+  const cab=document.getElementById('act-cab');
+  if(cab) cab.innerHTML=`<b class="lchart-val">${M.txt(total)} <small>${M.unidad}</small></b>
+    <span class="lchart-pie">pico: ${escHtml(list[pico].lbl)} con ${M.txt(vals[pico])}</span>`;
+  cont.innerHTML=`<div class="lchart">
+    <div class="lchart-lienzo">
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+        <path class="area" d="${area}"></path><path class="linea" d="${d}"></path></svg>
+      ${puntos}
+    </div>
+    <div class="lchart-meses">${meses}</div>
+  </div>`;
+}
+
+// ---- "Quién hizo qué": el trabajo confirmado agrupado por contratista, servicio o lote ----
+// Las tres agrupaciones y sus dos medidas llegan ya sumadas desde el modelo
+// (resumen.ranking, js/data/resumen.js): aca solo se ordena por la medida elegida y se dibuja.
+// A diferencia de Airo, las filas NO son botones: alla cada fila fija un filtro global de
+// contratista/servicio/lote que este tablero no tiene, y un boton que no lleva a ningun lado es
+// peor que un renglon quieto.
+const RANK_DIM = {contr:'Contratistas', serv:'Servicios', lote:'Lotes'};
+// Como se llama la base de cada agrupacion. Hace falta decirla: una OT sin contratista (Labor
+// Propia) no entra en el ranking de contratistas, asi que el porcentaje NO es sobre las 2.815 OT
+// confirmadas de la campaña sino sobre las que tienen ese campo cargado. Sin aclararlo, un 49%
+// se lee como la mitad de la campaña cuando es la mitad de otra cosa.
+// Que significa "Gasto" en cada agrupacion. No es lo mismo en las tres, y por eso no se decide
+// con una formula sola:
+//   - Contratistas y Servicios miden el SERVICIO. El insumo lo pone la empresa: sumarselo al
+//     contratista le atribuye un gasto que no es suyo (Agro Continental pasaba de 549.748,52 a
+//     1.738.802,84, el triple, por los insumos aplicados en sus OT).
+//   - Lotes mide la OT ENTERA. Ahi si corresponde: lo que costo trabajar ese lote incluye lo que
+//     se le aplico. Medir el lote solo por la labor lo dejaria corto.
+// La nota al pie dice cual de las dos se esta viendo, para que nunca haya que adivinarlo.
+const RANK_GASTO = {
+  contr: g => g.servicio,
+  serv:  g => g.servicio,
+  lote:  g => g.costo,
+};
+// Sin Hectareas, a pedido — y de paso evita la salvedad de la superficie que no todas las OT traen.
+const RANK_MED = {
+  ot:    {rot:'OT',    valor:(g,dim)=>g.ot,                       txt:v=>fmt(v)+' OT'},
+  gasto: {rot:'Gasto', valor:(g,dim)=>RANK_GASTO[dim](g),        txt:v=>'$ '+fmtUSD(v)},
+};
+const RANK_TOPE = 8;
+let rankDim='contr', rankMed='ot';
+function renderRanking(){
+  const lista=document.getElementById('rank-lista');
+  if(!lista) return;
+  const R=(paqueteResumen().resumen.ranking||{})[rankDim]||[];
+  const M=RANK_MED[rankMed]||RANK_MED.ot;
+  const pinta=(id,mapa,actual,attr)=>{
+    const el=document.getElementById(id); if(!el) return;
+    el.innerHTML=Object.keys(mapa).map(k=>{
+      const rot=mapa[k].rot!==undefined?mapa[k].rot:mapa[k];
+      return `<button type="button" ${attr}="${k}" class="${k===actual?'on':''}">${rot}</button>`;
+    }).join('');
+  };
+  pinta('rank-dim', RANK_DIM, rankDim, 'data-rk');
+  pinta('rank-med', RANK_MED, rankMed, 'data-rm');
+  const filas=R.map(g=>({k:g.k, v:M.valor(g, rankDim)})).filter(f=>f.v>0).sort((a,b)=>b.v-a.v);
+  if(!filas.length){
+    lista.innerHTML='<div class="resumen-empty">Sin trabajo confirmado en la campaña.</div>';
+    return;
+  }
+  // El porcentaje es sobre el total de TODAS las filas, no sobre las ocho que se muestran: si no,
+  // los ocho primeros sumarian 100% y pareceria que no hay nada mas.
+  const tot=filas.reduce((s,f)=>s+f.v,0), mx=filas[0].v;
+  lista.innerHTML=filas.slice(0,RANK_TOPE).map((f,i)=>
+    `<div class="rank-fila">
+      <span class="n">${i+1}</span>
+      <span class="t" title="${escAttr(f.k)}">${escHtml(f.k)}</span>
+      <span class="v">${M.txt(f.v)}<em>${Math.round(f.v/tot*100)}%</em></span>
+      <span class="b"><i style="width:${(f.v/mx*100).toFixed(1)}%;animation-delay:${i*60}ms"></i></span>
+    </div>`).join('');
 }
 
 // ---- 4. Gastos Operativos: tarjeta con el total + una fila por categoría (nombre, barra,
@@ -233,28 +544,6 @@ function renderGastosOperativos(){
   }).join('');
 }
 
-// ---- 5. Posibles problemas en la campaña: tarjetas de alerta por severidad (ver reglas y orden
-// en data.js). "Ver detalle" usa data-tab + delegación de evento en events.js (reutiliza show(),
-// nunca onclick inline). Sin problemas => estado positivo explícito, nunca la sección vacía. ----
-function renderProblemasResumen(){
-  const list=paqueteResumen().resumen.problemas;
-  document.getElementById('prob-n').textContent=list.length;
-  document.getElementById('b-prob').textContent=list.length;
-  const cont=document.getElementById('probs');
-  if(!list.length){
-    cont.innerHTML='<div class="prob prob-ok"><div class="p-left"><div class="p-title">No se detectaron problemas relevantes con las reglas actuales.</div></div></div>';
-    return;
-  }
-  cont.innerHTML=list.map(p=>{
-    const col=colorSeveridad(p.severidad);
-    const accion=(p.accion && p.destinoTab!=null)?`<button type="button" class="prob-link" data-tab="${p.destinoTab}">${p.accion}</button>`:'';
-    return `<div class="prob prob-${col}"><div class="p-left"><div class="p-tags"><span class="p-cat f-${col}">${labelSeveridad(p.severidad)}</span></div>
-      <div class="p-title">${p.titulo}</div><div class="p-desc">${p.descripcion}</div>
-      ${p.contexto?`<div class="p-ctx">${p.contexto}</div>`:''}${accion}</div>
-      <div class="p-met">${p.metrica}</div></div>`;
-  }).join('');
-}
-
 // ---- Detalle de Etapas por Cultivo: primer bloque analítico tras los KPIs (Preparación de
 // Suelo, Siembra, Cuidados, Cosecha por cada cultivo). Los MAPAS (imágenes estáticas, sin datos
 // calculados) se agregan como DOS tarjetas más al final del mismo innerHTML — así quedan en la
@@ -277,7 +566,7 @@ function renderCultivoDetalle(){
     <div class="cc-name">${m.titulo}</div>
     <img class="mapa-thumb" src="${m.src}" data-mapa-alt="Mapa ${m.que} de la Campaña 26/27 (ampliado)"
       alt="Mapa ${m.que} de la Campaña 26/27" tabindex="0" role="button" aria-label="Ampliar ${m.titulo.toLowerCase()}"></div>`).join('');
-  document.getElementById('cults').innerHTML=paqueteResumen().cultivos.map(c=>{
+  document.getElementById('cults').innerHTML=paqueteResumen().cultivos.map((c,i)=>{
     const plan=c.tiene_rtk?fmt2(c.ha_plan)+' ha':'s/ plan';
     // Cada etapa muestra su avance y, al lado, las hectáreas ejecutadas de ESA etapa. Las ha salen
     // de e.ha_ejec — la ejecución equivalente que ya calcula data.js (equivalenteLoteEstadio: cada
@@ -300,13 +589,86 @@ function renderCultivoDetalle(){
     // detalle de cada etapa (arriba) y "OT conf. / total" se retiró a pedido del usuario — ambas
     // referían siempre al último estadio con actividad, no al cultivo entero, y esa información ya
     // vive donde corresponde: dentro de la fila de su etapa.
-    return `<div class="cult-card">
-      <div class="cc-name">${c.nombre}</div>
+    // c-<cultivo> solo pinta la franja de color de arriba (shell.css). normEstadio hace el slug:
+    // quita tildes y baja a minusculas, asi MAIZ y MAÍZ caen los dos en c-maiz. Un cultivo que no
+    // este en la lista de shell.css simplemente no lleva franja.
+    const cslug = normEstadio(c.nombre).replace(/\s+/g, '-');
+    // data-cult guarda el indice dentro de paqueteResumen().cultivos: es con lo que las pildoras
+    // y el boton de agrandar encuentran su tarjeta. No se usa el orden del DOM porque al final de
+    // la cuadricula van las tarjetas de mapa, que no son cultivos.
+    return `<div class="cult-card c-${cslug}" data-cult="${i}">
+      <div class="cc-top"><div class="cc-name">${c.nombre}</div>
+        <button type="button" class="cc-exp" data-cult="${i}" aria-pressed="false"
+          title="Ver ${escAttr(c.nombre.toLowerCase())} en grande">${ICONO_AGRANDAR}</button></div>
       ${c.etapa_actual?`<div class="cc-stage">Etapa actual: <b>${c.etapa_actual}</b></div>`:'<div class="cc-stage cc-stage-muted">Sin actividad confirmada aún</div>'}
       <div class="cc-etapas">${etapasHtml}</div>
       <div class="cc-ha">
         <div><span>${c.incluyeZafrina?'Plan 26/27 · incluye Zafriña26':'Ha planificadas'}</span><b>${plan}</b></div>
-      </div></div>`;}).join('') + mapaCards;
+      </div>
+      <!-- El acceso al desglose de ESTE cultivo. Va en todas las tarjetas pero solo se ve en la
+           que esta en grande (css/shell.css): en la cuadricula chica, cuatro botones iguales
+           compiten con las cifras, que es lo que la tarjeta tiene que mostrar.
+           data-cult lleva el nombre TAL CUAL viene del modelo, porque es el valor de las opciones
+           de #avcultivo; el rotulo usa el nombre de a pie. -->
+      <button type="button" class="cc-desglose" data-cult="${escAttr(c.nombre)}">Ver desglose de ${escHtml(nombreCultivo(c.nombre))} →</button>
+      </div>`;}).join('') + mapaCards;
+  pintarFocoCultivo();
+}
+
+// ---- Foco por cultivo (.mg-av-vista + mgAvFoco de Airo) ----
+// Elegir un cultivo deja SOLO esa tarjeta, en grande y a todo el ancho; "Todos" vuelve a la
+// cuadricula. No filtra ni recalcula nada: las tarjetas ya estan dibujadas con los mismos
+// numeros, lo unico que cambia es cual se ve y de que tamaño.
+const ICONO_AGRANDAR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>';
+const ICONO_ACHICAR  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>';
+let cultFoco = null;
+// Alterna el foco de un cultivo. Volver a tocar el mismo lo saca: el boton de la tarjeta sirve
+// para entrar y para salir, como en Airo.
+function alternarFocoCultivo(i){
+  cultFoco = (cultFoco===i) ? null : i;
+  pintarFocoCultivo();
+  if(cultFoco!=null){
+    const card=document.querySelector('#cults .cult-card[data-cult="'+cultFoco+'"]');
+    if(card) card.scrollIntoView({behavior:'smooth', block:'nearest'});
+  }
+}
+function pintarFocoCultivo(){
+  const cont=document.getElementById('cults');
+  if(!cont) return;
+  const cultivos=paqueteResumen().cultivos||[];
+  cont.classList.toggle('foco', cultFoco!=null);
+  // Las tarjetas de mapa no son cultivos: con un cultivo en foco se esconden, y vuelven con "Todos".
+  cont.querySelectorAll('.mapa-card').forEach(m=>{ m.hidden = cultFoco!=null; });
+  cont.querySelectorAll('.cult-card[data-cult]').forEach(card=>{
+    const i=+card.dataset.cult, grande=cultFoco===i;
+    card.classList.toggle('grande', grande);
+    card.hidden = cultFoco!=null && !grande;
+    const b=card.querySelector('.cc-exp');
+    if(b){
+      b.innerHTML = grande ? ICONO_ACHICAR : ICONO_AGRANDAR;
+      b.setAttribute('aria-pressed', grande?'true':'false');
+      const nom=(cultivos[i]&&cultivos[i].nombre||'').toLowerCase();
+      b.title = grande ? 'Volver a ver todos los cultivos' : ('Ver '+nom+' en grande');
+    }
+  });
+  const sel=document.getElementById('cult-foco');
+  if(!sel) return;
+  // El punto de cada pildora toma el MISMO color que la franja de su tarjeta (--cult-<slug> en
+  // tokens.css), asi que no pueden discrepar. Un cultivo sin color definido cae en el gris.
+  sel.innerHTML = ['<button type="button" data-cf="" class="'+(cultFoco==null?'on':'')+'">Todos</button>']
+    .concat(cultivos.map((c,i)=>{
+      const slug=normEstadio(c.nombre).replace(/\s+/g,'-');
+      return '<button type="button" data-cf="'+i+'" class="'+(cultFoco===i?'on':'')+'">'+
+        '<i style="background:var(--cult-'+slug+',var(--line-strong))"></i>'+escHtml(nombreCultivo(c.nombre))+'</button>';
+    })).join('');
+}
+// El nombre del cultivo como se escribe fuera de una planilla: ARROZ -> Arroz. Lo usan la pildora
+// de foco y el boton de desglose, que tienen que decir lo mismo. No se le agrega ni se le saca
+// ninguna tilde: si el dato trae MAIZ sin tilde, la pantalla dice Maiz, igual que el titulo de la
+// tarjeta — corregirlo en un solo lugar haria que el tablero se contradiga a si mismo.
+function nombreCultivo(n){
+  const s=String(n||'');
+  return s.charAt(0)+s.slice(1).toLowerCase();
 }
 
 // ================== AVANCE DETALLADO POR CULTIVO ==================
@@ -2453,9 +2815,14 @@ function poblarFiltrosTerceros(rows){
   llenar('terctercero',[...new Set(rows.map(r=>r.tercero))].sort((a,b)=>a.localeCompare(b,'es'))
     .map(t=>({val:t,lbl:t})));
 }
-function show(i,btn){ document.querySelectorAll('.page').forEach((p,j)=>p.classList.toggle('active',j===i));
+function show(i,btn){ const paginas=document.querySelectorAll('.page');
+  paginas.forEach((p,j)=>p.classList.toggle('active',j===i));
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); btn.classList.add('active');
-  recordarModuloEnURL(btn); window.scrollTo({top:0,behavior:'smooth'}); }
+  recordarModuloEnURL(btn); window.scrollTo({top:0,behavior:'smooth'});
+  // Las cifras del modulo que se abre cuentan desde cero, como en Airo al cambiar de seccion.
+  // Solo las de ESE modulo: animar el tablero entero son miles de nodos y los de las pestañas
+  // cerradas no se ven igual.
+  animarCifrasPronto(paginas[i]); }
 
 // ---- El módulo abierto queda en la URL ----
 // Refrescar la página (F5, o el aviso de datos nuevos) volvía siempre al Resumen Ejecutivo, porque

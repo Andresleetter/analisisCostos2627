@@ -82,10 +82,74 @@ function construirResumen(ctx){
   // explícitamente como "OT" en el render para que no se confunda con hectáreas. Fechas inválidas
   // (fr null) se excluyen, igual criterio que el resto del dashboard; orden cronológico (mesnum),
   // nunca alfabético.
-  const resumenActMap={};
-  CONF.forEach(o=>{ if(!o.fr) return; const m=o.fr.getMonth()+1; resumenActMap[m]=(resumenActMap[m]||0)+1; });
+  // Se agrega el COSTO del mes junto al conteo. Sale del mismo o.imp que suma costo_total unas
+  // lineas mas abajo (CONF.reduce((s,o)=>s+o.imp,0)) y se acumula en este mismo recorrido, asi
+  // que no agrega una pasada sobre las OT. Lo consume el grafico de la portada; el conteo de OT
+  // sigue siendo el que alimenta el grafico de columnas, que no cambia.
+  const resumenActMap={}, resumenCostoMap={};
+  CONF.forEach(o=>{ if(!o.fr) return; const m=o.fr.getMonth()+1;
+    resumenActMap[m]=(resumenActMap[m]||0)+1;
+    resumenCostoMap[m]=(resumenCostoMap[m]||0)+o.imp; });
   const resumen_actividadMensual=Object.keys(resumenActMap).map(Number).sort((a,b)=>a-b)
-    .map(m=>({mesnum:m,lbl:MES[m],otConfirmadas:resumenActMap[m]}));
+    .map(m=>({mesnum:m,lbl:MES[m],otConfirmadas:resumenActMap[m],costo:resumenCostoMap[m]||0}));
+
+  // Serie aparte para el grafico de la tarjeta "Ordenes cargadas": cuenta TODAS las OT por mes de
+  // Fecha Teorica, confirmadas o no. Va SEPARADA de actividadMensual a proposito, no por descuido:
+  // esa otra lista la consume el grafico de columnas de "Actividad por mes", que es de OT
+  // confirmadas por Fecha Real. Meter acá un mes que solo tiene OT cargadas le agregaria a ese
+  // grafico una columna en cero que hoy no tiene.
+  const resumenCargMap={};
+  OTS.forEach(o=>{ if(!o.ft) return; const m=o.ft.getMonth()+1; resumenCargMap[m]=(resumenCargMap[m]||0)+1; });
+  const resumen_cargadasMensual=Object.keys(resumenCargMap).map(Number).sort((a,b)=>a-b)
+    .map(m=>({mesnum:m,lbl:MES[m],otCargadas:resumenCargMap[m]}));
+
+  // ---- "Quién hizo qué": el mismo trabajo confirmado agrupado de tres maneras ----
+  // Contratista, servicio y lote salen de UNA sola pasada sobre las OT confirmadas, no de tres.
+  // El lote se guarda como "CULTIVO · lote" porque el numero de lote se repite entre cultivos: el
+  // .52A de sorgo y el de arroz son dos parcelas distintas y sumarlas seria inventar una.
+  // Cada grupo lleva las dos medidas (cantidad de OT e importe) para que cambiar de medida en
+  // pantalla no obligue a recorrer las OT de nuevo. No se ordena aca: el orden depende de la
+  // medida que se este mirando, y eso lo decide el render.
+  const rankClave = {
+    contr: o => o.contr,
+    serv:  o => o.serv,
+    lote:  o => o.lote ? (o.act+' · '+o.lote) : '',
+  };
+  // Se guardan DOS importes por grupo, no uno:
+  //   costo    = la OT entera (servicio + insumos), que es lo que cuesta el trabajo en el lote;
+  //   servicio = solo las lineas de labor (propia + tercero), que es lo que se le paga a quien
+  //              hizo el trabajo. Los insumos los pone la empresa, no el contratista.
+  // La diferencia no es menor: Agro Continental da 1.738.802,84 con los insumos adentro y
+  // 549.748,52 de servicio — la cifra de servicio es la que coincide con la pestaña Servicios.
+  // Verificado sobre el .xlsx del 26/10: en las 2.815 OT confirmadas, imp == propia+tercero+insumos
+  // sin una sola excepcion, asi que las dos cifras salen de la misma suma partida en dos.
+  const rankMap = {contr:{}, serv:{}, lote:{}};
+  CONF.forEach(o=>{
+    for(const dim in rankClave){
+      const k = rankClave[dim](o);
+      if(!k) continue;
+      const g = rankMap[dim][k] || (rankMap[dim][k] = {k, ot:0, costo:0, servicio:0});
+      g.ot++; g.costo += o.imp; g.servicio += o.propia + o.tercero;
+    }
+  });
+  const resumen_ranking = {};
+  for(const dim in rankMap) resumen_ranking[dim] = Object.values(rankMap[dim]);
+
+  // ---- Las ultimas OT confirmadas, para la cinta de la portada ----
+  // Mismo recorte que hace Airo en su propia cinta (minga.js:1866): confirmadas, con servicio
+  // cargado y sin las Actividades operativas. Las dos exclusiones NO son cosmeticas:
+  //  - sin tieneServ la fila no tendria que mostrar (el rotulo de la cinta ES el servicio), y
+  //  - una OT operativa no es trabajo de campo, que es lo que la cinta esta contando.
+  // Se ordena por Fecha Real descendente; a igual fecha, por numero de OT descendente, para que
+  // el orden sea estable y no dependa de como vinieron las filas del Excel. Las que no tienen
+  // Fecha Real quedan fuera: sin fecha no hay "ultima".
+  // El corte en 14 es el alto de la columna, no un criterio: la lista se desvanece abajo con una
+  // mascara y lo que sobra no se llega a leer.
+  const resumen_ultimasConfirmadas = CONF
+    .filter(o=>o.fr && o.tieneServ && !/operativ/i.test(o.act||''))
+    .sort((a,b)=>(b.fr-a.fr) || (Number(b.ot)-Number(a.ot)))
+    .slice(0,14)
+    .map(o=>({ot:o.ot, serv:o.serv, act:o.act, lote:o.lote, contr:o.contr, fr:o.fr, imp:o.imp}));
 
   // ---- Posibles problemas en la campaña: reglas separadas y trazables, cada una produce 0..N
   // tarjetas con severidad (critica/alta/media/informativa), reutilizando SIEMPRE una colección ya
@@ -257,6 +321,9 @@ function construirResumen(ctx){
     },
     estadosOT:resumen_estadosOT,
     actividadMensual:resumen_actividadMensual,
+    cargadasMensual:resumen_cargadasMensual,
+    ranking:resumen_ranking,
+    ultimasConfirmadas:resumen_ultimasConfirmadas,
     problemas:RP,
   };
   return resumen;

@@ -544,7 +544,618 @@ tr.open .ip-caret{color:var(--acento)}
   .kpis,.gkpis{padding:var(--sp-4);border-radius:var(--radius-lg)}
   .panel{padding:var(--sp-5) var(--sp-4);border-radius:var(--radius-md)}
 }
+@media(max-width:560px){
+  /* En un telefono angosto el boton de menu y la fecha juntos se comen la columna derecha: medido
+     en 375px dejaban 95px a la izquierda para un logotipo de 125, y el boton terminaba montado
+     sobre la palabra "SUR". Se deshace tambien .header-right y cada control toma su propia fila:
+       fila 1   logotipo            | boton de menu
+       fila 2   Campo La Teresa...  | fecha
+       fila 3   el menu desplegable
+     Asi la columna izquierda pasa de 95px a 241 y el logotipo entra entero. */
+  .top .header-right{display:contents}
+  .top .menu-toggle{grid-column:2;grid-row:1;justify-self:end;align-self:center}
+  .top .t-date{grid-column:2;grid-row:2;justify-self:end;align-self:center}
+  .top .b-txt{grid-column:1;grid-row:2}
+}
 @media(max-width:480px){
   .kpis,.gkpis{padding:var(--sp-3)}
   .brand img{height:32px}
+}
+
+
+/* ================================================================
+   10. VESTIDO AIRO · lo que faltaba
+   ================================================================
+   Portado el 26/10/2026 desde las reglas de minga.css que apuntan a este tablero
+   (#v-tablero:not(.mg-en-ot) #app ...). Son 83; aplican 79, porque las cuatro de #gacc quedaron
+   sin uso cuando el grafico de gasto acumulado se reemplazo por la seccion de Servicios.
+
+   Que se cambio de Airo y que no:
+   - La GEOMETRIA, los cuerpos, los pesos, el tracking y los tiempos de animacion van tal cual.
+   - La PALETA no: donde Airo usa su carmin #C1272D y sus tintes rosa/pistacho, van el petroleo
+     #095C4C y el lima #8AB211 del logo de Del Sur.
+   - El lima NO se usa nunca para texto ni para fondo de boton con letra blanca: medido, da 2,35
+     contra el crema y 2,48 contra el blanco, o sea que no llega ni a 3. Sirve de relleno
+     (barras, franjas, rellenos de grafico) y nada mas. Donde Airo pone su acento en texto o en
+     un boton, aca va el petroleo (7,50 sobre crema; 7,93 con letra blanca). */
+
+/* --- las dos animaciones de crecimiento de Airo (mgCrece / mgCreceX) --- */
+@keyframes creceX{from{transform:scaleX(0)}}
+@keyframes creceY{from{transform:scaleY(0)}}
+
+/* --- filtros: vidrio, sin canto --- */
+.gfilter{background:rgba(255,255,255,.7);border:0;box-shadow:none;border-radius:16px}
+
+/* --- botones de accion: pildora negra, igual que .prob-link/.opex-toggle en Airo ---
+   El !important esta en el original y hace falta por el mismo motivo: estos botones traen color
+   de borde y de fondo desde las hojas de modulo, que cargan antes pero con la misma
+   especificidad en algunos casos. */
+.prob-link,.opex-toggle{
+  border:0!important;background:var(--ink)!important;color:#fff!important;
+  border-radius:99px!important;padding:7px 14px!important;
+  font:700 12px var(--font-sans);cursor:pointer;
+  transition:background .15s,transform .15s;
+}
+.prob-link:hover,.opex-toggle:hover{background:var(--acento)!important;transform:translateY(-1px)}
+
+/* --- Actividad y "Quién hizo qué", lado a lado (.mg-extra2, minga.css:1188) ---
+   1,7 contra 1: el grafico necesita ancho para que los nueve meses no se amontonen, y la lista
+   se lee bien angosta. El minmax(280px,1fr) evita que la lista se achique tanto que los nombres
+   queden en dos letras. */
+.resumen-par{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(280px,1fr);gap:20px;margin-bottom:var(--sp-5,20px)}
+.resumen-par>.panel{margin-bottom:0;min-width:0}
+@media (max-width:1100px){
+  .resumen-par{grid-template-columns:minmax(0,1fr);gap:0}
+  .resumen-par>.panel{margin-bottom:var(--sp-5,20px)}
+}
+
+/* --- la cifra grande del periodo, arriba del grafico (.mg-act-cab, minga.css:498-502) --- */
+.lchart-cab{display:flex;flex-direction:column;gap:4px;margin:-6px 0 2px}
+.lchart-val{font-size:clamp(26px,2.6vw,34px);font-weight:800;letter-spacing:-.04em;line-height:1.1;color:var(--ink)}
+/* El rotulo que acompaña a la cifra va en .42em y no en un tamaño fijo para que siga a la cifra
+   cuando el clamp la achica en pantallas angostas. */
+.lchart-val small{font-size:.42em;font-weight:700;color:var(--muted);letter-spacing:0}
+.lchart-pie{font-size:12.5px;color:var(--muted)}
+
+/* --- "Quién hizo qué" (.mg-rank, minga.css:993-1002) --- */
+/* La segunda fila de botones (la medida) va debajo del titulo y mas chica que la primera: son dos
+   decisiones distintas y en Airo tambien se ven en dos escalones. */
+/* Los dos grupos, uno debajo del otro y los dos empezando a la izquierda. */
+.rank-cab{display:flex;flex-direction:column;align-items:flex-start;gap:8px;margin:-4px 0 14px}
+.segbtns-chico{margin:0}
+.segbtns-chico button{padding:4px 9px;font-size:11.5px}
+.rank-lista{display:grid;gap:4px}
+/* Cada fila son dos renglones: el dato arriba y su barra abajo, cruzando las columnas del nombre
+   y del valor. El numero de orden queda fuera de la barra, a la izquierda. */
+.rank-fila{
+  display:grid;grid-template-columns:22px minmax(0,1fr) auto;grid-template-rows:auto 6px;
+  column-gap:8px;row-gap:5px;align-items:center;
+  padding:7px 8px;border-radius:12px;
+}
+.rank-fila:nth-child(odd){background:rgba(233,239,228,.35)}
+.rank-fila .n{font-size:11.5px;font-weight:800;color:var(--muted);text-align:center}
+/* Nombres como "JACSON MATHEUS GRETZLER KIELING" no entran: se recortan con puntos suspensivos y
+   el nombre entero queda en el title. Dejarlos envolver partiria la fila en dos alturas distintas
+   y la lista dejaria de leerse como un ranking. */
+.rank-fila .t{font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rank-fila .v{font-size:12.5px;font-weight:800;white-space:nowrap;font-variant-numeric:tabular-nums}
+.rank-fila .v em{font-style:normal;font-weight:600;color:var(--muted);margin-left:6px;font-size:11.5px}
+.rank-fila .b{grid-column:2/-1;height:6px;border-radius:99px;background:var(--pista);overflow:hidden}
+.rank-fila .b i{
+  display:block;height:100%;border-radius:inherit;
+  background:linear-gradient(90deg,#8AB211,var(--acento));
+  transform-origin:left;animation:creceX .9s cubic-bezier(.3,1,.4,1) both;
+}
+
+/* --- Actividad Operacional por Período: grafico de linea (.mg-act-graf, minga.css:503-514) ---
+   El SVG va estirado con preserveAspectRatio:none, asi que adentro NO puede ir nada que no deba
+   deformarse. Por eso los puntos y sus cifras son <span> posicionados en porcentaje ENCIMA del
+   SVG, no circulos del SVG: asi el circulito es redondo y el numero no se estira. */
+.lchart{padding:14px 22px 0}
+.lchart-lienzo{position:relative;height:150px}
+.lchart-lienzo svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.lchart-lienzo .area{fill:var(--pista);opacity:.75;animation:aparece 1s .5s both}
+.lchart-lienzo .linea{
+  fill:none;stroke:var(--acento);stroke-width:2.4;
+  /* Sin esto el trazo se estira con el SVG y queda mas grueso en horizontal que en vertical. */
+  vector-effect:non-scaling-stroke;stroke-linejoin:round;stroke-linecap:round;
+}
+.lchart-lienzo svg{animation:revela 1.6s .2s cubic-bezier(.4,0,.2,1) both}
+.lchart-pt{
+  position:absolute;width:11px;height:11px;margin:-5.5px 0 0 -5.5px;border-radius:50%;
+  background:var(--card);box-shadow:inset 0 0 0 2.5px var(--acento);
+  animation:punto .45s cubic-bezier(.3,1.5,.5,1) both;
+}
+.lchart-pt b{
+  position:absolute;left:50%;bottom:calc(100% + 5px);transform:translateX(-50%);
+  /* El punto mide 11px: sin width:max-content la cifra queda en una caja de 6px y el texto se
+     sale por los costados. Se ve igual, pero la caja no mide lo que se ve y cualquier cuenta de
+     superposicion da mal. */
+  width:max-content;
+  font-size:11.5px;font-weight:800;color:var(--ink);white-space:nowrap;
+  font-variant-numeric:tabular-nums;
+}
+/* El mes con mas actividad se marca relleno y con un anillo que late: es el dato que se busca
+   primero en una serie del año. */
+.lchart-pt.pico{background:var(--acento)}
+.lchart-pt.pico::after{
+  content:"";position:absolute;inset:-6px;border-radius:50%;
+  border:2px solid var(--acento);opacity:.5;animation:late 1.8s ease-in-out infinite;
+}
+@keyframes punto{from{opacity:0;transform:scale(.3)}}
+.lchart-meses{position:relative;height:26px;margin-top:6px}
+.lchart-meses span{
+  position:absolute;top:6px;transform:translateX(-50%);
+  font-size:11px;color:var(--muted);white-space:nowrap;
+}
+
+/* --- tarjetas de cultivo --- */
+/* 14px, el de Airo (minga.css:847). Estaba en 10 (cultivos.css:1). */
+.cults{gap:14px}
+.cult-card{
+  position:relative;background:var(--card);
+  border:0!important;border-radius:18px!important;
+  padding:18px 18px 16px;overflow:hidden;
+  transition:transform var(--dur-2) var(--ease), box-shadow var(--dur-2) var(--ease);
+}
+.cult-card:hover{transform:translateY(-3px);box-shadow:var(--ring-1), 0 22px 40px -28px rgba(9,60,50,.4)}
+/* La franja de 5px que identifica al cultivo, igual que en Airo (minga.css:850-852). Las tarjetas
+   de mapa no la llevan.
+   Airo usa cuatro colores sueltos (salmon, verde, ocre, amarillo). Aca los cuatro salen de la
+   rampa que va del petroleo al lima del logo, en las posiciones 0 / 0,27 / 0,59 / 1, que son las
+   que mas separan los cuatro entre si: medido en CIEDE2000, el par mas parecido queda a 13,8, y
+   el menos visible contra la tarjeta blanca a 35,3. Con las posiciones repartidas parejo
+   (0/0,33/0,67/1) sorgo y maiz caian a 9,3 y se confundian. */
+.cult-card:not(.mapa-card)::before{
+  content:"";position:absolute;inset:0 0 auto 0;height:5px;
+  background:var(--cult,var(--pista));
+}
+/* Los cuatro colores viven en una variable cada uno porque los usan DOS cosas: la franja de la
+   tarjeta y el punto de su pildora de foco. Con el color escrito dos veces, tarde o temprano una
+   de las dos queda vieja. */
+:root{
+  --cult-arroz:#095C4C;
+  --cult-soja:#2C733C;
+  --cult-sorgo:#558F29;
+  --cult-maiz:#8AB211;
+}
+.cult-card.c-arroz{--cult:var(--cult-arroz)}
+.cult-card.c-soja{--cult:var(--cult-soja)}
+.cult-card.c-sorgo{--cult:var(--cult-sorgo)}
+.cult-card.c-maiz{--cult:var(--cult-maiz)}
+.cc-name{font-size:17px;font-weight:800;letter-spacing:-.02em}
+.cc-stage{font-size:12.5px;color:var(--muted);margin-bottom:12px}
+.et-row{margin-bottom:12px}
+/* Los 13px son los de Airo. Pero cultivos.css:13 le pone white-space:nowrap + ellipsis al rotulo,
+   y a 13px "Preparacion de Suelo" pide 134px donde hay 129: se leia "Preparacion de Su...".
+   Airo se corta igual, porque arrastra ese mismo nowrap del archivo base. No se copia el recorte:
+   el rotulo baja de linea. Un rotulo cortado no es una decision de disenio, es un defecto. */
+.et-lbl{font-size:13px;font-weight:600;white-space:normal;overflow:visible;text-overflow:clip}
+.et-val{font-size:12.5px;font-weight:800}
+.cc-ha{background:var(--bg);border-radius:12px;border:0}
+/* --- cabecera del bloque: de que habla, y las pildoras para mirar un cultivo solo --- */
+.cults-cab{display:flex;align-items:center;justify-content:space-between;gap:8px 20px;flex-wrap:wrap;margin:-4px 0 14px}
+.cults-sub{margin:0;font-size:12.5px;color:var(--muted)}
+
+/* El grupo de botones segmentados de Airo (.mg-seg-btns, minga.css:948-951): una bandeja con los
+   botones adentro y el elegido en blanco, que es la misma figura que la barra de modulos. */
+.segbtns{display:inline-flex;flex-wrap:wrap;gap:3px;padding:3px;border-radius:13px;background:var(--pista)}
+.segbtns button{
+  display:inline-flex;align-items:center;gap:6px;
+  border:0;background:transparent;border-radius:10px;padding:6px 11px;
+  font-family:inherit;font-size:12.5px;font-weight:700;color:var(--muted);cursor:pointer;
+  transition:background var(--dur-2) var(--ease), color var(--dur-2) var(--ease), box-shadow var(--dur-2) var(--ease);
+}
+.segbtns button:hover{color:var(--ink);background:rgba(255,255,255,.7)}
+.segbtns button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 2px rgba(9,60,50,.08), inset 0 0 0 1px var(--line)}
+.segbtns button:focus-visible{outline:2px solid var(--acento);outline-offset:1px}
+.segbtns button i{width:8px;height:8px;border-radius:3px;display:inline-block;flex:none}
+
+/* --- el boton de agrandar, en la esquina de cada tarjeta --- */
+.cc-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.cc-exp{
+  flex:none;width:30px;height:30px;border:0;border-radius:10px;
+  display:grid;place-items:center;cursor:pointer;
+  background:var(--pista);color:var(--muted);
+  transition:background var(--dur-2) var(--ease), color var(--dur-2) var(--ease), transform var(--dur-2) var(--ease);
+}
+.cc-exp svg{width:15px;height:15px}
+.cc-exp:hover{background:var(--acento);color:var(--on-acento);transform:scale(1.06)}
+.cc-exp:focus-visible{outline:2px solid var(--acento);outline-offset:2px}
+
+/* --- "Ver desglose de <cultivo>" ---
+   Esta en todas las tarjetas pero solo se ve en la que esta en grande: en la cuadricula chica,
+   cuatro botones iguales le compiten el lugar a las cifras. Con display:none no queda ni en el
+   orden de tabulacion de las tarjetas que no estan abiertas. */
+.cc-desglose{
+  display:none;
+  align-items:center;gap:7px;
+  margin-top:14px;
+  border:0;border-radius:99px;padding:7px 15px;
+  font-family:inherit;font-size:12.5px;font-weight:700;cursor:pointer;
+  color:var(--acento);background:var(--pista);
+  transition:background var(--dur-2) var(--ease), color var(--dur-2) var(--ease);
+}
+.cc-desglose:hover{background:var(--acento);color:var(--on-acento)}
+.cc-desglose:focus-visible{outline:2px solid var(--acento);outline-offset:2px}
+
+/* --- un cultivo en grande: la cuadricula pasa a una sola columna y la tarjeta se abre en dos
+       (.mg-avance.foco y .mg-av-card.grande, minga.css:1141-1152) --- */
+.cults.foco{grid-template-columns:minmax(0,1fr)}
+/* El atributo hidden NO alcanza: .cult-card tiene display propio en las hojas de modulo y le gana
+   al display:none que el navegador le da a [hidden]. Sin esto, con un cultivo en foco las demas
+   tarjetas y los mapas se seguian viendo. Airo arrastra la misma regla (minga.css:1021). */
+.cult-card[hidden]{display:none!important}
+.cult-card.grande{
+  display:grid;
+  grid-template-columns:minmax(220px,300px) minmax(0,1fr);
+  /* La ultima fila es elastica para que el boton de desglose se apoye abajo del todo de la
+     columna izquierda, a la altura del pie de la lista de etapas. */
+  grid-template-areas:"top top" "info etapas" "ha etapas" "desglose etapas";
+  grid-template-rows:auto auto auto 1fr;
+  gap:6px 32px;align-items:start;
+  padding:22px 26px;
+}
+.cult-card.grande:hover{transform:none}
+.cult-card.grande .cc-top{grid-area:top;margin-bottom:10px}
+.cult-card.grande .cc-name{font-size:22px}
+.cult-card.grande .cc-stage{grid-area:info;align-self:start;font-size:13.5px}
+.cult-card.grande .cc-etapas{grid-area:etapas;gap:12px}
+.cult-card.grande .cc-ha{grid-area:ha;align-self:start}
+.cult-card.grande .cc-desglose{display:inline-flex;grid-area:desglose;align-self:end;justify-self:start}
+.cult-card.grande .et-lbl{font-size:13.5px}
+@media (max-width:760px){
+  .cult-card.grande{
+    grid-template-columns:minmax(0,1fr);
+    grid-template-areas:"top" "info" "etapas" "ha" "desglose";
+    grid-template-rows:auto auto auto auto auto;
+    padding:16px;
+  }
+}
+
+/* --- el destello que recorre la barra llena (.mg-av-et .b i::after, minga.css:484) ---
+   Una banda de luz que cruza la parte pintada cada tanto. Va solo en las barras de etapa: en las
+   de participacion de las tablas serian decenas moviendose a la vez. */
+.et-bar .bar-fill{position:relative;overflow:hidden}
+.et-bar .bar-fill::after{
+  content:"";position:absolute;inset:0;width:45%;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);
+  transform:translateX(-120%);
+  animation:brillo 2.8s 1.1s ease-in-out infinite;
+}
+/* Escalonado: sin esto las cuatro etapas destellan al mismo tiempo y parece un parpadeo del
+   bloque entero en vez de un recorrido. */
+.cc-etapas .et-row:nth-child(2) .bar-fill::after{animation-delay:1.5s}
+.cc-etapas .et-row:nth-child(3) .bar-fill::after{animation-delay:1.9s}
+.cc-etapas .et-row:nth-child(4) .bar-fill::after{animation-delay:2.3s}
+@keyframes brillo{0%{transform:translateX(-120%)}60%,100%{transform:translateX(330%)}}
+
+.mapa-card{padding:14px!important}
+.mapa-card img,.mapa-thumb{border-radius:14px}
+
+/* --- barras: 9px, cantos redondos, y crecen al entrar --- */
+.bar,.et-bar{height:9px!important;border-radius:99px!important;background:var(--pista)!important;overflow:hidden}
+.bar-fill{border-radius:99px!important;transform-origin:left;animation:creceX 1s .2s cubic-bezier(.3,1,.4,1) both}
+.sopbar,.pu-bar{height:8px!important;border-radius:99px!important;background:var(--pista)!important;overflow:hidden}
+/* Airo pinta las barras con degradado. Aca se aplica SOLO donde el color no dice nada: .sopbar,
+   .pu-bar y .opex-bar-fill estaban las dos en var(--teal) plano.
+   NO se toca .bar-fill: esa lleva clase f-g / f-y / f-o / f-r y su color ES el dato (el avance de
+   cada etapa). Airo las
+   repinta con !important; copiarle eso aca borraria informacion, asi que no se copia. */
+.sopbar>div,.pu-bar>i{
+  border-radius:99px!important;transform-origin:left;
+  background:linear-gradient(90deg,#3E8C78,#095C4C)!important;
+  animation:creceX 1s .2s cubic-bezier(.3,1,.4,1) both;
+}
+
+/* --- barra de estados y su leyenda ---
+   La leyenda deja de ser una linea de textitos y pasa a ser una fila de tarjetas con la cifra
+   grande arriba, que es como la muestra Airo. */
+
+/* --- gasto operativo --- */
+.opex-row{border-bottom:1px dashed var(--line);transition:background .15s;border-radius:12px}
+/* resumen.css:63 ya separa las filas con una linea solida arriba (.opex-row+.opex-row). Con la
+   punteada de Airo abajo quedaban las DOS, una encima de la otra. La punteada la reemplaza. */
+.opex-row+.opex-row{border-top:0}
+.opex-bar-track{height:9px!important;border-radius:99px!important;background:var(--pista)!important;overflow:hidden}
+.opex-bar-fill{
+  border-radius:99px!important;transform-origin:left;
+  background:linear-gradient(90deg,#8AB211,#095C4C)!important;
+  animation:creceX 1s .2s cubic-bezier(.3,1,.4,1) both;
+}
+/* El peso 800 de Airo ensancha el texto y resumen.css:65 lo corta con nowrap + ellipsis:
+   "CUIDADOS DE PATIOS VIVIEND..." pedia 19px mas de los que tenia. Igual que con .et-lbl, el
+   rotulo baja de linea en lugar de cortarse. */
+.opex-cat{font-weight:800;white-space:normal;overflow:visible;text-overflow:clip}
+
+/* --- tablas: sin rejilla, cabecera en versalitas, filas con raya punteada ---
+   La raya punteada es de las cosas que mas identifican a Airo de cerca. */
+table{border-collapse:separate;border-spacing:0}
+th{
+  background:transparent!important;
+  font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);
+  border-bottom:1.5px solid var(--line)!important;padding:10px 12px;
+}
+td{border-bottom:1px dashed var(--line)!important;padding:11px 12px}
+tr.grp>td{background:var(--surface-2)!important;font-weight:700}
+tr.tot>td{background:var(--surface-3)!important;border-top:0!important}
+td.mono,td .mono{font-variant-numeric:tabular-nums}
+.scroll{border-radius:14px}
+.chip,.tag,.rc-chip{border-radius:99px!important}
+tr.dethead>td{background:var(--bg)!important;color:var(--muted)}
+
+/* --- pie --- */
+.foot{border-top:0;color:var(--muted);font-size:12px;line-height:1.6;padding:20px 8px 0}
+
+@media (max-width:760px){
+  .panel{padding:18px 16px}
+}
+
+/* ---- telefono: una sola tarjeta por fila ----
+   Arreglo de un recorte VIEJO, anterior a todo este redisenio. En un telefono de 375px .kpis y
+   .gkpis se quedaban en DOS columnas (kpis.css:13 y gastos.css:92), o sea 132px por tarjeta y 93
+   de ancho util. Medido ahi: "589.500,00 L" recien entra a 16px y "$ 2.716.823,66" no entra a
+   NINGUN cuerpo legible — se cortaba siempre, dijera lo que dijera el font-size.
+   El patron ya existia en el repo: .kpis-exec baja a una columna en 480px (resumen.css:25), y por
+   eso el Resumen Ejecutivo era el unico tablero que no se cortaba en telefono. Se le da el mismo
+   corte a las otras dos grillas.
+   Tambien se suelta el nowrap de la fila de cinco: a una tarjeta por fila sobra lugar, y si
+   alguna vez faltara, es preferible que la cifra baje de linea a que se corte. */
+@media (max-width:480px){
+  .kpis,.gkpis{grid-template-columns:minmax(0,1fr)}
+  .gkpis:has(> :nth-child(5)) .k-val{white-space:normal}
+}
+/* Quien pidio menos movimiento no ve crecer nada: las barras aparecen ya en su largo final. */
+@media (prefers-reduced-motion:reduce){
+  .bar-fill,.sopbar>div,.pu-bar>i,.opex-bar-fill{animation:none!important}
+}
+
+
+/* ================================================================
+   11. PORTADA DEL RESUMEN · el hero de Airo
+   ================================================================
+   Calcado de .mg-hero (minga.css:221-240). Es la parte que faltaba: hasta el 26/10/2026 el
+   Resumen arrancaba directo con el filtro y tres tarjetas chicas, mientras que en Airo la portada
+   abre con un bloque grande — versalitas, saludo y cifras — sobre su propio lavado.
+
+   Que se cambio: los tintes, que son el lima y el petroleo del logo en lugar del rosa y el
+   pistacho de Airo. Las medidas, los cuerpos, los pesos, el tracking y los tiempos van tal cual.
+   Que NO se copio, porque seria inventar datos: el nombre en el saludo (no hay sesion) y la
+   cadena Albor -> n8n -> Airo (este tablero lee un .xlsx, no Albor en vivo). */
+.hero{
+  position:relative;
+  border-radius:28px;
+  padding:30px clamp(18px,2.6vw,34px) clamp(18px,2.6vw,30px);
+  margin-bottom:26px;
+  overflow:hidden;
+  background:
+    radial-gradient(60% 90% at 12% 10%, #EAF1D4, transparent 70%),
+    radial-gradient(60% 90% at 92% 95%, #D1E1DE, transparent 70%),
+    #F2F6E4;
+  animation:entraHero .7s cubic-bezier(.2,.8,.2,1) both;
+}
+@keyframes entraHero{from{opacity:0;transform:translateY(16px) scale(.98)}}
+/* El halo claro que deriva en la esquina, de Airo. Decorativo y fuera del flujo. */
+.hero::after{
+  content:"";position:absolute;right:-60px;top:-80px;
+  width:280px;height:280px;border-radius:50%;
+  background:rgba(255,255,255,.35);filter:blur(10px);
+  animation:derivaHalo 18s ease-in-out infinite alternate;
+  pointer-events:none;
+}
+@keyframes derivaHalo{to{transform:translate(6vw,4vh) scale(1.12)}}
+
+.hero .gfilter{position:relative;z-index:1;margin-bottom:24px}
+/* El total se va al extremo derecho de la fila, como .mg-f-resumen en Airo. */
+.gfilter-cuenta{margin:0 0 0 auto;font-size:12.5px;color:var(--muted);white-space:nowrap}
+.hero-cab{
+  position:relative;z-index:1;
+  display:flex;align-items:flex-end;justify-content:space-between;
+  gap:20px 40px;flex-wrap:wrap;
+  margin-bottom:24px;
+}
+/* Las versalitas llevan el dato que hasta hoy vivia al lado del logotipo. En Airo ese renglon es
+   el que ubica la pantalla: campo y moneda. */
+.hero .eyebrow{
+  font-size:12px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--acento);
+}
+.hero h2{
+  font-size:clamp(30px,3.6vw,44px);font-weight:700;
+  letter-spacing:-.045em;line-height:1.02;
+  margin:8px 0;color:var(--ink);
+}
+.hero-sub{font-size:14px;color:var(--ink-soft);max-width:62ch;margin:0}
+
+/* ---- el cuerpo del hero: las cifras a la izquierda, la cinta de ordenes a la derecha ----
+   Es .mg-hero-cuerpo de Airo (minga.css:231): una columna elastica y otra fija de 280-340px. */
+.hero-cuerpo{
+  position:relative;z-index:1;
+  display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,340px);gap:14px;
+}
+
+/* ---- las cifras, con la forma de .mg-pulso ---- */
+.hero .kpis-exec{position:relative;z-index:1;gap:14px;margin-bottom:0}
+/* Dos columnas, no las tres de resumen.css:20: con la cinta al lado, tres en fila dejan cada
+   tarjeta mas angosta que la propia cifra que tiene que mostrar. Como son 3 y no las 4 de Airo,
+   la ultima toma el ancho de las dos. El :has es un seguro: si alguna vez se agrega una cuarta
+   tarjeta, la regla se apaga sola en vez de dejar un hueco. */
+.hero .kpis-exec{grid-template-columns:repeat(2,minmax(0,1fr))}
+.hero .kpis-exec:not(:has(> :nth-child(4))) > .kpi:nth-child(3){grid-column:1/-1}
+.hero .kpis-exec .kpi{
+  position:relative;overflow:hidden;
+  /* Cuatro filas: rotulo, cifra, pie y una elastica donde el grafico se apoya abajo. Es la
+     grilla de .mg-pulso (minga.css:235). */
+  display:grid;grid-template-rows:auto auto auto 1fr;gap:4px;
+  min-height:176px;
+  padding:18px 20px 0;   /* sin padding abajo: el grafico llega al borde de la tarjeta */
+  border:0;border-radius:20px;
+  background:rgba(255,255,255,.92);
+  box-shadow:0 1px 0 rgba(255,255,255,.6) inset, 0 24px 50px -32px rgba(9,60,50,.35);
+  transition:transform .25s cubic-bezier(.2,.8,.2,1), box-shadow .25s;
+}
+.hero .kpis-exec .kpi:hover{
+  transform:translateY(-3px);
+  box-shadow:0 1px 0 rgba(255,255,255,.6) inset, 0 30px 50px -28px rgba(9,60,50,.42);
+}
+.hero .kpis-exec .kpi:nth-child(2){animation-delay:.08s}
+.hero .kpis-exec .kpi:nth-child(3){animation-delay:.16s}
+.hero .kpis-exec .k-lab{font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.02em;text-transform:none}
+/* OJO: esto PISA los 19px que se habian fijado a pedido el 23/10. En Airo estas son las cifras
+   grandes de la portada — clamp(26px,2.6vw,34px) — y a 19px el bloque no se parece. Si se
+   prefieren chicas, se baja este clamp y listo; el resto del hero no depende de el. */
+.hero .kpis-exec .k-val{
+  font-size:clamp(26px,2.6vw,34px);font-weight:800;
+  letter-spacing:-.04em;line-height:1.1;margin:4px 0 2px;color:var(--ink);
+}
+.hero .kpis-exec .k-foot{font-size:12.5px;color:var(--muted)}
+
+/* ---- la cinta de ultimas ordenes confirmadas (.mg-cinta-ot, minga.css:261-269) ----
+   Misma tarjeta blanca que las cifras: lo que cambia es que adentro va una lista, no un numero. */
+.cinta-ot{
+  display:grid;grid-template-rows:auto 1fr;gap:10px;min-height:0;
+  padding:18px 16px 14px 20px;
+  border-radius:20px;
+  background:rgba(255,255,255,.92);
+  box-shadow:0 1px 0 rgba(255,255,255,.6) inset, 0 24px 50px -32px rgba(9,60,50,.35);
+}
+.cinta-cab{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13.5px}
+.cinta-cab b{font-weight:800;letter-spacing:-.02em}
+.cinta-n{
+  flex:none;white-space:nowrap;
+  font-size:11.5px;font-weight:700;color:var(--muted);
+  background:var(--pista);border-radius:99px;padding:3px 10px;
+}
+/* La lista se corta con una mascara, no con una barra de scroll: la ultima fila se desvanece y
+   asi se lee que hay mas abajo sin agregar un control que no lleva a ningun lado. */
+.cinta-lista{
+  position:relative;overflow:hidden;min-height:0;height:100%;max-height:300px;
+  -webkit-mask-image:linear-gradient(#000 78%,transparent);
+          mask-image:linear-gradient(#000 78%,transparent);
+}
+.ot-fila{
+  display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;
+  padding:10px 0;border-bottom:1px dashed var(--line);
+  /* La cinta gira: la primera fila se va hacia arriba tirando del margen negativo y las demas
+     suben solas detras. Se anima el MARGEN y no transform para que las que quedan se corran de
+     verdad, no por debajo de la que sale. El max-height acota el salto cuando una fila es mas
+     alta que otra. */
+  max-height:80px;
+  transition:margin .5s cubic-bezier(.4,0,.2,1), opacity .5s;
+}
+.ot-fila.sale{margin-top:-58px;opacity:0}
+/* El numero de OT en una chapita: petroleo sobre la pista verde da 6,77 de contraste (medido),
+   asi que a 11,5px en negrita cumple AA de sobra. */
+.ot-fila .num{
+  white-space:nowrap;font-size:11.5px;font-weight:800;
+  color:var(--acento);background:var(--pista);
+  padding:4px 8px;border-radius:8px;
+}
+/* El servicio y su renglon de contexto se recortan con puntos suspensivos en vez de empujar la
+   columna: la cinta tiene ancho fijo y un nombre largo la desarmaria. */
+.ot-fila .srv{
+  min-width:0;font-size:13px;font-weight:700;line-height:1.3;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.ot-fila .srv em{
+  display:block;font-style:normal;font-weight:500;font-size:12px;color:var(--muted);
+  overflow:hidden;text-overflow:ellipsis;
+}
+.ot-fila .cuando{white-space:nowrap;font-size:11.5px;color:var(--muted)}
+.cinta-vacio{margin:0;font-size:13px;color:var(--muted)}
+
+/* ---- la tarjeta "Órdenes en marcha ahora" (.mg-pulso.marcha, minga.css:250-258) ----
+   Dos tramos repartidos por flex: lo empezado y lo que ni arranco. */
+.kpi-seg{display:flex;gap:4px;height:10px;margin:10px 0 8px}
+.kpi-seg i{
+  border-radius:99px;background:var(--acento);
+  transform-origin:left;animation:creceX .9s .3s cubic-bezier(.3,1.2,.4,1) both;
+}
+.kpi-seg i+i{background:var(--pista)}
+.kpi-leyenda{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:12.5px;color:var(--ink-soft)}
+.kpi-leyenda em{width:9px;height:9px;border-radius:3px;background:var(--acento)}
+.kpi-leyenda em.p{background:var(--pista);margin-left:8px}
+.kpi-sin-atraso{align-self:end;margin:12px 0 18px}
+/* El boton que lleva a Alertas Operativas. Rojo #B3261E sobre #F8D2CE da 4,70 de contraste
+   (medido), que cumple AA. El punto late para que se note sin tener que gritar con el tamaño. */
+.kpi-atras{
+  align-self:end;justify-self:start;margin:12px 0 18px;
+  display:inline-flex;align-items:center;gap:7px;
+  border:0;font-family:inherit;font-size:12.5px;font-weight:700;cursor:pointer;
+  padding:5px 12px;border-radius:99px;
+  color:var(--r);background:#F8D2CE;
+}
+.kpi-atras::before{
+  content:"";width:7px;height:7px;border-radius:50%;background:var(--r);
+  animation:late 1.6s ease-in-out infinite;
+}
+.kpi-atras.c-o{color:#8A4600;background:#FBDEC0}
+.kpi-atras.c-o::before{background:#8A4600}
+.kpi-atras:hover{filter:brightness(.96)}
+@keyframes late{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.5);opacity:.55}}
+
+@media (max-width:1100px){
+  /* La cinta deja de ir al costado y pasa abajo, a todo el ancho (minga.css:274). */
+  .hero-cuerpo{grid-template-columns:minmax(0,1fr)}
+  .cinta-lista{max-height:236px}
+}
+@media (max-width:760px){
+  .hero{padding:22px 16px;border-radius:22px}
+  .hero .kpis-exec .kpi{min-height:0}
+  /* Una sola columna. Hay que repetirlo ACA aunque resumen.css:25 ya lo diga en 480px: esa regla
+     es .kpis-exec (0,1,0) y la de arriba es .hero .kpis-exec (0,2,0), que le gana — y una media
+     query no suma especificidad. Tambien hay que soltar el tramo de la tercera tarjeta. */
+  .hero .kpis-exec{grid-template-columns:minmax(0,1fr)}
+  .hero .kpis-exec:not(:has(> :nth-child(4))) > .kpi:nth-child(3){grid-column:auto}
+}
+@media (prefers-reduced-motion:reduce){
+  .hero{animation:none}
+  .hero::after{animation:none}
+}
+
+/* ---- los graficos del pie de las tarjetas de portada (.mg-spark, minga.css:243-248) ----
+   El ancho es el de la tarjeta MAS los 40px de padding lateral, con margen negativo, para que el
+   grafico toque los dos bordes. Los colores son los del logo: el lima para la serie, el petroleo
+   para el ultimo dato. */
+.spark{
+  align-self:end;
+  width:calc(100% + 40px);margin:12px -20px 0;
+  height:58px;display:block;
+}
+.spark rect{
+  fill:#C6DB8A;
+  transform-origin:bottom;transform-box:fill-box;
+  animation:creceY .7s cubic-bezier(.3,1.3,.4,1) both;
+}
+.spark rect.hoy{fill:var(--acento)}
+.spark .area{fill:#D1E1DE;opacity:.8;animation:aparece 1s .5s both}
+.spark .linea{
+  fill:none;stroke:#3E8C78;stroke-width:2.2;
+  vector-effect:non-scaling-stroke;stroke-linejoin:round;
+}
+.spark.l{animation:revela 1.6s .2s cubic-bezier(.4,0,.2,1) both}
+@keyframes aparece{from{opacity:0}}
+@keyframes revela{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
+
+@media (prefers-reduced-motion:reduce){
+  .spark rect,.spark .area,.spark.l{animation:none!important;clip-path:none!important;opacity:1!important}
+  /* El giro de la cinta y el conteo de las cifras ya se apagan solos en el JS; esto es para lo
+     que se anima solo con CSS. */
+  .kpi-seg i,.kpi-atras::before{animation:none!important}
+  .et-bar .bar-fill::after{animation:none!important;display:none}
+  .lchart-lienzo svg,.lchart-pt,.lchart-pt.pico::after{animation:none!important;clip-path:none!important;opacity:1!important}
+  .rank-fila .b i{animation:none!important}
+  .ot-fila{transition:none!important}
+}
+
+/* ================================================================
+   12. IMPRESION
+   ================================================================
+   El bloque general de impresion vive en css/reporte.css. Esta regla es la excepcion y se queda
+   ACA, junto al lavado que corrige: las dos tienen la misma especificidad, asi que gana la que
+   viene despues en el archivo. Puesta en otra hoja habria que acordarse del orden de carga. */
+@media print{
+  /* El lavado de fondo de la pestaña es una tarjeta de pantalla. En papel el color no se imprime:
+     de la tarjeta solo queda el margen y el canto redondeado comiendose el ancho util de la hoja. */
+  .page.active{padding:0;border-radius:0;background:none}
 }

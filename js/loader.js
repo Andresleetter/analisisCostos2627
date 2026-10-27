@@ -393,6 +393,9 @@ function loadData(){
       // se abre ese en lugar del Resumen Ejecutivo. Asi F5 deja al usuario donde estaba.
       // Va aca y no antes porque show() hace scroll, y sobre #app oculto no tiene efecto.
       restaurarModuloDeURL();
+    // Y recien ahora las cifras del modulo visible cuentan desde cero: antes de restaurar el
+    // modulo de la URL no se sabe cual es el que se esta mirando.
+    animarCifrasPronto(document.querySelector('.page.active'));
       console.log('Dashboard renderizado correctamente.');
       vigilarDatosNuevos();
     })

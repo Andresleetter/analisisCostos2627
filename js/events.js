@@ -177,11 +177,6 @@ document.addEventListener('DOMContentLoaded', function(){
   // Entrada y salida de la vista. No es un módulo del menú: se entra desde "Detalle de Etapas por
   // Cultivo" (Resumen Ejecutivo) y se vuelve al Resumen, que queda como pestaña activa mientras
   // tanto. Los dos botones son markup fijo del HTML, así que van con listener directo.
-  document.getElementById('ver-avance-detallado').addEventListener('click', function(){
-    // Sin cultivo: abre con el primero disponible (ARROZ si existe, por el orden de CULTIVOS).
-    abrirAvanceDetallado();
-    cerrarMenuModulos();
-  });
   document.getElementById('av-volver').addEventListener('click', volverAResumen);
   // Cambiar de cultivo cierra cualquier labor abierta: el desplegable pertenece al cultivo que se
   // estaba mirando, y dejarlo abierto mostraría otra labor con el mismo nombre en otro cultivo.
@@ -273,16 +268,54 @@ document.addEventListener('DOMContentLoaded', function(){
     auditSiembraAbierta = (auditSiembraAbierta===lote) ? null : lote;
     renderAuditoriaSiembra();
   });
-  // "Ver detalle" de las tarjetas de Posibles Problemas (Resumen Ejecutivo): delegado sobre el
-  // contenedor #probs (fijo en el HTML) porque las tarjetas se regeneran en cada carga — así un
-  // único listener sigue funcionando sin volver a atarse por tarjeta. Reutiliza show(), la misma
-  // función de cambio de pestaña que usan los botones .tab; no hay onclick inline en el HTML.
-  document.getElementById('probs').addEventListener('click', function(e){
-    const btn = e.target.closest('.prob-link');
+  // Qué mide el gráfico de Actividad Operacional. Delegado sobre #act-medir, que es fijo en el
+  // HTML: los botones los reescribe renderActividadMensual() en cada cambio.
+  document.getElementById('act-medir').addEventListener('click', function(e){
+    const btn = e.target.closest('[data-act]');
+    if(!btn || btn.dataset.act===actMedida) return;
+    actMedida = btn.dataset.act;
+    renderActividadMensual();
+  });
+  // "Quién hizo qué": agrupar por y medir por. Delegados sobre los dos grupos, que son fijos en
+  // el HTML — los botones de adentro los reescribe renderRanking() en cada cambio.
+  document.getElementById('rank-dim').addEventListener('click', function(e){
+    const b = e.target.closest('[data-rk]');
+    if(!b || b.dataset.rk===rankDim) return;
+    rankDim = b.dataset.rk; renderRanking();
+  });
+  document.getElementById('rank-med').addEventListener('click', function(e){
+    const b = e.target.closest('[data-rm]');
+    if(!b || b.dataset.rm===rankMed) return;
+    rankMed = b.dataset.rm; renderRanking();
+  });
+  // Píldoras de foco por cultivo y botón de agrandar de cada tarjeta (Resumen Ejecutivo).
+  // Los dos van delegados sobre contenedores fijos del HTML: #cults se reescribe entero en cada
+  // render y #cult-foco se repinta con cada cambio de foco, asi que atar el listener a los
+  // botones no sobreviviria al primer clic.
+  document.getElementById('cult-foco').addEventListener('click', function(e){
+    const btn = e.target.closest('[data-cf]');
     if(!btn) return;
-    const i = parseInt(btn.dataset.tab, 10);
-    if(isNaN(i)) return;
-    const tabs = document.querySelectorAll('.tab');
+    cultFoco = btn.dataset.cf==='' ? null : +btn.dataset.cf;
+    pintarFocoCultivo();
+  });
+  document.getElementById('cults').addEventListener('click', function(e){
+    const exp = e.target.closest('.cc-exp');
+    if(exp){ alternarFocoCultivo(+exp.dataset.cult); return; }
+    // "Ver desglose de <cultivo>": abre el Avance Detallado en ESE cultivo. El nombre viaja en
+    // data-cult tal cual lo da el modelo; abrirAvanceDetallado() lo ignora si no corresponde a
+    // ninguna opcion del selector.
+    const des = e.target.closest('.cc-desglose');
+    if(des){ abrirAvanceDetallado(des.dataset.cult); cerrarMenuModulos(); }
+  });
+  // El boton de atrasadas de la tarjeta "Órdenes en marcha ahora" (Resumen Ejecutivo). Delegado
+  // sobre #exec-kpis, que es fijo en el HTML, porque las tarjetas se regeneran en cada render.
+  // Busca la pestaña por data-mod y no por indice: reordenarlas no rompe el salto.
+  document.getElementById('exec-kpis').addEventListener('click', function(e){
+    const btn = e.target.closest('.kpi-atras');
+    if(!btn) return;
+    const tabs = [...document.querySelectorAll('.tab')];
+    const i = tabs.findIndex(t => t.dataset.mod === btn.dataset.mod);
+    if(i < 0) return;
     show(i, tabs[i]);
     cerrarMenuModulos();
   });
