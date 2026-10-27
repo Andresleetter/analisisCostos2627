@@ -395,6 +395,11 @@
   <!-- TAB 5 -->
   <section class="page">
     <div class="gfilter ha-filtros">
+      <!-- Cultivo va primero porque es el filtro mas grueso: acota los otros dos. Es un <select>
+           comun y no un .ha-selector con buscador como Servicio y Lote — son cuatro opciones, un
+           buscador ahi seria un paso de mas. Comparte el estilo igual: .gfilter los pinta juntos. -->
+      <label for="ha-cultivo">Cultivo</label>
+      <select id="ha-cultivo"><option value="">Todos los cultivos</option></select>
       <label id="ha-label-servicio" for="ha-toggle-servicio">Servicio</label>
       <div class="ha-selector" data-filtro="servicio">
         <select id="ha-servicio" hidden aria-hidden="true" tabindex="-1"><option value="">Todos los servicios</option></select>

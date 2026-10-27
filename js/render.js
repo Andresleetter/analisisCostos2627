@@ -2866,8 +2866,12 @@ function coincideControlHa(valor, consulta, lote=false){
   const texto=normalizar(valor);
   return normalizar(consulta).split(/\s+/).every(p=>texto.includes(p));
 }
-function filtrarControlHectareas(datos, servicio, lote, servicioElegido="", loteElegido=""){
-  const porLote=r=>(!loteElegido||r.lote===loteElegido)&&coincideControlHa(r.lote,lote,true);
+function filtrarControlHectareas(datos, servicio, lote, servicioElegido="", loteElegido="", cultivoElegido=""){
+  // El cultivo se filtra por GRUPO, no por linea de detalle: cult vive en el lote (exceso,
+  // cancelados) o en la fila (repetidas, sinrtk), nunca en la OT de adentro. Por eso entra junto
+  // al lote y no junto al servicio.
+  const porCultivo=r=>!cultivoElegido||r.cult===cultivoElegido;
+  const porLote=r=>porCultivo(r)&&(!loteElegido||r.lote===loteElegido)&&coincideControlHa(r.lote,lote,true);
   const porServicio=r=>(!servicioElegido||r.serv===servicioElegido)&&coincideControlHa(r.serv,servicio);
   const exceso=datos.exceso.filter(porLote).map(e=>{
     const dets=e.dets.filter(porServicio), culpables=dets.filter(x=>x.over);
@@ -2892,8 +2896,21 @@ function renderControlHectareas(){
 function renderControlHectareasDatos(datos){
   const servicio=document.getElementById('ha-servicio').value;
   const lote=document.getElementById('ha-lote').value;
-  const filas=[...datos.exceso.flatMap(e=>e.dets.map(x=>({...x,lote:e.lote}))),
-    ...datos.repetidas,...datos.cancelados.flatMap(e=>e.dets.length?e.dets.map(x=>({...x,lote:e.lote})):[{lote:e.lote,serv:''}]),...datos.sinrtk];
+  const cultivo=document.getElementById('ha-cultivo').value;
+  // Cada fila arrastra el cultivo de su grupo para que las opciones de Servicio y Lote se puedan
+  // acotar al cultivo elegido: sin esto, elegir SORGO seguiria ofreciendo lotes de arroz.
+  const filas=[...datos.exceso.flatMap(e=>e.dets.map(x=>({...x,lote:e.lote,cult:e.cult}))),
+    ...datos.repetidas,...datos.cancelados.flatMap(e=>e.dets.length?e.dets.map(x=>({...x,lote:e.lote,cult:e.cult})):[{lote:e.lote,cult:e.cult,serv:''}]),...datos.sinrtk];
+  const delCultivo=r=>!cultivo||r.cult===cultivo;
+  // Cultivo es un <select> comun: no tiene buscador ni boton que sincronizar, asi que no pasa por
+  // opciones() — esa funcion ademas repinta el menu del .ha-selector, que aca no existe.
+  const opcionesSimple=(id,valores,seleccion,titulo)=>{
+    const select=document.getElementById(id);
+    select.innerHTML='<option value="">'+titulo+'</option>'+[...new Set([...valores,seleccion].filter(Boolean))]
+      .sort((a,b)=>a.localeCompare(b,'es',{numeric:true}))
+      .map(v=>'<option value="'+escHtml(String(v))+'">'+escHtml(String(v))+'</option>').join('');
+    select.value=seleccion;
+  };
   const opciones=(id,valores,seleccion,titulo)=>{
     const select=document.getElementById(id);
     select.innerHTML='<option value="">'+titulo+'</option>'+[...new Set([...valores,seleccion].filter(Boolean))]
@@ -2903,9 +2920,12 @@ function renderControlHectareasDatos(datos){
     document.getElementById(id.replace('ha-','ha-toggle-')).textContent=seleccion||titulo;
     renderOpcionesSelectorHa(id.replace('ha-',''));
   };
-  opciones('ha-servicio',filas.filter(r=>(!lote||r.lote===lote)).map(r=>r.serv),servicio,'Todos los servicios');
-  opciones('ha-lote',filas.filter(r=>(!servicio||r.serv===servicio)).map(r=>r.lote),lote,'Todos los lotes');
-  const D=filtrarControlHectareas(datos,'','',servicio,lote);
+  // Las opciones de Cultivo salen de TODAS las filas, sin acotar por los otros dos: es el filtro
+  // de arriba de la jerarquia y tiene que poder cambiarse siempre. Los otros dos si se acotan.
+  opcionesSimple('ha-cultivo',filas.map(r=>r.cult),cultivo,'Todos los cultivos');
+  opciones('ha-servicio',filas.filter(r=>delCultivo(r)&&(!lote||r.lote===lote)).map(r=>r.serv),servicio,'Todos los servicios');
+  opciones('ha-lote',filas.filter(r=>delCultivo(r)&&(!servicio||r.serv===servicio)).map(r=>r.lote),lote,'Todos los lotes');
+  const D=filtrarControlHectareas(datos,'','',servicio,lote,cultivo);
   // TAB3 control ha
   document.getElementById('ha-kpis').innerHTML=
     `<div class="kpi"><div class="k-lab">Lotes con Exceso</div><div class="k-val c-r">${D.exc_kpi.n}</div>`+

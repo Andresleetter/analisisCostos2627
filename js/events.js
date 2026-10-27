@@ -56,6 +56,12 @@ document.addEventListener('DOMContentLoaded', function(){
     document.querySelectorAll('.ha-selector').forEach(selector=>cerrarSelectorHa(selector));
     document.getElementById('ha-servicio').value='';
     document.getElementById('ha-lote').value='';
+    document.getElementById('ha-cultivo').value='';
+    if(D) renderControlHectareas();
+  });
+  // Cambiar de cultivo vuelve a dibujar: las opciones de Servicio y Lote se recalculan acotadas al
+  // cultivo elegido, igual que ya hacen entre si.
+  document.getElementById('ha-cultivo').addEventListener('change', function(){
     if(D) renderControlHectareas();
   });
   // Menú hamburguesa (solo visible en móvil, ver tabs.css): reutiliza los mismos botones .tab de
