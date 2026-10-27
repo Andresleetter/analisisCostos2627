@@ -14,68 +14,18 @@
 
   var raiz = document.documentElement;
 
-  // ---------------------------------------------------------------- tema
-  // Tres estados, no dos. "auto" no es un lujo: es el estado correcto por defecto, porque quien
-  // tiene el sistema en oscuro no debería recibir una pantalla blanca a las 6 de la mañana. El
-  // ciclo del botón es auto -> claro -> oscuro -> auto.
-  var CLAVE = 'delsur-tema';
-  var MODOS = ['auto', 'light', 'dark'];
-  var ETIQUETA = {auto:'Automático', light:'Claro', dark:'Oscuro'};
-  var mqOscuro = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
-
-  function leerModo(){
-    try{
-      var v = localStorage.getItem(CLAVE);
-      return MODOS.indexOf(v) > -1 ? v : 'auto';
-    }catch(e){ return 'auto'; }   // modo privado / cookies bloqueadas
-  }
-
-  // El atributo data-theme SIEMPRE queda resuelto a light u dark (nunca "auto"): así el CSS no
-  // necesita duplicar cada regla dentro de un @media prefers-color-scheme.
-  function resolver(modo){
-    if(modo === 'auto') return (mqOscuro && mqOscuro.matches) ? 'dark' : 'light';
-    return modo;
-  }
-
-  function aplicar(modo){
-    raiz.setAttribute('data-theme', resolver(modo));
-    raiz.setAttribute('data-theme-modo', modo);
-    // La barra del navegador móvil acompaña al fondo del tablero.
-    var meta = document.querySelector('meta[name="theme-color"]:not([media])');
-    if(meta) meta.setAttribute('content', resolver(modo) === 'dark' ? '#141010' : '#FBF8F5');
-    pintarBoton(modo);
-  }
-
-  // Dos iconos, dibujados con SVG inline para no pedir una fuente de iconos por dos glifos.
-  var ICO = {
-    light:'<svg class="tt-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.1 5.1l1.4 1.4M17.5 17.5l1.4 1.4M18.9 5.1l-1.4 1.4M6.5 17.5l-1.4 1.4"/></svg>',
-    dark:'<svg class="tt-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.8 6.8 0 0 0 10.5 10.5z"/></svg>'
-  };
-
-  function pintarBoton(modo){
-    var b = document.getElementById('theme-toggle');
-    if(!b) return;
-    var efectivo = resolver(modo);
-    b.innerHTML = ICO[efectivo] + '<span class="tt-txt">' + ETIQUETA[modo] + '</span>';
-    // El rótulo dice qué hay AHORA y a qué se pasa: un botón que cicla entre tres estados es
-    // ilegible para un lector de pantalla si solo anuncia el estado actual.
-    var siguiente = MODOS[(MODOS.indexOf(modo) + 1) % MODOS.length];
-    b.setAttribute('aria-label', 'Tema: ' + ETIQUETA[modo] + '. Cambiar a ' + ETIQUETA[siguiente] + '.');
-    b.setAttribute('title', 'Tema: ' + ETIQUETA[modo]);
-  }
-
-  function ciclar(){
-    var modo = MODOS[(MODOS.indexOf(leerModo()) + 1) % MODOS.length];
-    try{ localStorage.setItem(CLAVE, modo); }catch(e){}
-    aplicar(modo);
-  }
-
-  // Cambio de tema del sistema estando en "auto": el tablero acompaña sin recargar.
-  if(mqOscuro){
-    var alCambiarSistema = function(){ if(leerModo() === 'auto') aplicar('auto'); };
-    if(mqOscuro.addEventListener) mqOscuro.addEventListener('change', alCambiarSistema);
-    else if(mqOscuro.addListener) mqOscuro.addListener(alCambiarSistema);
-  }
+  // ---------------------------------------------------------------- tema: NO VA
+  // Aca vivia un conmutador de tres estados (auto / claro / oscuro) con su preferencia en
+  // localStorage. Se quito el 23/10/2026 por decision del usuario: el tablero no lleva modo
+  // oscuro. El motivo esta medido: hay 136 colores literales sin tokenizar en 13 de las 16 hojas,
+  // todos escritos para fondo claro, y definir el oscuro hoy dejaba unas 62 reglas ilegibles el
+  // mismo dia — abrir una fila del Detalle por Servicio la dejaba en blanco sobre blanco.
+  //
+  // Se fue entero y no desactivado con una bandera a proposito: dejarlo escribiendo un
+  // localStorage que nadie respeta es peor que no tenerlo. Si algun dia se retoma, se recupera
+  // del historial, pero PRIMERO hay que tokenizar esos literales, una hoja por vez.
+  // Con el se fueron tambien el boton #theme-toggle (que nunca existio en index.html), sus
+  // estilos en ui.css y la regla de brillo del logo en oscuro.
 
   // ---------------------------------------------------------------- encabezado al hacer scroll
   // Throttle con requestAnimationFrame: el evento scroll dispara decenas de veces por segundo y
@@ -180,9 +130,6 @@
   }
 
   function iniciar(){
-    aplicar(leerModo());
-    var b = document.getElementById('theme-toggle');
-    if(b) b.addEventListener('click', ciclar);
     vigilarScroll();
     prepararRevelado();
     espejarPestanaActiva();

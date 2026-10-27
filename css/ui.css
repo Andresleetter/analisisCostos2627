@@ -5,56 +5,51 @@
    Se carga DESPUÉS de las hojas de módulo a propósito: acá hay refinamientos que tienen que
    ganarle a reglas más viejas sin subir la especificidad a golpe de !important. */
 
-/* ---------- Conmutador de tema ----------
-   Tres estados reales (auto / claro / oscuro) en un solo botón que cicla, no un interruptor de
-   dos: "auto" tiene que existir para que quien usa el sistema en oscuro no vea el tablero en
-   blanco al entrar. El icono lo pinta el propio botón con ::before y el rótulo accesible lo
-   mantiene js/ui.js en aria-label. */
-.theme-toggle{
-  display:inline-flex;align-items:center;justify-content:center;gap:var(--sp-2);
-  height:40px;min-width:40px;padding:0 var(--sp-3);
-  border:1px solid var(--line);border-radius:var(--radius-sm);
-  background:var(--card);color:var(--muted);
-  font-family:inherit;font-size:var(--fs-xs);font-weight:700;
-  cursor:pointer;flex-shrink:0;
-  transition:color var(--dur-2) var(--ease), border-color var(--dur-2) var(--ease),
-             background-color var(--dur-2) var(--ease), transform var(--dur-1) var(--ease);
-}
-.theme-toggle:hover{color:var(--teal);border-color:var(--line-strong);background:var(--surface-2)}
-.theme-toggle:active{transform:scale(.96)}
-.theme-toggle .tt-ico{width:16px;height:16px;display:block;flex:0 0 auto}
-.theme-toggle .tt-txt{display:none}
-@media(min-width:1100px){ .theme-toggle .tt-txt{display:inline} }
+/* ---------- Conmutador de tema: NO VA ----------
+   El tablero no lleva modo oscuro (decision del usuario, 23/10/2026) y por eso no hay boton
+   #theme-toggle en index.html ni estilos para el. El motivo esta medido: hay 136 colores literales
+   sin tokenizar en 13 de las 16 hojas, escritos todos para fondo claro, y definir el oscuro hoy
+   deja unas 62 reglas ilegibles el mismo dia. El bloque de tema tambien se quito de js/ui.js.
+   Si algun dia se retoma, lo primero es tokenizar esos literales, una hoja por vez. */
 
-/* ---------- Encabezado pegajoso ----------
-   El tablero se lee hacia abajo durante minutos; perder de vista la fecha del dato y el acceso
-   a los módulos obliga a volver arriba todo el tiempo. Pegado arriba, y al hacer scroll se
-   compacta y gana sombra para despegarse del contenido que pasa por debajo. */
-.top{
-  position:sticky;top:0;z-index:40;
-  background:color-mix(in srgb, var(--card) 88%, transparent);
-  -webkit-backdrop-filter:saturate(180%) blur(14px);
-  backdrop-filter:saturate(180%) blur(14px);
-  box-shadow:var(--shadow-1);
-  transition:padding var(--dur-3) var(--ease), box-shadow var(--dur-3) var(--ease),
-             border-radius var(--dur-3) var(--ease);
-}
-.top.scrolled{
-  padding-top:var(--sp-3);padding-bottom:var(--sp-3);
-  box-shadow:var(--shadow-2);
-  border-radius:var(--radius-md);
-}
-.top.scrolled .brand img{height:38px}
-.top.scrolled .brand .b-txt{padding-left:var(--sp-4)}
-/* Navegador sin backdrop-filter (o con él desactivado): fondo sólido, nunca semitransparente,
-   para que el contenido no se lea a través del encabezado. */
-@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
-  .top{background:var(--card)}
+/* ---------- Revelado al entrar en pantalla ----------
+   js/ui.js le pone .reveal a los .panel, .kpis, .gkpis, .probs, .subtabs y .gfilter que existen al
+   cargar, y les agrega .in cuando entran en el viewport. Hasta el 23/10/2026 NO habia una sola
+   regla que usara esas clases en todo el proyecto: el revelado era codigo muerto que no se veia.
+   Estas tres reglas son las que lo hacen existir.
+
+   El desplazamiento es corto (8px) y la curva sale rapido y frena: es el gesto del Portal del Sur,
+   no una entrada de presentacion. Lo que NO se hace es animar lo que render.js crea despues de la
+   carga (tablas al cambiar un filtro, filas de OPEX): ahi el contenido tiene que aparecer y punto.
+
+   NO HAY ESTADO OCULTO PERSISTENTE, y es la decision importante de este bloque. La primera version
+   hacia `.reveal{opacity:0}` y lo encendia con .in, que es como suele escribirse. Probado pestania
+   por pestania, fallaba: los paneles de una pestania que estuvo en display:none no siempre reciben
+   .in al volverse visibles, y quedaban INVISIBLES dentro del viewport — en Alertas Operativas, los
+   tres. El modo de fallo era un panel en blanco en una herramienta de trabajo.
+
+   Aca el bloque esta SIEMPRE visible y .in solo dispara una animacion de entrada. Si el observador
+   no llega a disparar, no se pierde nada: se ve el contenido sin el gesto. Es la forma segura de
+   escribir esto. */
+.reveal.in{animation:entraBloque var(--dur-3) var(--ease) both}
+@keyframes entraBloque{from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none}}
+/* Quien pidio menos movimiento ve el contenido directamente. */
+@media(prefers-reduced-motion:reduce){
+  .reveal.in{animation:none}
 }
 
-/* El logo es un SVG vectorial de una tinta sobre fondo claro; en modo oscuro se le levanta
-   apenas el brillo para que el verde no se apague contra la superficie. */
-:root[data-theme="dark"] .brand img{filter:brightness(1.12) saturate(1.05)}
+/* ---------- Encabezado pegajoso: lo define shell.css ----------
+   Aca habia una segunda version de .top, .top.scrolled y el @supports de backdrop-filter, con
+   valores distintos de los de shell.css (fondo al 88% contra 74%, z-index 40 contra 50, el logo a
+   38px contra 34px). Como shell.css carga ultima, ganaba shell y esto era una segunda fuente de
+   verdad para el mismo elemento. Peor: el z-index 40 quedaba POR DEBAJO del 45 del velo del menu
+   movil (tabs.css), asi que al abrir los modulos en telefono el velo tapaba el encabezado y el
+   boton con el que se cierra. Se quito el 23/10/2026; manda shell.css:53-86. */
+
+
+/* (Aca habia un filtro de brillo sobre el logo para modo oscuro. Se fue con el tema: no hay
+   oscuro, y ademas el comentario daba por hecho un SVG de una tinta cuando el logotipo trae
+   cuatro colores.) */
 
 /* ---------- Selects: un solo acabado para los 24 ----------
    Se le saca la flecha nativa (distinta en cada sistema operativo) y se dibuja una propia con
@@ -78,7 +73,11 @@
 /* ---------- Barras de scroll ----------
    Las tablas largas viven dentro de .scroll; la barra nativa de Windows es un bloque gris que
    corta la tarjeta por la mitad. */
-.scroll{scrollbar-width:thin;scrollbar-color:var(--line-strong) transparent;overscroll-behavior:contain}
+/* overscroll-behavior solo en X. Con 'contain' en los dos ejes, al llegar al final de una tabla
+   de 560px la PAGINA dejaba de scrollear y habia que mover el puntero fuera de la tabla para
+   seguir bajando — en una herramienta que se lee hacia abajo durante minutos. En X si conviene,
+   que es donde molesta el rebote lateral. */
+.scroll{scrollbar-width:thin;scrollbar-color:var(--line-strong) transparent;overscroll-behavior-x:contain}
 .scroll::-webkit-scrollbar{width:10px;height:10px}
 .scroll::-webkit-scrollbar-track{background:transparent}
 .scroll::-webkit-scrollbar-thumb{
@@ -108,17 +107,5 @@
   font-feature-settings:'tnum' 1;
 }
 
-/* ---------- Impresión ----------
-   El tablero se imprime y se pega en informes. Fuera cromos de interfaz, todo en claro, y las
-   tarjetas sin sombra para que no salgan cajas grises. */
-@media print{
-  :root{--bg:#fff;--card:#fff}
-  .tabs,.theme-toggle,.menu-toggle,.aviso-datos,.prob-link,.opex-toggle,.skip-link{display:none!important}
-  .top{position:static;box-shadow:none;backdrop-filter:none}
-  .panel,.kpi,.gkpi{box-shadow:none;break-inside:avoid}
-  .scroll{max-height:none;overflow:visible}
-  .page{display:block!important}
-  /* Al imprimir se muestran TODAS las pestañas, incluidas las que nunca llegaron a entrar en
-     pantalla: sin esto saldrían en blanco, porque su .reveal todavía está en opacity:0. */
-  .reveal{opacity:1!important;transform:none!important}
-}
+/* La hoja de impresión salió de acá: vive en css/reporte.css, que se carga último. Dejar las
+   dos copias era garantizar que algún día se editara la que no se lee. */

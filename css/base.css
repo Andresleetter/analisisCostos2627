@@ -1,25 +1,70 @@
 :root{
-  /* colores */
-  --green:#5AA02C;
+  /* colores
+     EL FONDO ES CREMA (23/10/2026). El tablero pasa de "blanco sobre verde palido" a "blanco sobre
+     crema", siguiendo al Portal del Sur, que es la referencia de disenio que eligio el usuario. Con
+     el fondo calido, la tinta y el gris de apoyo tambien se vuelven calidos: los verdosos de antes
+     (#1c2b21 y #52605A) chocaban contra el crema. Los nuevos salen de la familia del gris #494748
+     del logotipo, y los dos pasan AA con margen sobre crema (13,74 y 6,42).
+
+     El verde NO desaparece: sigue siendo el color de accion (--teal, el petroleo #095C4C del logo,
+     7,50 sobre crema). Lo que cambia es que deja de ser tambien el fondo.
+
+     Tres colores se corrigieron antes, el mismo dia, por CONTRASTE, midiendo los ratios WCAG con la
+     formula de luminancia relativa, no a ojo:
+
+       --muted  #6b7c72 -> #52605A   4,42 -> 6,60 sobre blanco (4,09 -> 6,11 sobre --bg)
+       --r      #E53935 -> #B3261E   4,23 -> 6,54 sobre blanco
+       --teal   #1E6B5C -> #095C4C   6,34 -> 7,93 sobre blanco
+
+     --muted era el peor: NO llegaba a los 4,5 que pide AA contra NINGUN fondo del tablero, y es
+     el gris de los encabezados de tabla, de las etiquetas de los 24 filtros, de .k-lab y del
+     subtitulo del encabezado. Una sola linea arregla once pares que fallaban.
+
+     --r importa porque es el color de .exd, la celda de exceso: el dato por el que existe la
+     Auditoria de Hectareas.
+
+     --teal ademas no era color de marca: #095C4C es el verde petroleo exacto del texto "DEL SUR"
+     del logotipo (img/del-sur-logo.svg). Subir el contraste salio gratis.
+
+     Los tres se usan tambien como FONDO con texto blanco encima (.tab.active, .pill-r, .tag,
+     .badge, .prob-count, .subtab.active, .f-r, .f-gris...). Al oscurecerlos ese texto mejora, no
+     empeora: verificado uno por uno. .f-y y .pill-y llevan texto oscuro, pero --y no se toco.
+
+     --green #5AA02C -> #6E8A2E (23/10): 3,23 -> 3,93. Es el MISMO matiz lima del logo bajado a
+     luminosidad de trazo. No se puso el lima literal #8AB211 a proposito: da 2,48 sobre blanco y
+     --green no es relleno sino el trazo del foco de teclado (header.css:38, panel.css:22, el
+     border-color de :focus de los 24 selects). Con el lima literal el foco de teclado dejaria de
+     cumplir el 3:1 que pide WCAG para objetos graficos. */
+  --green:#6E8A2E;
   --green-l:#8BC34A;
   --green-xl:#C5E1A5;
-  --teal:#1E6B5C;
-  --ink:#1c2b21;
-  --muted:#6b7c72;
-  --line:#e4ebe4;
-  --bg:#f4f7f2;
+  --teal:#095C4C;
+  --ink:#2A2927;
+  --muted:#5C5B57;
+  --line:#E8E2DB;
+  --bg:#FBF8F5;
   --card:#fff;
   --g:#4CAF50;
   --y:#F5B301;
   --o:#F57C00;
-  --r:#E53935;
+  --r:#B3261E;
 
   /* tipografía */
-  --font-sans:'Segoe UI',Arial,sans-serif;
+  /* Plus Jakarta Sans, la del Portal del Sur. El fallback deja el tablero legible si Google Fonts
+     no responde: nunca se queda sin tipografia. */
+  --font-sans:'Plus Jakarta Sans','Segoe UI',Arial,sans-serif;
 
   /* radios */
-  --radius-lg:14px;
-  --radius-md:12px;
+  /* Radios del Portal del Sur: .panel va en 22px y .kpi en 20px. El tablero tenia 14/12/10, que
+     sobre fondo crema y sin bordes se lee duro. Es, junto con la tipografia, lo que mas cambia la
+     cara. --radius-input queda en 8 a proposito: un control con radio de tarjeta parece tarjeta. */
+  /* Los radios son los de Airo, leidos del bloque "variables del tablero de Andres, re-tenidas"
+     de minga.css (26/10/2026): ahi el Portal remapea estas mismas variables a 16/14/10. Antes
+     estaban en 22/16/12, que redondeaba de mas los controles chicos.
+     Ojo: las TARJETAS no usan estos tokens. Airo le da 22px a .panel y .kpi con una regla propia,
+     y 28px a la pagina entera; eso vive en shell.css. */
+  --radius-lg:16px;
+  --radius-md:14px;
   --radius-sm:10px;
   --radius-input:8px;
   --radius-pill:20px;
@@ -36,7 +81,10 @@ body{font-family:var(--font-sans);background:var(--bg);color:var(--ink);line-hei
    Ejecutado del Total cuando mezcla unidades, que listaba tres magnitudes seguidas. Verificado a
    1220: ni la tabla de siete columnas ni el desplegable de ocho parten una sola celda en dos
    renglones, con y sin filtros. */
-.wrap{max-width:1220px;margin:0 auto;padding:22px 26px 60px}
+/* 1320px es el ancho de Airo (--ancho:min(1320px,100vw - 2*var(--pad)) en minga.css). Los 1220
+   anteriores venian de las siete columnas del Detalle por Servicio; 1320 les da MAS lugar, no
+   menos, asi que el motivo de aquel limite se respeta igual. */
+.wrap{max-width:1320px;margin:0 auto;padding:22px 26px 60px}
 #app{display:none}
 /* !important: sin esto, una regla posterior con la misma especificidad (ej. .kpis{display:grid})
    puede ganarle a .hidden en el cascade y el bloque queda visible pese a la clase. */

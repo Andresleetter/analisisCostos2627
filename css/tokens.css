@@ -1,0 +1,433 @@
+/* ============================================================================
+   TOKENS DEL TABLERO · Desarrollos Del Sur S.A.
+   ============================================================================
+   Este archivo define las 55 variables que css/shell.css y css/ui.css consumen y
+   que no existian en ningun :root del proyecto. Confirmado con grep contra todas
+   las hojas: son exactamente 55.
+
+   POR QUE ES BLOQUEANTE. Una declaracion con var() indefinida NO se descarta al
+   parsear: gana la cascada igual y recien al computar se vuelve `unset`. Para
+   padding, margin, gap, background, box-shadow y border eso es `initial`
+   (0 / transparent / none); para color, font-size, letter-spacing y line-height
+   es `inherit`. O sea que shell.css sin este archivo no deja el rediseno a medio
+   pintar: deja `td{padding:var(--sp-3)}` en padding 0 en TODAS las celdas de
+   TODAS las tablas, y `.panel{padding:var(--sp-6)}` en 0 en todos los paneles.
+
+   ORDEN DE CARGA. Este archivo va JUSTO DESPUES de css/base.css y antes de las
+   hojas de modulo. Las variables son de resolucion diferida, asi que shell.css y
+   ui.css las ven aunque se carguen mucho despues.
+
+   ESTE ARCHIVO NO REDEFINE NADA DE base.css. Las cuatro correcciones de
+   contraste (--muted, --r, --teal, --green) se aplicaron en base.css mismo, que
+   es donde vive la paleta del tablero. Aca solo se declaran tokens NUEVOS. Tener
+   el mismo token en dos archivos es la clase de duda que despues cuesta una
+   tarde.
+
+   MODO OSCURO: ESTE ARCHIVO NO LLEVA BLOQUE :root[data-theme="dark"], Y ES A
+   PROPOSITO. Hay 136 literales de color sin tokenizar repartidos en 13 de las 16
+   hojas enlazadas, mas 7 en js/render.js. Definir el oscuro hoy deja 62 reglas
+   ilegibles el mismo dia (filas de hover y de abierto con fondo claro literal y
+   texto heredado de body, chips con el par roto, los 24 selects con fondo
+   #fcfdfb literal). No agregar el bloque por inercia en la proxima fase: primero
+   hay que tokenizar esos literales, una hoja por vez.
+
+   ============================================================================
+   COLORES DEL LOGO · img/brand/del-sur-logo.svg
+   ============================================================================
+   Verificados con grep sobre el SVG vectorial, que es el que index.html carga
+   desde el 23/10/2026. Toda la paleta de abajo deriva de aca.
+
+     #8AB211  verde lima/oliva  - la hoja del isotipo
+     #095C4C  verde petroleo    - el texto "DEL SUR"
+     #494748  gris             - el subtitulo "Desarrollos del Sur S. A."
+     #FFFFFF  blanco            - el fondo del logo
+
+   El 19/10 se le quito la bajada al logotipo ("PRODUCCION AGRICOLA - GANADERA")
+   y con ella desaparecio el quinto color, #575354. Donde hacia falta un gris
+   intermedio se deriva de #494748, no se reintroduce el viejo.
+
+   REGLA DE USO DEL LIMA: #8AB211 da 2.48:1 contra blanco. Es color de marca, no
+   de interfaz. Entra como MATIZ (diluido en los pasteles y en los tintes, y
+   oscurecido en --on-tint-g y --border-g) pero NUNCA como texto ni como trazo
+   fino sobre fondo claro. Esta regla es el motivo por el que --green no es el
+   lima literal: ver el comentario de base.css.
+   ============================================================================ */
+
+:root{
+
+  /* ---- MARCA: los cinco colores del logo, tal cual, sin retocar -----------
+     Se declaran como tokens para que nadie los vuelva a escribir a mano y para
+     que la cadena de derivacion de todo lo de abajo sea rastreable. */
+  --marca-lima:#8AB211;        /* hoja del isotipo */
+  --marca-petroleo:#095C4C;    /* texto "DEL SUR" */
+  --marca-gris:#575354;        /* subtitulo */
+  --marca-gris-osc:#494748;    /* subtitulo */
+  --marca-blanco:#FFFFFF;
+
+
+  /* ======================================================================
+     1. ESPACIADO · escala de 4px con dos anclas duras
+     ======================================================================
+     Las dos anclas reproducen EXACTO los valores con los que se verifico a
+     1220px que ninguna celda parte en dos renglones. Si se mueven, hay que
+     repetir esa verificacion. */
+  --sp-1:4px;    /* gap y padding del grupo de pildoras (.tabs, .subtabs),
+                    margin-top de la cifra de KPI, .top.scrolled comprimido */
+  --sp-2:7px;    /* ANCLA 1: padding vertical de th. tables.css:2 dice 7px, y
+                    shell.css:230 es `th{padding:var(--sp-2) var(--sp-3)}`.
+                    Vale 7 y no 8 justamente para no reabrir la verificacion.
+                    Es tambien el padding vertical de .tab y .subtab. */
+  --sp-3:8px;    /* ANCLA 2: padding de td. tables.css:3 dice 8px y shell.css:234
+                    es `td{padding:var(--sp-3)}`. El ancho de las siete columnas
+                    del Detalle por Servicio depende de este valor. */
+  --sp-4:12px;   /* padding horizontal de .tab, gap de la fila de KPI (hoy 12px,
+                    identico), padding de .cult-card, margin-bottom de .panel */
+  --sp-5:16px;   /* padding de la tarjeta de KPI (hoy 14px 15px), padding
+                    horizontal de .prob y .sop-kpi, margin-bottom de .gfilter */
+  --sp-6:20px;   /* padding de .panel. panel.css:1 es 18px 20px, asi que el
+                    HORIZONTAL queda identico y no se pierde ancho util; solo
+                    crecen 2px arriba y abajo. Tambien sangria de td.dl (hoy 22). */
+  --sp-10:40px;  /* unico salto grande: el aire sobre el pie de pagina */
+
+
+  /* ======================================================================
+     2. TIPOGRAFIA
+     ======================================================================
+     Los rungs marcados "exacto" reproducen un valor que ya esta en pantalla y
+     que el usuario acepto; los demas son el escalon mas cercano. */
+  --fs-3xs:9px;      /* EXACTO: chips de unidad ha/hrs/kg (gastos.css:65) y .tag
+                        (tables.css). OJO: shell.css:228 tambien manda th aca, lo
+                        que bajaria la cabecera de 10.5 a 9px. Ver "cambios a
+                        shell.css": esa linea tiene que pasar a --fs-2xs. */
+  --fs-2xs:10.5px;   /* EXACTO: cabeceras th (tables.css:2), .rc-l, .foot, .pill,
+                        .k-lab */
+  --fs-xs:12px;      /* texto de apoyo: .t-sub del encabezado, .t-date, .k-foot,
+                        .fnote, .sop-kpi .l */
+  --fs-sm:13.5px;    /* EXACTO: los 24 selects de filtro (gastos.css:7). Es el
+                        token que impide que la barra de filtros salte a 16px
+                        heredados y envuelva en dos renglones. Tambien .tab y
+                        .subtab y las filas tr.det. */
+  --fs-md:13px;      /* titulo del panel anidado (.panel.sub h3, hoy 12px) */
+  --fs-lg:15.5px;       /* EXACTO: .panel h3 del Portal del Sur */      /* EXACTO para el hero: .panel.hero-panel h3 ya es 15px.
+                        .panel h3 sube de 13 a 15. NO usarlo para .brand h1:
+                        para eso esta --fs-brand. */
+  --fs-xl:19px;      /* EXACTO: cifra de los mini-KPI de Gasoil por Area y
+                        Terceros (gastos.css:85). Tambien .ph-t (hoy 17px). */
+  --fs-2xl:26px;     /* EXACTO: la cifra del KPI (kpis.css:11). OJO: shell.css:175
+                        se lo aplica tambien a .kpis-exec, que resumen.css:21 fija
+                        en 19px a pedido del usuario. Esa linea se borra. */
+  --fs-3xl:32px;     /* EXACTO: el contador de Posibles Problemas (problemas.css:3) */
+  --fs-brand:21px;   /* EXTRA, fuera de las 55. EXACTO: .brand h1 (header.css:9).
+                        Existe porque shell.css:79 le da --fs-lg al titulo del
+                        encabezado, y subir --fs-lg a 21 agrandaria todos los
+                        titulos de panel. Ver "cambios a shell.css". */
+
+  --lh-tight:1.1;        /* interlineado de las cifras grandes: lo justo para que
+                            una coma decimal o un parentesis no se recorte */
+  --ls-tight:-.02em;       /* EXACTO: tracking de .brand h1 (header.css:11). Tambien
+                            .panel h3, .ph-t, .p-met */
+  --ls-tighter:-.035em;    /* cifras de 19px para arriba: a ese tamano los digitos
+                            sueltan demasiado aire */
+  --ls-caps:.4px;        /* EXACTO: tracking de las mayusculas de th y tr.dethead
+                            (tables.css:2 y :7). A 10.5px el tracking ES la
+                            legibilidad. */
+
+
+  /* ======================================================================
+     3. SUPERFICIES
+     ======================================================================
+     Estos tres NO se inventan: son los literales verdosos que las hojas de
+     modulo ya repiten (grep: 30 apariciones). Tokenizarlos no cambia un solo
+     pixel en claro y deja medio hecha la tokenizacion de las 46 reglas que
+     hoy pintan un fondo claro literal sin declarar color propio. */
+  --surface-1:#F8F4EF;   /* el mas tenue: filas de detalle (gastos.css:110),
+                            fondo de .rc-chip, hover de .cult-card */
+  --surface-2:#F3EDE6;   /* hover de fila y de pestana (tr.sv-fila:hover,
+                            tr.cu-fila:hover, .tab:hover, .subtab:hover) */
+  /* Riel de las barras (lo que en Airo es --suave). Va tenido al verde y no al calido de los
+     --surface-*, porque las barras llevan encima relleno lima o petroleo y sobre un gris calido
+     el contraste entre riel y relleno se ensucia. */
+  --pista:#E9EFE4;
+  --surface-3:#EDE6DD;   /* fila abierta (.open), fondo de tr.tot, fondo de la
+                            barra de modulos, y pista de TODAS las barras
+                            (.bar, .opex-bar-track, .sopbar, .pu-bar,
+                            .estbar-track). Sin esto las pistas quedan
+                            transparentes y se pierde la referencia de
+                            "sobre cuanto". */
+
+  --line-strong:#74816D; /* el gris calido #575354 del logo inclinado al oliva.
+                            CORREGIDO: las tres propuestas lo dejaban entre
+                            #A8B199 y #B3B6B2, o sea 1.8-2.2:1, por debajo del
+                            3.0 que WCAG 1.4.11 exige a un objeto grafico.
+                            Medido: 4.11 sobre tarjeta, 3.68 sobre --surface-3,
+                            3.81 sobre --bg. Es el pulgar de la barra de scroll
+                            de las tablas de 560px, el hover de borde de los 24
+                            selects y la cinta del KPI sin estado: tiene que
+                            verse sin mirarlo a proposito. */
+
+  --ink-soft:#3F4C44;    /* tinta de apoyo entre --ink y --muted: el #494748 del
+                            logo corrido hacia el petroleo. Es el color de TODAS
+                            las celdas de tabla (shell.css:236 pone
+                            td{color:var(--ink-soft)}), o sea el texto mas
+                            repetido de la herramienta. Medido: 9.02 sobre
+                            tarjeta, 8.06 sobre fila abierta, 7.27 sobre el peor
+                            pastel. Cumple el objetivo de 7:1 en los 17 fondos. */
+
+
+  /* ======================================================================
+     4. TINTES Y SUS TEXTOS · pares verificados
+     ======================================================================
+     Cada tinte viene con su tinta. Los ratios estan medidos con la formula de
+     luminancia relativa WCAG; el minimo para texto chico es 4.5. */
+  --tint-g:#E8F3DC;        /* fondo verde de marca: .tag-nuevo (caso nuevo contra
+                              exceso-baseline.json), .chip-ha, .rc-e-segun.
+                              Es el literal que ya usa gastos.css:70. */
+  --on-tint-g:#3A5A10;     /* 6.90 sobre --tint-g. No es inventado: es el --u-ha
+                              que gastos.css:69 ya declara para la unidad
+                              hectarea, o sea el lima del logo llevado a tinta. */
+
+  --tint-y:#F8ECD5;        /* ambar: .tag-desc ("a descontar", que es accion
+                              pendiente y no error), .tag-rep, .pill-y,
+                              .t-date.vieja, .rc-e-sobre */
+  --on-tint-y:#6B4A00;     /* 6.89 sobre --tint-y. Reemplaza el #f59e0b de
+                              tables.css:21, que sobre su propio fondo da 1.93 y
+                              es literalmente ilegible hoy. */
+
+  --tint-o:#FBDEC0;        /* naranja de severidad media-alta: .pill-o. Es el
+                              literal de alertas.css:6. */
+  --on-tint-o:#7A3A08;     /* 6.70 sobre --tint-o. Hoy .pill-o es blanco sobre
+                              naranja macizo: 2.70, no llega ni a 3. */
+
+  --tint-r:#FBE5E3;        /* rojo de hallazgo: .tag y .pill-r. Deliberadamente
+                              mas claro que el #f8d2ce de la fila al-r, para que
+                              la pildora se despegue de la fila tenida. */
+  --on-tint-r:#9B1C18;     /* EXTRA, fuera de las 55. 6.77 sobre --tint-r y 5.87
+                              sobre la fila #f8d2ce de Alertas. Con --r ya
+                              corregido mas abajo, shell.css:257 y :269 pasan
+                              igual (5.42), asi que este token es el margen extra
+                              para el texto de 9px, no un arreglo obligatorio. */
+
+  --tint-r-soft:#FBF3F2;   /* EXACTO (tables.css:5): rojo apenas insinuado de las
+                              filas de grupo y de tr.dethead, donde el rojo
+                              significa hallazgo */
+  --tint-brand-soft:#F1F6EA; /* lima del logo al ~7%: fondo de tr.neutra.grp, las
+                              filas de grupo que NO son hallazgo (Trabajos para
+                              Terceros). Es lo que deja que .neutra siga apagando
+                              el rojo. */
+
+
+  /* ======================================================================
+     5. ACENTO · el petroleo del logo sin retocar
+     ====================================================================== */
+  --acento:#095C4C;        /* #095C4C tal cual del logo. Es EL color de accion de
+                              toda la hoja: td.dl, .ip-caret abierto, badges de
+                              .tab y .subtab, texto de los selects, y origen de
+                              --ring, --ring-2 y del tinte de las cuatro sombras.
+                              Medido: 7.93 sobre tarjeta, 7.34 sobre --bg, 7.09
+                              sobre --surface-3. El color de marca cumple el
+                              objetivo de 7:1 sin diluirse: esa es la premisa de
+                              esta paleta y se sostiene. */
+  --on-acento:#FFFFFF;     /* el blanco del logo. 7.93 sobre --acento. */
+  --teal-hover:#063F34;    /* --acento un escalon mas oscuro, para el hover del
+                              boton Reintentar del overlay y del aviso flotante de
+                              datos nuevos. OJO: shell.css:361 y :369 ponen el
+                              REPOSO de esos dos en var(--ink), que es mas oscuro
+                              que este valor, asi que el boton se aclararia al
+                              pasar el cursor. Ver "cambios a shell.css": el
+                              reposo pasa a var(--acento) y asi el hover oscurece
+                              de verdad, ademas de devolver el verde de la marca
+                              a los dos elementos mas destacados del tablero. */
+
+
+  /* ======================================================================
+     6. PASTELES · el cielo de tres manchas y el bloque de KPI
+     ======================================================================
+     Aca estaba el motivo exacto de la baja del 02/10: Airo traia rosa, pistacho
+     y almendra, que son del Portal del Sur y no de Del Sur. Los tres nombres de
+     variable se conservan porque shell.css los busca asi (lineas 40-42, 145-147
+     y 165), pero los VALORES ya no son esos. Conviene renombrarlos a
+     --c-lima / --c-petroleo / --c-neutro el dia que se pueda tocar shell.css. */
+  --c-rosa:#EFF2DE;    /* YA NO ES ROSA: es #8AB211 (el lima del logo) al ~10%
+                          sobre blanco. Primera mancha del cielo y primer
+                          degradado del bloque de KPI. */
+  --c-pist:#DFEAE4;    /* es #095C4C (el petroleo del logo) al ~12%. Es la mancha
+                          que ancla el cielo a la marca. Es tambien el fondo mas
+                          oscuro del tablero: todos los grises de texto estan
+                          verificados contra este. */
+  --c-almen:#F6F1E9;   /* YA NO ES ALMENDRA: es el gris calido #575354 al ~5%.
+                          Es el fondo SOLIDO del bloque de KPI. Advertencia
+                          medida: la tarjeta de KPI es color-mix(card 92%) y
+                          contra este fondo da 1.22:1, o sea que las cuatro
+                          tarjetas blancas NO se recortan solas. Necesitan su
+                          propio anillo: ver "cambios a shell.css", linea 154. */
+
+
+  /* ======================================================================
+     7. BORDES DE ESTADO · los chips de reconciliacion de Auditoria
+     ======================================================================
+     CORREGIDOS. Los valores actuales (#bcd6ae, #cfe0c4, #e0c08a) dan 1.49, 1.32
+     y 1.65 contra la superficie del chip: el borde ES el estado de la
+     reconciliacion y a esos valores el estado no se ve. Subidos a >=3:1.
+     ADVERTENCIA HONESTA: aun corregidos, los tres se separan poco ENTRE SI
+     (la luminancia disponible ya se gasto en pasar el 3:1 contra el fondo).
+     Conciliado / en tolerancia / sobrepasado no pueden distinguirse SOLO por el
+     anillo: .rc-chip ya trae .rc-est con texto, que ahi se apoye el estado. */
+  --border-g:#5E8A3C;       /* "conciliado / segun receta". 4.06 sobre tarjeta,
+                               3.85 sobre --surface-1. Es el lima del logo bajado
+                               a luminosidad de borde de verdad. */
+  --border-g-soft:#7F9172;  /* "dentro de tolerancia": conforme pero no exacto.
+                               3.39 sobre tarjeta. */
+  --border-y:#96701A;       /* "sobrepasado", y los recuadros .ip-aviso y
+                               .rc-nodisp. 4.54 sobre tarjeta. */
+
+
+  /* ======================================================================
+     8. FOCO Y ANILLOS
+     ======================================================================
+     El concepto de shell.css ("anillo en vez de borde") es tecnicamente
+     correcto: inset 0 0 0 1px no suma 1px a la caja ni corta el radio, y en un
+     tablero de 1220px cada pixel que no se gasta en bordes queda para las
+     celdas. Lo que estaba mal eran los valores. */
+  --ring:0 0 0 2px var(--card), 0 0 0 4px var(--acento);
+                            /* FOCO DE TECLADO de los 24 selects. CORREGIDO a un
+                               anillo SOLIDO de dos capas (halo de tarjeta +
+                               petroleo). Las tres propuestas usaban un rgba al
+                               28-35%, que compuesto da 1.35-1.60:1 contra los
+                               3.0 que exige WCAG 2.2 1.4.11 — y ui.css:75 apaga
+                               el outline nativo, asi que no queda nada atras. En
+                               una herramienta operativa que se tabula entre 24
+                               filtros todo el dia, el foco tiene que verse.
+                               Asi da 7.93:1. */
+  --ring-1:inset 0 0 0 1px rgba(9,92,76,.42);
+                            /* El canto de las tarjetas: .top, .tabs, .gfilter,
+                               .cult-card, .t-date, .panel. Es DECORATIVO (la
+                               separacion real la hace --shadow-2), por eso no se
+                               le exige 3:1: compuesto da ~2.1:1, que es casi el
+                               doble del --line actual (1.21) y no dibuja una
+                               linea dura sobre cada caja. */
+  --ring-1-fuerte:inset 0 0 0 1px rgba(9,92,76,.68);
+                            /* EXTRA, fuera de las 55. Para los casos donde el
+                               anillo ES la caja y no hay sombra que lo supla:
+                               .rc-chip, .sop-kpi y la tarjeta de KPI sobre el
+                               bloque pastel. Compuesto da ~3.6:1. Un solo token
+                               para las dos cosas obligaba a elegir entre tarjetas
+                               sucias y cajas invisibles. */
+  --ring-2:inset 0 0 0 1.5px var(--acento);
+                            /* El anillo de enfasis, en petroleo macizo: el panel
+                               hero "Detalle por Servicio" (hoy 2px teal) y los
+                               botones de contorno .prob-link / .opex-toggle /
+                               #al-img (hoy 1.5px teal). 7.93:1. Sin esto esos
+                               botones quedan como texto suelto sin forma, porque
+                               shell.css les pone border:0. */
+
+
+  /* ======================================================================
+     9. SOMBRAS Y RADIO
+     ======================================================================
+     Tenidas en rgba del verde petroleo, NO en el rgba(60,30,30) marron que
+     shell.css trae de Airo. Una sombra verde sobre crema se lee como sombra de
+     campo; la marron ensucia. shell.css tiene seis de esas en literal, no en
+     var(): hay que reemplazarlas a mano (ver "cambios a shell.css"). */
+  --shadow-1:0 1px 2px rgba(9,60,50,.06);
+                            /* reposo: el encabezado pegajoso sin scrollear */
+  --shadow-2:0 1px 2px rgba(9,60,50,.05), 0 8px 24px -16px rgba(9,60,50,.18);
+                            /* la tarjeta: .panel, .prob, .top.scrolled. Es lo
+                               que separa la tarjeta blanca del fondo ahora que
+                               shell.css le saca el border. */
+  --shadow-3:0 2px 6px -2px rgba(9,60,50,.10), 0 16px 32px -18px rgba(9,60,50,.22);
+                            /* elevacion de hover: .prob:hover */
+  --shadow-4:0 6px 18px -8px rgba(9,60,50,.18), 0 24px 52px -26px rgba(9,60,50,.32);
+                            /* lo unico que flota sobre todo: .aviso-datos */
+  --radius-xl:28px;         /* radio del bloque pastel de KPI. Extiende un escalon
+                               la familia de base.css (sm 10 / md 12 / lg 14) y no
+                               los 28 que menciona el comentario de shell.css: a
+                               1168px de ancho util, 28 hace que el bloque se lea
+                               como burbuja. Tiene que ser visiblemente mas
+                               redondo que las tarjetas de 12px que lleva adentro. */
+
+
+  /* ======================================================================
+     10. MOVIMIENTO
+     ======================================================================
+     Es una herramienta que se tiene abierta todo el dia: el movimiento tiene que
+     terminar, no acompaniar. */
+  --ease:cubic-bezier(.2,.6,.2,1);  /* arranca rapido y frena largo, sin rebote */
+  --dur-1:90ms;    /* microinteraccion: el :active de un boton. Por debajo de
+                      100ms se percibe como instantaneo. */
+  --dur-2:150ms;   /* color y fondo: hover de .tab, .subtab, selects, .ip-caret.
+                      Es exactamente el .15s que tabs.css:2 y auditoria.css:7 ya
+                      usan, asi que lo enlazado y lo nuevo van al mismo ritmo. */
+  --dur-3:240ms;   /* geometria: compresion del encabezado al scrollear y
+                      revelado de bloques. Mas lento porque mueve layout. */
+
+
+  /* ======================================================================
+     11. ACENTOS DE SEVERIDAD DEL KPI · EXTRA, fuera de las 55
+     ======================================================================
+     shell.css:177-182 mueve el acento de severidad del borde izquierdo de 4px
+     (resumen.css:22-26) a una cinta superior de 4px sobre el bloque pastel. El
+     gesto es defendible, pero la cinta es mas chica y flota sobre color, asi que
+     necesita MAS contraste que el borde que reemplaza, no menos. Medido con los
+     tokens actuales sobre --c-almen: --y 1.67, --o 2.44, --g 2.51, o sea que el
+     KPI ambar y el KPI sin estado se ven iguales.
+     NO se corrigen --g/--y/--o en base.css porque son relleno semantico en
+     quince lugares con pares de texto distintos: oscurecer --y romperia
+     .p-cat.f-y (problemas.css:18), que hoy cumple con 4.96. Estos cuatro tokens
+     son solo para la cinta. */
+  --acc-g:#2F8A34;      /* 3.94 sobre --c-almen, 4.37 sobre tarjeta */
+  --acc-y:#9A6F00;      /* 4.07 / 4.52 */
+  --acc-o:#B35A00;      /* 4.32 / 4.80 */
+  --acc-gris:var(--line-strong);  /* el KPI sin estado, que hoy queda sin marca
+                                     porque --line-strong no existia */
+
+
+  /* ======================================================================
+     12. LO QUE NO ESTA ACA
+     ======================================================================
+     Las correcciones de contraste de --muted, --r, --teal y --green viven en
+     css/base.css, con sus ratios medidos anotados al lado. No se repiten aca
+     para que cada token tenga un solo lugar donde buscarlo. */
+
+}
+
+
+/* ============================================================================
+   REGLAS QUE FALTAN · no son tokens, pero sin ellas la capa Airo v2 no funciona
+   ============================================================================ */
+
+/* ---- .reveal / .reveal.in: la regla NO esta aca ----
+   js/ui.js le pone .reveal a los .panel, .kpis, .gkpis, .probs, .subtabs y .gfilter, y les
+   agrega .in al entrar en pantalla. Hasta el 23/10/2026 no habia ninguna regla que usara esas
+   clases: el revelado era codigo muerto.
+
+   La version original de este archivo las definia aca como `.reveal{opacity:0}` encendido por
+   .in, que es como suele escribirse. Se probo pestania por pestania y FALLABA: los paneles de
+   una pestania que estuvo en display:none no siempre reciben .in al volverse visibles, y
+   quedaban invisibles dentro del viewport — en Alertas Operativas, los tres. En una herramienta
+   de trabajo el modo de fallo era un panel en blanco.
+
+   La regla viva esta en css/ui.css y no oculta nada: el bloque esta SIEMPRE visible y .in solo
+   dispara una animacion de entrada. Si el observador no llega a disparar, se ve el contenido sin
+   el gesto y listo. Aca no se declara ninguna para no tener dos fuentes de verdad. */
+/* OJO: la version original de este bloque era  encendido por .in, que es como
+   suele escribirse. Se probo pestania por pestania y FALLABA: los paneles de una pestania que
+   estuvo en display:none no siempre reciben .in al volverse visibles, y quedaban invisibles dentro
+   del viewport — en Alertas Operativas, los tres. El modo de fallo era un panel en blanco.
+   La regla viva esta en css/ui.css y no oculta nada: el bloque esta siempre visible y .in solo
+   dispara una animacion de entrada. Aca no se declara ninguna, para no tener dos fuentes. */
+
+/* ---- Guarda de movimiento reducido ----
+   El criterio ya existe en el proyecto: css/resumen.css es la unica hoja que lo
+   usa hoy. shell.css no lo sigue, y sus dos animaciones corren para siempre: el
+   cielo (30s infinite alternate) y el latido del punto de la pildora de fecha
+   (2s infinite). En una herramienta que se tiene abierta todo el dia eso es
+   ruido permanente.
+   Lleva !important y el prefijo `html` a proposito: asi esta guarda funciona sin
+   importar si este archivo se carga antes o despues de shell.css. Es el unico
+   !important del archivo y esta justificado por eso. */
+@media (prefers-reduced-motion: reduce){
+  html body::before{animation:none!important}
+  html .top .t-date::before{animation:none!important}
+  .reveal.in{animation:none!important}
+  html .page.active{animation:none!important}
+}

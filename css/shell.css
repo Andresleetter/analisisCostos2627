@@ -24,7 +24,10 @@
    Se carga la última: es la capa que define el resultado final. */
 
 :root{
-  --barra-max:1320px;
+  /* 1220px, no 1320: es el mismo ancho que .wrap (base.css). Hoy no ata —.top vive DENTRO de
+     .wrap— pero el dia que la barra flote de verdad, un 1320 aca reintroduce en silencio el ancho
+     que se deshizo el 14/10 por las siete columnas del Detalle por Servicio. */
+  --barra-max:1320px;   /* igual que .wrap y que la barra de Airo */
   --barra-top:12px;
 }
 
@@ -33,42 +36,79 @@
    ================================================================
    Van en un pseudo-elemento fijo de <body> para no agregar elementos al documento. Es puramente
    decorativo (pointer-events:none, fuera del flujo) y queda detrás de todo con z-index:-1. */
-body::before{
-  content:"";
-  position:fixed;inset:0;z-index:-1;pointer-events:none;
+/* CORREGIDO el 26/10/2026. Antes esto eran tres manchas pastel en un ::before fijo de <body>,
+   o sea DETRAS de todo y a tamanio de pantalla. En Airo no es asi, y era el motivo principal de
+   que el tablero no se le pareciera: alla el lavado va SOBRE LA PAGINA, que es una tarjeta
+   redondeada de 28px. La regla es minga.css:821-822 y es la de mayor peso visual de las 83:
+
+     #v-tablero:not(.mg-en-ot) #app .page.active{border-radius:28px;padding:clamp(16px,2.4vw,30px);
+       background:radial-gradient(55% 35% at 0% 0%,...),radial-gradient(50% 35% at 100% 100%,...),
+                  radial-gradient(40% 30% at 100% 0%,rgba(255,255,255,.5),...),rgba(242,230,211,.55)}
+
+   Las posiciones, tamanios, cortes al 70% y opacidades son los de Airo tal cual. Lo unico que
+   cambia son los tintes: donde Airo pone rosa y pistacho (tintes de su carmin), van el lima y el
+   petroleo del logo de Del Sur. */
+.page.active{
+  position:relative;
+  border-radius:28px;
+  padding:clamp(16px,2.4vw,30px);
   background:
-    radial-gradient(42vw 42vw at 6% -6%, var(--c-rosa), transparent 68%),
-    radial-gradient(38vw 38vw at 96% 22%, var(--c-pist), transparent 68%),
-    radial-gradient(34vw 34vw at 46% 112%, var(--c-almen), transparent 68%);
-  opacity:.55;
-  filter:blur(40px);
-  animation:cielo 30s ease-in-out infinite alternate;
+    /* Los tres tintes estan CALIBRADOS contra los de Airo, no elegidos a ojo: se midio con
+       CIEDE2000 cuanto se despega cada tinte de Airo de su propio fondo (rosa 12,10 / pistacho
+       10,21 / almendra 7,85) y se busco la mezcla de lima y petroleo que da esa misma distancia.
+       Quedaron a 12,08 / 10,19 / 8,03. Las posiciones, los cortes al 70% y las alfas son de Airo. */
+    radial-gradient(55% 35% at 0% 0%,     rgba(234,241,212,.75), transparent 70%),
+    radial-gradient(50% 35% at 100% 100%, rgba(209,225,222,.80), transparent 70%),
+    radial-gradient(40% 30% at 100% 0%,   rgba(255,255,255,.50), transparent 70%),
+    rgba(242,246,228,.55);
 }
-@keyframes cielo{to{transform:translate(4vw,3vh) scale(1.1)}}
-:root[data-theme="dark"] body::before{opacity:.5}
+@media (max-width:760px){ .page.active{border-radius:22px;padding:14px} }
 
 /* ================================================================
    2. BARRA FLOTANTE
    ================================================================ */
+/* Calcada de .mg-barra (minga.css:177-179). Tres columnas — marca | modulos | derecha — con los
+   modulos al medio, que es el lugar que antes ocupaba el titulo de la pagina.
+   header.css:4 declara .top como flex; esta hoja carga despues y lo pasa a grid. */
 .top{
-  position:sticky;top:var(--barra-top);z-index:50;
+  /* Quieta. Airo la deja pegada arriba, pero a pedido acá no sigue al scroll: no se superpone al
+     contenido ni cambia de tamaño al bajar. Sin position, el z-index no haría nada, así que
+     tampoco va. */
+  position:static;
+  display:grid;
+  /* Columnas SIMÉTRICAS para que los botones queden centrados en la barra de verdad.
+     Con "auto 1fr auto" la columna del medio se centra en lo que sobra, no en la barra: el
+     logotipo mide 164px y la fecha 140, así que la bandeja quedaba 15px corrida a la derecha
+     (medido a 1024px). Con dos 1fr iguales a los costados, el centro de la bandeja y el de la
+     barra coinciden pase lo que pase con el ancho del logotipo o de la fecha. */
+  grid-template-columns:minmax(auto,1fr) auto minmax(auto,1fr);
+  align-items:center;
+  gap:8px 18px;
   max-width:var(--barra-max);
   margin:0 auto var(--sp-6);
-  padding:var(--sp-2) var(--sp-3) var(--sp-2) var(--sp-5);
+  padding:9px 10px 9px 16px;
   border:0;
-  border-radius:var(--radius-lg);
-  background:color-mix(in srgb, var(--card) 74%, transparent);
+  border-radius:22px;
+  background:rgba(255,255,255,.72);
   -webkit-backdrop-filter:blur(18px) saturate(1.4);
   backdrop-filter:blur(18px) saturate(1.4);
-  box-shadow:var(--ring-1), 0 18px 40px -30px rgba(60,30,30,.45);
-  gap:var(--sp-4);
+  /* El anillo de Airo es rgba(234,225,218,.9), un canto calido porque su marca es carmin; aca va
+     el mismo canto tenido al verde. La sombra es la de Airo con el tinte cambiado. */
+  box-shadow:inset 0 0 0 1px rgba(222,233,230,.9), 0 18px 40px -30px rgba(9,60,50,.45);
   min-height:64px;
   transition:padding var(--dur-3) var(--ease), box-shadow var(--dur-3) var(--ease);
 }
-.top.scrolled{
-  padding-top:var(--sp-1);padding-bottom:var(--sp-1);
-  box-shadow:var(--ring-2), 0 22px 44px -26px rgba(60,30,30,.5);
+.top .brand{grid-column:1}
+.top .header-right{grid-column:3}
+/* El titulo sigue en el documento para los lectores de pantalla, pero no ocupa lugar. */
+.solo-lectores{
+  position:absolute;width:1px;height:1px;margin:-1px;padding:0;
+  overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0;
 }
+/* El encabezado ya no se compacta al bajar: con la barra quieta, verla encogerse a mitad de
+   página era movimiento sin motivo. js/ui.js sigue poniendo y sacando la clase .scrolled — no se
+   toca desde acá, pero hoy no pinta nada; si nunca va a volver a usarse, ese listener se saca
+   aparte. */
 @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
   .top{background:var(--card)}
 }
@@ -76,14 +116,20 @@ body::before{
 /* El título del encabezado va en la misma familia que todo lo demás, con el peso y el tracking
    apretado de los titulares del portal. Syne queda reservada para una marca denominativa corta
    (la palabra AIRO); una frase larga en Syne 800 se come el encabezado entero. */
-.brand h1{font-weight:800;font-size:var(--fs-lg);color:var(--ink);letter-spacing:var(--ls-tight)}
+.brand h1{font-weight:800;font-size:var(--fs-brand);color:var(--ink);letter-spacing:var(--ls-tight)}
 .brand .t-sub{font-size:var(--fs-xs);color:var(--muted);font-weight:500}
 .brand .b-txt{border-left:0;padding-left:0}
-.brand{gap:var(--sp-3)}
+/* Las dos columnas de los costados se igualan con un ancho minimo comun. Sin esto la bandeja
+   no queda centrada en la barra: a 1024px el logotipo mide 164 y la fecha 140, la barra esta
+   llena (no sobra espacio que repartir entre los 1fr) y la bandeja quedaba 15px corrida a la
+   derecha. Con el minimo comun las dos columnas miden lo mismo y el centro coincide.
+   Si alguna vez el contenido de un costado pasa de 170px, manda el contenido: el minmax(auto,1fr)
+   de .top no lo deja recortarse. */
+.top{--barra-lado:170px}
+.brand{gap:var(--sp-3);justify-self:start;min-width:var(--barra-lado)}
+.top .header-right{justify-self:end;min-width:var(--barra-lado);justify-content:flex-end}
 .brand .logo-box{background:transparent;padding:0}
 .brand img{height:40px}
-.top.scrolled .brand img{height:34px}
-.top.scrolled .brand .b-txt{padding-left:0}
 
 /* La píldora de fecha, con el punto latiendo del portal. */
 .top .t-date{
@@ -104,30 +150,43 @@ body::before{
 /* ================================================================
    3. MÓDULOS: grupo de píldoras
    ================================================================ */
+/* La bandeja de modulos: .mg-navs de Airo (minga.css:1091). Va en la columna del medio de la
+   barra, centrada, con 5px de padding, radio 20 y el fondo suave al 80%.
+   Airo reparte sus modulos en DOS filas de cinco dentro de la misma bandeja. Aca son siete y se
+   deja que la bandeja los acomode sola con flex-wrap: cuando no entran en una fila pasan a dos,
+   que es la misma figura. */
 .tabs{
-  width:fit-content;max-width:100%;
-  flex-wrap:wrap;
-  gap:var(--sp-1);
-  padding:var(--sp-1);
-  margin:0 auto var(--sp-6);
-  border:0;border-radius:var(--radius-md);
-  background:color-mix(in srgb, var(--surface-3) 80%, transparent);
-  -webkit-backdrop-filter:blur(12px);
-  backdrop-filter:blur(12px);
-  box-shadow:var(--ring-1);
+  grid-column:2;
+  justify-self:center;align-self:center;
+  width:fit-content;max-width:100%;min-width:0;
+  display:flex;flex-wrap:wrap;justify-content:center;
+  gap:2px;
+  padding:5px;
+  margin:0;
+  border:0;border-radius:20px;
+  background:rgba(233,239,228,.8);
+  -webkit-backdrop-filter:none;backdrop-filter:none;
+  box-shadow:none;
 }
+/* Las medidas son las de .mg-nav button (minga.css:188): radio 12, padding 9/15, cuerpo 14 y
+   peso 600. Antes eran 13 de radio, 9/16 de padding y --fs-sm, tomadas de la barra ANTERIOR del
+   Portal, cuando los modulos vivian fuera del encabezado.
+   El color del activo NO se copia de Airo: alla la pildora encendida es casi negra (var(--tinta))
+   y aca se queda en el petroleo #095C4C de la marca, que es el color actual. */
 .tab{
   flex:none;
-  border-radius:var(--radius-sm);
-  padding:var(--sp-2) var(--sp-4);
-  font-size:var(--fs-sm);font-weight:600;letter-spacing:0;
+  border-radius:12px;
+  padding:9px 15px;
+  font-size:14px;font-weight:600;letter-spacing:0;
   color:var(--ink-soft);
   transition:background-color var(--dur-2) var(--ease), color var(--dur-2) var(--ease),
              box-shadow var(--dur-2) var(--ease);
 }
-.tab:hover{background:var(--surface-2);color:var(--ink)}
+/* En Airo el boton apagado no se pinta al pasar por encima: solo oscurece el texto. Con la
+   bandeja ya tenida, un fondo de hover encima agrega un tercer tono al mismo centimetro. */
+.tab:hover{background:transparent;color:var(--ink)}
 .tab:active{transform:none}
-.tab.active{background:var(--ink);color:var(--card);box-shadow:0 8px 18px -10px rgba(42,30,28,.7)}
+.tab.active{background:var(--acento);color:var(--on-acento);box-shadow:0 8px 18px -10px rgba(9,60,50,.7)}
 .tab .badge{background:var(--acento);color:var(--on-acento);font-weight:700}
 .tab.active .badge{background:var(--card);color:var(--acento)}
 
@@ -136,75 +195,135 @@ body::before{
    ================================================================
    El contenedor de KPI deja de ser una grilla suelta y pasa a ser el bloque de portada del
    portal: degradados pastel, 28px de radio, y adentro las tarjetas blancas flotando. */
+/* 14px de separacion y 18px abajo: las dos medidas del Portal. */
+/* SIN bloque pastel detras de los KPI. El encabezado de esta hoja decia que la fila de KPI se
+   convierte en el "hero" del portal, con degradados rosa/pistacho/almendra. Leido el codigo del
+   Portal, eso NO es asi en su vista de tablero: ahi la regla es
+    y nada mas — las tarjetas
+   van directo sobre el fondo crema. El bloque con degradados es de .mg-ot-hero, que es OTRA vista
+   (la de Ordenes de Trabajo). Con las tarjetas al 93% de blanco sobre crema, el bloque ademas
+   restaba contraste entre tarjeta y fondo. */
 .kpis,.gkpis{
-  gap:var(--sp-3);
-  padding:var(--sp-5);
-  border:0;border-radius:var(--radius-xl);
-  margin-bottom:var(--sp-6);
-  background:
-    radial-gradient(60% 90% at 12% 10%, var(--c-rosa), transparent 70%),
-    radial-gradient(60% 90% at 92% 95%, var(--c-pist), transparent 70%),
-    var(--c-almen);
-  overflow:hidden;
+  gap:14px;
+  margin-bottom:18px;
 }
 .kpi,.gkpi{
   position:relative;overflow:hidden;
-  border:0;border-radius:var(--radius-md);
-  background:color-mix(in srgb, var(--card) 92%, transparent);
-  box-shadow:0 1px 0 rgba(255,255,255,.6) inset, 0 24px 50px -32px rgba(60,30,30,.35);
-  padding:var(--sp-5) var(--sp-5) var(--sp-4);
-  transition:transform var(--dur-2) var(--ease), box-shadow var(--dur-2) var(--ease);
+  /* Medidas EXACTAS del Portal del Sur, leidas de la regla que manda en su vista de tablero
+     (#v-tablero:not(.mg-en-ot) #app .kpi): radio 22, fondo al 93%, padding 18/20 y una sombra sin
+     anillo — el canto lo da el brillo interior de 1px, no un trazo. */
+  border:0;border-radius:22px;
+  background:rgba(255,255,255,.93);
+  box-shadow:0 1px 0 rgba(255,255,255,.6) inset, 0 24px 50px -32px rgba(9,60,50,.38);
+  padding:18px 20px;
+  /* El tiempo y la curva son los de Airo (minga.css:365), no los tokens --dur-2/--ease: alla la
+     tarjeta sube con .25s cubic-bezier(.2,.8,.2,1), que frena mas tarde y se siente mas firme. */
+  transition:transform .25s cubic-bezier(.2,.8,.2,1), box-shadow .25s;
 }
+/* Airo no aclara el fondo al pasar por encima: solo sube la tarjeta y agranda la sombra. El
+   background:var(--card) que habia aca era agregado mio y hacia parpadear el 93% al 100%. */
 .kpi:hover,.gkpi:hover{
-  transform:translateY(-3px);background:var(--card);
-  box-shadow:0 1px 0 rgba(255,255,255,.6) inset, 0 30px 50px -28px rgba(60,30,30,.42);
+  transform:translateY(-3px);
+  box-shadow:0 1px 0 rgba(255,255,255,.6) inset, 0 30px 50px -28px rgba(9,60,50,.45);
 }
 /* Cinta de color arriba de cada tarjeta: es la misma de la portada del portal. */
-.kpi::after,.gkpi::after{
-  content:"";position:absolute;left:0;right:0;top:0;height:4px;
-  background:linear-gradient(90deg, var(--c-rosa), var(--c-almen), var(--c-pist));
-}
+/* SIN cinta de color arriba de la tarjeta. La regla generica .kpi del Portal la tiene, pero su
+   propia vista de tablero la apaga con `.kpi::before{display:none}`: con cuatro o cinco tarjetas
+   en fila, cuatro cintas de colores compiten con las cifras, que son lo que hay que leer. El
+   acento de severidad vive en el borde izquierdo (.kpi-acc), que es donde estaba antes. */
+/* La etiqueta va en mayusculas con tracking ANCHO (.06em) mientras la cifra lo lleva apretado
+   (-.035em). Ese contraste entre rotulo y numero es una de las cosas que mas identifica al Portal:
+   la etiqueta se lee como un letrero chico y la cifra como un bloque solido. */
+/* La etiqueta del Portal es de 12px con tracking CORTO (.02em), no de 10,5 con tracking ancho.
+   El tracking ancho es el de su regla generica; la vista de tablero lo acorta y sube el cuerpo. */
 .kpi .k-lab,.gkpi .k-lab{
-  font-size:var(--fs-2xs);font-weight:700;color:var(--muted);
-  text-transform:none;letter-spacing:.02em;
+  font-size:12px;font-weight:700;color:var(--muted);
+  text-transform:none;
+  letter-spacing:.02em;
 }
+/* letter-spacing apretado: es lo que le da a las cifras el aire del Portal (alla es -.035em en
+   .kpi .k-val). A 26px, el tracking normal las deja sueltas. */
+/* clamp(24px,2.5vw,34px): el de Airo tal cual (minga.css:838), junto con el tracking -.04em y el
+   interlineado 1.1. Hasta el 26/10 el tope aca era 26px por un limite que ya no existe: se habia
+   medido sobre un ancho de pagina de 1220px, y el ancho paso a los 1320 de Airo. Si con cinco KPI
+   por fila alguna cifra se cortara, se baja el TOPE y se deja dicho aca cuanto y por que — no se
+   toca el resto de la regla. */
 .kpi .k-val,.gkpi .k-val{
-  font-size:var(--fs-2xl);font-weight:800;letter-spacing:var(--ls-tighter);
-  line-height:var(--lh-tight);color:var(--ink);margin-top:var(--sp-1);
+  font-size:clamp(24px, 2.5vw, 34px);
+  font-weight:800;
+  letter-spacing:-.04em;
+  line-height:1.1;
+  margin:4px 0 2px;
+  color:var(--ink);
 }
-.kpis-exec .k-val{font-size:var(--fs-2xl)}
-.kpi .k-foot,.gkpi .k-foot{font-size:var(--fs-xs);color:var(--muted)}
+/* Los tres KPI del Resumen Ejecutivo se quedan en los 19px que fija resumen.css:21 a pedido del
+   usuario. Hay que repetirlo ACA: la regla generica de arriba (.kpi .k-val, .gkpi .k-val) tiene la
+   MISMA especificidad que la de resumen.css y esta hoja carga despues, asi que sin esta linea el
+   generico de 26px gana y los sube igual. Lo que se quito el 23/10 fue la linea que los llevaba a
+   --fs-2xl a proposito. */
+.kpis-exec .k-val{font-size:19px}
+/* La UNICA fila que no aguanta los 34px de Airo es la de Servicios, que tiene CINCO KPI en lugar
+   de cuatro: a 1320px de pagina cada tarjeta queda en 230px, o sea 190 de ancho util.
+   Medido sobre esa caja de 190, con el marcado real de la cifra:
+     "$ 2.716.823,66"  entra hasta 27px
+     "$ 12.716.823,66" entra hasta 25px  <- la misma cifra pasados los 10 millones
+   Se toma 25 para no tener que volver a tocarlo cuando el gasto crezca. El nowrap es necesario
+   aparte: sin el, la cifra no se desborda, se PARTE en dos lineas entre el "$" y el numero, y la
+   tarjeta crece al doble de alto al lado de las otras.
+   Va con :has() y no con una clase nueva para que la regla se aplique sola el dia que una fila
+   pase a tener cinco tarjetas, o deje de tenerlas, sin depender de que render.js rotule nada.
+   Los otros seis tableros se quedan con los 34 de Airo: medidos, ninguno se corta ni se parte. */
+.gkpis:has(> :nth-child(5)) .k-val{font-size:clamp(22px, 2.5vw, 25px);white-space:nowrap}
+.kpi .k-foot,.gkpi .k-foot{font-size:12.5px;color:var(--muted)}
 /* El acento de severidad pasa a teñir la cinta superior: con la tarjeta flotando sobre pastel,
    un borde izquierdo se perdía. */
 .kpi-acc{border-left:0}
-.kpi-g::after{background:var(--g)} .kpi-y::after{background:var(--y)}
-.kpi-o::after{background:var(--o)} .kpi-r::after{background:var(--r)}
-.kpi-gris::after{background:var(--line-strong)}
+/* Sobre el pastel, --y da 1,67:1 y --o 2,44: el KPI ambar se veia igual que el gris. Estas cintas
+   usan los --acc-*, que son los mismos matices bajados a luminosidad de cinta. El relleno
+   semantico (--g/--y/--o) no se toca: se usa en quince lugares con pares de texto distintos. */
+.kpi-g::after{background:var(--acc-g)} .kpi-y::after{background:var(--acc-y)}
+.kpi-o::after{background:var(--acc-o)} .kpi-r::after{background:var(--r)}
+.kpi-gris::after{background:var(--acc-gris)}
 
 /* ================================================================
    5. TARJETAS
    ================================================================ */
 .panel{
   border:0;
-  border-radius:var(--radius-lg);
+  /* 22px explicito, NO var(--radius-lg): ese token ahora vale 16 (el de Airo para controles
+     chicos) y Airo le da a .panel y .kpi un radio propio de 22. */
+  border-radius:22px;
   background:var(--card);
   box-shadow:var(--shadow-2);
-  padding:var(--sp-6);
-  margin-bottom:var(--sp-4);
+  /* 24px arriba/abajo y 26px a los costados: el padding exacto de Airo (minga.css:828). Antes
+     era 22 parejo. No se usa --sp-6 (20px) porque ese token tambien marca el sangrado de td.dl y
+     la separacion de .panel.sub, y ahi queda flojo. */
+  padding:24px 26px;
+  margin-bottom:18px;   /* el de Airo (minga.css:828) */
 }
 .panel h3{
-  font-size:var(--fs-lg);font-weight:700;letter-spacing:var(--ls-tight);
+  /* 17px y peso 800, los de Airo (minga.css:829). --fs-lg vale 15,5 y se habia tomado de la regla
+     generica del Portal, no de la que manda en su vista de tablero. */
+  font-size:17px;font-weight:800;letter-spacing:-.025em;
   color:var(--ink);
   border-bottom:0;padding-bottom:0;
-  margin-bottom:var(--sp-4);
-  gap:var(--sp-3);
+  /* 16px de separacion y 10px de gap: los de Airo (minga.css:829). */
+  margin-bottom:16px;
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
 }
+/* El boton de accion del encabezado se va al extremo derecho. */
+.panel h3 .prob-link,.panel h3 .segbtns{margin-left:auto}
+/* Dentro de un h3 los botones no heredan el peso 800 del titulo. */
+.panel h3 .segbtns button{font-weight:700}
 /* La nota del título va en una píldora, como las fichas del portal. */
-.panel h3 span{
+/* Calcada de Airo (minga.css:830): 12px, peso 700, gris, fondo suave, 3/10 de padding y radio de
+   pildora. Antes usaba --fs-2xs con peso 600 y --radius-pill, que ahora vale 20 y no redondea del
+   todo; el 99px deja el canto semicircular pase lo que pase con el alto. */
+.panel h3 span:not(.badge){
   flex:none;
-  font-family:var(--font-sans);font-size:var(--fs-2xs);font-weight:600;letter-spacing:0;
-  color:var(--ink-soft);background:var(--surface-3);
-  border-radius:var(--radius-pill);padding:3px 11px;
+  font-family:var(--font-sans);font-size:12px;font-weight:700;letter-spacing:0;
+  color:var(--muted);background:var(--pista);
+  border-radius:99px;padding:3px 10px;
   text-align:center;
 }
 .panel h3 span:empty{display:none}
@@ -216,16 +335,22 @@ body::before{
 }
 .panel.sub:first-of-type{border-top:0;padding-top:0}
 .panel.sub h3{font-size:var(--fs-md)}
-.panel.hero-panel{box-shadow:var(--ring-2), 0 24px 50px -36px rgba(60,30,30,.4)}
+.panel.hero-panel{box-shadow:var(--ring-2), 0 24px 50px -36px rgba(9,60,50,.4)}
 .panel.hero-panel h3{font-size:var(--fs-lg)}
 
 /* ================================================================
    6. TABLAS: sin rejilla
    ================================================================ */
+/* El th NO se pega aca: esta regla alcanza a TODA cabecera de tabla, tambien a las que no estan
+   dentro de un .scroll, que se pegarian al borde de la ventana con z-index 2 — o sea por detras de
+   la barra flotante, que es translucida con blur, y se leerian borrosas a traves del encabezado.
+   ui.css lo resuelve acotado a `.scroll table th` y con la excepcion de las cabeceras internas de
+   los desplegables (.sv-ots, .opex-detail-table). */
 th{
-  position:sticky;top:0;z-index:2;
-  background:var(--card);
-  font-size:var(--fs-3xs);font-weight:700;letter-spacing:var(--ls-caps);
+  /* --fs-2xs (10,5px) y no --fs-3xs (9px): 10,5 es el tamanio con el que se verifico celda por
+     celda que las siete columnas del Detalle por Servicio entran a 1220px. --fs-3xs queda para los
+     chips de unidad, que si son de 9. */
+  font-size:var(--fs-2xs);font-weight:700;letter-spacing:var(--ls-caps);
   color:var(--muted);
   padding:var(--sp-2) var(--sp-3);
   border-bottom:1px solid var(--line);
@@ -235,10 +360,14 @@ td{
   border-bottom:0;
   color:var(--ink-soft);
 }
-td.mono,td.tr,.col-tot,.ldt .lname{color:var(--ink)}
+/* Dos exclusiones, las dos por el mismo motivo: la celda de Costo Servicio se emite como
+   class="tr mono col-serv", asi que TANTO `td.tr` como `td.mono` (0,1,1) le ganan a .col-serv
+   (0,1,0) de gastos.css y le pisan el gris. Sin eso, Costo Servicio y Costo Total quedan del mismo
+   color y se pierde el escalon que el usuario pidio el 14/10 para poder leer una contra la otra. */
+td.mono:not(.col-serv),.col-tot,.ldt .lname{color:var(--ink)}
 /* Las filas no se iluminan al pasar el cursor: no son clicables. Las que sí lo son (desplegables
    de Servicios, Combustible, Auditoría) conservan su propio hover, definido en sus hojas. */
-.scroll tbody tr:hover>td{background:transparent}
+.scroll tbody tr:not(.sv-fila):not(.cu-fila):not(.ip-fila):not(.pu-fila):not(.sb-fila):hover>td{background:transparent}
 
 /* Grupo y detalle: el grupo es un renglón apenas marcado; el detalle va limpio. */
 tr.grp td{background:var(--tint-r-soft);border-top:1px solid var(--line);border-bottom:0;
@@ -249,7 +378,7 @@ tr.dethead td{background:var(--tint-r-soft);font-size:var(--fs-3xs);font-weight:
 tr.det td,tr.det-over td{background:transparent;font-size:var(--fs-sm);
   padding:var(--sp-2) var(--sp-3);border-bottom:0}
 tr.neutra.grp td,tr.neutra.dethead td{background:var(--tint-brand-soft)}
-tr.tot td{background:var(--surface-3);border-top:1px solid var(--line-strong);color:var(--ink)}
+tr.tot td{background:var(--surface-3);border-top:2px solid var(--acento);color:var(--ink)}
 td.dl{padding-left:var(--sp-6);color:var(--acento);font-weight:700}
 .exd{color:var(--r)}
 
@@ -284,7 +413,12 @@ tr.al-y td,tr.al-o td,tr.al-r td{background:transparent}
 .gfilter label,.scontr label{font-size:var(--fs-2xs);font-weight:700;letter-spacing:.02em;
   text-transform:none;color:var(--muted)}
 .gfilter select,.scontr select{
-  border:1px solid var(--line);border-radius:var(--radius-input);
+  /* --line-strong y no --line: el borde de un control es objeto grafico y pide 3:1 (WCAG 1.4.11).
+     --line da 1,21. No se cambia --line globalmente porque tambien separa filas, y oscurecerlo
+     reintroduce la rejilla que esta hoja quiere sacar. */
+  border:1px solid var(--line-strong);
+  /* 10px es el radio de los selects del Portal; --radius-input (8px) queda para campos chicos. */
+  border-radius:10px;
   background-color:var(--card);color:var(--ink);font-weight:600;font-size:var(--fs-sm);
 }
 .gfilter select:hover,.scontr select:hover{border-color:var(--line-strong)}
@@ -306,22 +440,18 @@ tr.al-y td,tr.al-o td,tr.al-r td{background:transparent}
 .cult-card:hover{box-shadow:var(--ring-2);background:var(--surface-1)}
 
 /* Problemas: tarjetas con el color de la gravedad en una barra fina a la izquierda. */
-.prob{border:0;border-left:3px solid var(--green-l);box-shadow:var(--shadow-2);
+/* Sin color en el border-left: problemas.css:11-12 define el color por gravedad con la misma
+   especificidad, y al cargarse shell despues le pisaba el color a las cuatro, dejando todas las
+   tarjetas con la misma barra lima y borrando la severidad del panel entero. Se recuperan ademas
+   los 5px de problemas.css:8. */
+/* Los tres lados por separado y NO `border:0`: el atajo resetea tambien border-left-color a
+   currentColor, y como esta hoja carga despues de problemas.css le borraba el color de gravedad a
+   las cuatro variantes (.prob-r/-o/-y/-g), dejando todas las tarjetas con la misma barra. */
   border-radius:var(--radius-md);padding:var(--sp-4) var(--sp-5)}
-.prob:hover{transform:none;box-shadow:var(--shadow-3)}
-.prob-count{border-radius:var(--radius-md);background:var(--ink);color:var(--card)}
-.prob-count b{font-size:var(--fs-3xl);font-weight:800;letter-spacing:var(--ls-tighter)}
-.prob-head .ph-t{font-size:var(--fs-xl);font-weight:800;letter-spacing:var(--ls-tight);color:var(--ink)}
-.p-met{color:var(--ink);font-weight:800;letter-spacing:var(--ls-tight)}
-.p-cat{letter-spacing:.02em;text-transform:none;font-size:var(--fs-3xs);padding:2px 10px}
 
-/* Barras: gruesas y completamente redondeadas, como las del portal. */
-.bar,.opex-bar-track,.sopbar,.pu-bar{height:8px;background:var(--surface-3)}
-.estbar-track{height:20px;border-radius:var(--radius-pill);background:var(--surface-3)}
-.colchart-bar{border-radius:var(--radius-sm) var(--radius-sm) 4px 4px}
 
 /* Mini-cifras dentro de los paneles (Gasoil por Área, Terceros). */
-.sop-kpi{background:var(--bg);border:0;box-shadow:var(--ring-1);
+.sop-kpi{background:var(--bg);border:0;box-shadow:var(--ring-1-fuerte);
   border-radius:var(--radius-md);padding:var(--sp-3) var(--sp-5)}
 .sop-kpi .l{font-size:var(--fs-xs);font-weight:700;letter-spacing:.02em;text-transform:none;color:var(--muted)}
 .sop-kpi .v{font-size:var(--fs-xl);font-weight:800;letter-spacing:var(--ls-tighter);color:var(--ink)}
@@ -351,14 +481,14 @@ tr.open .ip-caret{color:var(--acento)}
 /* Avisos y recuadros informativos. */
 .ip-aviso,.rc-nodisp{border:0;box-shadow:inset 0 0 0 1px var(--border-y);border-radius:var(--radius-md)}
 .errbanner{border:0;box-shadow:inset 0 0 0 1px var(--r);border-radius:var(--radius-md)}
-.rc-chip{border:0;box-shadow:var(--ring-1);border-radius:var(--radius-sm);background:var(--surface-1)}
+.rc-chip{border:0;box-shadow:var(--ring-1-fuerte);border-radius:var(--radius-sm);background:var(--surface-1)}
 .rc-con{box-shadow:inset 0 0 0 1px var(--border-g)}
 .rc-sobre{box-shadow:inset 0 0 0 1px var(--border-y)}
 .rc-tol{box-shadow:inset 0 0 0 1px var(--border-g-soft)}
 
 /* Overlay de carga y lightbox. */
 #overlay{background:var(--bg)}
-#overlay .retry{border-radius:var(--radius-sm);background:var(--ink);color:var(--card)}
+#overlay .retry{border-radius:var(--radius-sm);background:var(--acento);color:var(--on-acento)}
 #overlay .retry:hover{background:var(--teal-hover)}
 .mapa-card{border-radius:var(--radius-md)}
 
@@ -366,7 +496,7 @@ tr.open .ip-caret{color:var(--acento)}
 .foot{margin-top:var(--sp-10);font-size:var(--fs-2xs);color:var(--muted)}
 
 /* El aviso flotante de datos nuevos, con la forma de los botones del portal. */
-.aviso-datos{background:var(--ink);color:var(--card);box-shadow:var(--shadow-4)}
+.aviso-datos{background:var(--acento);color:var(--on-acento);box-shadow:var(--shadow-4)}
 .aviso-datos:hover{background:var(--teal-hover)}
 .aviso-datos-cta{background:color-mix(in srgb, var(--card) 18%, transparent)}
 
@@ -374,9 +504,39 @@ tr.open .ip-caret{color:var(--acento)}
    9. RESPONSIVE
    ================================================================ */
 @media(max-width:900px){
-  .top{top:var(--sp-2);padding:var(--sp-3) var(--sp-3) var(--sp-3) var(--sp-4)}
-  .tabs{width:auto;margin-bottom:0}
-  .tabs.open{margin-bottom:var(--sp-5)}
+  .top{padding:var(--sp-3) var(--sp-3) var(--sp-3) var(--sp-4)}
+  /* En telefono la barra pasa a dos columnas — marca y grupo derecho — y el menu ocupa una fila
+     entera abajo. Sin esto el desplegable queda atrapado en la columna del medio de la grilla de
+     escritorio: medido en 375px, 10px de ancho y 60 de desborde horizontal.
+     Es el mismo recurso de Airo, que en telefono deshace su bandeja con .mg-navs{display:contents}
+     para que los modulos caigan directo en la grilla de la barra. */
+  .top{grid-template-columns:minmax(0,1fr) auto}
+  /* Se suelta el ancho minimo de los costados: aca la barra ya no son tres columnas simetricas
+     —son dos— y 170+170 no entran en un telefono. Medido a 375px: con el minimo puesto, la barra
+     pedia 340px de contenido en 317 disponibles y desbordaba. */
+  .top{--barra-lado:0px}
+  /* display:contents deshace .brand y deja que el logotipo y la bajada caigan directo en la
+     grilla de la barra. Es el mismo recurso de Airo, que en telefono deshace su bandeja de
+     modulos con .mg-navs{display:contents}.
+     Hace falta porque .brand es una sola celda en la columna 1, y ahi la bajada se partia en
+     tres lineas ("Campo La / Teresa · Datos en / Dolares") contra los controles de al lado.
+     Asi queda: fila 1 el logotipo y los controles, fila 2 la bajada a todo el ancho, fila 3 el
+     menu desplegable. */
+  .top .brand{display:contents}
+  .top .logo-box{grid-column:1;grid-row:1;justify-self:start}
+  .top .header-right{grid-column:2;grid-row:1}
+  .top .b-txt{grid-column:1 / -1;grid-row:2}
+  /* display:none hay que REPETIRLO aca. tabs.css:16 ya lo oculta en telefono, pero la regla
+     .tabs de esta hoja ahora declara display:flex y esta FUERA de toda media query: misma
+     especificidad (0,1,0), hoja posterior, y las media queries no suman especificidad, asi que le
+     gana y el menu quedaba desplegado siempre. */
+  .tabs{
+    display:none;
+    grid-column:1 / -1;grid-row:3;
+    justify-self:stretch;width:auto;max-width:none;
+    background:transparent;padding:0;
+  }
+  .tabs.open{display:flex;flex-direction:column;margin-bottom:0}
   /* Las barras de secciones se apilan (auditoria.css) y ahí un ancho "a medida" deja un bloque
      angosto y dentado: a lo ancho se lee como la lista de secciones que es. */
   .subtabs{width:auto}
