@@ -1,12 +1,10 @@
 // ================== RENDER ==================
 function renderAll(){
-  const fd=D.fecha_datos;
-  const fdTxt=('0'+fd.getDate()).slice(-2)+'/'+('0'+(fd.getMonth()+1)).slice(-2)+'/'+fd.getFullYear();
   // Header: fecha Y hora de la última actualización real del archivo .xlsx (D.excel_actualizado,
   // calculada UNA sola vez en loader.js — nunca se recalcula acá ni cambia al navegar entre
-  // módulos/filtros/menú móvil). Distinta de fd/fdTxt (arriba, sigue usándose tal cual en el pie
-  // de página): fd es la Fecha Teórica más reciente de las OT (frescura del CONTENIDO); esto es
-  // cuándo se modificó el ARCHIVO en sí. Formato 24 horas, sin segundos: DD/MM/YYYY · HH:mm.
+  // módulos/filtros/menú móvil). No confundir con D.fecha_datos, la Fecha Teórica más reciente de
+  // las OT (frescura del CONTENIDO): esto es cuándo se modificó el ARCHIVO en sí. Formato 24
+  // horas, sin segundos: DD/MM/YYYY · HH:mm.
   const fa=D.excel_actualizado;
   const faTxt=('0'+fa.getDate()).slice(-2)+'/'+('0'+(fa.getMonth()+1)).slice(-2)+'/'+fa.getFullYear()+' · '+('0'+fa.getHours()).slice(-2)+':'+('0'+fa.getMinutes()).slice(-2);
   // La chapita pasa a ambar cuando el .xlsx tiene mas de 24 horas. No es decoracion: el 11/09/2026
@@ -75,7 +73,11 @@ function renderAll(){
   const selITipo=document.getElementById('itipo'); selITipo.querySelectorAll('option:not([value=ALL])').forEach(o=>o.remove());
   D.insumos_tipos.forEach(t=>{const o=document.createElement('option');o.value=t;o.textContent=t;selITipo.appendChild(o);});
   actualizarFiltroInsumo();
-  document.getElementById('foot').innerHTML='Datos cargados automáticamente desde datosCampania2627.xlsx · solo OT confirmadas en importes · todo importe = Unidades/Dosis × Precio Unitario · litros = Unidades/Dosis · avance por Ha ejecutadas vs plan de cultivo · planificación desde consultaCultivos (clave de unión: cultivo=actividad + lote normalizado) · sin datos de rendimiento ni presupuesto · no se hallaron OT canceladas.<br>Desarrollos del Sur S.A. · Producción Agrícola-Ganadera · '+fdTxt;
+  // El pie dice de dónde salen los datos y quién puso qué. La parrafada de método que había antes
+  // (fórmulas de importe, clave de unión, criterios de avance) se retiró a pedido: eso vive en
+  // README.md y CLAUDE.md, que es donde se busca, y no en todas las pantallas del tablero.
+  document.getElementById('foot').textContent=
+    'Desarrollos del Sur S.A. · datos de Albor · reglas de procesamiento Rodrigo Medina · modelo de campaña de Andrés Gómez';
   renderCombustible();
   renderG();
   renderInsumos();
