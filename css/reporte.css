@@ -15,7 +15,12 @@
   /* Fuera los cromos de interfaz: no se pueden tocar en una hoja y solo ocupan lugar. */
   .tabs,.menu-toggle,.aviso-datos,.prob-link,.opex-toggle,.skip-link{display:none!important}
   .top{position:static;box-shadow:none;backdrop-filter:none}
-  .panel,.kpi,.gkpi{box-shadow:none;break-inside:avoid}
+  /* Un .panel puede medir varias hojas —el informe de labores repetidas son 6.243px—, asi que NO
+     lleva break-inside:avoid: el navegador intenta no partirlo, no entra, y lo empuja entero a la
+     hoja siguiente dejando la primera en blanco debajo del membrete. Se lo queda solo lo que de
+     verdad cabe en una hoja, que son las tarjetas de KPI. */
+  .panel{box-shadow:none}
+  .kpi,.gkpi{box-shadow:none;break-inside:avoid}
   /* Las tablas largas viven dentro de un .scroll con alto máximo: en papel eso recortaría el
      reporte a lo que entra en la ventana. */
   .scroll{max-height:none;overflow:visible}
