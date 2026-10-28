@@ -265,6 +265,16 @@
     "campania": "26/27",
     "cultivo": "ARROZ",
     "grupo": "HERBICIDAS PÓS EMERGENTES",
+    "insumo": "EXOCET 25 FLOW",
+    "descripcion": "Quinclorac 25% SC",
+    "dosisHa": 2,
+    "unidad": "L",
+    "origen": "agregado el 28/10/2026 desde HOJA DE TRABAJO PRESP 26-27 ARROZ, fila \"Fyn - Vulcano - Exocet\" · el nombre es el de Albor (\"EXOCET 25 FLOW\", 45 movimientos), no el del presupuesto (\"Exocet\"), porque la receta se busca por nombre exacto · va en Litros, como lo carga Albor y como dice el presupuesto, a diferencia de sus hermanos Fyn y VULCANO PQT que son kg"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "HERBICIDAS PÓS EMERGENTES",
     "insumo": "Fyn",
     "descripcion": "Quinclorac 25% SC",
     "dosisHa": 2,
@@ -287,6 +297,16 @@
     "descripcion": null,
     "dosisHa": 0.08,
     "unidad": "kg"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "HERBICIDAS PÓS EMERGENTES",
+    "insumo": "Triclomax",
+    "descripcion": "Triclopyr 48%",
+    "dosisHa": 0.5,
+    "unidad": "L",
+    "origen": "agregado el 28/10/2026 desde HOJA DE TRABAJO PRESP 26-27 ARROZ, fila \"Triclon y Morfeu - Triclomax\" · Albor lo carga como \"Triclomax\" en Litros (76 movimientos)"
   },
   {
     "campania": "26/27",
@@ -350,6 +370,16 @@
     "descripcion": null,
     "dosisHa": 0.21,
     "unidad": "kg"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "HERBICIDAS PUNTO DE AGUJA",
+    "insumo": "Redex",
+    "descripcion": "Imazapic 17.5% + Imazapir 52.5% WG",
+    "dosisHa": 0.12,
+    "unidad": "kg",
+    "origen": "agregado el 28/10/2026 desde HOJA DE TRABAJO PRESP 26-27 ARROZ, fila \"Maxirice - Zupressor - Redex\" · Albor lo carga como \"Redex\" en Kilos (39 movimientos), igual unidad que el presupuesto"
   },
   {
     "campania": "26/27",
