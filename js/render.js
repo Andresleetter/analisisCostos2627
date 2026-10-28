@@ -2890,6 +2890,30 @@ function filtrarControlHectareas(datos, servicio, lote, servicioElegido="", lote
     n_repetidas:repetidas.length,ha_repetidas:repetidas.reduce((s,e)=>s+e.exceso,0),
     n_nuevas_repetidas:repetidas.filter(e=>e.nuevo).length,n_sinrtk:sinrtk.length}};
 }
+// Encabezado del informe impreso de labores repetidas. No calcula NADA: pone en palabras los
+// filtros que estan puestos —que en papel salen como cajas sin texto legible— y el tamanio de lo
+// que se esta listando, que es lo primero que se mira en un informe. Se rearma en cada render para
+// que no pueda quedar describiendo un filtro distinto del que muestra la tabla, y otra vez justo
+// antes de imprimir (ver el beforeprint en js/events.js) para que la hora sea la real.
+let repUltimo=null;
+function repArmarInforme(datos){
+  if(datos) repUltimo=datos; else datos=repUltimo;
+  const filtros=document.getElementById('rep-informe-filtros');
+  if(!filtros || !datos) return;
+  const elegido=(id,todos)=>{ const s=document.getElementById(id); return (s&&s.value)?s.value:todos; };
+  filtros.textContent='Cultivo: '+elegido('ha-cultivo','Todos')
+    +'   ·   Servicio: '+elegido('ha-servicio','Todos')
+    +'   ·   Lote: '+elegido('ha-lote','Todos')
+    +'   ·   '+datos.repetidas.length+' caso(s) · +'+fmt2(datos.exc_kpi.ha_repetidas)+' ha de más';
+  // La misma fecha de archivo que muestra la chapita del encabezado (D.excel_actualizado): en un
+  // informe lo que interesa es de que exportacion salio.
+  const hm=d=>('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
+  const fa=D.excel_actualizado, ahora=new Date();
+  document.getElementById('rep-informe-pie').textContent=
+    'Campaña 26/27 · Campo La Teresa · solo Preparación de Suelo, cuando la suma de las OT de una '
+    +'misma labor supera el plan del lote · datos del archivo al '+ipFecha(fa)+' '+hm(fa)
+    +' · impreso el '+ipFecha(ahora)+' '+hm(ahora);
+}
 function renderControlHectareas(){
   renderControlHectareasDatos(D);
 }
@@ -2984,6 +3008,7 @@ function renderControlHectareasDatos(datos){
   });
   document.getElementById('rep').innerHTML = repHtml ||
     '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:16px">Sin casos</td></tr>';
+  repArmarInforme(D);
   document.getElementById('cancel-sub').textContent=D.cancelados.length+' lote(s)';
   let cancelHtml='';
   D.cancelados.forEach(e=>{

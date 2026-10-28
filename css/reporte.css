@@ -39,6 +39,19 @@
      Se oculta con visibility y no con display para que las filas no se corran 11px a la izquierda. */
   .ip-caret{visibility:hidden}
   .rep-cab{display:block;margin:0 0 14px;padding-bottom:10px;border-bottom:2px solid var(--teal)}
+
+  /* ---- Informe de un solo panel ----
+     Con body.informe-un-panel puesto, de la pestaña se imprime SOLO el panel marcado: los filtros,
+     los KPI y los otros tres paneles no son parte de ese informe. La marca la pone y la saca
+     js/events.js alrededor de window.print(); en pantalla no existe nunca.
+     El encabezado del tablero (.top) se deja: es el membrete de la hoja. */
+  body.informe-un-panel .page.active > :not(.informe-este){display:none!important}
+  /* El panel impreso suelta su caja: en papel el marco de una tarjeta de pantalla solo come
+     margen, y el informe ya tiene su propio titulo. */
+  body.informe-un-panel .informe-este{box-shadow:none!important;border:0!important;padding:0!important;background:none!important}
+  /* El titulo del panel no se imprime: el encabezado del informe dice lo mismo justo debajo, y
+     la chapita de "33 caso(s)" tambien esta en la linea de filtros. */
+  body.informe-un-panel .informe-este > h3{display:none!important}
   .rep-cab h2{margin:0 0 6px;font-size:19px;font-weight:800;letter-spacing:-.02em}
   .rep-cab p{margin:2px 0;font-size:12px;color:#444}
   .rep-cab .rep-filtros{font-weight:700;color:#000}

@@ -52,6 +52,27 @@ document.addEventListener('DOMContentLoaded', function(){
       if(!selector.contains(e.target)) cerrarSelectorHa(selector);
     });
   });
+  // Informe PDF del panel de labores repetidas. El boton no arma ningun PDF: marca el panel, abre
+  // el dialogo de impresion —donde se elige "Guardar como PDF"— y lo desmarca. Asi el informe sale
+  // siempre con los filtros puestos y sin sumarle al tablero una libreria de PDF.
+  // La marca se saca en cuanto print() devuelve y tambien en afterprint: print() es sincronico en
+  // los navegadores de escritorio, pero si alguno lo hiciera asincronico la pagina quedaria con un
+  // solo panel a la vista, que es un estado del que el usuario no podria salir.
+  document.getElementById('rep-pdf').addEventListener('click', function(){
+    // Sin argumento: reusa el mismo recorte que dibujo la tabla y solo refresca la hora. No se
+    // vuelve a filtrar aca — seria una segunda copia de la misma logica, y el dia que una cambie
+    // el informe diria una cosa y la tabla otra.
+    repArmarInforme();
+    document.body.classList.add('informe-un-panel');
+    document.getElementById('panel-repetidas').classList.add('informe-este');
+    try{ window.print(); } finally { limpiarInforme(); }
+  });
+  function limpiarInforme(){
+    document.body.classList.remove('informe-un-panel');
+    const p=document.getElementById('panel-repetidas');
+    if(p) p.classList.remove('informe-este');
+  }
+  window.addEventListener('afterprint', limpiarInforme);
   document.getElementById('ha-limpiar').addEventListener('click',()=>{
     document.querySelectorAll('.ha-selector').forEach(selector=>cerrarSelectorHa(selector));
     document.getElementById('ha-servicio').value='';

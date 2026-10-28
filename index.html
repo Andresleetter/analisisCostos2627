@@ -433,7 +433,17 @@
          grande (max), no con la suma, asi que dos pasadas de 24,22 ha sobre un lote de 24,22 dan
          exceso cero. Los Cuidados quedan fuera a proposito: repetirlos es agronomicamente normal
          (ver REPETIDAS_ESTADIOS en config.js). -->
-    <div class="panel"><h3>Labores de Preparación Repetidas que Superan el Lote · Detalle de OT <span id="rep-sub"></span></h3>
+    <div class="panel" id="panel-repetidas"><h3>Labores de Preparación Repetidas que Superan el Lote · Detalle de OT <span id="rep-sub"></span>
+      <!-- Imprime SOLO este panel; de ahí se guarda como PDF desde el propio diálogo del
+           navegador. Reutiliza .prob-link, el mismo botón-píldora del resto del tablero. -->
+      <button type="button" class="prob-link" id="rep-pdf">Informe PDF</button></h3>
+      <!-- Encabezado del informe: en pantalla no se ve, existe para el papel. Lo llena
+           repArmarInforme() en js/render.js, que es quien sabe qué filtros están puestos. -->
+      <div class="rep-cab" id="rep-informe">
+        <h2>Labores de preparación repetidas que superan el lote</h2>
+        <p class="rep-filtros" id="rep-informe-filtros"></p>
+        <p class="rep-pie" id="rep-informe-pie"></p>
+      </div>
       <div class="scroll"><table><thead><tr><th>Cultivo</th><th>Lote</th><th>Labor</th><th class="tr">Ha Plan</th><th class="tr">Suma OT</th><th class="tr">Dif. Ha</th><th class="tr">% Exceso</th></tr></thead><tbody id="rep"></tbody></table></div></div>
     <div class="panel"><h3>Lotes inhabilitados · Detalle de OT y Labores <span id="cancel-sub"></span></h3>
       <div class="scroll"><table><thead><tr><th>Cultivo</th><th>Lote</th></tr></thead><tbody id="cancel"></tbody></table></div></div>
