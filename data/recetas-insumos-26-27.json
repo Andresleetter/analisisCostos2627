@@ -637,6 +637,16 @@
   {
     "campania": "26/27",
     "cultivo": "MAIZ",
+    "grupo": "ACEITES Y ADJUVANTES",
+    "insumo": "Power Oil",
+    "descripcion": "Aceite vegetal",
+    "dosisHa": 1.6,
+    "unidad": "L",
+    "origen": "28/10/2026, de HOJA DE TRABAJO PRESP 26-27 MAIZ · mismo aceite que \"Iop Full\", misma dosis · se escribe con espacio como en el presupuesto: el alias PowerOil->Power Oil de config.js ya cubre la forma en que lo carga Albor (293 movimientos, 4 cultivos)"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "MAIZ",
     "grupo": "DESECACIÓN",
     "insumo": "Cleanspray",
     "descripcion": "2,4-D DMA 72%",
@@ -746,6 +756,16 @@
     "campania": "26/27",
     "cultivo": "MAIZ",
     "grupo": "HERBICIDAS PÓS EMERGENTES",
+    "insumo": "Glifotec Gold",
+    "descripcion": "Glifosato Sal Amonio 75%",
+    "dosisHa": 1.8,
+    "unidad": "L",
+    "origen": "28/10/2026, de HOJA DE TRABAJO PRESP 26-27 MAIZ · otra marca del mismo activo que \"Glifex full\", misma dosis · Albor lo carga en Litros"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "MAIZ",
+    "grupo": "HERBICIDAS PÓS EMERGENTES",
     "insumo": "Sineret",
     "descripcion": "Atrazina 76% + Mesotriona 12,5%",
     "dosisHa": 1.2,
@@ -795,6 +815,16 @@
     "descripcion": null,
     "dosisHa": 0.07,
     "unidad": "kg"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "MAIZ",
+    "grupo": "HERBICIDAS PRÉ EMERGENTES",
+    "insumo": "VIZIO - SAFLUFENACIL",
+    "descripcion": "Saflufenacil",
+    "dosisHa": 0.07,
+    "unidad": "kg",
+    "origen": "28/10/2026, de HOJA DE TRABAJO PRESP 26-27 MAIZ · el nombre comercial de un activo que ya estaba cargado por su molecula (\"Saflufenacil\", misma dosis) · se usa el nombre de Albor (\"VIZIO - SAFLUFENACIL\", 27 movimientos en Kilos) y no el del presupuesto (\"Vizio\"), porque la receta se busca por nombre exacto"
   },
   {
     "campania": "26/27",
@@ -1700,6 +1730,26 @@
   {
     "campania": "26/27",
     "cultivo": "SORGO",
+    "grupo": "HERBICIDAS PÓS EMERGENTES",
+    "insumo": "Zetapex 70",
+    "descripcion": "Imazapic 17.5% + Imazapir 52.5% WG",
+    "dosisHa": 0.14,
+    "unidad": "kg",
+    "origen": "28/10/2026, de HOJA DE TRABAJO PRESP 26-27 SORGO · Albor lo carga como \"Zetapex 70\" en Kilos, 24 movimientos de SORGO; el presupuesto lo nombra \"Zetapex\""
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SORGO",
+    "grupo": "HERBICIDAS PÓS EMERGENTES",
+    "insumo": "Zupressor",
+    "descripcion": "Imazapic 17.5% + Imazapir 52.5% WG",
+    "dosisHa": 0.14,
+    "unidad": "L",
+    "origen": "28/10/2026, de HOJA DE TRABAJO PRESP 26-27 SORGO · unidad en L y no en kg como dice el presupuesto: Albor carga Zupressor en Litros (66 movimientos), mismo criterio que la entrada de ARROZ. Hoy no hay ningun movimiento de Zupressor en SORGO — se carga porque el presupuesto lo preve"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SORGO",
     "grupo": "HERBICIDAS PRÉ EMERGENTES",
     "insumo": "Alfamex",
     "descripcion": "S-metalclor",
@@ -1714,6 +1764,16 @@
     "descripcion": "Glifosato DMA 60.8%",
     "dosisHa": 0.4,
     "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SORGO",
+    "grupo": "HERBICIDAS PRÉ EMERGENTES",
+    "insumo": "Glifotec Gold",
+    "descripcion": "Glifosato DMA 60.8%",
+    "dosisHa": 0.4,
+    "unidad": "L",
+    "origen": "28/10/2026, de HOJA DE TRABAJO PRESP 26-27 SORGO · otra marca del mismo activo que \"Glifex gold 60,8\", misma dosis en este grupo · Albor lo carga como \"Glifotec Gold\" en Litros, 230 movimientos en cinco cultivos"
   },
   {
     "campania": "26/27",
@@ -1885,6 +1945,16 @@
     "descripcion": "ADVF8450",
     "dosisHa": 7.5,
     "unidad": "kg"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SORGO",
+    "grupo": "TRATAMIENTO DE SEMILLAS",
+    "insumo": "Flexim 96%",
+    "descripcion": "Fluxofenim 96%",
+    "dosisHa": 0.0028,
+    "unidad": "L",
+    "origen": "28/10/2026, de HOJA DE TRABAJO PRESP 26-27 SORGO · el nombre comercial de un activo que ya estaba cargado por su molecula (\"Fluxofenim 96%\", misma dosis) · Albor lo carga como \"Flexim 96%\" en Litros, 25 movimientos de SORGO"
   },
   {
     "campania": "26/27",
