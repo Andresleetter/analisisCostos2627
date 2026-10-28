@@ -115,7 +115,7 @@ function indiceRecetasVacio(){
 // el mismo. Si las dosis difieren, no hay forma de saber cual corresponde y se devuelve null, que
 // el llamador traduce a "Sin receta" — nunca se elige una.
 // `grupo` permite desempatar cuando el alias lo declara explicitamente (ver RECETAS_INSUMO_ALIAS).
-function resolverCandidatasReceta(lista, grupo){
+function resolverCandidatasReceta(lista, grupo, unidadNorm){
   if(!lista || !lista.length) return null;
   let cand = lista;
   if(grupo){
@@ -124,8 +124,19 @@ function resolverCandidatasReceta(lista, grupo){
     if(!filtradas.length) return null;
     cand = filtradas;
   }
-  const distintas = new Map();
-  cand.forEach(f=>distintas.set(f.dosisHa+'|'+f.unidadNorm, f));
+  const porDosis = c=>{ const m = new Map(); c.forEach(f=>m.set(f.dosisHa+'|'+f.unidadNorm, f)); return m; };
+  let distintas = porDosis(cand);
+  if(distintas.size>1 && unidadNorm){
+    // El MISMO producto puede estar dos veces en el mismo cultivo con dosis distinta segun el uso:
+    // Rhino es 0,06 kg como insecticida y 0,1 L en tratamiento de semillas, y Glifotec Gold de SOJA
+    // es 3 L en desecacion y 1,8 kg en pos-emergentes. Albor carga cada movimiento con SU unidad
+    // (Kilos o Litros), asi que la unidad alcanza para saber de cual de los dos usos se trata.
+    // Solo decide cuando deja UNA sola dosis en pie: si las dos candidatas comparten unidad, la
+    // receta sigue siendo ambigua y se informa como antes, sin adivinar.
+    const mismaUnidad = cand.filter(f=>f.unidadNorm===unidadNorm);
+    const reducidas = porDosis(mismaUnidad);
+    if(reducidas.size===1){ cand = mismaUnidad; distintas = reducidas; }
+  }
   return distintas.size===1 ? cand[0] : null;
 }
 
@@ -145,7 +156,10 @@ function resolverEquivalenciaReceta(campania, cultivo){
     && normHdr(e.cultivo)===normHdr(cultivo));
   return eq ? {campania:eq.usarCampania, cultivo:eq.usarCultivo} : {campania, cultivo};
 }
-function buscarReceta(indice, campania, cultivo, insumoOriginal){
+// unidadReal: la unidad con que Albor cargo el movimiento. Es solo un DESEMPATE — nunca cambia a
+// que receta se llega cuando no hay ambiguedad.
+function buscarReceta(indice, campania, cultivo, insumoOriginal, unidadReal){
+  const unidadNorm = normUnidadDosis(unidadReal);
   if(!indice || !indice.disponible) return {fila:null, motivo:'sin_indice', via:null};
   const eq = resolverEquivalenciaReceta(campania, cultivo);
   campania = eq.campania; cultivo = eq.cultivo;
@@ -154,13 +168,13 @@ function buscarReceta(indice, campania, cultivo, insumoOriginal){
   const clave = base+normInsumoNombre(insumo);
   const porNombre = indice.porInsumo.get(clave);
   if(porNombre){
-    const f = resolverCandidatasReceta(porNombre, null);
+    const f = resolverCandidatasReceta(porNombre, null, unidadNorm);
     if(f) return {fila:f, motivo:null, via:'insumo'};
     return {fila:null, motivo:'ambigua', via:null};
   }
   const porDesc = indice.porDescripcion.get(clave);
   if(porDesc){
-    const f = resolverCandidatasReceta(porDesc, null);
+    const f = resolverCandidatasReceta(porDesc, null, unidadNorm);
     if(f) return {fila:f, motivo:null, via:'descripcion'};
     return {fila:null, motivo:'ambigua', via:null};
   }
@@ -173,7 +187,7 @@ function buscarReceta(indice, campania, cultivo, insumoOriginal){
   if(alias){
     const porAlias = indice.porInsumo.get(base+normInsumoNombre(alias.receta));
     if(porAlias){
-      const f = resolverCandidatasReceta(porAlias, alias.grupo);
+      const f = resolverCandidatasReceta(porAlias, alias.grupo, unidadNorm);
       if(f) return {fila:f, motivo:null, via:'alias'};
       return {fila:null, motivo:'ambigua', via:null};
     }
@@ -199,7 +213,7 @@ function evaluarDosisContraReceta(indice, datos){
     desvioAbsoluto:null, desvioPct:null,
     estadoReceta: RECETA_ESTADO.SIN, motivo:null,
   };
-  const hallazgo = buscarReceta(indice, campania, cultivo, insumo);
+  const hallazgo = buscarReceta(indice, campania, cultivo, insumo, unidadReal);
   salida.motivo = hallazgo.motivo;
   if(!hallazgo.fila) return salida;
 

@@ -1325,6 +1325,16 @@
     "campania": "26/27",
     "cultivo": "SOJA",
     "grupo": "INSECTICIDAS",
+    "insumo": "Chothianex",
+    "descripcion": "Clotianidina 60%",
+    "dosisHa": 0.2,
+    "unidad": "L",
+    "origen": "28/10/2026, de HOJA DE TRABAJO PRESP 26-27 SOJA · otra marca del mismo activo que \"Pilarclotrin\", misma dosis. Todavia sin movimientos en Albor: se carga porque el presupuesto lo preve"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "INSECTICIDAS",
     "insumo": "Destroyer",
     "descripcion": "Metomil 90%",
     "dosisHa": 0.4,
@@ -1338,6 +1348,16 @@
     "descripcion": "Thiametoxan 75%",
     "dosisHa": 0.1,
     "unidad": "kg"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "INSECTICIDAS",
+    "insumo": "Mind 900",
+    "descripcion": "Metomil 90%",
+    "dosisHa": 0.4,
+    "unidad": "kg",
+    "origen": "28/10/2026, de HOJA DE TRABAJO PRESP 26-27 SOJA · otra marca del mismo activo que \"Destroyer\", misma dosis. Albor lo carga en Kilos"
   },
   {
     "campania": "26/27",
@@ -1392,6 +1412,16 @@
     "descripcion": null,
     "dosisHa": 1,
     "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "NUTRICIÓN",
+    "insumo": "Root Max CoMo",
+    "descripcion": "Aminoácidos",
+    "dosisHa": 1,
+    "unidad": "L",
+    "origen": "28/10/2026, de HOJA DE TRABAJO PRESP 26-27 SOJA · Albor lo carga como \"Root Max CoMo\" en Litros, 8 movimientos de SOJA"
   },
   {
     "campania": "26/27",
@@ -1534,8 +1564,9 @@
     "grupo": "TRATAMIENTO DE SEMILLAS",
     "insumo": "AQ BPR MAX",
     "descripcion": "Bradyrhizobium Japonicun 1x1010",
-    "dosisHa": 0.15,
-    "unidad": "L"
+    "dosisHa": 0.5,
+    "unidad": "L",
+    "origen": "28/10/2026, de HOJA DE TRABAJO PRESP 26-27 SOJA · la dosis paso de 0,15 a 0,5 L en el presupuesto nuevo (fila \"Aq BPR  Max\" de TRATAMIENTO DE SEMILLAS). Albor lo carga en Litros, 12 movimientos de SOJA"
   },
   {
     "campania": "26/27",
@@ -1581,6 +1612,26 @@
     "descripcion": "azospirilum brasiliense 4x10^9 + 4 esp bacillus + sacaromices",
     "dosisHa": 0.15,
     "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "TRATAMIENTO DE SEMILLAS",
+    "insumo": "RHINO",
+    "descripcion": "Clorantraniliprol + Clotianidina",
+    "dosisHa": 0.1,
+    "unidad": "L",
+    "origen": "28/10/2026, de HOJA DE TRABAJO PRESP 26-27 SOJA · es el MISMO producto que el \"Rhino\" de INSECTICIDAS pero en otro uso y con otra dosis (0,06 kg alla, 0,1 L aca). Albor tambien los carga por separado: \"RHINO\" en Litros/TRATAMIENTO DE SEMILLAS (16 movimientos) y \"Rhino\" en Kilos/INSECTICIDAS (78). Los dos nombres normalizan igual, asi que la receta se desempata por la unidad del movimiento — ver resolverCandidatasReceta en js/data/recetas.js"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "TRATAMIENTO DE SEMILLAS",
+    "insumo": "Seed+TM",
+    "descripcion": "nutrientes + extratos de alga",
+    "dosisHa": 0.1,
+    "unidad": "L",
+    "origen": "28/10/2026, de HOJA DE TRABAJO PRESP 26-27 SOJA · el presupuesto lo nombra \"Seed +\"; se usa el nombre de Albor (\"Seed+TM\", Litros) porque la receta se busca por nombre exacto. Mismo activo y misma dosis que \"Agriker Seed\""
   },
   {
     "campania": "26/27",
