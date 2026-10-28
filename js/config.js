@@ -644,6 +644,22 @@ const RECETAS_INSUMO_ALIAS = [
   // (la urea es 46% de N; el 45 del presupuesto es un error de tipeo, no otro producto), y la dosis
   // real de 150,23 kg/ha coincide con los 0,15 ton/ha presupuestados.
   {insumo:'Urea 46-00-00', receta:'Urea'},
+  // ---- Medidos el 28/10/2026 sobre el panel de Insumos por Parcela: son los cuatro desajustes de
+  // nombre que mas filas dejaban en "Sin receta" (127 de 279). En los cuatro casos el producto YA
+  // esta en la receta del cultivo; lo unico que no coincide es como lo escribe cada sistema.
+  // Van sin cultivo salvo donde haga falta: el alias es lo ultimo que se consulta, asi que nunca
+  // pisa una coincidencia por nombre que ya funcione.
+  // Albor le agrega la concentracion. 58 filas, en ARROZ y SOJA.
+  {insumo:'Metomax 75', receta:'Metomax'},
+  // Albor le agrega el TM de marca registrada. 35 filas de ARROZ; en SOJA no hace falta porque
+  // su receta se cargo con el nombre de Albor.
+  {insumo:'Seed+TM', receta:'Seed+'},
+  // El mismo producto escrito de TRES formas: BISPYRYCE en la receta, BISPYRICE en el presupuesto
+  // y Bispyrine en Albor. 28 filas de ARROZ.
+  {insumo:'Bispyrine', receta:'BISPYRYCE'},
+  // Guiones contra puntos, y la S final en mayuscula. 6 filas de SORGO; en ARROZ el nombre de
+  // Albor ya coincide solo con su receta.
+  {insumo:'Abono 04-30-10 +4.5S', receta:'Abono 04.30.10 +4,5s', cultivo:'SORGO'},
 ];
 
 // ---- Labores que son LA MISMA labor cargada con dos nombres distintos ----

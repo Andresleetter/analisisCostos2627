@@ -1325,11 +1325,11 @@
     "campania": "26/27",
     "cultivo": "SOJA",
     "grupo": "INSECTICIDAS",
-    "insumo": "Chothianex",
+    "insumo": "Clothianex",
     "descripcion": "Clotianidina 60%",
     "dosisHa": 0.2,
     "unidad": "L",
-    "origen": "28/10/2026, de HOJA DE TRABAJO PRESP 26-27 SOJA · otra marca del mismo activo que \"Pilarclotrin\", misma dosis. Todavia sin movimientos en Albor: se carga porque el presupuesto lo preve"
+    "origen": "28/10/2026, de HOJA DE TRABAJO PRESP 26-27 SOJA · el presupuesto lo escribe \"Chothianex\" pero Albor lo carga como \"Clothianex\", y la receta se busca por nombre exacto · otra marca del mismo activo que \"Pilarclotrin\", misma dosis · ojo: hoy Albor solo lo usa en SORGO y MAIZ, cuyos presupuestos no lo listan, asi que esas filas siguen sin receta"
   },
   {
     "campania": "26/27",
