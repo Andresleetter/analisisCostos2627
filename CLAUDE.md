@@ -19,28 +19,30 @@ Respuestas, comentarios de código y mensajes de commit **en español**.
 - Servidor local para probar: cualquier estático sobre la carpeta (`python -m http.server`,
   `npx serve .`). El navegador bloquea `fetch()` sobre `file://`.
 
-## Datos: migrando del Excel a la API de Albor
+## Datos: se usa el Excel. La migración a Albor está en pausa
 
-**Hoy la fuente sigue siendo `datosCampania2627.xlsx`.** El 30/10/2026 el usuario pidió dejar de
-depender del Excel y pasar a la API, así que la regla anterior («no uses la API») quedó sin efecto.
-La migración está a medio camino:
+**La fuente es `datosCampania2627.xlsx` y por ahora sigue siéndolo.** El 30/10/2026 el usuario pidió
+migrar a la API de Albor y, ese mismo día, al toparse con que faltaba crear el almacén en Cloudflare,
+decidió **dejarlo como estaba y seguir con el Excel**. No retomes la migración por tu cuenta.
 
-- **Listo y validado:** `/api/albor/ordenes` (`CuboOrdenesTrabajo`) devuelve exactamente los mismos
-  KPIs, costos y OT que la hoja `consultaOT`.
-- **Falta el dato:** no se conoce el endpoint de los **movimientos de insumos** (`consultaInsumos`,
-  17.043 filas) ni el del **plan de cultivo** (`consultaCultivos`, 278). De esos dos cuelgan
-  Combustible, Insumos, Auditoría de Insumos por Parcela, las recetas y Control de Hectáreas, así
-  que sin ellos no se puede apagar el Excel.
-- **Listo el andamiaje:** `wrangler.jsonc` ya agenda el cron (09:00, 13:30 y 17:50 de Paraguay,
-  escritos en UTC) y `worker/index.js` tiene `scheduled()` → `tomarInstantaneas()` → R2, más la
-  ruta de lectura `/api/datos/<nombre>`.
+El andamiaje quedó hecho y **no molesta**: no toca `js/`, `index.html` ni `css/`, así que la carga
+del tablero es exactamente la de siempre. Está todo en `worker/index.js` y `wrangler.jsonc`:
+
+- Los tres reportes en `REPORTES`, con endpoints **confirmados** contra las consultas Power Query
+  del Excel: `CuboOrdenesTrabajo` (validado: mismos KPIs, costos y OT que `consultaOT`),
+  `CuboMovimientosInsumos` y `Agricultura/Cultivos`.
+- El cron de `wrangler.jsonc` (09:00, 13:30 y 17:50 de Paraguay, escritos en UTC) llamando a
+  `scheduled()` → `tomarInstantaneas()`, y la ruta de lectura `/api/datos/<nombre>`.
+- Las instantáneas se guardan **comprimidas** en el binding `DATOS`, que puede ser KV o R2
+  indistintamente (`worker/index.js` detecta cuál está atado).
+
+**Hoy no corre nada**: el binding `DATOS` está comentado, así que `tomarInstantaneas()` vuelve antes
+de consultar y `/api/datos/*` devuelve 503. **Cero tokens de Albor.** Para reactivarlo falta una sola
+cosa: crear el espacio KV en la cuenta de Cloudflare que hospeda el worker y descomentar el binding.
 
 **El navegador NUNCA le pega a Albor.** El gasto de tokens tiene que quedar fijo (3 consultas por
-reporte por día), no proporcional a las visitas: por eso el cron publica una instantánea en R2 y el
-tablero lee de ahí. No conectes `js/loader.js` a `/api/albor/*`.
-
-Mientras `INSTANTANEAS` esté vacía o no exista el binding `DATOS`, el cron corre y **no consulta
-nada**: así no gasta tokens hasta que la migración sirva para algo.
+reporte por día), no proporcional a las visitas: por eso el cron publica una instantánea y el tablero
+leería de ahí. No conectes `js/loader.js` a `/api/albor/*` ni a `/api/datos/*`.
 
 Los archivos de datos viven en **`data/`** (ruta armada una sola vez en `config.js`: `SRC_DATA`).
 Además de los dos `.xlsx` está `data/recetas-insumos-26-27.json` (dosis por hectárea de la campaña),
