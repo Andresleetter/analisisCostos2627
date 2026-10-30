@@ -1,0 +1,3 @@
+# Estado local de wrangler (cache de la CLI). Se regenera solo y no va al repo: cada archivo
+# que se sube queda para siempre en el historial, y el deploy de Cloudflare clona el repo entero.
+.wrangler/

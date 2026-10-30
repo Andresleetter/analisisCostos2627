@@ -25,9 +25,22 @@
     "crons": ["0 12 * * *", "30 16 * * *", "50 20 * * *"]
   },
   // ---- Donde se guardan las instantaneas ----
-  // PENDIENTE: hay que crear el bucket en el panel de Cloudflare y recien entonces descomentar
-  // esto. Declarar un binding de un bucket que no existe HACE FALLAR EL DEPLOY, y mientras el
-  // binding no este, scheduled() no llama a Albor — o sea que no gasta tokens al pedo.
+  // PENDIENTE: falta crear el almacen y recien entonces descomentar UNA de las dos opciones de
+  // abajo (nunca las dos: el binding se llama DATOS en los dos casos). Declarar un binding de algo
+  // que todavia no existe HACE FALLAR EL DEPLOY, y mientras el binding no este, scheduled() no
+  // llama a Albor — o sea que no gasta tokens al pedo.
+  //
+  // Opcion A, KV (recomendada). Esta pensada justo para este uso: se escribe 3 veces por dia y se
+  // lee en cada visita, y las lecturas se cachean en el borde. Se crea con:
+  //     npx wrangler kv namespace create DATOS
+  // y ese comando imprime el id que va abajo.
+  // "kv_namespaces": [
+  //   { "binding": "DATOS", "id": "PEGAR_ACA_EL_ID" }
+  // ],
+  //
+  // Opcion B, R2. Requiere habilitar R2 en el panel de Cloudflare (es una accion de cuenta, no se
+  // puede hacer desde wrangler) y despues crear el bucket. Sirve igual: worker/index.js detecta
+  // solo cual de los dos esta atado.
   // "r2_buckets": [
   //   { "binding": "DATOS", "bucket_name": "campaniadelsur-datos" }
   // ],

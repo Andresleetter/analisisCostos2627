@@ -192,14 +192,51 @@ const INSTANTANEAS = [
   },
 ];
 
-// Toma una instantanea de cada reporte de INSTANTANEAS y la deja en R2. No lanza nunca: cada
+// ---- Donde se guardan las instantaneas ----
+// El binding se llama DATOS y puede ser un espacio KV o un bucket R2, indistintamente: cual de los
+// dos es se decide SOLO en wrangler.jsonc, y este codigo se adapta en caliente. Se distinguen por
+// getWithMetadata(), que existe en KV y no en R2.
+// Para lo que hace este tablero los dos sirven, pero no son iguales: KV esta pensado para escribir
+// poco y leer mucho desde el borde (3 escrituras por dia, una lectura por visita), que es
+// exactamente este caso; R2 esta pensado para archivos grandes y no cachea en el borde.
+function almacen(env) {
+  const b = env && env.DATOS;
+  if (!b) return null;
+  const esKV = typeof b.getWithMetadata === 'function';
+  return {
+    tipo: esKV ? 'kv' : 'r2',
+    guardar(clave, bytes) {
+      return esKV
+        ? b.put(clave, bytes)
+        : b.put(clave, bytes, { httpMetadata: { contentType: 'application/json; charset=utf-8', contentEncoding: 'gzip' } });
+    },
+    async leer(clave) {
+      if (esKV) return b.get(clave, 'stream');           // null si no existe
+      const obj = await b.get(clave);
+      return obj ? obj.body : null;
+    },
+  };
+}
+
+// Todo lo que se guarda va comprimido con gzip. No es un lujo: la instantanea de insumos ya pesa
+// ~15 MiB en JSON y CRECE todos los dias (FechaHasta es hoy), mientras que KV admite como maximo
+// 25 MiB por valor. Comprimida son ~0,5 MiB, asi que el limite deja de ser un problema y de paso la
+// lectura del tablero baja de 15 MiB a medio mega.
+const LIMITE_VALOR = 25 * 1024 * 1024;
+async function comprimir(texto) {
+  const flujo = new Response(texto).body.pipeThrough(new CompressionStream('gzip'));
+  return new Response(flujo).arrayBuffer();
+}
+
+// Toma una instantanea de cada reporte de INSTANTANEAS y la guarda. No lanza nunca: cada
 // reporte se resuelve por separado y el que falla queda registrado sin arrastrar a los demas, para
 // que una corrida a medias no borre lo que ya estaba publicado.
 async function tomarInstantaneas(env) {
-  // Sin bucket no hay donde publicar, asi que NO se consulta a Albor: una consulta que no se puede
-  // guardar es un token gastado al pedo.
-  if (!env || !env.DATOS) {
-    logInterno('cron: sin binding DATOS (bucket R2); no se consulta a Albor');
+  // Sin almacen no hay donde publicar, asi que NO se consulta a Albor: una consulta que no se
+  // puede guardar es un token gastado al pedo.
+  const alm = almacen(env);
+  if (!alm) {
+    logInterno('cron: sin binding DATOS (KV o R2); no se consulta a Albor');
     return;
   }
   if (!INSTANTANEAS.length) {
@@ -235,10 +272,12 @@ async function tomarInstantaneas(env) {
       // Se guarda SOLO el array de filas, no el sobre del proxy ni el de Albor: lo que lea el
       // tablero tiene que ser el dato, no la forma en que se lo pidio.
       const texto = JSON.stringify(filas);
-      await env.DATOS.put('instantaneas/' + ins.nombre + '.json', texto, {
-        httpMetadata: { contentType: 'application/json; charset=utf-8' },
-      });
-      resultado.push({ nombre: ins.nombre, ok: true, bytes: texto.length,
+      const bytes = await comprimir(texto);
+      // Si alguna vez la instantanea comprimida se acercara al limite, se avisa en el manifiesto en
+      // vez de dejar que la escritura falle en silencio a mitad de campania.
+      if (bytes.byteLength > LIMITE_VALOR) throw new Error('demasiado_grande');
+      await alm.guardar('instantaneas/' + ins.nombre + '.json', bytes);
+      resultado.push({ nombre: ins.nombre, ok: true, bytes: texto.length, comprimido: bytes.byteLength,
         filas: filas.length, crudas, paginas: totalPaginas, cortado: cortado || undefined });
     } catch (e) {
       resultado.push({ nombre: ins.nombre, ok: false, motivo: 'excepcion:' + ((e && e.name) || 'Error') });
@@ -246,9 +285,9 @@ async function tomarInstantaneas(env) {
   }
   // El manifiesto se escribe SIEMPRE, tambien cuando algo fallo: es lo que le permite al tablero
   // saber de cuando son los datos que esta mostrando y si alguna parte quedo vieja.
-  await env.DATOS.put('instantaneas/meta.json', JSON.stringify({
-    generado: new Date().toISOString(), reportes: resultado,
-  }), { httpMetadata: { contentType: 'application/json; charset=utf-8' } });
+  await alm.guardar('instantaneas/meta.json', await comprimir(JSON.stringify({
+    generado: new Date().toISOString(), almacen: alm.tipo, reportes: resultado,
+  })));
   logInterno('cron: ' + resultado.map(r => r.nombre + '=' + (r.ok ? 'ok' : r.motivo)).join(' '));
 }
 
@@ -665,7 +704,8 @@ async function consultarReporte(request, env, reporte) {
 const PREFIJO_DATOS = '/api/datos/';
 
 async function servirInstantanea(pathname, env) {
-  if (!env || !env.DATOS) {
+  const alm = almacen(env);
+  if (!alm) {
     return json({ ok: false, error: { codigo: 'sin_almacenamiento', mensaje: 'Las instantáneas todavía no están disponibles.' } }, 503);
   }
   // Solo el nombre, sin barras: la clave se arma aca y nunca con texto crudo de la URL.
@@ -673,11 +713,15 @@ async function servirInstantanea(pathname, env) {
   if (!/^[a-z0-9-]{1,40}$/.test(nombre)) {
     return json({ ok: false, error: { codigo: 'nombre_invalido', mensaje: 'Instantánea inexistente.' } }, 404);
   }
-  const obj = await env.DATOS.get('instantaneas/' + nombre + '.json');
-  if (!obj) {
+  const cuerpo = await alm.leer('instantaneas/' + nombre + '.json');
+  if (!cuerpo) {
     return json({ ok: false, error: { codigo: 'sin_instantanea', mensaje: 'Todavía no se publicó esa instantánea.' } }, 404);
   }
-  return new Response(obj.body, {
+  // Se guarda comprimido y se descomprime aca, en vez de devolver los bytes con Content-Encoding:
+  // gzip, para no depender de como trate el borde de Cloudflare una respuesta ya codificada. Es en
+  // flujo, asi que los 15 MiB nunca estan enteros en memoria, y Cloudflare vuelve a comprimir sola
+  // la respuesta al navegador.
+  return new Response(cuerpo.pipeThrough(new DecompressionStream('gzip')), {
     status: 200,
     headers: {
       'Content-Type': 'application/json; charset=utf-8',
