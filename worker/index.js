@@ -126,6 +126,71 @@ const REPORTES = {
   },
 };
 
+// ---- Instantaneas: que se le pide a Albor en cada corrida del cron ----
+// Cada entrada se resuelve reusando consultarReporte() tal cual, con un Request sintetico: asi el
+// cron hereda sin copiar nada el login del Durable Object, la lista blanca de empresas, el filtro
+// de parametros y el manejo de errores. Agregar un reporte al cron = agregar una linea aca.
+//
+// ESTA VACIA A PROPOSITO. Para llenarla faltan dos cosas que todavia no se saben:
+//   1. el endpoint de Albor de los MOVIMIENTOS DE INSUMOS (hoy la hoja consultaInsumos, 17.043
+//      filas) y el del PLAN DE CULTIVO (hoja consultaCultivos, 278 filas). Sin esos dos no se
+//      puede dejar de depender del Excel: de ellos cuelgan Combustible, Insumos, la Auditoria de
+//      Insumos por Parcela, las recetas y el Control de Hectareas.
+//   2. los valores de los parametros de cada consulta para la campania vigente (IdsCampanias,
+//      IdMoneda, empresa). /api/albor/ordenes ya esta validado contra consultaOT, pero se valido
+//      con parametros puestos a mano, no fijados aca.
+// Mientras este vacia, el cron corre y no hace nada: ni una consulta a Albor.
+const INSTANTANEAS = [
+  // { nombre: 'ordenes', ruta: '/api/albor/ordenes', query: 'empresa=5&IdsCampanias=…' },
+];
+
+// Toma una instantanea de cada reporte de INSTANTANEAS y la deja en R2. No lanza nunca: cada
+// reporte se resuelve por separado y el que falla queda registrado sin arrastrar a los demas, para
+// que una corrida a medias no borre lo que ya estaba publicado.
+async function tomarInstantaneas(env) {
+  // Sin bucket no hay donde publicar, asi que NO se consulta a Albor: una consulta que no se puede
+  // guardar es un token gastado al pedo.
+  if (!env || !env.DATOS) {
+    logInterno('cron: sin binding DATOS (bucket R2); no se consulta a Albor');
+    return;
+  }
+  if (!INSTANTANEAS.length) {
+    logInterno('cron: no hay instantaneas configuradas; no se consulta a Albor');
+    return;
+  }
+  const resultado = [];
+  for (const ins of INSTANTANEAS) {
+    const reporte = Object.prototype.hasOwnProperty.call(REPORTES, ins.ruta) ? REPORTES[ins.ruta] : null;
+    if (!reporte) { resultado.push({ nombre: ins.nombre, ok: false, motivo: 'ruta_desconocida' }); continue; }
+    try {
+      // Request sintetico: consultarReporte() solo lee de el la query string y la URL.
+      const req = new Request('https://cron.interno' + ins.ruta + (ins.query ? '?' + ins.query : ''));
+      const resp = await consultarReporte(req, env, reporte);
+      const cuerpo = await resp.json();
+      if (!resp.ok || !cuerpo || cuerpo.ok !== true) {
+        resultado.push({ nombre: ins.nombre, ok: false, motivo: (cuerpo && cuerpo.error && cuerpo.error.codigo) || ('http_' + resp.status) });
+        continue;
+      }
+      // Se guarda SOLO el payload del reporte, no el sobre del proxy: lo que lea el tablero tiene
+      // que ser el dato, no la forma en que se lo pidio.
+      const texto = JSON.stringify(cuerpo.datos);
+      await env.DATOS.put('instantaneas/' + ins.nombre + '.json', texto, {
+        httpMetadata: { contentType: 'application/json; charset=utf-8' },
+      });
+      resultado.push({ nombre: ins.nombre, ok: true, bytes: texto.length,
+        filas: Array.isArray(cuerpo.datos) ? cuerpo.datos.length : null });
+    } catch (e) {
+      resultado.push({ nombre: ins.nombre, ok: false, motivo: 'excepcion:' + ((e && e.name) || 'Error') });
+    }
+  }
+  // El manifiesto se escribe SIEMPRE, tambien cuando algo fallo: es lo que le permite al tablero
+  // saber de cuando son los datos que esta mostrando y si alguna parte quedo vieja.
+  await env.DATOS.put('instantaneas/meta.json', JSON.stringify({
+    generado: new Date().toISOString(), reportes: resultado,
+  }), { httpMetadata: { contentType: 'application/json; charset=utf-8' } });
+  logInterno('cron: ' + resultado.map(r => r.nombre + '=' + (r.ok ? 'ok' : r.motivo)).join(' '));
+}
+
 // Empresas habilitadas para el modo 'parametro'. Es una LISTA BLANCA a proposito: el valor que llega
 // del navegador nunca se usa tal cual para armar el header — solo sirve para elegir una de estas
 // entradas. Asi el frontend no puede definir un X-Company arbitrario aunque manipule la URL.
@@ -534,9 +599,55 @@ async function consultarReporte(request, env, reporte) {
   return json({ ok: true, datos, parametros: enviados }, 200);
 }
 
+// Prefijo de lectura de las instantaneas. Es lo UNICO que va a consumir el tablero: nunca le pega
+// a /api/albor/*, asi que ninguna visita puede gastar un token de Albor.
+const PREFIJO_DATOS = '/api/datos/';
+
+async function servirInstantanea(pathname, env) {
+  if (!env || !env.DATOS) {
+    return json({ ok: false, error: { codigo: 'sin_almacenamiento', mensaje: 'Las instantáneas todavía no están disponibles.' } }, 503);
+  }
+  // Solo el nombre, sin barras: la clave se arma aca y nunca con texto crudo de la URL.
+  const nombre = pathname.slice(PREFIJO_DATOS.length);
+  if (!/^[a-z0-9-]{1,40}$/.test(nombre)) {
+    return json({ ok: false, error: { codigo: 'nombre_invalido', mensaje: 'Instantánea inexistente.' } }, 404);
+  }
+  const obj = await env.DATOS.get('instantaneas/' + nombre + '.json');
+  if (!obj) {
+    return json({ ok: false, error: { codigo: 'sin_instantanea', mensaje: 'Todavía no se publicó esa instantánea.' } }, 404);
+  }
+  return new Response(obj.body, {
+    status: 200,
+    headers: {
+      'Content-Type': 'application/json; charset=utf-8',
+      // Se revalida siempre: entre dos corridas del cron el contenido no cambia, pero cuando
+      // cambia el tablero tiene que verlo en la siguiente carga, no al vencer un TTL.
+      'Cache-Control': 'public, max-age=0, must-revalidate',
+    },
+  });
+}
+
 export default {
+  // Lo dispara el cron de wrangler.jsonc (09:00, 13:30 y 17:50 de Paraguay). waitUntil mantiene
+  // viva la corrida aunque el handler ya haya devuelto.
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(tomarInstantaneas(env));
+  },
+
   async fetch(request, env) {
     const { pathname } = new URL(request.url);
+
+    if (pathname.startsWith(PREFIJO_DATOS)) {
+      if (request.method !== 'GET') {
+        return json({ ok: false, error: { codigo: 'metodo_no_permitido', mensaje: 'Use GET.' } }, 405);
+      }
+      try {
+        return await servirInstantanea(pathname, env);
+      } catch (e) {
+        logInterno('error sirviendo instantanea: ' + ((e && e.name) || 'Error'));
+        return errorControlado('error_interno', 'Ocurrió un error al procesar la solicitud.', 500);
+      }
+    }
 
     const reporte = Object.prototype.hasOwnProperty.call(REPORTES, pathname) ? REPORTES[pathname] : null;
     if (reporte) {

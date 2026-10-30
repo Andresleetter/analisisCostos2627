@@ -12,6 +12,25 @@
   "keep_vars": true,
   // Worker/proxy hacia la API de Albor (ver worker/index.js).
   "main": "worker/index.js",
+  // ---- Actualizacion automatica de los datos ----
+  // Cloudflare agenda los cron SIEMPRE en UTC. Paraguay quedo en UTC-3 TODO EL ANIO desde que se
+  // abolio el cambio de hora (ley de octubre de 2024), asi que la conversion es fija y estos
+  // horarios no se corren nunca:
+  //    09:00 Paraguay -> 12:00 UTC
+  //    13:30 Paraguay -> 16:30 UTC
+  //    17:50 Paraguay -> 20:50 UTC
+  // Si alguna vez Paraguay volviera a mover la hora, hay que corregir estos tres valores a mano:
+  // el cron no entiende de zonas horarias.
+  "triggers": {
+    "crons": ["0 12 * * *", "30 16 * * *", "50 20 * * *"]
+  },
+  // ---- Donde se guardan las instantaneas ----
+  // PENDIENTE: hay que crear el bucket en el panel de Cloudflare y recien entonces descomentar
+  // esto. Declarar un binding de un bucket que no existe HACE FALLAR EL DEPLOY, y mientras el
+  // binding no este, scheduled() no llama a Albor — o sea que no gasta tokens al pedo.
+  // "r2_buckets": [
+  //   { "binding": "DATOS", "bucket_name": "campaniadelsur-datos" }
+  // ],
   "assets": {
     // Sin cambios: el sitio estatico completo se sigue sirviendo desde la raiz del repo.
     "directory": ".",

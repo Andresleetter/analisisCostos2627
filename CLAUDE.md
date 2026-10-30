@@ -19,13 +19,28 @@ Respuestas, comentarios de código y mensajes de commit **en español**.
 - Servidor local para probar: cualquier estático sobre la carpeta (`python -m http.server`,
   `npx serve .`). El navegador bloquea `fetch()` sobre `file://`.
 
-## Datos: se usa el Excel, no la API
+## Datos: migrando del Excel a la API de Albor
 
-El dashboard se alimenta de `datosCampania2627.xlsx`. **La API de Albor no se usa**: cada consulta
-gasta tokens y son limitados. El proxy del Worker (`worker/index.js`, con el Durable Object
-`AlborAuth`) quedó en el repo pero **sin ningún consumidor** — no lo llames ni propongas volver a
-la API sin que el usuario lo pida. No es un problema técnico: se validó contra el dato real que la
-API devuelve exactamente los mismos KPIs, costos y OT que la hoja `consultaOT`.
+**Hoy la fuente sigue siendo `datosCampania2627.xlsx`.** El 30/10/2026 el usuario pidió dejar de
+depender del Excel y pasar a la API, así que la regla anterior («no uses la API») quedó sin efecto.
+La migración está a medio camino:
+
+- **Listo y validado:** `/api/albor/ordenes` (`CuboOrdenesTrabajo`) devuelve exactamente los mismos
+  KPIs, costos y OT que la hoja `consultaOT`.
+- **Falta el dato:** no se conoce el endpoint de los **movimientos de insumos** (`consultaInsumos`,
+  17.043 filas) ni el del **plan de cultivo** (`consultaCultivos`, 278). De esos dos cuelgan
+  Combustible, Insumos, Auditoría de Insumos por Parcela, las recetas y Control de Hectáreas, así
+  que sin ellos no se puede apagar el Excel.
+- **Listo el andamiaje:** `wrangler.jsonc` ya agenda el cron (09:00, 13:30 y 17:50 de Paraguay,
+  escritos en UTC) y `worker/index.js` tiene `scheduled()` → `tomarInstantaneas()` → R2, más la
+  ruta de lectura `/api/datos/<nombre>`.
+
+**El navegador NUNCA le pega a Albor.** El gasto de tokens tiene que quedar fijo (3 consultas por
+reporte por día), no proporcional a las visitas: por eso el cron publica una instantánea en R2 y el
+tablero lee de ahí. No conectes `js/loader.js` a `/api/albor/*`.
+
+Mientras `INSTANTANEAS` esté vacía o no exista el binding `DATOS`, el cron corre y **no consulta
+nada**: así no gasta tokens hasta que la migración sirva para algo.
 
 Los archivos de datos viven en **`data/`** (ruta armada una sola vez en `config.js`: `SRC_DATA`).
 Además de los dos `.xlsx` está `data/recetas-insumos-26-27.json` (dosis por hectárea de la campaña),
