@@ -83,6 +83,29 @@ const REPORTES = {
   // Por eso la lista arranca deliberadamente CORTA — solo estos tres, como primera prueba. No hay
   // valores por defecto: si el que llama no manda uno, no se manda. Cualquier otro parametro que
   // llegue en la URL se ignora (no se reenvia) hasta que se confirme que hace falta y se agregue acá.
+  // Movimientos de insumos: la fuente de la hoja consultaInsumos. Sale de la consulta Power Query
+  // con la que hoy se arma el Excel, asi que el endpoint y los parametros estan CONFIRMADOS, no
+  // deducidos.
+  // OJO con el formato de fecha: este reporte las quiere en MM/dd/yyyy (el Excel manda
+  // "01/01/2026" y Date.ToText(..., "MM/dd/yyyy")), no en aaaa-mm-dd como los demas.
+  // El Excel ademas FILTRA lo que recibe — categoriaInsumo "Agricola" y empresa "Desarrollo del
+  // Sur SA" —, pero eso no se hace aca: el proxy devuelve el reporte tal cual y el recorte se
+  // declara en INSTANTANEAS, para que se vea que es una decision nuestra y no del reporte.
+  '/api/albor/insumos': {
+    endpoint: '/Reportes/CuboMovimientosInsumos',
+    params: ['FechaDesde', 'FechaHasta'],
+    empresa: 'parametro',
+  },
+  // Plan de cultivo: la fuente de la hoja consultaCultivos. Tambien sale de la Power Query real.
+  // A diferencia de los Cubos, este endpoint esta PAGINADO: la respuesta trae pagination.totalPages
+  // y hay que recorrer las paginas y concatenar los .data. Eso lo resuelve tomarInstantaneas(), que
+  // es quien sabe que esta armando una coleccion completa; el proxy sigue devolviendo UNA pagina,
+  // la que se le pida.
+  '/api/albor/cultivos': {
+    endpoint: '/Agricultura/Cultivos',
+    params: ['IdCampania', 'pageNumber'],
+    empresa: 'parametro',
+  },
   '/api/albor/cubo-contable': {
     endpoint: '/Reportes/CuboContable',
     params: ['FechaDesde', 'FechaHasta', 'IdMoneda'],
@@ -131,17 +154,42 @@ const REPORTES = {
 // cron hereda sin copiar nada el login del Durable Object, la lista blanca de empresas, el filtro
 // de parametros y el manejo de errores. Agregar un reporte al cron = agregar una linea aca.
 //
-// ESTA VACIA A PROPOSITO. Para llenarla faltan dos cosas que todavia no se saben:
-//   1. el endpoint de Albor de los MOVIMIENTOS DE INSUMOS (hoy la hoja consultaInsumos, 17.043
-//      filas) y el del PLAN DE CULTIVO (hoja consultaCultivos, 278 filas). Sin esos dos no se
-//      puede dejar de depender del Excel: de ellos cuelgan Combustible, Insumos, la Auditoria de
-//      Insumos por Parcela, las recetas y el Control de Hectareas.
-//   2. los valores de los parametros de cada consulta para la campania vigente (IdsCampanias,
-//      IdMoneda, empresa). /api/albor/ordenes ya esta validado contra consultaOT, pero se valido
-//      con parametros puestos a mano, no fijados aca.
-// Mientras este vacia, el cron corre y no hace nada: ni una consulta a Albor.
+// Cada entrada declara:
+//   params(pagina) -> objeto con los parametros de ESA consulta (se codifican con URLSearchParams,
+//                     asi una barra de una fecha MM/dd/yyyy no rompe la query)
+//   lista(cuerpo)  -> de donde sacar el array de filas de la respuesta cruda de Albor
+//   paginas(cuerpo)-> opcional; si esta, el reporte es paginado y se recorren todas
+//   filtro(fila)   -> opcional; el mismo recorte que hoy hace el Excel
+//
+// FALTA 'ordenes'. Su endpoint ya esta y esta validado contra consultaOT, pero se valido con
+// parametros puestos a mano; no se conocen todavia los valores de IdsCampanias / IdMoneda /
+// TipoOrden para la campania vigente. Hasta tenerlos, el cron no lo pide.
+const MAX_PAGINAS = 50;
+const hoyMMDDYYYY = () => {
+  const d = new Date();
+  const dd = String(d.getUTCDate()).padStart(2, '0');
+  const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+  return mm + '/' + dd + '/' + d.getUTCFullYear();
+};
 const INSTANTANEAS = [
-  // { nombre: 'ordenes', ruta: '/api/albor/ordenes', query: 'empresa=5&IdsCampanias=…' },
+  {
+    nombre: 'insumos',
+    ruta: '/api/albor/insumos',
+    // Mismas fechas que el Excel: desde el 1 de enero de 2026 hasta hoy, en MM/dd/yyyy.
+    params: () => ({ empresa: '5', FechaDesde: '01/01/2026', FechaHasta: hoyMMDDYYYY() }),
+    lista: c => (c && c.data) || [],
+    // El MISMO recorte que hace el Excel despues de traer el reporte. Si alguna vez deja de
+    // coincidir la cantidad de filas con la hoja, mirar primero aca.
+    filtro: r => r && r.categoriaInsumo === 'Agricola' && r.empresa === 'Desarrollo del Sur SA',
+  },
+  {
+    nombre: 'cultivos',
+    ruta: '/api/albor/cultivos',
+    // 996 es el id de la campania vigente, el mismo que usa la consulta del Excel.
+    params: p => ({ empresa: '5', IdCampania: '996', pageNumber: String(p) }),
+    lista: c => (c && c.data) || [],
+    paginas: c => (c && c.pagination && c.pagination.totalPages) || 1,
+  },
 ];
 
 // Toma una instantanea de cada reporte de INSTANTANEAS y la deja en R2. No lanza nunca: cada
@@ -163,22 +211,35 @@ async function tomarInstantaneas(env) {
     const reporte = Object.prototype.hasOwnProperty.call(REPORTES, ins.ruta) ? REPORTES[ins.ruta] : null;
     if (!reporte) { resultado.push({ nombre: ins.nombre, ok: false, motivo: 'ruta_desconocida' }); continue; }
     try {
-      // Request sintetico: consultarReporte() solo lee de el la query string y la URL.
-      const req = new Request('https://cron.interno' + ins.ruta + (ins.query ? '?' + ins.query : ''));
-      const resp = await consultarReporte(req, env, reporte);
-      const cuerpo = await resp.json();
-      if (!resp.ok || !cuerpo || cuerpo.ok !== true) {
-        resultado.push({ nombre: ins.nombre, ok: false, motivo: (cuerpo && cuerpo.error && cuerpo.error.codigo) || ('http_' + resp.status) });
-        continue;
+      let filas = [];
+      let totalPaginas = 1, pagina = 1, cortado = false;
+      while (pagina <= totalPaginas) {
+        // Request sintetico: consultarReporte() solo lee de el la URL y la query string.
+        const qs = new URLSearchParams(ins.params(pagina)).toString();
+        const req = new Request('https://cron.interno' + ins.ruta + '?' + qs);
+        const resp = await consultarReporte(req, env, reporte);
+        const cuerpo = await resp.json();
+        if (!resp.ok || !cuerpo || cuerpo.ok !== true) {
+          throw new Error((cuerpo && cuerpo.error && cuerpo.error.codigo) || ('http_' + resp.status));
+        }
+        if (pagina === 1 && ins.paginas) {
+          totalPaginas = Math.max(1, Number(ins.paginas(cuerpo.datos)) || 1);
+          // Tope duro: un totalPages absurdo no puede convertirse en cientos de consultas a Albor.
+          if (totalPaginas > MAX_PAGINAS) { totalPaginas = MAX_PAGINAS; cortado = true; }
+        }
+        filas = filas.concat(ins.lista(cuerpo.datos) || []);
+        pagina++;
       }
-      // Se guarda SOLO el payload del reporte, no el sobre del proxy: lo que lea el tablero tiene
-      // que ser el dato, no la forma en que se lo pidio.
-      const texto = JSON.stringify(cuerpo.datos);
+      const crudas = filas.length;
+      if (ins.filtro) filas = filas.filter(ins.filtro);
+      // Se guarda SOLO el array de filas, no el sobre del proxy ni el de Albor: lo que lea el
+      // tablero tiene que ser el dato, no la forma en que se lo pidio.
+      const texto = JSON.stringify(filas);
       await env.DATOS.put('instantaneas/' + ins.nombre + '.json', texto, {
         httpMetadata: { contentType: 'application/json; charset=utf-8' },
       });
       resultado.push({ nombre: ins.nombre, ok: true, bytes: texto.length,
-        filas: Array.isArray(cuerpo.datos) ? cuerpo.datos.length : null });
+        filas: filas.length, crudas, paginas: totalPaginas, cortado: cortado || undefined });
     } catch (e) {
       resultado.push({ nombre: ins.nombre, ok: false, motivo: 'excepcion:' + ((e && e.name) || 'Error') });
     }
