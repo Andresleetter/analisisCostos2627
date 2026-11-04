@@ -4,7 +4,7 @@ Dashboard de seguimiento de campaña agrícola (Campo La Teresa). Es una web est
 
 - **`data/datosCampania2627.xlsx`** — 3 hojas: `consultaOT`, `consultaCultivos`, `consultaInsumos`.
 - **`data/presupuesto-infraestructura-26-27.json`** — 10 ítems con el presupuesto de infraestructura usado en la pestaña Auditoría (`especificacion`, `cantidadPresupuestada`, `unidadMedida`, `costo`, `importeTotal`).
-- **`data/recetas-insumos-26-27.json`** — 207 registros con la dosis por hectárea recomendada por cultivo e insumo. Es una versión **reducida** del presupuesto de insumos: solo dosis, sin costos ni volúmenes. Alimenta el seguimiento de receta de Auditoría de Insumos por Parcela.
+- **`data/recetas-insumos-26-27.json`** — 238 registros con la dosis por hectárea recomendada por cultivo e insumo. Es una versión **reducida** del presupuesto de insumos: solo dosis, sin costos ni volúmenes. Alimenta el seguimiento de receta de Auditoría de Insumos por Parcela.
 
 - **`data/receta-labores-25-26.json`** — cuántas labores distintas lleva cada cultivo en cada estadio, derivado del export de la campaña 25/26. Es el **divisor** del avance de campo: sin él, la primera labor confirmada sobre un lote lo dejaba en 100 % del estadio (ver **El divisor del avance**).
 
@@ -1314,6 +1314,34 @@ Segundo sub-módulo de la pestaña Auditoría (`js/data/auditoria.js` → `const
 ### Seguimiento de receta
 
 Compara la **dosis real por hectárea** (la que ya calculaba y mostraba el módulo) contra la **dosis recomendada** de `data/recetas-insumos-26-27.json`. La lógica vive en `js/data/recetas.js`; `render.js` solo presenta — no hay ninguna fórmula de desvío ahí.
+
+#### Incorporación de presupuestos del 04/11/2026
+
+Se compararon las hojas `INSUMOS` de los tres Excel entregados de SOJA, SORGO y ARROZ con los
+226 registros existentes. Se agregaron 12 registros, con archivo, hoja y fila en `origen`:
+
+| Cultivo | Insumo | Dosis por ha |
+|---|---|---|
+| SOJA | Maxim | 0,075 L |
+| SOJA | Chothianex | 0,2 L |
+| SORGO | Glifotec Gold (Desecación) | 3 L |
+| SORGO | Cibrafertil | 0,15 ton |
+| SORGO | Flexim | 0,0028 L |
+| SORGO | Zetapex (Pré Emergentes) | 1 kg |
+| SORGO | Mind 900 | 0,4 kg |
+| SORGO | Clorfenax | 2 L |
+| SORGO | Chothianex | 0,2 L |
+| SORGO | Utrisha | 0,3 L |
+| ARROZ | Virtue | 0,5 L |
+| ARROZ | Clothianex | 0,2 L |
+
+Se conservaron las dosis, unidades corregidas y nombres de OT ya documentados. Las altas usan
+los nombres comerciales escritos en estas hojas, sin crear equivalencias nuevas por similitud.
+`Zetapex` se agrega con la dosis de su fila (1 kg); la entrada anterior `Zetapex 70` conserva
+0,14 kg. `Glifotec Gold` de SORGO figura ahora en dos grupos con distintas dosis (3 y 0,4 L):
+la búsqueda sin grupo devuelve **Sin receta por ambigüedad**, según la regla existente, en vez
+de elegir uno de esos valores. Las hojas de insumos no traen precios; esta incorporación
+aporta referencias de dosis para Auditoría de Insumos por Parcela.
 
 **Fuente única de la dosis real.** El valor que se compara es *exactamente* el que imprime la columna "Dosis Real" (`cantidad del insumo en el lote ÷ hectáreas del lote`, calculado una sola vez en `ipInsumosDeParcela()`). No se recalcula por otro camino: la receta **enriquece** los registros, no cambia ninguna cantidad, hectárea ni costo. Verificado con un volcado completo del modelo antes/después: `insumos_parcela` queda byte-idéntico.
 

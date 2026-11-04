@@ -490,7 +490,7 @@ const AUDITORIA_GASTO_DESALIJO = "Desalijo Karanda'y / Carandai";
 const AUDITORIA_INSUMOS_CULTIVOS_EXCLUIDOS = ['AVENA', 'COBERTURA',
   'CUIDADOS DE PATIOS SILO', 'CUIDADOS DE PATIOS VIVIENDA'];
 // ---- AUDITORIA DE INSUMOS POR PARCELA: seguimiento de receta ----
-// Version reducida del presupuesto de insumos de la campania (179 registros). Es la UNICA fuente de
+// Version reducida del presupuesto de insumos de la campania. Es la UNICA fuente de
 // las dosis recomendadas: los Excel de presupuesto no se leen, y este JSON no aporta costos ni
 // volumenes totales, solo dosis por hectarea. Se descarga una sola vez al iniciar el dashboard.
 // Mismo criterio de respaldo que SRC_XLSX. Si falla, el modulo sigue funcionando y el seguimiento

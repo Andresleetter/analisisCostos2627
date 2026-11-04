@@ -2055,5 +2055,125 @@
     "descripcion": null,
     "dosisHa": 0.0028,
     "unidad": "L"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "TRATAMIENTO DE SEMILLAS",
+    "insumo": "Maxim",
+    "descripcion": "Fludioxonil + metalaxil + sedaxanes",
+    "dosisHa": 0.075,
+    "unidad": "L",
+    "origen": "04/11/2026, de HOJA DE TRABAJO PRESP 26-27 SOJA (modificado 04.08.26) (1).xlsx, hoja INSUMOS, fila 29; nombre comercial de la fila: Vibrance max- Metaflux - Maxim"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SOJA",
+    "grupo": "INSECTICIDAS",
+    "insumo": "Chothianex",
+    "descripcion": "Clotianidina 60%",
+    "dosisHa": 0.2,
+    "unidad": "L",
+    "origen": "04/11/2026, de HOJA DE TRABAJO PRESP 26-27 SOJA (modificado 04.08.26) (1).xlsx, hoja INSUMOS, fila 53; nombre comercial de la fila: Pilarclotrin - Chothianex"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SORGO",
+    "grupo": "DESECACIÓN",
+    "insumo": "Glifotec Gold",
+    "descripcion": "Glifosato DMA 60.8%",
+    "dosisHa": 3,
+    "unidad": "L",
+    "origen": "04/11/2026, de HOJA DE TRABAJO PRESP 26-27 SORGO (modificado 04.08.2026) (1).xlsx, hoja INSUMOS, fila 10; nombre comercial de la fila: Glifex gold 60,8 y Kalium- Glifotec gold; tambien figura en PRE EMERGENTES a 0,4 L/ha: sin grupo de aplicacion no hay una dosis unica para comparar"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SORGO",
+    "grupo": "FERTILIZANTES",
+    "insumo": "Cibrafertil",
+    "descripcion": "04.30.10",
+    "dosisHa": 0.15,
+    "unidad": "ton",
+    "origen": "04/11/2026, de HOJA DE TRABAJO PRESP 26-27 SORGO (modificado 04.08.2026) (1).xlsx, hoja INSUMOS, fila 23; nombre comercial de la fila: Abomo 04.30.10 +4,5s , Cibrafertil, Abono 04-30-10 COFCO"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SORGO",
+    "grupo": "TRATAMIENTO DE SEMILLAS",
+    "insumo": "Flexim",
+    "descripcion": "Fluxofenim 96%",
+    "dosisHa": 0.0028,
+    "unidad": "L",
+    "origen": "04/11/2026, de HOJA DE TRABAJO PRESP 26-27 SORGO (modificado 04.08.2026) (1).xlsx, hoja INSUMOS, fila 29; nombre comercial de la fila: Flexim"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SORGO",
+    "grupo": "HERBICIDAS PRÉ EMERGENTES",
+    "insumo": "Zetapex",
+    "descripcion": "IMAZETAPIR 10 %",
+    "dosisHa": 1,
+    "unidad": "kg",
+    "origen": "04/11/2026, de HOJA DE TRABAJO PRESP 26-27 SORGO (modificado 04.08.2026) (1).xlsx, hoja INSUMOS, fila 38; nombre comercial de la fila: Squadra - Zetapex; receta de PRE EMERGENTES (1 kg/ha), distinta de la entrada existente Zetapex 70 (0,14 kg/ha), que se conserva"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SORGO",
+    "grupo": "INSECTICIDAS",
+    "insumo": "Mind 900",
+    "descripcion": "Metomil 90%",
+    "dosisHa": 0.4,
+    "unidad": "kg",
+    "origen": "04/11/2026, de HOJA DE TRABAJO PRESP 26-27 SORGO (modificado 04.08.2026) (1).xlsx, hoja INSUMOS, fila 53; nombre comercial de la fila: Destroyer 900 - mind 900"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SORGO",
+    "grupo": "INSECTICIDAS",
+    "insumo": "Clorfenax",
+    "descripcion": "Clorfenapir 24%",
+    "dosisHa": 2,
+    "unidad": "L",
+    "origen": "04/11/2026, de HOJA DE TRABAJO PRESP 26-27 SORGO (modificado 04.08.2026) (1).xlsx, hoja INSUMOS, fila 54; nombre comercial de la fila: Paretto Huron - Clorfenax"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SORGO",
+    "grupo": "INSECTICIDAS",
+    "insumo": "Chothianex",
+    "descripcion": "Clotianidina 60%",
+    "dosisHa": 0.2,
+    "unidad": "L",
+    "origen": "04/11/2026, de HOJA DE TRABAJO PRESP 26-27 SORGO (modificado 04.08.2026) (1).xlsx, hoja INSUMOS, fila 56; nombre comercial de la fila: Pilarclotrin . Chothianex"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "SORGO",
+    "grupo": "NUTRICIÓN",
+    "insumo": "Utrisha",
+    "descripcion": "Methylobacterium symbioticum 3x10*7 UFC/g",
+    "dosisHa": 0.3,
+    "unidad": "L",
+    "origen": "04/11/2026, de HOJA DE TRABAJO PRESP 26-27 SORGO (modificado 04.08.2026) (1).xlsx, hoja INSUMOS, fila 73; nombre comercial de la fila: Utrisha"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "HERBICIDAS PUNTO DE AGUJA",
+    "insumo": "Virtue",
+    "descripcion": "Clomazone 48%",
+    "dosisHa": 0.5,
+    "unidad": "L",
+    "origen": "04/11/2026, de HOJA DE TRABAJO PRESP 26-27 ARROZ (1) (1).xlsx, hoja INSUMOS, fila 43; nombre comercial de la fila: Conductor Clomazone - Virtue"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "ARROZ",
+    "grupo": "INSECTICIDAS",
+    "insumo": "Clothianex",
+    "descripcion": "Clotianidina 60%",
+    "dosisHa": 0.2,
+    "unidad": "L",
+    "origen": "04/11/2026, de HOJA DE TRABAJO PRESP 26-27 ARROZ (1) (1).xlsx, hoja INSUMOS, fila 60; nombre comercial de la fila: Pilarclotrin - Clothianex"
   }
 ]
