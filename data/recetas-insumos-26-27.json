@@ -1071,6 +1071,46 @@
   },
   {
     "campania": "26/27",
+    "cultivo": "MAIZ",
+    "grupo": "HERBICIDAS PRÉ EMERGENTES",
+    "insumo": "Fascinate",
+    "descripcion": "Glufosinato",
+    "dosisHa": 2,
+    "unidad": "L",
+    "origen": "04/11/2026, de HOJA DE TRABAJO PRESP 26-27 MAIZ · Albor lo carga en Litros con la misma grafia · misma dosis que el registro de SOJA · OJO: tambien se mueve en lotes de ARROZ, que sigue sin receta para este producto"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "MAIZ",
+    "grupo": "INSECTICIDAS",
+    "insumo": "Mind 900",
+    "descripcion": "Metomil 90%",
+    "dosisHa": 0.4,
+    "unidad": "kg",
+    "origen": "04/11/2026, de HOJA DE TRABAJO PRESP 26-27 MAIZ · Albor lo carga en Kilos con la misma grafia · misma dosis que el registro de SOJA · solo se mueve en lotes de MAIZ"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "MAIZ",
+    "grupo": "INSECTICIDAS",
+    "insumo": "Clothianex",
+    "descripcion": "Clotianidina 60%",
+    "dosisHa": 0.2,
+    "unidad": "L",
+    "origen": "04/11/2026, de HOJA DE TRABAJO PRESP 26-27 MAIZ · Albor lo carga en Litros con la misma grafia · misma dosis que el registro de SOJA · OJO: tambien se mueve en lotes de SORGO, que sigue sin receta para este producto"
+  },
+  {
+    "campania": "26/27",
+    "cultivo": "MAIZ",
+    "grupo": "FUNGICIDAS",
+    "insumo": "Valoria",
+    "descripcion": "BIXAFEN 12,5 % + CIPROCONAZOLE 9 % + DIFENOCONAZOLE 15 % SC",
+    "dosisHa": 0.4,
+    "unidad": "L",
+    "origen": "04/11/2026, de HOJA DE TRABAJO PRESP 26-27 MAIZ · producto nuevo: no estaba en ninguna receta · Albor lo escribe en mayusculas (\"VALORIA\") y en Litros; se deja la grafia del presupuesto porque el cotejo normaliza mayusculas y no hace falta alias · solo se mueve en lotes de MAIZ"
+  },
+  {
+    "campania": "26/27",
     "cultivo": "SOJA",
     "grupo": "ACEITES Y ADJUVANTES",
     "insumo": "Garant",
