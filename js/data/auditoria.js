@@ -207,17 +207,17 @@ function construirAuditoriaInsumosParcela(rawTodasCampanias){
   //  - Ninguna OT trae mas de un valor de Has. Reales entre sus lineas de insumo, y ningun par
   //    OT+insumo aparece repetido.
   const INSUMO_CATEGORIA_OT = 'Insumo';
-  function ipEsLineaInsumoAuditable(r){
+  // Alcance del modulo SIN mirar el estado de la OT. Esta separado del estado a proposito: con los
+  // dos mezclados, contar aparte las lineas que cumplen todo MENOS estar confirmadas (ver
+  // `pendientes` mas abajo) obligaria a repetir estas mismas exclusiones en otro lado, y las dos
+  // copias se irian despegando con el tiempo.
+  function ipEstaEnAlcance(r){
     // Mismas reglas de alcance que el modulo Insumos, aplicadas a esta hoja:
     //  - COMBUSTIBLES fuera: tiene su propio modulo (Combustible), nunca se mezcla con Insumos.
     //  - INSUMOS_EXCLUIDOS fuera (config.js), misma comparacion normInsumoNombre que usa loader.js.
     //  - Movimientos ganaderos fuera. Hoy consultaOT no trae ninguno (verificado: 0 filas), pero la
     //    regla queda explicita para que un dato ganadero futuro no entre solo.
-    // Y una regla propia de esta hoja: solo OT CONFIRMADAS, igual criterio que usa todo el resto
-    // del dashboard para los importes (ver CONF mas arriba y el pie de pagina). Las Pendientes/En
-    // Ejecucion traen el insumo previsto pero costo 0: sumarlas mezclaria plan con ejecucion.
     if(String(keyOf(r,['categoria','Categoria'])||'').trim()!==INSUMO_CATEGORIA_OT) return false;
-    if(String(keyOf(r,['estado','Estado'])||'').trim()!=='Confirmado') return false;
     if(String(keyOf(r,['tipoInsumo','Tipo de Insumo'])||'').trim().toUpperCase()===TIPO_INSUMO_COMBUSTIBLE) return false;
     const nombre = String(keyOf(r,['insumo','Insumo'])||'').trim();
     if(!nombre) return false;
@@ -228,7 +228,12 @@ function construirAuditoriaInsumosParcela(rawTodasCampanias){
     if(AUDITORIA_INSUMOS_CULTIVOS_EXCLUIDOS.some(c=>normHdr(c)===normHdr(actividad))) return false;
     return true;
   }
-  const insumos_parcela_movs = rawTodasCampanias.filter(ipEsLineaInsumoAuditable).map(r=>{
+  // Y una regla propia de esta hoja: solo OT CONFIRMADAS, igual criterio que usa todo el resto del
+  // dashboard para los importes (ver CONF mas arriba y el pie de pagina). Las Pendientes/En
+  // Ejecucion traen el insumo previsto: sumarlas mezclaria plan con ejecucion.
+  function ipEstaConfirmada(r){ return String(keyOf(r,['estado','Estado'])||'').trim()==='Confirmado'; }
+  function ipEsLineaInsumoAuditable(r){ return ipEstaEnAlcance(r) && ipEstaConfirmada(r); }
+  function ipLineaDesdeOT(r){
     const servicio = String(keyOf(r,['servicio','Servicio'])||'').trim();
     // Fecha del trabajo: Fecha Real (la de ejecucion). Todas las lineas confirmadas la traen
     // cargada (verificado: 0 vacias); el resto de las fechas queda como respaldo por si el export
@@ -279,7 +284,15 @@ function construirAuditoriaInsumosParcela(rawTodasCampanias){
       ha,
       motivoSinHa: ha!=null ? null : (sinSuperficie ? 'sin_superficie' : 'ot_sin_ha'),
     };
-  });
+  }
+  const insumos_parcela_movs = rawTodasCampanias.filter(ipEsLineaInsumoAuditable).map(ipLineaDesdeOT);
+  // Lineas que cumplen todo el alcance pero cuya OT todavia no esta confirmada. NO entran en ningun
+  // numero del modulo —ni cantidades, ni costos, ni el seguimiento de receta—: se exponen solo para
+  // poder avisar en pantalla que ese consumo existe. Sin esto, un insumo aplicado en una OT En
+  // Ejecucion no aparece en ninguna parte del tablero y se lee como que nunca se uso.
+  // Se arman con el MISMO mapeo que las confirmadas para que el aviso pueda filtrarse con los
+  // mismos filtros del panel y el numero corresponda siempre a lo que se esta mirando.
+  const insumos_parcela_pendientes = rawTodasCampanias.filter(r=>ipEstaEnAlcance(r) && !ipEstaConfirmada(r)).map(ipLineaDesdeOT);
   // Campanias presentes, en el orden de presentacion de CAMPANIA_ORDEN (config.js) y despues
   // cualquier otra que aparezca — nunca se oculta ninguna. El valor es SIEMPRE la clave real de
   // consultaOT ('26/27', '26'); CAMPANIA_LABEL solo cambia el texto visible, igual que en Servicios.
@@ -295,6 +308,8 @@ function construirAuditoriaInsumosParcela(rawTodasCampanias){
     // propios de la linea), pero no pueden expresarse por hectarea. Se expone el conteo para
     // avisarlo en pantalla en vez de dejar celdas vacias sin explicacion.
     sin_ha: insumos_parcela_movs.filter(m=>m.ha==null).length,
+    // Ver arriba: consumo real que todavia no se cuenta porque su OT no esta confirmada.
+    pendientes: insumos_parcela_pendientes,
   };
   return insumos_parcela;
 }

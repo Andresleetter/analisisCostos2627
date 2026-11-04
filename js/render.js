@@ -1415,6 +1415,33 @@ function renderInsumosParcela(){
       'hectáreas planificadas, que son otra magnitud.';
   }
 
+  // ---- Aviso de consumo todavía no confirmado ----
+  // El módulo cuenta SOLO líneas de OT confirmadas (ver construirAuditoriaInsumosParcela). Las que
+  // están En Ejecución o Pendientes traen insumo aplicado igual, y no verlas en ninguna parte se
+  // lee como que ese consumo no existe. No se suman —mezclaría lo planificado con lo ejecutado—,
+  // se avisan: mismo criterio que el aviso de hectáreas de arriba. Se filtran con los MISMOS
+  // filtros del panel, así el número corresponde siempre a lo que se está mirando.
+  const pendMovs = ipFiltrar(D.insumos_parcela.pendientes, null);
+  const avisoPend = document.getElementById('ip-aviso-pendientes');
+  avisoPend.classList.toggle('hidden', pendMovs.length===0);
+  if(pendMovs.length){
+    const costoPend = Math.round(pendMovs.reduce((s,m)=>s+m.costoTotal,0)*100)/100;
+    const otsPend = new Set(pendMovs.map(m=>m.ot).filter(Boolean)).size;
+    const prodPend = new Set(pendMovs.map(m=>m.tipo+'|'+m.insumo)).size;
+    // Se desglosa por estado porque no es lo mismo una OT En Ejecución (el trabajo se está
+    // haciendo) que una Pendiente (todavía no empezó), y el que mira el aviso necesita saber cuál
+    // de las dos pesa más antes de decidir si el número le importa.
+    const porEstadoPend = new Map();
+    pendMovs.forEach(m=>{ const e=m.estadoOT||'(sin estado)'; porEstadoPend.set(e,(porEstadoPend.get(e)||0)+1); });
+    const detallePend = [...porEstadoPend.entries()].sort((a,b)=>b[1]-a[1])
+      .map(([e,n])=>'<b>'+fmt(n)+'</b> '+e).join(' y ');
+    avisoPend.innerHTML = 'Además hay <b>'+fmt(pendMovs.length)+' aplicaciones</b> ($ '+fmtUSD(costoPend)+
+      ') en <b>'+fmt(otsPend)+'</b> órdenes que todavía no están confirmadas ('+detallePend+'), con '+
+      fmt(prodPend)+' productos distintos. <b>No están contadas en ningún número de este módulo</b>: '+
+      'se cuentan solo las órdenes confirmadas, igual que los importes del resto del tablero, para no '+
+      'mezclar lo planificado con lo ejecutado. Entran solas cuando la orden se confirme.';
+  }
+
   // ---- Cantidad utilizada por unidad de medida ----
   const porUnidad = new Map();
   movs.forEach(m=>{
