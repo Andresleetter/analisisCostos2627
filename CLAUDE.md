@@ -57,10 +57,20 @@ Excel que está en `HEAD`, es decir el de la exportación **anterior**. Es la fo
 dashboard decide qué excesos de superficie son nuevos (ver README). Si no se regenera, el aviso
 queda mostrando las novedades de la subida pasada, que es peor que no mostrarlas.
 
-El orden es: sacar el `.xlsx` de `HEAD` con `git show`, correr `buildData()` sobre ese archivo,
-escribir `lotes` (`cultivo|lote`) y `repetidas` (`cultivo|lote|servicio`) ordenados, y recién
-entonces commitear el JSON junto con el `.xlsx` nuevo. El campo `exportacion_base` lleva la fecha
-de esa exportación anterior y se muestra en pantalla.
+Lo hace `tools/baseline.mjs`, que corre desde cualquier directorio y no necesita `npm install`:
+
+```
+node tools/baseline.mjs              # informa qué cambiaría, sin tocar nada
+node tools/baseline.mjs --escribir   # además escribe data/exceso-baseline.json
+```
+
+Saca el `.xlsx` de `HEAD` con `git show`, corre el `buildData()` real sobre ese archivo y escribe
+`lotes` (`cultivo|lote`) y `repetidas` (`cultivo|lote|servicio`) ordenados. El campo
+`exportacion_base` lleva la fecha de esa exportación anterior y se muestra en pantalla. Después se
+commitea el JSON **junto con** el `.xlsx` nuevo.
+
+Se niega a escribir si el `.xlsx` del working tree es idéntico al de `HEAD`: sin datos nuevos no hay
+nada que rebasear, y adelantar la foto dejaría en cero los avisos de «nuevo» que están en pantalla.
 
 ## Arquitectura del modelo de datos
 
@@ -100,7 +110,8 @@ JSON canónico (claves ordenadas, `Set`/`Map`/`Date` en forma estable), antes y 
 Se cargan los scripts con `node:vm` en un único contexto, en el mismo orden que declara
 `index.html`, y se comparan los dos volcados. En la separación de `data.js` en `js/data/` eso dio
 **9.672.151 bytes idénticos byte a byte** en las 60 claves — que es la única prueba real de que no
-se movió ninguna fórmula. Reconstruilo en el scratchpad cuando haga falta.
+se movió ninguna fórmula. Reconstruilo en el scratchpad cuando haga falta; el arranque del arnés
+(los `cargar()` en el orden de `index.html`) está copiable en `tools/baseline.mjs`.
 
 ## Reglas de negocio que NO se tocan sin pedido explícito
 
