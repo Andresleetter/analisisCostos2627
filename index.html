@@ -402,7 +402,11 @@
       <select id="ha-cultivo"><option value="">Todos los cultivos</option></select>
       <label id="ha-label-servicio" for="ha-toggle-servicio">Servicio</label>
       <div class="ha-selector" data-filtro="servicio">
-        <select id="ha-servicio" hidden aria-hidden="true" tabindex="-1"><option value="">Todos los servicios</option></select>
+        <!-- multiple: Servicio admite varios valores. Nace de que el informe PDF de labores
+             repetidas tenia que poder listar las cuatro labores de plaina y disco juntas, y con un
+             solo valor hacian falta cuatro informes. El <select> real sigue oculto y es solo el
+             estado; lo que se ve y se opera es el menu de abajo. -->
+        <select id="ha-servicio" multiple hidden aria-hidden="true" tabindex="-1"><option value="">Todos los servicios</option></select>
         <button type="button" class="ha-selector-toggle" id="ha-toggle-servicio" aria-haspopup="dialog" aria-expanded="false" aria-controls="ha-menu-servicio" aria-labelledby="ha-label-servicio ha-toggle-servicio">Todos los servicios</button>
         <div class="ha-selector-menu" id="ha-menu-servicio" role="dialog" aria-labelledby="ha-label-servicio" hidden>
           <input type="search" id="ha-buscar-servicio" placeholder="Buscar servicio…" aria-label="Buscar servicio" autocomplete="off" aria-controls="ha-opciones-servicio">
@@ -421,7 +425,7 @@
         </div>
       </div>
       <button type="button" id="ha-limpiar">Limpiar filtros</button>
-      <span class="fnote" id="ha-ayuda">Buscá por palabras, sin importar acentos o mayúsculas. Los filtros se combinan y actualizan las tablas y los indicadores.</span>
+      <span class="fnote" id="ha-ayuda">Buscá por palabras, sin importar acentos o mayúsculas. En Servicio podés elegir varios a la vez; el menú queda abierto hasta que lo cierres. Los filtros se combinan y actualizan las tablas y los indicadores.</span>
     </div>
     <div class="kpis" id="ha-kpis"></div>
     <div class="panel"><h3>Lotes con Exceso de Superficie · Detalle de OT y Labores <span id="exc-sub"></span></h3>

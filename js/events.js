@@ -27,7 +27,27 @@ document.addEventListener('DOMContentLoaded', function(){
     selector.addEventListener('click',e=>{
       const opcion=e.target.closest('[data-ha-value]');
       if(!opcion) return;
-      document.getElementById('ha-'+nombre).value=opcion.dataset.haValue;
+      const select=document.getElementById('ha-'+nombre);
+      if(select.multiple){
+        const valor=opcion.dataset.haValue;
+        if(!valor){
+          // "Todos los servicios" no es una opcion mas: limpia la seleccion.
+          [...select.options].forEach(op=>{ op.selected=false; });
+        } else {
+          const op=[...select.options].find(x=>x.value===valor);
+          if(op) op.selected=!op.selected;
+        }
+        // El menu NO se cierra: elegir cuatro labores con el menu cerrandose en cada clic
+        // obligaria a reabrirlo cuatro veces. Se cierra con Escape, con el boton o haciendo clic
+        // afuera, como antes.
+        if(D) renderControlHectareas(); else renderOpcionesSelectorHa(nombre);
+        // renderOpcionesSelectorHa rehace los botones, asi que el foco se perdio: se devuelve al
+        // mismo que se acaba de tocar, para poder seguir con el teclado.
+        const vuelve=[...selector.querySelectorAll('[data-ha-value]')].find(b=>b.dataset.haValue===valor);
+        if(vuelve) vuelve.focus();
+        return;
+      }
+      select.value=opcion.dataset.haValue;
       cerrarSelectorHa(selector,true);
       if(D) renderControlHectareas();
     });
@@ -44,10 +64,19 @@ document.addEventListener('DOMContentLoaded', function(){
       if(e.key==='Enter'&&e.target===buscador){e.preventDefault();if(opciones[0]) opciones[0].click();}
     });
     selector.addEventListener('focusout',e=>{
+      // Elegir un servicio rehace los botones del menu, asi que el que tenia el foco desaparece y
+      // el navegador dispara focusout. Eso NO es salir del filtro: si el nodo que perdio el foco
+      // ya no esta en el documento, fue nuestro propio repintado.
+      if(e.target && !e.target.isConnected) return;
       if(!selector.contains(e.relatedTarget)) cerrarSelectorHa(selector);
     });
   });
   document.addEventListener('click',e=>{
+    // Mismo caso que en focusout: cuando se elige un servicio, para cuando este listener corre el
+    // boton clickeado ya fue reemplazado, y selector.contains() responde que no esta adentro. Sin
+    // esta guarda, el menu de varios valores se cerraria en cada clic y habria que reabrirlo una
+    // vez por servicio, que es justo lo que se quiso evitar.
+    if(!e.target.isConnected) return;
     document.querySelectorAll('.ha-selector').forEach(selector=>{
       if(!selector.contains(e.target)) cerrarSelectorHa(selector);
     });
@@ -75,7 +104,7 @@ document.addEventListener('DOMContentLoaded', function(){
   window.addEventListener('afterprint', limpiarInforme);
   document.getElementById('ha-limpiar').addEventListener('click',()=>{
     document.querySelectorAll('.ha-selector').forEach(selector=>cerrarSelectorHa(selector));
-    document.getElementById('ha-servicio').value='';
+    [...document.getElementById('ha-servicio').options].forEach(op=>{ op.selected=false; });
     document.getElementById('ha-lote').value='';
     document.getElementById('ha-cultivo').value='';
     if(D) renderControlHectareas();

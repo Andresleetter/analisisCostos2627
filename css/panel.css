@@ -20,4 +20,7 @@
 .ha-selector-opciones{max-height:240px;overflow-y:auto}
 .ha-selector-opciones button{display:block;width:100%;border:0;background:transparent;color:var(--ink);text-align:left;font:inherit;font-size:13px;padding:9px 10px;cursor:pointer;white-space:normal}
 .ha-selector-opciones button:hover,.ha-selector-opciones button:focus-visible,.ha-selector-opciones button[aria-pressed="true"]{background:var(--line);outline:2px solid var(--green);outline-offset:-2px}
+/* En el selector de varios valores hay varias opciones marcadas a la vez, y solo con el fondo no
+   se distingue cual esta marcada de cual esta apenas bajo el cursor. El tilde lo dice sin color. */
+.ha-selector[data-filtro="servicio"] .ha-selector-opciones button[aria-pressed="true"]::before{content:"✓ ";font-weight:800}
 .ha-selector-estado{display:block;color:var(--muted);font-size:12px}

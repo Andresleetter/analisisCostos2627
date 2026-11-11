@@ -2893,13 +2893,15 @@ function coincideControlHa(valor, consulta, lote=false){
   const texto=normalizar(valor);
   return normalizar(consulta).split(/\s+/).every(p=>texto.includes(p));
 }
-function filtrarControlHectareas(datos, servicio, lote, servicioElegido="", loteElegido="", cultivoElegido=""){
+// serviciosElegidos es una LISTA: el filtro de Servicio admite varios a la vez (ver el <select
+// multiple> en index.html). Vacia = todos, igual que antes con la cadena vacia.
+function filtrarControlHectareas(datos, servicio, lote, serviciosElegidos=[], loteElegido="", cultivoElegido=""){
   // El cultivo se filtra por GRUPO, no por linea de detalle: cult vive en el lote (exceso,
   // cancelados) o en la fila (repetidas, sinrtk), nunca en la OT de adentro. Por eso entra junto
   // al lote y no junto al servicio.
   const porCultivo=r=>!cultivoElegido||r.cult===cultivoElegido;
   const porLote=r=>porCultivo(r)&&(!loteElegido||r.lote===loteElegido)&&coincideControlHa(r.lote,lote,true);
-  const porServicio=r=>(!servicioElegido||r.serv===servicioElegido)&&coincideControlHa(r.serv,servicio);
+  const porServicio=r=>(!serviciosElegidos.length||serviciosElegidos.includes(r.serv))&&coincideControlHa(r.serv,servicio);
   const exceso=datos.exceso.filter(porLote).map(e=>{
     const dets=e.dets.filter(porServicio), culpables=dets.filter(x=>x.over);
     if(!culpables.length) return null;
@@ -2910,7 +2912,7 @@ function filtrarControlHectareas(datos, servicio, lote, servicioElegido="", lote
   const cancelados=datos.cancelados.filter(porLote).map(e=>{
     const dets=e.dets.filter(porServicio);
     return {...e,dets,n_ot:dets.length};
-  }).filter(e=>(!servicio.trim()&&!servicioElegido)||e.n_ot);
+  }).filter(e=>(!servicio.trim()&&!serviciosElegidos.length)||e.n_ot);
   const sinrtk=datos.sinrtk.filter(r=>porLote(r)&&porServicio(r));
   return {exceso,repetidas,cancelados,sinrtk,exc_kpi:{...datos.exc_kpi,
     n:exceso.length,ha:exceso.reduce((s,e)=>s+e.diff,0),n_nuevos:exceso.filter(e=>e.nuevo).length,
@@ -2928,8 +2930,12 @@ function repArmarInforme(datos){
   const filtros=document.getElementById('rep-informe-filtros');
   if(!filtros || !datos) return;
   const elegido=(id,todos)=>{ const s=document.getElementById(id); return (s&&s.value)?s.value:todos; };
+  // Los servicios van enumerados y no como "3 servicios": en papel, el informe tiene que decir
+  // exactamente que labores esta listando — es lo primero que se mira para saber si el recorte es
+  // el que se pidio.
+  const servicios=haServiciosElegidos();
   filtros.textContent='Cultivo: '+elegido('ha-cultivo','Todos')
-    +'   ·   Servicio: '+elegido('ha-servicio','Todos')
+    +'   ·   Servicio: '+(servicios.length?servicios.join(', '):'Todos')
     +'   ·   Lote: '+elegido('ha-lote','Todos')
     +'   ·   '+datos.repetidas.length+' caso(s) · +'+fmt2(datos.exc_kpi.ha_repetidas)+' ha de más';
   // La misma fecha de archivo que muestra la chapita del encabezado (D.excel_actualizado): en un
@@ -2944,8 +2950,13 @@ function repArmarInforme(datos){
 function renderControlHectareas(){
   renderControlHectareasDatos(D);
 }
+// Los servicios elegidos, sin la opcion "Todos" (que vale ''). Lista vacia = todos.
+function haServiciosElegidos(){
+  const select=document.getElementById('ha-servicio');
+  return select?[...select.selectedOptions].map(o=>o.value).filter(Boolean):[];
+}
 function renderControlHectareasDatos(datos){
-  const servicio=document.getElementById('ha-servicio').value;
+  const servicios=haServiciosElegidos();
   const lote=document.getElementById('ha-lote').value;
   const cultivo=document.getElementById('ha-cultivo').value;
   // Cada fila arrastra el cultivo de su grupo para que las opciones de Servicio y Lote se puedan
@@ -2962,6 +2973,20 @@ function renderControlHectareasDatos(datos){
       .map(v=>'<option value="'+escHtml(String(v))+'">'+escHtml(String(v))+'</option>').join('');
     select.value=seleccion;
   };
+  // Servicio: misma idea que opciones(), pero la seleccion es una lista y el boton no puede
+  // escupir diez nombres sin romper la barra de filtros, asi que con mas de uno dice cuantos. El
+  // informe impreso SI los enumera (ver repArmarInforme): ahi el espacio sobra y el dato importa.
+  const opcionesMulti=(id,valores,seleccion,titulo)=>{
+    const select=document.getElementById(id);
+    select.innerHTML='<option value="">'+titulo+'</option>'+[...new Set([...valores,...seleccion].filter(Boolean))]
+      .sort((a,b)=>a.localeCompare(b,'es',{numeric:true}))
+      .map(v=>'<option value="'+escHtml(String(v))+'">'+escHtml(String(v))+'</option>').join('');
+    // Se vuelve a marcar lo elegido sobre las opciones recien creadas: innerHTML las descarta.
+    [...select.options].forEach(op=>{ op.selected=!!op.value&&seleccion.includes(op.value); });
+    document.getElementById(id.replace('ha-','ha-toggle-')).textContent=
+      !seleccion.length?titulo:seleccion.length===1?seleccion[0]:seleccion.length+' servicios';
+    renderOpcionesSelectorHa(id.replace('ha-',''));
+  };
   const opciones=(id,valores,seleccion,titulo)=>{
     const select=document.getElementById(id);
     select.innerHTML='<option value="">'+titulo+'</option>'+[...new Set([...valores,seleccion].filter(Boolean))]
@@ -2974,9 +2999,9 @@ function renderControlHectareasDatos(datos){
   // Las opciones de Cultivo salen de TODAS las filas, sin acotar por los otros dos: es el filtro
   // de arriba de la jerarquia y tiene que poder cambiarse siempre. Los otros dos si se acotan.
   opcionesSimple('ha-cultivo',filas.map(r=>r.cult),cultivo,'Todos los cultivos');
-  opciones('ha-servicio',filas.filter(r=>delCultivo(r)&&(!lote||r.lote===lote)).map(r=>r.serv),servicio,'Todos los servicios');
-  opciones('ha-lote',filas.filter(r=>delCultivo(r)&&(!servicio||r.serv===servicio)).map(r=>r.lote),lote,'Todos los lotes');
-  const D=filtrarControlHectareas(datos,'','',servicio,lote,cultivo);
+  opcionesMulti('ha-servicio',filas.filter(r=>delCultivo(r)&&(!lote||r.lote===lote)).map(r=>r.serv),servicios,'Todos los servicios');
+  opciones('ha-lote',filas.filter(r=>delCultivo(r)&&(!servicios.length||servicios.includes(r.serv))).map(r=>r.lote),lote,'Todos los lotes');
+  const D=filtrarControlHectareas(datos,'','',servicios,lote,cultivo);
   // TAB3 control ha
   document.getElementById('ha-kpis').innerHTML=
     `<div class="kpi"><div class="k-lab">Lotes con Exceso</div><div class="k-val c-r">${D.exc_kpi.n}</div>`+
@@ -3058,7 +3083,11 @@ function renderOpcionesSelectorHa(nombre){
   const select=document.getElementById('ha-'+nombre);
   const consulta=document.getElementById('ha-buscar-'+nombre).value;
   const opciones=[...select.options].filter(o=>!consulta.trim()||coincideControlHa(o.textContent,consulta,nombre==='lote'));
+  // En el selector de varios valores, "Todos" queda marcado justamente cuando no hay ninguno
+  // elegido: es el estado, no una opcion mas que se suma a la lista.
+  const elegidos=select.multiple?[...select.selectedOptions].map(o=>o.value).filter(Boolean):null;
+  const marcada=o=>elegidos?(o.value?elegidos.includes(o.value):!elegidos.length):o.value===select.value;
   document.getElementById('ha-opciones-'+nombre).innerHTML=opciones.map(o=>
-    '<button type="button" data-ha-value="'+escHtml(o.value)+'" aria-pressed="'+(o.value===select.value)+'">'+escHtml(o.textContent)+'</button>').join('');
+    '<button type="button" data-ha-value="'+escHtml(o.value)+'" aria-pressed="'+marcada(o)+'">'+escHtml(o.textContent)+'</button>').join('');
   document.getElementById('ha-estado-'+nombre).textContent=opciones.length?'':'Sin coincidencias';
 }
