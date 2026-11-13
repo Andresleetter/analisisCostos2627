@@ -1,7 +1,7 @@
 {
  "_comentario": "Foto de Control de Hectareas de la exportacion ANTERIOR. Solo sirve para marcar que casos aparecieron con la subida actual (ver construirControlHectareas en cultivos.js). Se regenera con `node tools/baseline.mjs --escribir` en cada subida de datos, ANTES de commitear el xlsx.",
- "exportacion_base": "2026-11-04 14:17",
- "commit_base": "24a1c1a",
+ "exportacion_base": "2026-11-11 11:44",
+ "commit_base": "b39867e",
  "lotes": [
   "ARROZ|.07A",
   "ARROZ|.27G",
@@ -39,6 +39,7 @@
   "ARROZ|.27G|Fumigacion Dron",
   "ARROZ|.27H|1° Disco",
   "ARROZ|.33A|1° Plaina",
+  "ARROZ|.35A|Fumigacion Imperator",
   "ARROZ|140|1° Disco",
   "ARROZ|201|2° Disco",
   "ARROZ|205A|1° Disco",
