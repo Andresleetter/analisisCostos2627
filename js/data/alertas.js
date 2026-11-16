@@ -43,7 +43,7 @@ function construirAlertas(OTS){
     // render.js la pasa por labelContratista() igual que el Detalle por Servicio, asi que las OT
     // sin contratista cargado se rotulan "Sin contratista" en un solo lugar y no en dos.
     return {ot:o.ot,cult:o.act,act:o.estadio||'-',serv:o.serv||'-',lote:o.lote,estado:o.estado,
-      contr:o.contr||'', ft:o.ft, diasTranscurridos, atrasada:esOTAtrasada(o)};
+      contr:o.contr||'', ft:o.ft, obs:o.obs||'', diasTranscurridos, atrasada:esOTAtrasada(o)};
   }).sort((a,b)=>{
     // Mayor a menor diasTranscurridos: más atrasadas primero, luego las de menos días, luego
     // fecha futura (diasTranscurridos negativo, las más próximas antes que las lejanas) y sin

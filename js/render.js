@@ -1593,6 +1593,10 @@ function ipTipReceta(r, i){
 // qué lado de la receta quedó la aplicación.
 function fmtPctFirmado(v){ return (v>0?'+':'')+fmt2(v)+'%'; }
 
+// OT de Alertas que tiene abierto su detalle. Como cada fila ya es una OT, la clave estable es el
+// numero de orden. Una sola queda abierta a la vez, igual que en el Detalle por Servicio.
+let alertaFilaAbierta = null;
+
 // ---- Alertas Operacionales: filtro por Estado (Pendiente / En Ejecución / Todas) ----
 function renderAlertas(){
   const estV = document.getElementById('aestado').value;
@@ -1605,6 +1609,9 @@ function renderAlertas(){
   // D.ot_ejec son totales de OT ÚNICAS por Estado (no "con atraso" — eso es D.n_ot_atrasadas, un
   // concepto distinto).
   const alertas = estV==='ALL' ? D.alertas : D.alertas.filter(a=>a.estado===estV);
+  // Si el filtro de Estado saco de la tabla la OT desplegada, se cierra: nunca se conserva un
+  // detalle que ya no corresponde a las filas visibles.
+  if(alertaFilaAbierta && !alertas.some(a=>a.ot===alertaFilaAbierta)) alertaFilaAbierta=null;
   const estTxt = estV==='ALL' ? 'Todas' : estV;
   document.getElementById('anote').textContent = estTxt;
   // KPIs con el mismo estilo que el resto del dashboard (.kpi, fondo blanco) — Lotes con Exceso
@@ -1632,12 +1639,15 @@ function renderAlertas(){
     const sinComparacionValida = a.diasTranscurridos==null || a.diasTranscurridos<0;
     const sev = a.atrasada ? (a.diasTranscurridos>30?'r':(a.diasTranscurridos>15?'o':(a.diasTranscurridos>7?'y':null))) : null;
     const ft=a.ft?(('0'+a.ft.getDate()).slice(-2)+'/'+('0'+(a.ft.getMonth()+1)).slice(-2)+'/'+a.ft.getFullYear()):'-';
-    const rowCls = sev?` class="al-${sev}"`:'';
     const diasCell = sinComparacionValida ? `<span class="mono">-</span>`
       : sev ? `<span class="pill pill-${sev}">${a.diasTranscurridos}d</span>` : `<span class="mono">${a.diasTranscurridos}d</span>`;
     // Contratista: misma traduccion que el Detalle por Servicio (labelContratista), para que
     // una OT sin el campo cargado diga "Sin contratista" y no una celda vacia.
-    return `<tr${rowCls}><td>${diasCell}</td><td class="mono">OT ${a.ot}</td><td>${a.act}</td><td>${a.serv}</td><td class="mono">${a.lote}</td><td>${a.cult}</td><td>${escHtml(labelContratista(a.contr))}</td><td>${a.estado}</td><td class="mono">${ft}</td></tr>`;}).join('')
+    const abierta=alertaFilaAbierta===a.ot;
+    const obs=String(a.obs||'').trim();
+    let html=`<tr class="al-fila${abierta?' open':''}${sev?' al-'+sev:''}" data-ot="${encodeURIComponent(a.ot)}"><td>${diasCell}</td><td class="mono"><span class="ip-caret">${abierta?'▾':'▸'}</span> OT ${escHtml(a.ot)}</td><td>${escHtml(a.act)}</td><td>${escHtml(a.serv)}</td><td class="mono">${escHtml(a.lote)}</td><td>${escHtml(a.cult)}</td><td>${escHtml(labelContratista(a.contr))}</td><td>${escHtml(a.estado)}</td><td class="mono">${ft}</td></tr>`;
+    if(abierta) html+=`<tr class="al-det"><td colspan="9"><div class="al-det-tit">Detalle de OT ${escHtml(a.ot)}</div><div class="al-det-obs"><b>Observaciones</b><div>${obs?obsHtml(obs):'<span class="ip-sin">Sin observaciones cargadas</span>'}</div></div></td></tr>`;
+    return html;}).join('')
     : '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:16px">Sin OT para el filtro seleccionado</td></tr>';
 }
 

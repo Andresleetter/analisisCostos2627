@@ -1236,6 +1236,11 @@ Módulo separado de Combustible (pestaña propia, con sus propios datos — nunc
 
 Filtro por **Estado** (`Todas` / `Pendiente` / `En Ejecución`), mismo patrón visual que los demás filtros del dashboard. Al cambiar, recalculan tanto los KPIs como la tabla de OT Atrasadas.
 
+Cada fila de OT se puede desplegar desde el caret de la columna **OT**, con el mismo gesto que el
+Detalle por Servicio. El bloque inferior muestra la **observación completa** de la orden, respetando
+sus saltos de línea; si no tiene una cargada, lo indica explícitamente. Solo puede permanecer una OT
+abierta y el detalle se cierra si el filtro de Estado deja esa orden fuera de la tabla.
+
 **Importante — "OT Pendientes" ≠ "OT Atrasadas":** el KPI "OT ATRASADAS" cuenta OT con Estado `Pendiente` **o** `En Ejecución` cuya Fecha Teórica ya pasó (comparada contra `HOY`, que es la Fecha Teórica más reciente encontrada en las OT — no la fecha real de hoy). Si alguien espera ver "1 tarea pendiente" pero el dashboard muestra más, probablemente esté comparando contra el conteo de `Estado=Pendiente` (que sí puede ser 1) en vez de contra "atrasadas" (que también suma el trabajo en ejecución demorado). El KPI separado "OT Pendientes" usa el mismo criterio `Estado=Pendiente` que el resto del dashboard, sin filtrar por atraso.
 
 **Color de fila por días de atraso** (puramente visual, no depende del filtro de Estado): ≤7 días sin color (fila neutra), 8-15 amarillo suave, 16-30 naranja fuerte, >30 rojo intenso. El color se calcula por fila sobre el subconjunto ya filtrado por Estado, nunca al revés.
