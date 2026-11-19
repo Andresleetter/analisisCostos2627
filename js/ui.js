@@ -129,11 +129,47 @@
     }
   }
 
+  // ---------------------------------------------------------------- aviso de novedades
+  // Muestra UNA sola vez el bloque #novedades (index.html), que cuenta que cambio el tablero.
+  //
+  // No se confunde con el aviso de datos nuevos (vigilarDatosNuevos, js/loader.js): aquel vigila
+  // el .xlsx y ofrece recargar; este habla de la herramienta y no recarga nada.
+  //
+  // Reglas deliberadas:
+  //  - El contenido y la version viven en el HTML, no aca. Para anunciar algo nuevo se edita el
+  //    data-version y la lista; este codigo no cambia.
+  //  - Se muestra hasta que el usuario lo cierre. No se va solo a los cinco segundos: si el aviso
+  //    aparece mientras mira otra cosa y se desvanece, el cambio no se anuncio, se escondio.
+  //  - Lo cerrado se guarda en localStorage con la version en la clave, asi un anuncio futuro
+  //    vuelve a aparecer aunque este haya sido cerrado.
+  //  - Todo el acceso a localStorage va en try/catch: en ventana privada o con el almacenamiento
+  //    bloqueado, leer o escribir TIRA. Si falla, el aviso se muestra igual — repetir un anuncio
+  //    es mucho menos grave que tragarse un error y dejar el tablero a medio iniciar.
+  //  - Arranca con medio segundo de retraso: el tablero entra con su propia animacion de revelado
+  //    y un cartel que aparece encima en el mismo instante tapa justamente lo que se esta
+  //    mostrando.
+  function avisarNovedades(){
+    var caja = document.getElementById('novedades');
+    if(!caja) return;
+    var version = caja.getAttribute('data-version') || '';
+    var clave = 'novedades-vistas:' + version;
+    var visto = false;
+    try { visto = window.localStorage.getItem(clave) === '1'; } catch(e){ visto = false; }
+    if(visto) return;
+    var ok = document.getElementById('novedades-ok');
+    if(ok) ok.addEventListener('click', function(){
+      caja.hidden = true;
+      try { window.localStorage.setItem(clave, '1'); } catch(e){}
+    });
+    window.setTimeout(function(){ caja.hidden = false; }, 500);
+  }
+
   function iniciar(){
     vigilarScroll();
     prepararRevelado();
     espejarPestanaActiva();
     vigilarBadges();
+    avisarNovedades();
   }
 
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', iniciar);

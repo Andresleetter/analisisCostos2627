@@ -117,13 +117,13 @@
          columna pueda encogerse a solo iconos en pantallas chicas sin tocar el script. -->
     <nav class="tabs" id="tabs-nav" aria-label="Módulos del tablero">
       <p class="tabs-rotulo">Módulos</p>
-      <button class="tab active" data-mod="resumen" title="Resumen Ejecutivo"><svg class="tab-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 13h7V4H4v9Zm0 7h7v-5H4v5Zm9 0h7v-9h-7v9Zm0-16v5h7V4h-7Z"/></svg><span class="tab-lbl">Resumen Ejecutivo</span></button>
-      <button class="tab" data-mod="servicios" title="Servicios"><svg class="tab-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M4 12h16M4 17h7"/><circle cx="18" cy="7" r="2"/><circle cx="14" cy="17" r="2"/></svg><span class="tab-lbl">Servicios</span></button>
-      <button class="tab" data-mod="combustible" title="Combustible"><svg class="tab-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 20V5a2 2 0 0 1 2-2h5a2 2 0 0 1 2 2v15M3 20h13M8 8h3"/><path d="M14 9h2.5a2 2 0 0 1 2 2v5a1.5 1.5 0 0 0 3 0V9l-2.5-3"/></svg><span class="tab-lbl">Combustible</span></button>
-      <button class="tab" data-mod="insumos" title="Insumos"><svg class="tab-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4 7v10l8 4 8-4V7l-8-4Z"/><path d="m4 7 8 4 8-4M12 11v10"/></svg><span class="tab-lbl">Insumos</span></button>
-      <button class="tab" data-mod="hectareas" title="Control de Hectáreas"><svg class="tab-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 4 6 2.5L21 4v13l-6 2.5L9 17l-6 2.5V6.5L9 4Z"/><path d="M9 4v13M15 6.5v13"/></svg><span class="tab-lbl">Control de Hectáreas</span><span class="badge" id="b-exc">0</span></button>
-      <button class="tab" data-mod="alertas" title="Alertas Operativas"><svg class="tab-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4.5 2.8 19.5h18.4L12 4.5Z"/><path d="M12 10v4M12 17h.01"/></svg><span class="tab-lbl">Alertas Operativas</span><span class="badge" id="b-al">0</span></button>
-      <button class="tab" data-mod="auditoria" title="Auditoría"><svg class="tab-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 5 6v6c0 4.2 2.9 7.8 7 9 4.1-1.2 7-4.8 7-9V6l-7-3Z"/><path d="m9 12 2 2 4-4"/></svg><span class="tab-lbl">Auditoría</span></button>
+      <button class="tab active" data-mod="resumen" aria-label="Resumen Ejecutivo" data-tooltip="Resumen Ejecutivo"><svg class="tab-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 13h7V4H4v9Zm0 7h7v-5H4v5Zm9 0h7v-9h-7v9Zm0-16v5h7V4h-7Z"/></svg><span class="tab-lbl">Resumen Ejecutivo</span></button>
+      <button class="tab" data-mod="servicios" aria-label="Servicios" data-tooltip="Servicios"><svg class="tab-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M4 12h16M4 17h7"/><circle cx="18" cy="7" r="2"/><circle cx="14" cy="17" r="2"/></svg><span class="tab-lbl">Servicios</span></button>
+      <button class="tab" data-mod="combustible" aria-label="Combustible" data-tooltip="Combustible"><svg class="tab-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 20V5a2 2 0 0 1 2-2h5a2 2 0 0 1 2 2v15M3 20h13M8 8h3"/><path d="M14 9h2.5a2 2 0 0 1 2 2v5a1.5 1.5 0 0 0 3 0V9l-2.5-3"/></svg><span class="tab-lbl">Combustible</span></button>
+      <button class="tab" data-mod="insumos" aria-label="Insumos" data-tooltip="Insumos"><svg class="tab-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4 7v10l8 4 8-4V7l-8-4Z"/><path d="m4 7 8 4 8-4M12 11v10"/></svg><span class="tab-lbl">Insumos</span></button>
+      <button class="tab" data-mod="hectareas" aria-label="Control de Hectáreas" data-tooltip="Control de Hectáreas"><svg class="tab-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 4 6 2.5L21 4v13l-6 2.5L9 17l-6 2.5V6.5L9 4Z"/><path d="M9 4v13M15 6.5v13"/></svg><span class="tab-lbl">Control de Hectáreas</span><span class="badge" id="b-exc">0</span></button>
+      <button class="tab" data-mod="alertas" aria-label="Alertas Operativas" data-tooltip="Alertas Operativas"><svg class="tab-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4.5 2.8 19.5h18.4L12 4.5Z"/><path d="M12 10v4M12 17h.01"/></svg><span class="tab-lbl">Alertas Operativas</span><span class="badge" id="b-al">0</span></button>
+      <button class="tab" data-mod="auditoria" aria-label="Auditoría" data-tooltip="Auditoría"><svg class="tab-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 5 6v6c0 4.2 2.9 7.8 7 9 4.1-1.2 7-4.8 7-9V6l-7-3Z"/><path d="m9 12 2 2 4-4"/></svg><span class="tab-lbl">Auditoría</span></button>
     </nav>
 
     <main class="isla">
@@ -631,6 +631,25 @@
 <button type="button" class="aviso-datos" id="aviso-datos" hidden>
   Hay datos nuevos<span class="aviso-datos-cta">Actualizar</span>
 </button>
+
+<!-- Aviso de NOVEDADES del tablero. Es otra cosa que el aviso de datos nuevos de arriba, y por eso
+     son dos piezas y no una: aquel dice que cambio el ARCHIVO de datos y ofrece recargar; este
+     dice que cambio el TABLERO —lo que se ve y como se usa— y solo pide un enterado.
+     Lo muestra avisarNovedades() (js/ui.js) una sola vez por version: el id de la version es el
+     data-version de abajo, y al cerrarlo queda guardado en localStorage. Para anunciar un cambio
+     futuro se toca SOLO este bloque (la fecha del data-version y los renglones de la lista); el
+     script no sabe nada del contenido y no hay que tocarlo.
+     Va fuera de .wrap porque es position:fixed, mismo criterio que #overlay y #aviso-datos. -->
+<aside class="novedades" id="novedades" data-version="2026-11-19" role="status" hidden>
+  <p class="novedades-cab"><span class="novedades-chip">Novedades</span> 19/11/2026</p>
+  <ul class="novedades-lista">
+    <li><b>Los módulos pasaron al costado.</b> La barra de arriba se volvió una columna de iconos
+      a la izquierda; apoyando el mouse sobre cada uno aparece su nombre.</li>
+    <li><b>Combustible · Ingresos se despliega.</b> Cada proveedor abre con un clic y muestra
+      compra por compra: fecha, comprobante, campaña y litros.</li>
+  </ul>
+  <button type="button" class="novedades-ok" id="novedades-ok">Entendido</button>
+</aside>
 
 <script src="vendor/xlsx.full.min.js" defer></script>
 <script src="js/config.js" defer></script>

@@ -29,13 +29,12 @@
   /* Anillo de foco de Horizon: 3px del color de accion al 14%. Reemplaza al outline de 2px solo
      donde esta hoja lo dice; el :focus-visible de teclado del resto del tablero no se toca. */
   --hz-ring:0 0 0 3px rgba(9,92,76,.14);
-  /* 248px: MEDIDO, no elegido a ojo. Es el ancho mas angosto en el que los siete rotulos entran
-     en UNA sola linea con el icono delante y sin chocar contra el contador. El que manda es
-     "Control de Hectáreas" con su chapita de 23: a 236 le faltan 9px y a 224, veintiuno.
-     Cada pixel de la columna se lo saca a la isla, que es donde estan las tablas de siete
-     columnas, asi que no se redondea para arriba por las dudas.
-     Los nombres NO se acortaron para ganar lugar: son los que el usuario conoce. */
-  --hz-nav:248px;
+  /* 64px: la columna es un RIEL DE ICONOS, no una lista de nombres. Asi la dibuja la referencia
+     (.nuevo-sidebar de Horizon va en 42px) y asi se pidio el 19/11/2026, despues de ver la
+     version con rotulos: ocupaba 248px de pagina para repetir siete palabras que no cambian.
+     El nombre no se pierde: aparece como globo al apoyar el mouse (data-tooltip, mas abajo) y
+     sigue en el aria-label para los lectores de pantalla. Son 184px que vuelven a la tabla. */
+  --hz-nav:64px;
 }
 
 /* ================================================================
@@ -81,9 +80,10 @@
   background:var(--card);
   flex-wrap:nowrap;
   justify-content:flex-start;
+  align-items:center;
   flex-direction:column;
-  gap:3px;
-  padding:14px 12px;
+  gap:6px;
+  padding:12px 8px;
   border:0;
   border-radius:22px;
   box-shadow:var(--hz-shadow);
@@ -92,34 +92,55 @@
   position:sticky;
   top:18px;
   margin-bottom:0;
+  /* Por encima de la isla: el globo con el nombre del modulo sale del riel hacia la derecha y
+     pasa por arriba de la tarjeta de filtros, que ya tiene z-index:20 (shell.css). Sin esta
+     linea el globo queda por debajo y se lee cortado. */
+  z-index:30;
 }
-.tabs-rotulo{
-  font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;
-  color:var(--muted);padding:4px 12px 10px;
-}
+/* El rotulo "MÓDULOS" no entra en un riel de 64px y tampoco hace falta: siete iconos en columna
+   al costado de la pagina no se confunden con otra cosa. Sigue en el HTML para el menu del
+   telefono, que si es una lista con nombres. */
+.tabs-rotulo{display:none}
 .tab{
   flex:none;
-  justify-content:flex-start;
-  text-align:left;
-  gap:11px;
-  padding:11px 12px;
+  justify-content:center;
+  width:46px;height:44px;
+  padding:0;
   border-radius:14px;
-  /* 13px y no los 14 de la barra horizontal: con 14 el rotulo mas largo pide 258px de columna y
-     esos 46px de mas salen de la tabla. A 13 entran los siete en 212. */
   font-size:13px;
   position:relative;
   transition:background-color .18s ease,color .18s ease;
 }
-.tab-ico{width:19px;height:19px;flex:0 0 19px;opacity:.9}
-/* nowrap: un rotulo partido en dos lineas hace que la columna quede con botones de alturas
-   distintas y se lee como un error. Con el contador fuera del flujo (abajo) ninguno se corta. */
-.tab-lbl{flex:1;min-width:0;white-space:nowrap;padding-right:38px}
-/* El contador sale del flujo y se ancla a la derecha: si ocupara lugar en la fila, los dos
-   modulos que lo llevan necesitarian 40px mas de columna que los otros cinco. */
-.tab .badge{position:absolute;right:10px;top:50%;transform:translateY(-50%)}
+.tab-ico{width:20px;height:20px;flex:0 0 20px;opacity:.9}
+/* El nombre se oculta en el riel y vuelve en el menu del telefono (ver el media query de abajo).
+   No se borra del HTML: es el texto accesible del boton. */
+.tab-lbl{display:none}
+/* ---- El globo con el nombre ---- */
+/* Es el de la referencia (.nuevo-sidebar-link::after): sale a la derecha del icono, con el nombre
+   en una linea y sin retardo. Se prefiere al tooltip nativo del navegador porque ese tarda cerca
+   de un segundo en aparecer, y en un riel de iconos el nombre tiene que estar enseguida.
+   El texto sale de data-tooltip y no de title justamente para no tener los dos globos a la vez;
+   el nombre accesible lo da aria-label (ver index.html). */
+.tab[data-tooltip]::after{
+  content:attr(data-tooltip);
+  position:absolute;left:calc(100% + 10px);top:50%;
+  transform:translate(-5px,-50%);
+  z-index:60;
+  padding:6px 10px;border-radius:9px;
+  background:var(--ink);color:var(--card);
+  font-size:11.5px;font-weight:700;letter-spacing:.01em;white-space:nowrap;
+  box-shadow:0 8px 20px -8px rgba(9,60,50,.55);
+  opacity:0;pointer-events:none;
+  transition:opacity .16s ease,transform .16s ease;
+}
+.tab[data-tooltip]:hover::after,.tab[data-tooltip]:focus-visible::after{
+  opacity:1;transform:translate(0,-50%);
+}
+/* El contador no cabe al lado del icono: va de chapita en la esquina, como en la referencia. */
+.tab .badge{position:absolute;top:3px;right:3px;padding:0 5px;font-size:9.5px;line-height:15px}
 .tab:hover{background:var(--tint-brand-soft);color:var(--ink)}
 /* El modulo abierto NO se rellena de verde pleno como antes: Horizon marca el activo con un tinte
-   suave, el rotulo en el color de accion y una barra al borde. Sobre --tint-brand-soft el
+   suave, el icono en el color de accion y una barra al borde. Sobre --tint-brand-soft el
    --acento da 7,16:1, de modo que el cambio no pierde contraste contra el blanco-sobre-verde que
    habia (7,93): sigue pasando AAA. */
 .tab.active{
@@ -128,55 +149,43 @@
   font-weight:800;
 }
 .tab.active::before{
-  content:"";position:absolute;left:0;top:50%;transform:translateY(-50%);
+  content:"";position:absolute;left:-8px;top:50%;transform:translateY(-50%);
   width:3px;height:22px;border-radius:0 3px 3px 0;background:var(--acento);
 }
 /* El contador de excesos y el de alertas siguen siendo rojos: tabs.css los invertia (blanco con
    numero rojo) porque la pestania activa era un bloque verde, y ya no lo es. */
 .tab.active .badge{background:var(--r);color:#fff}
 
-/* ---- Pantallas medianas: la columna se queda, pero solo con iconos ---- */
-/* Entre 900 y 1180 la isla se queda sin ancho util para las tablas de siete columnas. Antes de
-   mandar la navegacion al menu desplegable, Horizon la encoge a un riel de iconos; se ganan 174px
-   sin perder ningun modulo de vista. */
-@media (min-width:901px) and (max-width:1180px){
-  :root{--hz-nav:62px}
-  .tabs{padding:12px 9px;align-items:center;gap:7px}
-  .tabs-rotulo{display:none}
-  .tab{justify-content:center;padding:11px 0;width:44px}
-  /* Sin rotulo visible, el nombre del modulo lo da el title del boton (ver index.html), que el
-     navegador muestra al apoyar el mouse. No se inventa un tooltip propio: el nativo alcanza y no
-     deja nada sin nombre para un lector de pantalla. */
-  .tab-lbl{display:none}
-  .tab .badge{top:2px;right:2px;transform:none;padding:0 5px;font-size:9.5px;line-height:15px}
-}
 /* ---- Telefono y tablet vertical: vuelve el menu desplegable de tabs.css ---- */
 /* A 900px tabs.css oculta la columna y enciende el boton hamburguesa. La grilla tiene que
    deshacerse ahi mismo: con display:grid y la columna en display:none quedaria una franja vacia
    de 236px al costado del contenido. */
 @media (max-width:900px){
   .shell{display:block}
-  .tabs{position:static;margin-bottom:0}
+  .tabs{position:static;margin-bottom:0;align-items:stretch;padding:14px 12px;gap:3px}
   .tabs.open{margin-bottom:18px}
+  /* En el menu desplegable no hay riel: vuelven el rotulo del grupo y el nombre de cada modulo,
+     que es lo que se puede tocar con el dedo. El globo se apaga —en una pantalla tactil no hay
+     "apoyar el mouse"— y el contador vuelve a su lugar natural, a la derecha del nombre. */
+  .tabs-rotulo{display:block;font-size:10px;font-weight:800;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--muted);padding:4px 12px 10px}
+  .tab{width:auto;height:auto;justify-content:flex-start;gap:11px;padding:12px;text-align:left}
+  .tab-lbl{display:block;flex:1;min-width:0;white-space:nowrap}
+  .tab[data-tooltip]::after{display:none}
+  .tab .badge{position:static;font-size:11px;line-height:normal;padding:1px 8px}
+  .tab.active::before{left:0}
 }
 
-/* ---- Consecuencia medida de la columna: la cifra mas larga del Resumen ---- */
-/* La isla es 268px mas angosta que la pagina entera, y la unica cifra del tablero que no entraba
-   es el Gasto confirmado del Resumen Ejecutivo: "$ 3.212.324,13" pide 234px y la tarjeta le da
-   212, asi que salia cortada con puntos suspensivos ("$ 3.212.324..."). Un numero cortado es un
-   numero mal, no un detalle de estilo.
-   Se baja el TOPE del clamp de 34 a 28 (a 28 la cifra ocupa 193 de los 212 disponibles) y se deja
-   el minimo y el vw como estaban. Es la misma correccion que shell.css ya hace para la fila de
-   cinco KPI de Servicios, por el mismo motivo y con la misma cuenta.
-   Va fuera de `.hz` a proposito: el angostamiento lo causa la columna, que vale para todo el
-   tablero, no la piel nueva. */
-#exec-kpis .k-val{font-size:clamp(22px, 2vw, 28px)}
-/* Por lo mismo, el pie de una tarjeta del Resumen ("ejecutado en 3.543 órdenes confirmadas") pide
-   243px y tiene 208: estaba en nowrap y se cortaba. Un pie de tarjeta no necesita una sola linea
-   —no es una cifra que se compare con la de al lado—, asi que baja de renglon en vez de cortarse.
-   Es el unico texto que cambia de comportamiento: se comparo el tablero entero con y sin esta
-   hoja, modulo por modulo, y los demas recortes son los que ya existian antes. */
-#exec-kpis .k-foot{white-space:normal}
+/* ---- La cifra mas larga del Resumen: ya no hace falta tocarla ---- */
+/* Mientras la columna llevaba los rotulos (248px), el Gasto confirmado del Resumen no entraba en
+   su tarjeta —pedia 234px y tenia 212— y habia que bajarle el tope del clamp a 28. Con el riel de
+   64px la tarjeta volvio a 304px y la cifra a 34px ocupa 234: entra con 70 de sobra, asi que la
+   correccion se retira en vez de quedar como deuda. Medido, no supuesto.
+   Lo mismo con el pie de esa tarjeta, que vuelve a entrar en una linea, y con los dos nombres del
+   ranking que se recortaban con la columna ancha.
+   El unico que NO se arregla solo es la ayuda del buscador de Control de Hectareas: esa frase no
+   entra en una linea ni con el riel, asi que conserva su regla (mas abajo). Comparado modulo por
+   modulo con y sin esta hoja, no queda ningun otro texto que antes entrara y ahora se recorte. */
 
 /* ================================================================
    3. PIEL — por ahora solo la pestania marcada .hz
@@ -225,6 +234,9 @@
 /* La cabecera en versalitas ya existia (shell.css): Horizon solo la abre un poco mas y le da aire.
    La raya punteada entre filas se cambia por una continua al 100% de --line, que es como se ven
    las tablas de Horizon; es el unico cambio visible del cuerpo. */
+/* La ayuda del buscador de Control de Hectareas es una frase, no una cifra: no entra en una linea
+   dentro de la isla y estaba en nowrap, asi que se cortaba. Baja de renglon. */
+.isla .ha-filtros .fnote{white-space:normal}
 .isla .scroll{border-radius:18px}
 /* El aire de Horizon se agrega ARRIBA y ABAJO, nunca a los costados: hay columnas con un ancho
    maximo fijo y texto recortado a proposito (.col-contratista va a 170px tope), y dos pixeles mas
@@ -233,9 +245,6 @@
    antes de esta hoja. El padding lateral se queda, entonces, en los 12 de shell.css. */
 .isla th{letter-spacing:.08em;padding:13px 12px}
 .isla td{border-bottom:1px solid var(--line)!important;padding:12px 12px}
-/* La ayuda del buscador de Control de Hectareas es una frase, no una cifra: con la isla mas
-   angosta no entra en una linea y estaba en nowrap, asi que se cortaba. Baja de renglon. */
-.isla .ha-filtros .fnote{white-space:normal}
 /* Las filas que se despliegan se encienden al pasar por encima — ya lo hacian, pero sin
    transicion; asi el gesto se lee igual que en el resto de Horizon. */
 .isla tr.cu-fila{transition:background-color .18s ease}
@@ -245,3 +254,52 @@
   transition:background-color .18s ease,box-shadow .18s ease,transform .18s ease;
 }
 .isla .prob-link:active{transform:scale(.98)}
+
+/* ================================================================
+   4. AVISO DE NOVEDADES
+   ================================================================
+   Cartel que cuenta que cambio el TABLERO. Lo enciende avisarNovedades() (js/ui.js) una vez por
+   version y se va cuando el usuario lo cierra.
+   Va abajo a la IZQUIERDA a proposito: abajo a la derecha vive el aviso de datos nuevos
+   (.aviso-datos, header.css) y los dos pueden estar encendidos al mismo tiempo. */
+.novedades{
+  position:fixed;left:20px;bottom:20px;z-index:900;
+  width:min(340px, calc(100vw - 40px));
+  background:var(--card);
+  border:0;border-radius:20px;
+  box-shadow:var(--hz-shadow-lift);
+  padding:16px 18px 14px;
+  font-size:12.5px;line-height:1.5;color:var(--ink);
+  /* La entrada es la misma curva que usan las tarjetas al revelarse. */
+  animation:novedades-entra .32s cubic-bezier(.2,.8,.2,1);
+}
+/* [hidden] explicito: la hoja le da display de bloque y eso le ganaria al hidden nativo, que es
+   como arranca en el HTML. Mismo caso que .aviso-datos. */
+.novedades[hidden]{display:none}
+@keyframes novedades-entra{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.novedades-cab{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:700;
+  color:var(--muted);margin-bottom:10px}
+.novedades-chip{background:var(--tint-brand-soft);color:var(--acento);
+  border-radius:99px;padding:3px 10px;font-size:10.5px;font-weight:800;
+  letter-spacing:.06em;text-transform:uppercase}
+.novedades-lista{list-style:none;display:grid;gap:9px;margin:0 0 14px}
+/* El punto va dibujado con ::before y no con list-style para poder teñirlo del color de accion
+   sin tocar el color del texto. */
+.novedades-lista li{position:relative;padding-left:15px;color:var(--muted)}
+.novedades-lista li::before{content:"";position:absolute;left:0;top:7px;
+  width:6px;height:6px;border-radius:50%;background:var(--acento)}
+.novedades-lista b{color:var(--ink);font-weight:700}
+.novedades-ok{
+  width:100%;border:0;border-radius:99px;cursor:pointer;
+  background:var(--acento);color:var(--on-acento);
+  font-family:var(--font-sans);font-size:12.5px;font-weight:700;padding:9px 0;
+  transition:background-color .18s ease,transform .18s ease;
+}
+.novedades-ok:hover{background:var(--teal-hover)}
+.novedades-ok:active{transform:scale(.98)}
+.novedades-ok:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+/* En telefono ocupa el ancho util, como .aviso-datos. */
+@media (max-width:560px){ .novedades{left:16px;right:16px;bottom:76px;width:auto} }
+/* El cartel es de pantalla: en papel no va. reporte.css carga despues y ya apaga lo flotante,
+   pero esto no depende de que aquella hoja siga haciendolo. */
+@media print{ .novedades{display:none!important} }
