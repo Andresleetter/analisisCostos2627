@@ -2050,10 +2050,21 @@ function renderCombustible(){
   // Filtro de Movimiento: separa el consumo real de los prestamos y devoluciones de combustible.
   const tipoV=document.getElementById('ctipo').value;
   const verConsumo = tipoV==='ALL' || tipoV==='consumo';
+  // Los ingresos son la cuarta cosa que puede mirar este filtro, y hasta el 19/11/2026 era la
+  // unica que no estaba: el selector separaba consumo, prestamos y devoluciones, pero la tabla de
+  // Ingresos se mostraba siempre, eligieras lo que eligieras. Ahora el filtro manda sobre los dos
+  // paneles: con "Solo ingresos" queda solo el de arriba, y con cualquiera de los otros tres el de
+  // Ingresos se esconde — no tiene sentido mirar "solo prestamos" con la tabla de compras al lado.
+  const verIngresos = tipoV==='ALL' || tipoV==='ingreso';
+  const soloIngresos = tipoV==='ingreso';
   // Un prestamo no tiene tercero ni maquina, asi que con cualquiera de esos filtros puesto no
   // corresponde mostrarlo: la tabla quedaria mezclando una seleccion con algo que no la cumple.
   const verPrestamos = (tipoV==='ALL' || tipoV==='prestamo' || tipoV==='devolucion')
     && tercV==='ALL' && maqV==='ALL';
+  // Los dos paneles se encienden o apagan enteros, con su titulo: dejar una tarjeta con la tabla
+  // vacia y un "sin registros" adentro obliga a leer para descubrir que no habia nada que ver.
+  document.getElementById('comb-panel-ing').hidden = !verIngresos;
+  document.getElementById('comb-panel-uso').hidden = soloIngresos;
 
   // ---- KPI de balance: Ingreso vs Consumo del período (solo filtra por Mes, no por Tercero,
   // para comparar siempre el consumo TOTAL contra lo ingresado, sin importar qué tercero se mire
@@ -2236,6 +2247,7 @@ function renderCombustible(){
 
   // Los KPI, recien ahora: `tot` y `nMov` son los de la tabla que se acaba de dibujar.
   combPintarKpis({haySeleccion: tercV!=='ALL' || maqV!=='ALL' || tipoV!=='ALL', verConsumo,
+    soloIngresos, ingresos: rowsIng,
     stockInicioPeriodo, totIngresoMes, totConsumoMes, balance, balCol, pieBalance,
     tot, nMov, prestamos: rowsP});
   combArmarReporte();
@@ -2284,6 +2296,16 @@ function combPintarKpis(o){
     html = kpi('Stock Inicial', litros(o.stockInicioPeriodo), 'g')
          + kpi('Ingreso', litros(o.totIngresoMes), 'g')
          + kpi('Consumo', litros(o.totConsumoMes), 'o')
+         + balance;
+  } else if(o.soloIngresos){
+    // Con el filtro en ingresos la pregunta es cuanto entro y de cuantas compras: el Consumo no
+    // esta en pantalla, asi que un KPI de consumo no tendria contra que leerse. El Balance se
+    // queda, rotulado "del periodo", por el mismo motivo que en las demas selecciones: el stock no
+    // se puede filtrar por tipo de movimiento.
+    const I = o.ingresos||[];
+    html = kpi('Ingreso', litros(o.totIngresoMes), 'g', 'de la selección')
+         + kpi('Movimientos', String(I.reduce((s,r)=>s+r.n,0)), 'g', 'compras de gasoil del período')
+         + kpi('Proveedores', String(I.length), 'g')
          + balance;
   } else if(!o.verConsumo){
     const P = o.prestamos||[];

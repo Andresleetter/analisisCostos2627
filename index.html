@@ -354,6 +354,7 @@
       <label for="ctipo">Movimiento</label>
       <select id="ctipo">
         <option value="ALL">Todos</option>
+        <option value="ingreso">Solo ingresos</option>
         <option value="consumo">Solo consumo</option>
         <option value="prestamo">Solo préstamos</option>
         <option value="devolucion">Solo devoluciones</option>
@@ -370,7 +371,7 @@
       <p class="rep-pie" id="comb-rep-pie"></p>
     </div>
     <div class="kpis" id="comb-balance"></div>
-    <div class="panel sub"><h3>Ingresos</h3>
+    <div class="panel sub" id="comb-panel-ing"><h3>Ingresos</h3>
       <div class="scroll"><table><thead><tr><th>Proveedor</th><th class="tr">Registros</th><th class="tr">Litros</th><th class="tr">Participación</th><th class="tr">%</th></tr></thead><tbody id="combingbody"></tbody></table></div></div>
     <!-- Consumo: la columna no es "Tercero" sino "Uso / Detalle". El texto sale de la atribución
          por niveles que resuelve js/data/combustible.js (OT vinculada -> observación de la OT;
@@ -383,7 +384,7 @@
          cronológicamente, de la más antigua a la más reciente (ahí se lee la cronología de ese
          equipo). La fecha no es una columna: se lee al desplegar la fila, junto al movimiento al
          que pertenece. -->
-    <div class="panel sub"><h3>Consumo <span id="comb-uso-sub"></span></h3>
+    <div class="panel sub" id="comb-panel-uso"><h3>Consumo <span id="comb-uso-sub"></span></h3>
       <div class="scroll"><table><thead><tr><th>Uso / Detalle</th><th class="tr">Movimientos</th><th class="tr">Consumo</th><th class="tr">Participación</th><th class="tr">%</th></tr></thead><tbody id="combbody"></tbody></table></div></div>
   </section>
 
@@ -647,6 +648,10 @@
       a la izquierda; apoyando el mouse sobre cada uno aparece su nombre.</li>
     <li><b>Combustible · Ingresos se despliega.</b> Cada proveedor abre con un clic y muestra
       compra por compra: fecha, comprobante, campaña y litros.</li>
+    <li><b>Combustible · «Solo ingresos».</b> El filtro de Movimiento suma esa opción y ahora
+      manda sobre los dos paneles: muestra el que elegís y esconde el otro.</li>
+    <li><b>Auditoría usa las mismas tarjetas</b> que el resto del tablero. Los números no
+      cambiaron, solo la caja.</li>
   </ul>
   <button type="button" class="novedades-ok" id="novedades-ok">Entendido</button>
 </aside>
