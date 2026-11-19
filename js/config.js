@@ -194,6 +194,24 @@ const COMBUSTIBLE_MAQUINAS = [
   // chapa le ganaba al modelo, asi que estos movimientos se mostraban como "Chevrolet HDX314".
   {id:'hilux', label:'Hilux HDX314', variantes:['hilux hdx314','chevrolet hdx314','toyota hilux','hdx314','hilux']},
   {id:'fad575', label:'Chevrolet FAD575', variantes:['chevrolet fad575','fad575']},
+  // --- Nissan (19/11/2026, los dos equipos nuevos que pidio el usuario) ---
+  // El dato real escribe esta camioneta de cinco maneras: "Nissan ISR323", "Nissan IRS323" (con
+  // las letras cambiadas de lugar), "ISR323" a secas, y tambien "Nissan" sin chapa. Las cuatro
+  // grafias con chapa van en la MISMA entrada porque son el mismo vehiculo; la transpuesta se
+  // carga explicitamente y no se corrige a mano en ningun lado, que es el mismo criterio que ya
+  // se uso con "s10 aub800"/"s10 uab800".
+  // El orden por longitud (ver COMBUSTIBLE_MAQUINA_VARIANTES) hace el resto: en "Logistica -
+  // Nissan ISR323" gana 'nissan isr323', que es mas larga que 'nissan', asi que la camioneta con
+  // chapa nunca cae en la entrada generica.
+  {id:'nissan-isr323', label:'Nissan ISR323',
+   variantes:['nissan isr323','nissan irs323','isr323','irs323']},
+  // "Nissan" a secas: 17 movimientos (874,01 L) que nombran la marca sin chapa, contra los 10
+  // (572,83 L) que si traen la chapa. Es una entrada generica y hay
+  // que saberlo — cualquier Nissan que el dato no identifique con su chapa cae aca. Hoy eso
+  // incluye UN movimiento que dice "Nissan ISR225" (32,54 L, 22/08/2026): otra chapa, que el
+  // usuario no menciono entre los equipos nuevos. Queda bajo "Nissan" hasta que se confirme si es
+  // un tercer vehiculo o un error de tipeo; si es un vehiculo propio, se le abre su entrada.
+  {id:'nissan', label:'Nissan', variantes:['nissan']},
   // --- Maquinaria pesada y equipos fijos ---
   {id:'motoniveladora', label:'Motoniveladora', variantes:['motoniveladora']},
   {id:'sany', label:'Excavadora Sany Neumático', variantes:['sany neumatico','sany neumatica','neumatica sany','sany']},
