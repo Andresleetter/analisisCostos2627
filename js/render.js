@@ -2011,6 +2011,9 @@ function renderInsumos(){
 // y no en el DOM porque la tabla se regenera completa en cada cambio de filtro — mismo patrón que
 // ipParcelaAbierta en la Auditoría de Insumos por Parcela.
 let combUsoAbierto = null;
+// Proveedor desplegado en la tabla de Ingresos (clave normalizada del nombre). Mismo patron que
+// combUsoAbierto: uno solo abierto a la vez y se redibuja la tabla entera. null = todo plegado.
+let combIngAbierto = null;
 // Escape mínimo para meter texto del Excel dentro del HTML que arma esta página. Las observaciones
 // de OT son texto libre cargado en Albor: hoy ninguna trae < > & o comillas (verificado sobre las
 // 449 observaciones del archivo), pero cualquier carga futura podría traerlas y romper la tabla o
@@ -2071,13 +2074,30 @@ function renderCombustible(){
   // ver combPintarKpis mas abajo.
 
   // ---- Ingresos de Combustible (arriba): solo respeta el filtro de Mes ----
+  // Cada proveedor arrastra ademas sus MOVIMIENTOS individuales (D.combustible_ingresos los trae
+  // desde el modelo, ver js/data/combustible.js): la fila se despliega y muestra compra por compra,
+  // igual que el Consumo. Al agrupar varios meses en "Toda la Campaña" los movimientos de cada mes
+  // se concatenan — nunca se vuelven a sumar litros desde los movimientos, el total sigue saliendo
+  // de los grupos del modelo.
   const byIng={};
-  ingresoMes.forEach(r=>{ if(!byIng[r.quien]) byIng[r.quien]={quien:r.quien,n:0,litros:0}; const o=byIng[r.quien]; o.n+=r.n; o.litros+=r.litros; });
-  const rowsIng=Object.values(byIng).sort((a,b)=>b.litros-a.litros);
+  ingresoMes.forEach(r=>{ if(!byIng[r.quien]) byIng[r.quien]={quien:r.quien,n:0,litros:0,movs:[]};
+    const o=byIng[r.quien]; o.n+=r.n; o.litros+=r.litros; o.movs=o.movs.concat(r.movs||[]); });
+  const rowsIng=Object.values(byIng)
+    .map(r=>({...r, litros:Math.round(r.litros*100)/100,
+      movs:r.movs.slice().sort((a,b)=>(b.fecha-a.fecha)||(b.litros-a.litros))}))
+    .sort((a,b)=>b.litros-a.litros);
   const mxIng=Math.max(1,...rowsIng.map(r=>r.litros));
-  document.getElementById('combingbody').innerHTML = rowsIng.length ? rowsIng.map(r=>
-    `<tr><td><b>${r.quien}</b></td><td class="tr mono">${r.n}</td><td class="tr mono">${fmt2(r.litros)}</td><td class="tr"><div class="sopbar"><div style="width:${r.litros/mxIng*100}%"></div></div></td><td class="tr mono">${totIngresoMes?(r.litros/totIngresoMes*100).toFixed(1):0}%</td></tr>`
-  ).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px">Sin ingresos de stock en el período</td></tr>';
+  document.getElementById('combingbody').innerHTML = rowsIng.length ? rowsIng.map(r=>{
+    const clave=normHdr(r.quien);
+    const abierta=combIngAbierto===clave;
+    let html=`<tr class="cu-fila${abierta?' open':''}" data-prov="${encodeURIComponent(clave)}">`+
+      `<td><span class="ip-caret">${abierta?'▾':'▸'}</span> <b>${escHtml(r.quien)}</b></td>`+
+      `<td class="tr mono">${r.n}</td><td class="tr mono">${fmt2(r.litros)}</td>`+
+      `<td class="tr"><div class="sopbar"><div style="width:${r.litros/mxIng*100}%"></div></div></td>`+
+      `<td class="tr mono">${totIngresoMes?(r.litros/totIngresoMes*100).toFixed(1):0}%</td></tr>`;
+    if(abierta) html+=combDetalleIngreso(r);
+    return html;
+  }).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px">Sin ingresos de stock en el período</td></tr>';
 
   // ---- Consumo de Combustible (abajo): agrupado por Uso / Detalle ----
   // La agrupación ya viene resuelta en D.combustible_uso (Mes + Uso / Detalle, ver
@@ -2290,6 +2310,26 @@ function combFilaTotal(nMov, litros, prestamos, verConsumo){
     `<td class="tr mono">${nMov}</td>`+
     `<td class="tr mono">${fmt2(litros)}</td>`+
     `<td></td><td class="tr mono">100,0%</td></tr>`;
+}
+// Detalle de un proveedor de Ingresos: las compras de gasoil que lo componen, una por fila.
+// Columnas: Fecha | Comprobante | Tipo de comprobante | Campaña | Litros — exactamente lo que trae
+// el movimiento de stock. Un ingreso NO tiene OT, ni maquina, ni uso: no se le muestra ninguna
+// columna de esas ni se deduce nada. El importe en moneda extranjera, cuando viene cargado, va en
+// la cabecera del detalle junto al total de litros, no como una sexta columna que no entraria.
+// Los movimientos van de mas reciente a mas antiguo, igual que el detalle del Consumo.
+function combDetalleIngreso(g){
+  const imp = (g.movs||[]).reduce((s,m)=>s+(m.importe||0),0);
+  let html=`<tr class="dethead"><td colspan="5">${escHtml(g.quien)} · ${fmtMovimientos(g.n)} · ${fmt2(g.litros)} L`+
+    (imp?` · $ ${fmtUSD(imp)}`:'')+`</td></tr>`;
+  html+=`<tr class="detcols">`+['Fecha','Comprobante','Tipo de comprobante','Campaña','Litros']
+    .map((c,i)=>`<td${i===4?' class="tr"':''}>${c}</td>`).join('')+`</tr>`;
+  const guion='<span class="ip-sin">—</span>';
+  html+=(g.movs||[]).map(m=>`<tr class="det"><td class="dl" title="${escAttr(m.obsMov)}">${ipFecha(m.fecha)}</td>`+
+    `<td class="mono">${escHtml(m.referencia)||guion}</td>`+
+    `<td>${escHtml(m.tipoComp)||guion}</td>`+
+    `<td>${escHtml(m.campania)||guion}</td>`+
+    `<td class="tr mono">${fmt2(m.litros)}</td></tr>`).join('');
+  return html;
 }
 // Detalle de un Uso / Detalle: los movimientos individuales que lo componen. Las columnas cambian
 // según el origen de la atribución, para no mostrar columnas vacías ni —sobre todo— datos de OT

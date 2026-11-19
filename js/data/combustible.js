@@ -206,20 +206,32 @@ function construirCombustible(combustibleRaw, existenciaInicial, indiceOTReferen
     r.usoOrigen = (r.tipoVinculo===VINCULO_OT && !obsOT) ? 'ot-sin-obs' : r.tipoVinculo;
   });
 
-  function agruparComb(list){
+  // conMovs: ademas del total, guarda los movimientos individuales del grupo para el detalle
+  // desplegable. Solo lo pide Ingresos; las demas colecciones agrupadas (Consumo, Transferencias,
+  // Prestamos) siguen devolviendo exactamente lo mismo que antes, sin movimientos adentro.
+  function agruparComb(list, conMovs){
     const map={};
     list.forEach(r=>{
       const mesnum = r.fecha.getMonth()+1;
       const quien = r.tercero ? r.tercero : 'Labor Propia';
       const key = mesnum+'|'+quien;
-      if(!map[key]) map[key]={mesnum,quien,n:0,litros:0};
+      if(!map[key]) map[key]={mesnum,quien,n:0,litros:0,movs:[]};
       const c=map[key]; c.n++; c.litros+=r.unidades;
+      // El movimiento se guarda TAL CUAL viene del dato: fecha, comprobante propio, tipo de
+      // comprobante, campania e importe en moneda extranjera. Nada se recalcula ni se deduce — un
+      // ingreso no tiene OT ni maquina, asi que no se le inventa ninguna.
+      if(conMovs) c.movs.push({fecha:r.fecha, litros:r.unidades, referencia:r.referencia,
+        referenciaOrigen:r.referenciaOrigen, tipoComp:r.tipoComp, campania:r.campania,
+        insumo:r.insumo, importe:r.importe, parcela:r.parcela, tercero:r.tercero,
+        obsMov:r.obsMov});
     });
-    return Object.values(map).map(c=>({...c,litros:Math.round(c.litros*100)/100})).sort((a,b)=>b.litros-a.litros);
+    return Object.values(map).map(c=>({...c, litros:Math.round(c.litros*100)/100,
+      movs:c.movs.slice().sort((a,b)=>(b.fecha-a.fecha)||(b.litros-a.litros))}))
+      .sort((a,b)=>b.litros-a.litros);
   }
   const esConsumo = r => !esIngreso(r) && !esTransferencia(r) && !esPrestamoStock(r);
   const combustible = agruparComb(combRows.filter(esConsumo));
-  const combustible_ingresos = agruparComb(combRows.filter(r=>esIngreso(r) && !esTransferencia(r) && !esPrestamoStock(r)));
+  const combustible_ingresos = agruparComb(combRows.filter(r=>esIngreso(r) && !esTransferencia(r) && !esPrestamoStock(r)), true);
   // Coleccion propia, con la misma forma que Consumo e Ingresos (Mes + Tercero) pero con los litros
   // NETOS. Hoy da 0,00 en 8 movimientos: 2 prestamos (Seagro 2.000 L, El Fogon 1.000 L) y sus 2
   // devoluciones. render.js la suma al Balance y al arrastre mensual; nunca la muestra como consumo.

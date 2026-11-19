@@ -268,6 +268,15 @@ document.addEventListener('DOMContentLoaded', function(){
     combUsoAbierto = (combUsoAbierto===uso) ? null : uso;
     renderCombustible();
   });
+  // Clic en una fila de "Ingresos" (Combustible): despliega/pliega las compras de ese proveedor.
+  // Mismo mecanismo delegado que el Consumo, sobre su propio tbody y con su propio estado.
+  document.getElementById('combingbody').addEventListener('click', function(e){
+    const fila = e.target.closest('tr.cu-fila');
+    if(!fila) return;
+    const prov = decodeURIComponent(fila.dataset.prov);
+    combIngAbierto = (combIngAbierto===prov) ? null : prov;
+    renderCombustible();
+  });
   document.getElementById('imes').addEventListener('change', renderInsumos);
   // Tipo de Insumo es el filtro "padre" del dependiente Insumo: primero se repueblan sus opciones
   // (y se limpia la seleccion si ya no corresponde al nuevo tipo), recien despues se re-renderiza.

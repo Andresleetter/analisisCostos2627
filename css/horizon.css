@@ -1,0 +1,247 @@
+/* ================================================================
+   HORIZON · ESTRUCTURA Y PIEL
+   ================================================================
+   Adaptacion del disenio de LECTOR-FACTURAS (Horizon UI) al tablero, pedida el 19/11/2026. La
+   consigna fue "combinarlo con el disenio actual", asi que lo que se trae de Horizon es su
+   ESTRUCTURA —barra superior fina, navegacion lateral fija e isla de contenido— y su manera de
+   tratar las superficies: sin bordes, radios generosos, sombras difusas y anillo de foco.
+   Lo que NO se trae es su paleta: Horizon es azul #2563EB sobre #f7fbff, y este tablero tiene
+   crema + verde petroleo del logotipo, con los contrastes medidos uno por uno (ver base.css). Los
+   colores salen todos de los tokens que ya existen; esta hoja no define ni un color nuevo.
+
+   Es una capa ADITIVA y se carga ultima (antes solo de reporte.css, que tiene que seguir mandando
+   en papel): quitando su <link> de index.html el tablero vuelve exactamente a como estaba.
+
+   La piel se estreno el 19/11/2026 acotada a `.hz` (solo Combustible) a pedido del usuario, que
+   queria verla en una pestania antes de extenderla. Visto el resultado, ese mismo dia paso a
+   valer para el tablero entero: el gancho ya no es `.hz` sino `.isla`, el contenedor del
+   contenido. Sigue siendo un gancho y no el selector pelado a proposito — asi un `.panel` que
+   viva fuera de la isla (el encabezado, el visor de mapas) no queda alcanzado sin querer.
+   ---------------------------------------------------------------- */
+:root{
+  /* Las tres sombras de Horizon, re-tenidas al verde del tablero. Alla son grises azuladas
+     (rgba(112,144,176,...)); sobre crema un gris azulado se ve sucio, asi que llevan el mismo
+     rgba(9,60,50) que ya usan .panel y .kpi en shell.css. Solo cambia el reparto: Horizon separa
+     la tarjeta del fondo con una sombra MUY difusa y de poca opacidad, no con un borde. */
+  --hz-shadow:0 18px 44px -26px rgba(9,60,50,.34), 0 2px 8px rgba(9,60,50,.05);
+  --hz-shadow-sm:0 10px 26px -20px rgba(9,60,50,.30), 0 1px 4px rgba(9,60,50,.04);
+  --hz-shadow-lift:0 26px 52px -26px rgba(9,60,50,.40), 0 2px 10px rgba(9,60,50,.06);
+  /* Anillo de foco de Horizon: 3px del color de accion al 14%. Reemplaza al outline de 2px solo
+     donde esta hoja lo dice; el :focus-visible de teclado del resto del tablero no se toca. */
+  --hz-ring:0 0 0 3px rgba(9,92,76,.14);
+  /* 248px: MEDIDO, no elegido a ojo. Es el ancho mas angosto en el que los siete rotulos entran
+     en UNA sola linea con el icono delante y sin chocar contra el contador. El que manda es
+     "Control de Hectáreas" con su chapita de 23: a 236 le faltan 9px y a 224, veintiuno.
+     Cada pixel de la columna se lo saca a la isla, que es donde estan las tablas de siete
+     columnas, asi que no se redondea para arriba por las dudas.
+     Los nombres NO se acortaron para ganar lugar: son los que el usuario conoce. */
+  --hz-nav:248px;
+}
+
+/* ================================================================
+   1. BARRA SUPERIOR
+   ================================================================
+   Horizon deja arriba una barra fina con la marca a la izquierda y el estado a la derecha; los
+   modulos NO viven ahi, viven en la columna. Como las pestanias se mudaron (ver index.html), la
+   barra queda con dos bloques y puede bajar de altura. */
+.top{
+  border:0;
+  border-radius:22px;
+  box-shadow:var(--hz-shadow);
+  padding:14px 24px;
+  margin-bottom:18px;
+}
+.brand img{height:46px}
+
+/* ================================================================
+   2. ARMAZON: COLUMNA + ISLA
+   ================================================================ */
+.shell{
+  display:grid;
+  grid-template-columns:var(--hz-nav) minmax(0,1fr);
+  gap:20px;
+  align-items:start;
+}
+/* minmax(0,1fr) arriba y min-width:0 aca: sin los dos, una tabla ancha dentro de .scroll estira
+   la columna de contenido y la grilla crece mas alla de la pagina en vez de dejar que la tabla
+   haga su propio scroll horizontal. */
+.isla{min-width:0}
+
+/* ---- La navegacion, ahora vertical ---- */
+/* Pisa a tabs.css, que la dibuja como barra horizontal. Misma especificidad: gana por orden de
+   carga, que es el motivo por el que esta hoja va ultima. */
+/* Las cuatro primeras lineas deshacen la bandeja de pildoras de shell.css: alla .tabs es una
+   bandeja centrada en la columna 2 del encabezado, con ancho segun contenido y fondo verde claro.
+   Ahora es la columna 1 de .shell y ocupa todo su ancho, asi que esas cuatro propiedades tienen
+   que volver a su valor normal o la navegacion termina flotando en el medio de la pagina. */
+.tabs{
+  grid-column:auto;
+  justify-self:stretch;align-self:start;
+  width:auto;max-width:none;
+  background:var(--card);
+  flex-wrap:nowrap;
+  justify-content:flex-start;
+  flex-direction:column;
+  gap:3px;
+  padding:14px 12px;
+  border:0;
+  border-radius:22px;
+  box-shadow:var(--hz-shadow);
+  /* La columna acompania el scroll, como la sidebar de Horizon. 18px de aire arriba para que no
+     quede pegada al borde de la ventana. */
+  position:sticky;
+  top:18px;
+  margin-bottom:0;
+}
+.tabs-rotulo{
+  font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--muted);padding:4px 12px 10px;
+}
+.tab{
+  flex:none;
+  justify-content:flex-start;
+  text-align:left;
+  gap:11px;
+  padding:11px 12px;
+  border-radius:14px;
+  /* 13px y no los 14 de la barra horizontal: con 14 el rotulo mas largo pide 258px de columna y
+     esos 46px de mas salen de la tabla. A 13 entran los siete en 212. */
+  font-size:13px;
+  position:relative;
+  transition:background-color .18s ease,color .18s ease;
+}
+.tab-ico{width:19px;height:19px;flex:0 0 19px;opacity:.9}
+/* nowrap: un rotulo partido en dos lineas hace que la columna quede con botones de alturas
+   distintas y se lee como un error. Con el contador fuera del flujo (abajo) ninguno se corta. */
+.tab-lbl{flex:1;min-width:0;white-space:nowrap;padding-right:38px}
+/* El contador sale del flujo y se ancla a la derecha: si ocupara lugar en la fila, los dos
+   modulos que lo llevan necesitarian 40px mas de columna que los otros cinco. */
+.tab .badge{position:absolute;right:10px;top:50%;transform:translateY(-50%)}
+.tab:hover{background:var(--tint-brand-soft);color:var(--ink)}
+/* El modulo abierto NO se rellena de verde pleno como antes: Horizon marca el activo con un tinte
+   suave, el rotulo en el color de accion y una barra al borde. Sobre --tint-brand-soft el
+   --acento da 7,16:1, de modo que el cambio no pierde contraste contra el blanco-sobre-verde que
+   habia (7,93): sigue pasando AAA. */
+.tab.active{
+  background:var(--tint-brand-soft);
+  color:var(--acento);
+  font-weight:800;
+}
+.tab.active::before{
+  content:"";position:absolute;left:0;top:50%;transform:translateY(-50%);
+  width:3px;height:22px;border-radius:0 3px 3px 0;background:var(--acento);
+}
+/* El contador de excesos y el de alertas siguen siendo rojos: tabs.css los invertia (blanco con
+   numero rojo) porque la pestania activa era un bloque verde, y ya no lo es. */
+.tab.active .badge{background:var(--r);color:#fff}
+
+/* ---- Pantallas medianas: la columna se queda, pero solo con iconos ---- */
+/* Entre 900 y 1180 la isla se queda sin ancho util para las tablas de siete columnas. Antes de
+   mandar la navegacion al menu desplegable, Horizon la encoge a un riel de iconos; se ganan 174px
+   sin perder ningun modulo de vista. */
+@media (min-width:901px) and (max-width:1180px){
+  :root{--hz-nav:62px}
+  .tabs{padding:12px 9px;align-items:center;gap:7px}
+  .tabs-rotulo{display:none}
+  .tab{justify-content:center;padding:11px 0;width:44px}
+  /* Sin rotulo visible, el nombre del modulo lo da el title del boton (ver index.html), que el
+     navegador muestra al apoyar el mouse. No se inventa un tooltip propio: el nativo alcanza y no
+     deja nada sin nombre para un lector de pantalla. */
+  .tab-lbl{display:none}
+  .tab .badge{top:2px;right:2px;transform:none;padding:0 5px;font-size:9.5px;line-height:15px}
+}
+/* ---- Telefono y tablet vertical: vuelve el menu desplegable de tabs.css ---- */
+/* A 900px tabs.css oculta la columna y enciende el boton hamburguesa. La grilla tiene que
+   deshacerse ahi mismo: con display:grid y la columna en display:none quedaria una franja vacia
+   de 236px al costado del contenido. */
+@media (max-width:900px){
+  .shell{display:block}
+  .tabs{position:static;margin-bottom:0}
+  .tabs.open{margin-bottom:18px}
+}
+
+/* ---- Consecuencia medida de la columna: la cifra mas larga del Resumen ---- */
+/* La isla es 268px mas angosta que la pagina entera, y la unica cifra del tablero que no entraba
+   es el Gasto confirmado del Resumen Ejecutivo: "$ 3.212.324,13" pide 234px y la tarjeta le da
+   212, asi que salia cortada con puntos suspensivos ("$ 3.212.324..."). Un numero cortado es un
+   numero mal, no un detalle de estilo.
+   Se baja el TOPE del clamp de 34 a 28 (a 28 la cifra ocupa 193 de los 212 disponibles) y se deja
+   el minimo y el vw como estaban. Es la misma correccion que shell.css ya hace para la fila de
+   cinco KPI de Servicios, por el mismo motivo y con la misma cuenta.
+   Va fuera de `.hz` a proposito: el angostamiento lo causa la columna, que vale para todo el
+   tablero, no la piel nueva. */
+#exec-kpis .k-val{font-size:clamp(22px, 2vw, 28px)}
+/* Por lo mismo, el pie de una tarjeta del Resumen ("ejecutado en 3.543 órdenes confirmadas") pide
+   243px y tiene 208: estaba en nowrap y se cortaba. Un pie de tarjeta no necesita una sola linea
+   —no es una cifra que se compare con la de al lado—, asi que baja de renglon en vez de cortarse.
+   Es el unico texto que cambia de comportamiento: se comparo el tablero entero con y sin esta
+   hoja, modulo por modulo, y los demas recortes son los que ya existian antes. */
+#exec-kpis .k-foot{white-space:normal}
+
+/* ================================================================
+   3. PIEL — por ahora solo la pestania marcada .hz
+   ================================================================
+   Todo lo de aca abajo es superficie: nada cambia un numero, un filtro ni una tabla. Cuando el
+   usuario de el visto bueno se le saca el `.hz` y pasa a valer para el tablero entero. */
+
+/* ---- Tarjetas ---- */
+.isla .panel{box-shadow:var(--hz-shadow)}
+.isla .panel h3{letter-spacing:-.01em}
+.isla .kpi{
+  background:var(--card);
+  box-shadow:var(--hz-shadow-sm);
+}
+.isla .kpi:hover{box-shadow:var(--hz-shadow-lift)}
+
+/* ---- Fila de filtros ---- */
+/* Horizon trata la barra de filtros como una tarjeta mas, no como un recuadro con borde. */
+.isla .gfilter{
+  background:var(--card);
+  border:0;
+  border-radius:20px;
+  box-shadow:var(--hz-shadow-sm);
+  padding:14px 18px;
+}
+.isla .gfilter select{
+  border-width:1.5px;
+  border-radius:12px;
+  transition:border-color .18s ease,box-shadow .18s ease;
+}
+/* Con la navegacion en columna, la isla perdio 232px de ancho y los CUATRO filtros de Combustible
+   (Mes / Tercero / Máquina / Movimiento) mas el boton ya no entraban en una fila: el rotulo de
+   "Movimiento" quedaba arriba y su select abajo, partido de su etiqueta. gastos.css:102 ya hacia
+   esto con los tres primeros desde una base de 170; se baja la base y se suma el cuarto, que
+   todavia estaba con el min-width de 200 del caso general. El boton se va al extremo derecho,
+   como en Horizon, en vez de quedar pegado al ultimo select. */
+.isla #cmes,.isla #cterc,.isla #cmaq,.isla #ctipo{flex:1 1 150px;min-width:138px}
+.isla .gfilter #comb-print{margin-left:auto}
+.isla .gfilter select:focus{
+  outline:none;
+  border-color:var(--acento);
+  box-shadow:var(--hz-ring);
+}
+
+/* ---- Tablas ---- */
+/* La cabecera en versalitas ya existia (shell.css): Horizon solo la abre un poco mas y le da aire.
+   La raya punteada entre filas se cambia por una continua al 100% de --line, que es como se ven
+   las tablas de Horizon; es el unico cambio visible del cuerpo. */
+.isla .scroll{border-radius:18px}
+/* El aire de Horizon se agrega ARRIBA y ABAJO, nunca a los costados: hay columnas con un ancho
+   maximo fijo y texto recortado a proposito (.col-contratista va a 170px tope), y dos pixeles mas
+   de padding a cada lado le comen cuatro al nombre. Medido en Servicios: con 14px se recortaban
+   12 nombres de contratista y con 12px se recortan 8, que son exactamente los que ya se recortaban
+   antes de esta hoja. El padding lateral se queda, entonces, en los 12 de shell.css. */
+.isla th{letter-spacing:.08em;padding:13px 12px}
+.isla td{border-bottom:1px solid var(--line)!important;padding:12px 12px}
+/* La ayuda del buscador de Control de Hectareas es una frase, no una cifra: con la isla mas
+   angosta no entra en una linea y estaba en nowrap, asi que se cortaba. Baja de renglon. */
+.isla .ha-filtros .fnote{white-space:normal}
+/* Las filas que se despliegan se encienden al pasar por encima — ya lo hacian, pero sin
+   transicion; asi el gesto se lee igual que en el resto de Horizon. */
+.isla tr.cu-fila{transition:background-color .18s ease}
+/* El boton de imprimir, como pastilla de accion. */
+.isla .prob-link{
+  border-radius:99px;
+  transition:background-color .18s ease,box-shadow .18s ease,transform .18s ease;
+}
+.isla .prob-link:active{transform:scale(.98)}

@@ -47,6 +47,11 @@
      que regla gana en el encabezado, en las tablas y en los KPI. -->
 <link rel="stylesheet" href="css/ui.css">
 <link rel="stylesheet" href="css/shell.css">
+<!-- Capa de estructura y piel tomada de Horizon UI (el diseño de LECTOR-FACTURAS, 19/11/2026):
+     barra lateral de módulos, isla de contenido y los refinamientos de superficie. Va DESPUES de
+     shell.css porque la corrige, y ANTES de reporte.css, que tiene que seguir ganando en papel.
+     Es una sola hoja aditiva: quitando este link el tablero vuelve exactamente a como estaba. -->
+<link rel="stylesheet" href="css/horizon.css">
 <!-- Ultima a proposito: la hoja de impresion necesita ganarle a las de modulo y al vestido por
      orden de carga, sin subir especificidad. Ver css/reporte.css. -->
 <link rel="stylesheet" href="css/reporte.css">
@@ -92,16 +97,6 @@
              cambia en ninguna pantalla. Todas las cifras del Excel vienen en dolares. -->
         </div>
     </div>
-    <!-- Los modulos viven DENTRO de la barra, en la columna del medio, como .mg-navs en Airo. -->
-    <nav class="tabs" id="tabs-nav">
-      <button class="tab active" data-mod="resumen">Resumen Ejecutivo</button>
-      <button class="tab" data-mod="servicios">Servicios</button>
-      <button class="tab" data-mod="combustible">Combustible</button>
-      <button class="tab" data-mod="insumos">Insumos</button>
-      <button class="tab" data-mod="hectareas">Control de Hectáreas <span class="badge" id="b-exc">0</span></button>
-      <button class="tab" data-mod="alertas">Alertas Operativas <span class="badge" id="b-al">0</span></button>
-      <button class="tab" data-mod="auditoria">Auditoría</button>
-    </nav>
     <div class="header-right">
       <button type="button" class="menu-toggle" id="menu-toggle" aria-label="Abrir menú de módulos" aria-expanded="false" aria-controls="tabs-nav">
         <span class="menu-toggle-bars" aria-hidden="true"><span></span><span></span><span></span></span>
@@ -111,6 +106,27 @@
   </header>
 
   <div class="menu-backdrop" id="menu-backdrop" hidden></div>
+
+  <div class="shell">
+    <!-- Los modulos pasaron de una barra horizontal dentro del encabezado a una COLUMNA lateral,
+         siguiendo la estructura de Horizon UI (19/11/2026, pedido del usuario): barra superior
+         fina con la marca, navegacion fija a la izquierda y el contenido en una isla a la
+         derecha. El marcado de los botones no cambio de orden ni de cantidad —events.js indexa
+         las .tab contra las .page por posicion— y conserva data-mod y los dos .badge con su id.
+         Lo unico que se agrego a cada boton es su icono y el <span> del rotulo, para que la
+         columna pueda encogerse a solo iconos en pantallas chicas sin tocar el script. -->
+    <nav class="tabs" id="tabs-nav" aria-label="Módulos del tablero">
+      <p class="tabs-rotulo">Módulos</p>
+      <button class="tab active" data-mod="resumen" title="Resumen Ejecutivo"><svg class="tab-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 13h7V4H4v9Zm0 7h7v-5H4v5Zm9 0h7v-9h-7v9Zm0-16v5h7V4h-7Z"/></svg><span class="tab-lbl">Resumen Ejecutivo</span></button>
+      <button class="tab" data-mod="servicios" title="Servicios"><svg class="tab-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M4 12h16M4 17h7"/><circle cx="18" cy="7" r="2"/><circle cx="14" cy="17" r="2"/></svg><span class="tab-lbl">Servicios</span></button>
+      <button class="tab" data-mod="combustible" title="Combustible"><svg class="tab-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 20V5a2 2 0 0 1 2-2h5a2 2 0 0 1 2 2v15M3 20h13M8 8h3"/><path d="M14 9h2.5a2 2 0 0 1 2 2v5a1.5 1.5 0 0 0 3 0V9l-2.5-3"/></svg><span class="tab-lbl">Combustible</span></button>
+      <button class="tab" data-mod="insumos" title="Insumos"><svg class="tab-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4 7v10l8 4 8-4V7l-8-4Z"/><path d="m4 7 8 4 8-4M12 11v10"/></svg><span class="tab-lbl">Insumos</span></button>
+      <button class="tab" data-mod="hectareas" title="Control de Hectáreas"><svg class="tab-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 4 6 2.5L21 4v13l-6 2.5L9 17l-6 2.5V6.5L9 4Z"/><path d="M9 4v13M15 6.5v13"/></svg><span class="tab-lbl">Control de Hectáreas</span><span class="badge" id="b-exc">0</span></button>
+      <button class="tab" data-mod="alertas" title="Alertas Operativas"><svg class="tab-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4.5 2.8 19.5h18.4L12 4.5Z"/><path d="M12 10v4M12 17h.01"/></svg><span class="tab-lbl">Alertas Operativas</span><span class="badge" id="b-al">0</span></button>
+      <button class="tab" data-mod="auditoria" title="Auditoría"><svg class="tab-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 5 6v6c0 4.2 2.9 7.8 7 9 4.1-1.2 7-4.8 7-9V6l-7-3Z"/><path d="m9 12 2 2 4-4"/></svg><span class="tab-lbl">Auditoría</span></button>
+    </nav>
+
+    <main class="isla">
   <!-- TAB 1: Resumen Ejecutivo -->
   <section class="page active">
 
@@ -592,6 +608,9 @@
     </div>
     <div id="av-cuerpo"></div>
   </section>
+
+    </main>
+  </div>
 
   <footer class="foot" id="foot"></footer>
 </div>
