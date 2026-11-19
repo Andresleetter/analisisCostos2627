@@ -2178,26 +2178,6 @@
   },
   {
     "campania": "26/27",
-    "cultivo": "ARROZ",
-    "grupo": "DESECACIÓN",
-    "insumo": "Fascinate",
-    "descripcion": "Glufosinato",
-    "dosisHa": 2,
-    "unidad": "L",
-    "origen": "19/11/2026 · NO esta en la hoja de presupuesto de ARROZ: la dosis se toma de los otros cultivos, donde es 2 L/ha en los tres registros existentes (MAIZ PRE EMERGENTES, SOJA DESECACION y SOJA PRE EMERGENTES), asi que el grupo no cambia la dosis · se carga porque Albor ya lo consumio por US$ 5.830 en 18 lotes de arroz sin receta · ya estaba advertido en el origen del registro de MAIZ del 04/11/2026"
-  },
-  {
-    "campania": "26/27",
-    "cultivo": "SOJA",
-    "grupo": "FUNGICIDAS",
-    "insumo": "Valoria",
-    "descripcion": "BIXAFEN 12,5 % + CIPROCONAZOLE 9 % + DIFENOCONAZOLE 15 % SC",
-    "dosisHa": 0.4,
-    "unidad": "L",
-    "origen": "19/11/2026 · NO esta en la hoja de presupuesto de SOJA: la dosis es la del unico registro existente, MAIZ FUNGICIDAS 0,4 L/ha · se carga porque Albor lo consumio por US$ 3.520 en 12 lotes de soja sin receta · corrige el origen del registro de MAIZ del 04/11/2026, que decia \"solo se mueve en lotes de MAIZ\": ya no es cierto · Albor lo escribe en mayusculas (\"VALORIA\") y el cotejo normaliza, asi que no hace falta alias"
-  },
-  {
-    "campania": "26/27",
     "cultivo": "SORGO",
     "grupo": "INSECTICIDAS",
     "insumo": "Clothianex",
