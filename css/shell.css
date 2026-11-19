@@ -488,10 +488,8 @@ tr.open .ip-caret{color:var(--acento)}
 /* Avisos y recuadros informativos. */
 .ip-aviso,.rc-nodisp{border:0;box-shadow:inset 0 0 0 1px var(--border-y);border-radius:var(--radius-md)}
 .errbanner{border:0;box-shadow:inset 0 0 0 1px var(--r);border-radius:var(--radius-md)}
-.rc-chip{border:0;box-shadow:var(--ring-1-fuerte);border-radius:var(--radius-sm);background:var(--surface-1)}
-.rc-con{box-shadow:inset 0 0 0 1px var(--border-g)}
-.rc-sobre{box-shadow:inset 0 0 0 1px var(--border-y)}
-.rc-tol{box-shadow:inset 0 0 0 1px var(--border-g-soft)}
+/* .rc-chip y sus tres variantes de color salieron el 19/11/2026 junto con las tarjetas propias
+   de Auditoria: ese modulo ahora usa las .kpi del resto del tablero. */
 
 /* Overlay de carga y lightbox. */
 #overlay{background:var(--bg)}
@@ -897,7 +895,7 @@ tr.grp>td{background:var(--surface-2)!important;font-weight:700}
 tr.tot>td{background:var(--surface-3)!important;border-top:0!important}
 td.mono,td .mono{font-variant-numeric:tabular-nums}
 .scroll{border-radius:14px}
-.chip,.tag,.rc-chip{border-radius:99px!important}
+.chip,.tag{border-radius:99px!important}
 tr.dethead>td{background:var(--bg)!important;color:var(--muted)}
 
 /* --- pie --- */

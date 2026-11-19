@@ -1031,6 +1031,18 @@ function renderAuditoria(){
 // El diagnóstico usa los mismos chips de estado que el Seguimiento de Receta (.rc-est) para no
 // inventar un vocabulario visual nuevo: ámbar = hay que corregir, azul = falta completar,
 // verde = coincide, gris = todavía no hay con qué comparar.
+// Tarjeta de KPI de Auditoria, con la misma forma que las de los otros modulos: rotulo arriba,
+// cifra grande con su color de severidad y un pie opcional. El color viaja como la letra de la
+// clase (.c-g / .c-y / .c-o / .c-gris) para no repetir aca el mapa de colores, que vive en
+// panel.css y es el mismo que usan Combustible, Insumos y Alertas.
+// `tip` es el texto largo del title: el pie dice lo corto y el title lo completo.
+function kpiAuditoria(lab, n, col, pie, tip){
+  return '<div class="kpi kpi-acc kpi-'+col+'"'+(tip?' title="'+escAttr(tip)+'"':'')+'>'+
+    '<div class="k-lab">'+escHtml(lab)+'</div>'+
+    '<div class="k-val c-'+col+'">'+fmt(n)+'</div>'+
+    (pie?'<div class="k-foot">'+escHtml(pie)+'</div>':'')+
+  '</div>';
+}
 const SB_DIAG = {
   ok:            {label:'Coincide',            cls:'rc-e-segun', ayuda:'La parcela declara la misma superficie que confirman las OT.'},
   supera_plan:   {label:'Supera la parcela',   cls:'rc-e-sobre', ayuda:'La parcela declara MÁS hectáreas sembradas que las que tiene. Es imposible: hay que corregirlo en Albor.'},
@@ -1081,12 +1093,15 @@ function renderAuditoriaSiembra(){
     'sembrar. '+
     '<b>Clic en una fila</b> para ver las OT que la componen.';
 
-  const chip = (n, label, cls) => `<div class="rc-chip ${cls}"><span class="rc-n">${n}</span><span class="rc-l">${label}</span></div>`;
+  // Las cuatro cifras van en tarjetas .kpi, las MISMAS que usan los otros seis modulos (ver
+  // kpiAuditoria mas abajo). Hasta el 19/11/2026 eran .rc-chip, una pieza propia de Auditoria —
+  // mas chica, con borde de color y la cifra en 19px— y el modulo se leia como si fuera de otro
+  // tablero. El dato y el criterio no cambian: lo que cambia es la caja.
   document.getElementById('sb-kpis').innerHTML =
-    chip(A.n_parcelas, 'Parcelas auditadas', 'rc-sin') +
-    chip(A.n_parcelas - A.n_desvios, 'Coinciden', 'rc-con') +
-    chip(A.n_supera_plan, 'Superan la parcela', 'rc-sobre') +
-    chip(A.n_desvios - A.n_supera_plan, 'Otras diferencias', 'rc-sin');
+    kpiAuditoria('Parcelas auditadas', A.n_parcelas, 'gris', 'con siembra declarada o con OT') +
+    kpiAuditoria('Coinciden', A.n_parcelas - A.n_desvios, 'g', 'la parcela y sus OT dicen lo mismo') +
+    kpiAuditoria('Superan la parcela', A.n_supera_plan, 'o', 'más hectáreas que el lote') +
+    kpiAuditoria('Otras diferencias', A.n_desvios - A.n_supera_plan, 'gris', 'el resto de los desvíos de carga');
 
   // Subtítulo: los dos totales enfrentados. La brecha entre ambos es, en una sola cifra, todo lo
   // que hay para corregir.
@@ -1487,12 +1502,20 @@ function renderInsumosParcela(){
     // Bajo + Dentro de tolerancia + Según), así que ya NO es la suma de las tarjetas visibles. Se
     // deja igual a propósito: es la cantidad de insumos que se pudieron comparar, y cambiarla para
     // que cierre con lo que se ve haría que el número dijera otra cosa.
-    const chip = (lbl,n,cls,tip) => '<div class="rc-chip '+cls+'" title="'+tip+'"><span class="rc-n">'+fmt(n)+'</span><span class="rc-l">'+lbl+'</span></div>';
+    // Mismas tarjetas que el resto del tablero (ver kpiAuditoria). El texto largo que antes vivia
+    // solo en el title pasa al pie de la tarjeta cuando entra en una linea; el title completo se
+    // conserva igual, asi nada de lo que se explicaba se pierde.
     ipRec.innerHTML =
-      chip('Con receta', conReceta, 'rc-con', 'Insumos de lote que se pudieron comparar contra una receta de la campaña')+
-      chip('Sobre receta', conteoReceta.get(RECETA_ESTADO.SOBRE)||0, 'rc-sobre', 'La dosis aplicada por hectárea superó la receta en más de '+RECETA_TOLERANCIA_PCT+'%')+
-      chip('Dentro de tolerancia', conteoReceta.get(RECETA_ESTADO.TOLERANCIA)||0, 'rc-tol', 'Se aplicó de más, pero sin superar la tolerancia de +'+RECETA_TOLERANCIA_PCT+'% definida para la campaña')+
-      chip('Sin receta', conteoReceta.get(RECETA_ESTADO.SIN)||0, 'rc-sin', 'No hay una receta inequívoca para ese cultivo e insumo: no se compara ni se estima');
+      kpiAuditoria('Con receta', conReceta, 'g', 'se pudieron comparar',
+        'Insumos de lote que se pudieron comparar contra una receta de la campaña')+
+      kpiAuditoria('Sobre receta', conteoReceta.get(RECETA_ESTADO.SOBRE)||0, 'o',
+        'más de +'+RECETA_TOLERANCIA_PCT+'% sobre la receta',
+        'La dosis aplicada por hectárea superó la receta en más de '+RECETA_TOLERANCIA_PCT+'%')+
+      kpiAuditoria('Dentro de tolerancia', conteoReceta.get(RECETA_ESTADO.TOLERANCIA)||0, 'y',
+        'de más, hasta +'+RECETA_TOLERANCIA_PCT+'%',
+        'Se aplicó de más, pero sin superar la tolerancia de +'+RECETA_TOLERANCIA_PCT+'% definida para la campaña')+
+      kpiAuditoria('Sin receta', conteoReceta.get(RECETA_ESTADO.SIN)||0, 'gris', 'no se comparan ni se estiman',
+        'No hay una receta inequívoca para ese cultivo e insumo: no se compara ni se estima');
   }
 
   // ---- Resumen por lote, ordenado por COSTO TOTAL de mayor a menor ----

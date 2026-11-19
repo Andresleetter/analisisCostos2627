@@ -88,13 +88,15 @@ tr.au-sin td{color:var(--muted)}
    del dashboard. "Sobre receta" y "Bajo receta" son hechos matemáticos, no faltas — mientras el
    negocio no defina una tolerancia agronómica, se distinguen por color pero ninguno se marca como
    incorrecto. Los colores salen de la misma paleta que ya usa el resto del dashboard. */
-.rc-resumen{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch;padding:2px 0}
-.rc-chip{flex:1 1 130px;border:1px solid var(--line);border-radius:var(--radius-sm);padding:9px 12px;background:var(--card);display:flex;flex-direction:column;gap:2px;cursor:default}
-.rc-chip .rc-n{font-size:19px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
-.rc-chip .rc-l{font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.3px}
-.rc-con{border-color:#bcd6ae}   .rc-con   .rc-n{color:var(--u-ha)}
-.rc-sobre{border-color:#e0c08a} .rc-sobre .rc-n{color:#8a5b00}
-.rc-sin{border-color:var(--line)}  .rc-sin  .rc-n{color:var(--muted)}
+/* Las tarjetas de .rc-chip (cifra de 19px, borde de color, 130px de base) se retiraron el
+   19/11/2026: los dos resúmenes de Auditoría —Seguimiento de Receta y Siembra por Parcela— pasaron
+   a usar las .kpi del resto del tablero, que es lo que pidió el usuario. Era la única pieza del
+   dashboard que dibujaba una cifra destacada de otra forma, y hacía que el módulo se leyera como
+   si fuera de otro sistema. El color de severidad no se perdió: viaja en .kpi-g/.kpi-y/.kpi-o/
+   .kpi-gris, los mismos que usan Combustible, Insumos y Alertas.
+   Lo que sí queda es .rc-nodisp, el aviso de "recetas no disponibles", que no es una tarjeta.
+   Ocupa la fila entera: su contenedor ahora es una grilla de cuatro columnas. */
+.rc-nodisp{grid-column:1/-1}
 .rc-nodisp{font-size:12px;color:#6b5300;background:#fdf7e6;border:1px solid var(--y);border-radius:var(--radius-sm);padding:10px 14px;line-height:1.5}
 
 /* Fila de encabezados del detalle: hacen falta ahora que el detalle tiene 7 columnas distintas
