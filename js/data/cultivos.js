@@ -689,6 +689,16 @@ function construirControlHectareas(OTS, RTK, excesoBaseline){
   exceso.forEach(e=>{ e.nuevo = hayBaseline && !baseLotes.has(e.cult+'|'+e.lote); });
   repetidas.forEach(r=>{ r.nuevo = hayBaseline && !baseRepetidas.has(r.cult+'|'+r.lote+'|'+r.serv); });
   const nuevosExceso=exceso.filter(e=>e.nuevo), nuevasRepetidas=repetidas.filter(r=>r.nuevo);
+  // ---- OT a las que les cambiaron la labor en esta subida de datos ----
+  // No se calcula aca: viene resuelto en el baseline (ver tools/baseline.mjs). Para saberlo hay que
+  // tener abiertas las DOS exportaciones del .xlsx, y el tablero solo ve la actual.
+  // Es el rastro de las correcciones de carga hechas en Albor, que si no se pierden al pisarse el
+  // archivo. Se le agrega `serv` —la labor que dice AHORA— para que los filtros de Control de
+  // Hectareas puedan tratarlo como a cualquier otra fila; `de` y `a` quedan tal cual para mostrar
+  // el antes y el despues.
+  // Sin baseline queda vacio, igual que las marcas de "nuevo": el modulo funciona igual.
+  const ot_cambiadas = ((excesoBaseline && excesoBaseline.ot_cambiadas) || [])
+    .map(c=>({...c, serv:c.a}));
   const exc_kpi={n:exceso.length, ha:Math.round(exceso.reduce((s,e)=>s+e.diff,0)*100)/100,
     n_sinrtk:sinrtk.length,
     peor: peor ? {cult:peor.cult, lote:peor.lote, diff:peor.diff, pdiff:peor.pdiff, ha_rtk:peor.ha_rtk} : null,
@@ -701,6 +711,7 @@ function construirControlHectareas(OTS, RTK, excesoBaseline){
     n_nuevos:nuevosExceso.length,
     ha_nuevos:Math.round(nuevosExceso.reduce((s,e)=>s+e.diff,0)*100)/100,
     n_nuevas_repetidas:nuevasRepetidas.length,
-    ha_nuevas_repetidas:Math.round(nuevasRepetidas.reduce((s,r)=>s+r.exceso,0)*100)/100};
-  return {exceso,sinrtk,cancelados,repetidas,exc_kpi};
+    ha_nuevas_repetidas:Math.round(nuevasRepetidas.reduce((s,r)=>s+r.exceso,0)*100)/100,
+    n_ot_cambiadas:ot_cambiadas.length};
+  return {exceso,sinrtk,cancelados,repetidas,ot_cambiadas,exc_kpi};
 }

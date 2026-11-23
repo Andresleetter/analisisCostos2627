@@ -60,14 +60,25 @@ queda mostrando las novedades de la subida pasada, que es peor que no mostrarlas
 Lo hace `tools/baseline.mjs`, que corre desde cualquier directorio y no necesita `npm install`:
 
 ```
-node tools/baseline.mjs              # informa qué cambiaría, sin tocar nada
-node tools/baseline.mjs --escribir   # además escribe data/exceso-baseline.json
+node tools/baseline.mjs                     # informa qué cambiaría, sin tocar nada
+node tools/baseline.mjs --escribir          # además escribe data/exceso-baseline.json
+node tools/baseline.mjs --desde <commit>    # toma otro commit como la exportación anterior
 ```
 
 Saca el `.xlsx` de `HEAD` con `git show`, corre el `buildData()` real sobre ese archivo y escribe
 `lotes` (`cultivo|lote`) y `repetidas` (`cultivo|lote|servicio`) ordenados. El campo
 `exportacion_base` lleva la fecha de esa exportación anterior y se muestra en pantalla. Después se
 commitea el JSON **junto con** el `.xlsx` nuevo.
+
+Escribe además **`ot_cambiadas`**: las OT a las que les cambió la labor entre las dos exportaciones
+(`{ot, cult, lote, de, a}`). Es el rastro de las correcciones de carga hechas en Albor, que si no se
+pierde apenas se pisa el `.xlsx`; lo muestra el panel *OT con la Labor Cambiada* de Control de
+Hectáreas. Solo entran las OT que están en las **dos** exportaciones: una OT nueva no cambió de
+labor, y una borrada tampoco.
+
+`--desde` existe para el caso en que el `.xlsx` nuevo **ya se commiteó**: ahí `HEAD` es la
+exportación nueva, así que hay que nombrar a mano el commit de datos anterior
+(`--desde 8fc6f97`). En el flujo normal no se usa.
 
 Se niega a escribir si el `.xlsx` del working tree es idéntico al de `HEAD`: sin datos nuevos no hay
 nada que rebasear, y adelantar la foto dejaría en cero los avisos de «nuevo» que están en pantalla.

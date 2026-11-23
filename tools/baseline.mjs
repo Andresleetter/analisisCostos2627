@@ -25,13 +25,19 @@ import { fileURLToPath } from 'node:url';
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SALIDA = path.join(REPO, 'data', 'exceso-baseline.json');
 const escribir = process.argv.includes('--escribir');
+// --desde <commit>: que commit tomar como la exportacion ANTERIOR. Por defecto HEAD, que es lo
+// correcto en el caso normal — el .xlsx nuevo todavia esta sin commitear, asi que HEAD es el que ya
+// esta publicado. Se pasa a mano cuando el .xlsx nuevo YA se subio: ahi HEAD es la exportacion
+// nueva y la anterior es el commit de datos anterior.
+const iDesde = process.argv.indexOf('--desde');
+const REF_BASE = iDesde >= 0 ? process.argv[iDesde + 1] : 'HEAD';
+if (iDesde >= 0 && !REF_BASE) throw new Error('--desde necesita un commit (ej. --desde 8fc6f97)');
 const git = (...a) => execFileSync('git', a, { cwd: REPO, encoding: 'buffer', maxBuffer: 1 << 28 });
 
-// El .xlsx de HEAD es, por definicion, el de la exportacion anterior: lo que ya esta publicado.
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'baseline-'));
 const previo = path.join(tmp, 'head.xlsx');
-fs.writeFileSync(previo, git('show', 'HEAD:data/datosCampania2627.xlsx'));
-const commitBase = git('rev-parse', '--short', 'HEAD').toString('utf8').trim();
+fs.writeFileSync(previo, git('show', REF_BASE + ':data/datosCampania2627.xlsx'));
+const commitBase = git('rev-parse', '--short', REF_BASE).toString('utf8').trim();
 
 // ---- Arnes: el minimo navegador de mentira que necesitan los scripts del tablero ----
 const noop = () => {};
@@ -64,7 +70,24 @@ function analizar(rutaXlsx) {
   ctx.__recLab = leerJSON('data/receta-labores-25-26.json');
   // excesoBaseline = null a proposito: aca se esta FABRICANDO la foto, no comparando contra una.
   const D = run('buildData(__ot, __cul, __ins, __infra, __recetas, __recLab, null)');
-  return { D, modificado: run('fechaModificacionXLSX(__wb)') };
+  // Servicio declarado por cada OT, leido de la hoja CRUDA y no del modelo: entre dos exportaciones
+  // lo que se compara es como vino cargado el dato, no como lo interpreta el tablero. Es un Set
+  // porque una OT puede traer mas de una linea de categoria "Servicio".
+  const servicios = new Map();
+  ctx.__ot.forEach(r => {
+    if (String(r.categoria || '').toLowerCase() !== 'servicio') return;
+    const ot = String(r.ordenTrabajo || '').trim();
+    if (!ot) return;
+    if (!servicios.has(ot)) {
+      // El cultivo sale de `actividad`, no de `cultivo`: ese ultimo campo trae un texto compuesto
+      // ("LA TERESA 110B SOJA 26/27"). `actividad` es lo que el resto del tablero usa como o.act y
+      // lo que forma las claves de esta misma foto, asi que los dos lados dicen lo mismo.
+      servicios.set(ot, { cult: String(r.actividad || '').toUpperCase(),
+                          lote: String(r.lote || '').trim(), servs: new Set() });
+    }
+    servicios.get(ot).servs.add(String(r.insumoServicio || '').trim());
+  });
+  return { D, servicios, modificado: run('fechaModificacionXLSX(__wb)') };
 }
 
 // Las mismas claves que compara el tablero: un lote en exceso es cultivo+lote, y una labor repetida
@@ -92,6 +115,23 @@ const repetidasN = claveRepetidas(nuevo.D);
 const nuevosLotes = lotesN.filter(k => !lotes.includes(k));
 const nuevasRepetidas = repetidasN.filter(k => !repetidas.includes(k));
 
+// ---- OT a las que les cambiaron la labor entre las dos exportaciones ----
+// Es el rastro de las correcciones de carga hechas en Albor. Hasta ahora se perdia entre una subida
+// y la siguiente: el .xlsx se pisa y nadie vuelve a mirar el anterior.
+// Solo entran las OT que estan en las DOS exportaciones: una OT nueva no cambio de labor, y una que
+// se borro tampoco. El texto se ordena antes de comparar para que el orden de las lineas de la hoja
+// no invente un cambio donde no lo hay.
+const textoServ = v => [...v.servs].sort().join(' / ');
+const ot_cambiadas = [...nuevo.servicios.entries()]
+  .map(([ot, v]) => {
+    const antes = anterior.servicios.get(ot);
+    if (!antes) return null;
+    const de = textoServ(antes), a = textoServ(v);
+    return de === a ? null : { ot, cult: v.cult, lote: v.lote, de, a };
+  })
+  .filter(Boolean)
+  .sort((x, y) => String(x.ot).localeCompare(String(y.ot), 'es', { numeric: true }));
+
 const viejo = JSON.parse(fs.readFileSync(SALIDA, 'utf8'));
 console.log('\nbaseline commiteado hoy');
 console.log(`   ${viejo.exportacion_base}   commit ${viejo.commit_base}   ${viejo.lotes.length} lotes, ${viejo.repetidas.length} repetidas`);
@@ -105,6 +145,10 @@ console.log(`   ${nuevosLotes.length} lote(s) en exceso${nuevosLotes.length ? ':
 nuevosLotes.forEach(k => console.log('        ' + k));
 console.log(`   ${nuevasRepetidas.length} labor(es) repetida(s)${nuevasRepetidas.length ? ':' : ''}`);
 nuevasRepetidas.forEach(k => console.log('        ' + k));
+console.log('');
+console.log(`OT a las que les cambiaron la labor: ${ot_cambiadas.length}`);
+ot_cambiadas.forEach(c => console.log(
+  `        OT ${String(c.ot).padEnd(7)} ${(c.cult + ' ' + c.lote).padEnd(14)} ${c.de}  ->  ${c.a}`));
 
 fs.rmSync(tmp, { recursive: true, force: true });
 
@@ -124,10 +168,17 @@ if (!hayXlsxNuevo) {
 if (!exportacionBase) throw new Error('el .xlsx de HEAD no trae Props.ModifiedDate');
 
 fs.writeFileSync(SALIDA, JSON.stringify({
-  _comentario: viejo._comentario,
+  // El comentario se escribe aca y ya no se arrastra del archivo anterior, para que no pueda quedar
+  // describiendo una version vieja del formato.
+  _comentario: 'Foto de Control de Hectareas de la exportacion ANTERIOR, mas las OT a las que les ' +
+    'cambiaron la labor entre esa exportacion y la actual. Sirve para dos cosas: marcar que casos ' +
+    'aparecieron con la subida actual (ver construirControlHectareas en cultivos.js) y dejar rastro ' +
+    'de las correcciones de carga, que si no se pierden al pisarse el .xlsx. Se regenera con ' +
+    '`node tools/baseline.mjs --escribir` en cada subida de datos, ANTES de commitear el xlsx.',
   exportacion_base: exportacionBase,
   commit_base: commitBase,
   lotes,
   repetidas,
+  ot_cambiadas,
 }, null, 1) + '\n');
 console.log('\nok  data/exceso-baseline.json');

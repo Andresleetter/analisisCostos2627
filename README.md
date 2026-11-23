@@ -711,6 +711,38 @@ En la exportación del 29/09/2026, sobre la base del 25/09, dio **10 casos nuevo
 exceso (`.39C` y `.27H` de arroz, +2,38 ha) y 8 labores repetidas (+167,04 ha), de las cuales 6 son
 Fumigación Imperator en sorgo — pasadas sucesivas sobre el mismo lote, no errores de carga.
 
+### OT con la labor cambiada desde la exportación anterior
+
+Corregir una carga en Albor —por ejemplo renumerar una pasada que se cargó dos veces como `1° Disco`
+cuando la segunda era la `2°`— **no deja rastro en ninguna parte**: la próxima exportación pisa el
+`.xlsx` y el valor anterior desaparece. El hallazgo se cae solo del panel de Labores Repetidas y
+nadie puede decir después qué se tocó.
+
+El panel **OT con la Labor Cambiada desde la Exportación Anterior**, debajo de *Lotes inhabilitados*,
+lista esas OT con la labor que decían y la que dicen ahora. Ejemplo real de la subida del 23/11/2026,
+donde se corrigieron 6 pasadas:
+
+| OT | Cultivo | Lote | Decía | Dice ahora |
+|---|---|---|---|---|
+| 4744 | SOJA | 110B | 2° Disco | 1° Disco |
+| 5832 | ARROZ | .27H | 1° Disco | 2° Disco |
+| 6386 | SORGO | .92/93 | 2° Plaina | 3° Plaina |
+
+**No lo calcula el dashboard**, y no puede: para saberlo hay que tener abiertas las **dos**
+exportaciones y en pantalla solo se ve la actual. Lo resuelve `tools/baseline.mjs` —que ya abre las
+dos para armar la foto— y lo deja en `ot_cambiadas` dentro de `data/exceso-baseline.json`. El
+dashboard solo lo muestra.
+
+Se compara el campo `Servicio` tal como viene en la hoja, no la labor normalizada del modelo: lo que
+interesa es cómo se cargó el dato. Si una OT trae varias líneas de servicio se comparan todas juntas,
+ordenadas, para que el orden de las filas no invente un cambio. El subtítulo nombra la exportación
+contra la que se comparó, y la tabla vacía distingue *«ninguna cambió»* de *«no se pudo comparar»* —
+el mismo criterio que `hay_baseline` usa en los KPI.
+
+Las filas pasan por los filtros de Cultivo, Lote y Servicio del módulo, pero **no alimentan sus
+opciones**: varias son de actividades que Control de Hectáreas no cubre (`PARCELA ARROZ`), y
+ofrecerlas en los selectores mostraría cultivos y lotes que ningún otro panel sabe dibujar.
+
 ### La fecha en el detalle de Lotes con Exceso
 
 Las filas de detalle del panel de exceso muestran `OT · Actividad · Servicio · **Fecha** · Estado ·

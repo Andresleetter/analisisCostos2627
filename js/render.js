@@ -3009,10 +3009,16 @@ function filtrarControlHectareas(datos, servicio, lote, serviciosElegidos=[], lo
     return {...e,dets,n_ot:dets.length};
   }).filter(e=>(!servicio.trim()&&!serviciosElegidos.length)||e.n_ot);
   const sinrtk=datos.sinrtk.filter(r=>porLote(r)&&porServicio(r));
-  return {exceso,repetidas,cancelados,sinrtk,exc_kpi:{...datos.exc_kpi,
+  // Las OT con la labor cambiada pasan por los mismos filtros que el resto (su `serv` es la labor
+  // que dicen AHORA), pero a proposito NO alimentan las opciones de los selectores: varias son de
+  // actividades que no entran en Control de Hectareas —"PARCELA ARROZ"— y agregarlas ofreceria
+  // cultivos y lotes que ninguno de los otros paneles sabe mostrar.
+  const ot_cambiadas=(datos.ot_cambiadas||[]).filter(r=>porLote(r)&&porServicio(r));
+  return {exceso,repetidas,cancelados,sinrtk,ot_cambiadas,exc_kpi:{...datos.exc_kpi,
     n:exceso.length,ha:exceso.reduce((s,e)=>s+e.diff,0),n_nuevos:exceso.filter(e=>e.nuevo).length,
     n_repetidas:repetidas.length,ha_repetidas:repetidas.reduce((s,e)=>s+e.exceso,0),
-    n_nuevas_repetidas:repetidas.filter(e=>e.nuevo).length,n_sinrtk:sinrtk.length}};
+    n_nuevas_repetidas:repetidas.filter(e=>e.nuevo).length,n_sinrtk:sinrtk.length,
+    n_ot_cambiadas:ot_cambiadas.length}};
 }
 // Encabezado del informe impreso de labores repetidas. No calcula NADA: pone en palabras los
 // filtros que estan puestos —que en papel salen como cajas sin texto legible— y el tamanio de lo
@@ -3168,6 +3174,26 @@ function renderControlHectareasDatos(datos){
     }
   });
   document.getElementById('cancel').innerHTML=cancelHtml || '<tr><td colspan="2">Sin casos para estos filtros</td></tr>';
+  // ---- OT con la labor cambiada desde la exportacion anterior ----
+  // Nada se recalcula aca (ver el comentario del panel en index.html): se muestra tal cual lo dejo
+  // el baseline. El subtitulo nombra la exportacion contra la que se comparo, porque sin esa fecha
+  // la tabla no dice desde cuando; y el texto de la tabla vacia distingue "ninguna cambio" de "no
+  // se pudo comparar", con el mismo criterio que los pies de los KPI.
+  // La foto guarda la fecha como "2026-11-19 11:18" y el tablero muestra todo en dd/mm/aaaa, asi que
+  // se da vuelta aca. Si el formato llegara a cambiar se muestra tal cual, sin romperse.
+  const fechaBase=(function(t){ const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(String(t||''));
+    return m ? m[3]+'/'+m[2]+'/'+m[1] : String(t||''); })(D.exc_kpi.baseline_fecha);
+  document.getElementById('camb-sub').textContent = D.ot_cambiadas.length
+    ? D.ot_cambiadas.length+' OT'+(fechaBase?' · desde la exportación del '+fechaBase:'')
+    : '';
+  document.getElementById('camb').innerHTML = D.ot_cambiadas.map(c=>
+    `<tr><td class="dl mono">OT ${escHtml(String(c.ot))}</td><td>${escHtml(String(c.cult))}</td>`+
+    `<td class="mono">${escHtml(String(c.lote))}</td><td>${escHtml(String(c.de))}</td>`+
+    `<td>${escHtml(String(c.a))}</td></tr>`).join('') ||
+    `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px">`+
+    (D.exc_kpi.hay_baseline
+      ? 'Ninguna OT cambió de labor en esta subida de datos'
+      : 'No se pudo comparar con la exportación anterior')+`</td></tr>`;
   document.getElementById('sinrtk-sub').textContent=D.sinrtk.length+' OT';
   document.getElementById('sinrtk').innerHTML=D.sinrtk.map(r=>
     `<tr><td class="mono">OT ${r.ot}</td><td>${r.cult}</td><td class="mono">${r.lote}</td><td>${r.act}</td><td>${r.serv}</td><td class="tr mono">${fmt2(r.ha)}</td><td>${r.estado}</td></tr>`).join('') || '<tr><td colspan="7">Sin casos para estos filtros</td></tr>';
