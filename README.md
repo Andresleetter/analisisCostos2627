@@ -1620,12 +1620,35 @@ Cruza dos fuentes que declaran la misma superficie sembrada y que hoy no coincid
 Los mismos criterios que el avance del Resumen Ejecutivo, para no inventar un segundo número:
 
 - Estadio `Siembra`, **excluyendo** `SIEMBRA_SERVICIOS_NO_SIEMBRA` (tratamiento de semillas, que no es sembrar).
+- **Excluyendo también** `SIEMBRA_SERVICIOS_RESIEMBRA` — la resiembra se muestra pero no suma superficie (ver más abajo).
 - Modalidad `hectareas` (`modalidadLaborOT`): las labores medidas en Horas — hoy "Pasada retro excavadora x Hs" — aparecen en el estadio Siembra pero **no acreditan superficie**.
 - Solo **Confirmadas** para la superficie. Las OT de siembra abiertas se cuentan aparte y se muestran en la fila, porque son la otra explicación posible de una diferencia.
 
 > **La superficie sale de `Unidades/Dosis`, NO de `Has. Reales`.** Es la diferencia entre medir bien y medir mal. En una siembra parcial, `Has. Reales` trae la superficie de **la parcela entera** mientras `Unidades/Dosis` trae lo que esa OT realmente sembró. Ejemplo real, lote 203: la OT 4781 declara `Has. Reales` 85,75 (todo el lote) pero `Unidades/Dosis` 1,77 — sembró 1,77 ha, no 85,75. Usar `Has. Reales` daba 5 falsos positivos.
 
-La superficie sembrada del lote es la **suma de todas las labores de siembra**, capada al plan. Se suman, no se toma el máximo: cuando un lote tiene dos labores de siembra son dos siembras **parciales y complementarias**, no dos pasadas sobre la misma superficie. Verificado contra el `.xlsx`: en las 28 parcelas sembradas la suma de `Unidades/Dosis` **no supera el plan en ninguna**, y en los lotes terminados da exactamente el plan (lote 203: 83,98 + 1,77 = 85,75).
+La superficie sembrada del lote es la **suma de las labores de siembra** (las que acreditan superficie), capada al plan. Se suman, no se toma el máximo: cuando un lote tiene dos labores de siembra son dos siembras **parciales y complementarias**, no dos pasadas sobre la misma superficie. Verificado contra el `.xlsx`: en las 28 parcelas sembradas la suma de `Unidades/Dosis` **no supera el plan en ninguna**, y en los lotes terminados da exactamente el plan (lote 203: 83,98 + 1,77 = 85,75).
+
+### La resiembra no suma superficie
+
+Resembrar es volver a sembrar superficie **que ya estaba sembrada**: el lote no crece. Sumarla daba totales físicamente imposibles — el 35A llegaba a 100,60 ha sobre un plan de 50,30 — y el cap al plan lo tapaba, dejando la fila en un empate aparente.
+
+Las labores de resiembra (`SIEMBRA_SERVICIOS_RESIEMBRA` en `config.js`, hoy el prefijo `resiembra`, que cubre "RESiembra" y "RESiembra s/implemento") van a su propio grupo: **se muestran pero no entran en `sembradas`**, ni en los totales, ni en ningún diagnóstico. Tampoco cuentan para `n_labores`, así que ya no disparan el cartel "sembrado en 2 etapas" — resembrar no es sembrar en dos etapas. En pantalla aparecen en la columna *Labores de siembra*, en gris y con la leyenda "no suma superficie", y en el desplegable como un bloque propio con sus OT.
+
+Son 7 lotes en la 26/27, **todos de arroz**, y en los 7 la resiembra es justamente lo que empujaba el total por encima del plan:
+
+| Lote | Plan | Siembra | Resiembra | Declarado (parcela) |
+|---|---|---|---|---|
+| 35A | 50,30 | 50,30 | 50,30 | 100,60 |
+| 37A | 45,83 | 45,83 | 45,83 | 91,66 |
+| 35B | 43,64 | 43,64 | 43,64 | 87,28 |
+| 37B | 56,24 | 48,57 | 48,57 | 97,14 |
+| 31A | 52,94 | 50,39 | 3,70 | 54,09 |
+| 31B | 47,00 | 47,00 | 1,80 | 48,80 |
+| 205C | 18,43 | 9,56 | 3,00 | 12,56 |
+
+`hectareasSembradas` **también la suma**, y eso no se puede cambiar desde acá: es un campo de Albor. Por eso los 6 primeros siguen marcados *Supera la parcela* — el diagnóstico es correcto y se corrige en Albor. El 205C pasó de *Siembra de menos* a *Parcela declara de más* **+3,00 ha**, que son exactamente las de su resiembra: antes el desvío quedaba oculto porque las dos fuentes sumaban igual.
+
+> **El avance del Resumen Ejecutivo no usa esta exclusión** y no hay que agregarsela sin mirar: allá la resiembra ya está contemplada por el divisor de labores por lote (`divisores`), que reparte las hectáreas entre las labores del estadio. En el 35A el divisor 2 deja 25,15 + 25,15 = 50,30, o sea el 100% del lote, que es lo correcto.
 
 ### Por qué el campo de la parcela queda mal
 

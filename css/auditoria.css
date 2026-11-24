@@ -172,4 +172,10 @@ tr.sb-fila.open td{background:#eef4ea}
 .sb-acciones{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
 .sb-acciones .sb-albor{margin-top:0;text-decoration:none;font-size:12px;padding:7px 16px}
 .sb-acciones .sb-ext{font-weight:700;margin-left:2px}
+/* Resiembra en la celda de labores: se muestra pero NO suma superficie (ver construirAuditoriaSiembra).
+   Va en gris y mas chica que las labores que si suman, para que se lea como la nota al pie que es y
+   no como una linea mas del total. */
+.sb-resiembra{color:var(--muted);font-size:11px;font-style:italic}
+.sb-resiembra .pu-ud{font-style:normal}
+
 .sb-acciones-nota{font-size:11px;color:var(--muted)}

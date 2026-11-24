@@ -55,6 +55,15 @@ const ETAPA_LABEL = {'preparacion de suelo':'Preparación de Suelo','siembra':'S
 // nombre, tiene que contar sola, no quedar en 0% en silencio.
 // Solo aplica al Estadio Siembra: el mismo servicio en otro estadio no se toca.
 const SIEMBRA_SERVICIOS_NO_SIEMBRA = ['tratamiento de semilla'];
+// Labores de RESIEMBRA. Son siembra de verdad, pero sobre superficie que YA estaba sembrada: no
+// acreditan superficie nueva y por eso no pueden sumarse a la del lote. Verificado sobre el .xlsx:
+// en los 7 lotes resembrados de la 26/27 la resiembra es justamente lo que empuja el total por
+// encima del plan (ej. el 35A: Siembra 50,30 + RESiembra 50,30 = 100,60 sobre un plan de 50,30).
+// Misma convencion que la lista de arriba: PREFIJOS comparados con normHdr, no nombres exactos, asi
+// cubre "RESiembra" y "RESiembra s/implemento" y las variantes que aparezcan.
+// Solo lo usa la auditoria de Siembra por Parcela (js/data/auditoria.js). El avance del Resumen
+// Ejecutivo NO lo usa: alla la resiembra ya esta contemplada por el divisor de labores por lote.
+const SIEMBRA_SERVICIOS_RESIEMBRA = ['resiembra'];
 // 'PARCELA MAIZ' se agrego el 14/09/2026: es el mismo tipo de trabajo que las otras tres PARCELA y
 // faltaba en la lista, asi que su unica OT (4351, Desecacion imperator, US$ 82,89) no figuraba en
 // Gastos Operativos ni en ninguna otra seccion.

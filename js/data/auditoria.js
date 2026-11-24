@@ -329,6 +329,12 @@ function construirAuditoriaInsumosParcela(rawTodasCampanias){
 // termina superando las hectareas de la propia parcela — algo fisicamente imposible. El avance del
 // dashboard no cae en eso porque capa cada labor al plan del lote y promedia por estadio.
 //
+// La RESIEMBRA no suma superficie (SIEMBRA_SERVICIOS_RESIEMBRA, config.js). Resembrar es volver a
+// sembrar superficie que YA estaba sembrada: el lote no crece. Sumarla daba totales imposibles en
+// los 7 lotes resembrados de la 26/27 —el 35A llegaba a 100,60 ha sobre un plan de 50,30— y el cap
+// al plan lo tapaba, dejando la fila en un empate aparente. Se sigue mostrando en la fila y en el
+// desplegable, pero como contexto: no entra en `sembradas` ni en ningun total ni diagnostico.
+//
 // Que se toma de cada OT (mismos criterios que el avance, para no inventar un segundo numero):
 //   - Estadio "Siembra", excluyendo SIEMBRA_SERVICIOS_NO_SIEMBRA (tratamiento de semillas, que no
 //     es sembrar).
@@ -345,6 +351,10 @@ function haSembradaDeOT(o){
   return (o.lines||[])
     .filter(l=>l.tipo==='Labor Propia'||l.tipo==='Labor Tercero')
     .reduce((s,l)=>s+(l.ud||0), 0);
+}
+// Resiembra: vuelve a sembrar superficie ya sembrada, asi que no acredita superficie nueva.
+function esResiembra(serv){
+  return SIEMBRA_SERVICIOS_RESIEMBRA.some(p=>normHdr(serv).startsWith(p));
 }
 function construirAuditoriaSiembra(OTS, proyecciones){
   // ---- Parcelas de consultaCultivos: plan y hectareas sembradas declaradas ----
@@ -379,11 +389,20 @@ function construirAuditoriaSiembra(OTS, proyecciones){
   OTS.filter(esSiembra).forEach(o=>{
     const k = clave(o.act, o.lote);
     if(!porLote[k]) porLote[k] = {lote:normLote(o.lote), cultivo:String(o.act||'').toUpperCase(),
-      labores:{}, sinConfirmar:[]};
+      labores:{}, resiembras:{}, sinConfirmar:[]};
     const g = porLote[k];
     if(o.estado!=='Confirmado'){ g.sinConfirmar.push({ot:o.ot, serv:o.serv, estado:o.estado, ha:o.ha}); return; }
     if(o.modalidad!=='hectareas' || o.ha==null) return;  // por horas o sin Has. Reales: no acredita superficie
     const labor = o.serv || '(sin labor)';
+    // La resiembra va a su propio grupo: se guarda igual —hay que poder verla y rastrear sus OT—
+    // pero no entra en la superficie sembrada del lote.
+    if(esResiembra(o.serv)){
+      if(!g.resiembras[labor]) g.resiembras[labor] = {ha:0, ots:[]};
+      const hr = haSembradaDeOT(o);
+      g.resiembras[labor].ha += hr;
+      g.resiembras[labor].ots.push({ot:o.ot, ha:hr, fecha:o.fr, contratista:o.contr, estado:o.estado});
+      return;
+    }
     // Superficie sembrada por esta OT = Unidades/Dosis de sus lineas de labor, NO Has. Reales.
     // Verificado contra el .xlsx y es la diferencia entre medir bien y medir mal: en una siembra
     // parcial, Has. Reales trae la superficie de LA PARCELA ENTERA mientras Unidades/Dosis trae lo
@@ -427,12 +446,16 @@ function construirAuditoriaSiembra(OTS, proyecciones){
   const filas = Object.keys(parcelas).concat(Object.keys(porLote))
     .filter((k,i,a)=>a.indexOf(k)===i)
     .map(k=>{
-      const g = porLote[k] || {lote:'', cultivo:'', labores:{}, sinConfirmar:[]};
+      const g = porLote[k] || {lote:'', cultivo:'', labores:{}, resiembras:{}, sinConfirmar:[]};
       const p = parcelas[k] || {lote:g.lote, cultivo:g.cultivo, plan:0, declaradas:0};
       const lote = p.lote;
-      const labores = Object.keys(g.labores).map(nombre=>({nombre, ha:g.labores[nombre].ha,
-          ots:g.labores[nombre].ots.slice().sort((x,y)=>y.ha-x.ha)}))
+      const agrupar = src => Object.keys(src).map(nombre=>({nombre, ha:src[nombre].ha,
+          ots:src[nombre].ots.slice().sort((x,y)=>y.ha-x.ha)}))
         .sort((a,b)=>b.ha-a.ha);
+      const labores = agrupar(g.labores);
+      // Contexto, no superficie: se muestran pero no suman (ver el encabezado del modulo).
+      const resiembras = agrupar(g.resiembras||{});
+      const ha_resiembra = Math.round(resiembras.reduce((t,l)=>t+l.ha,0)*100)/100;
       // Superficie sembrada del lote = SUMA de todas las labores de siembra, capada al plan.
       // Se SUMAN, no se toma el maximo: verificado contra el .xlsx, cuando un lote tiene dos
       // labores de siembra ("Siembra" y "Siembra de arroz s/ implemento") NO son dos pasadas sobre
@@ -458,20 +481,23 @@ function construirAuditoriaSiembra(OTS, proyecciones){
       // El otro lado del mismo eje: lo que se sembro POR ENCIMA del plan del lote.
       const exceso_plan = p.plan ? Math.max(0, Math.round((sembradas_crudo - p.plan)*100)/100) : 0;
       return {lote, cultivo:p.cultivo, plan:p.plan, declaradas:p.declaradas, sembradas,
-        sembradas_crudo, dif, falta_plan, exceso_plan, labores, sinConfirmar:g.sinConfirmar,
+        sembradas_crudo, dif, falta_plan, exceso_plan, labores, resiembras, ha_resiembra,
+        sinConfirmar:g.sinConfirmar,
         // Preparacion de suelo del lote, ordenada por superficie trabajada.
         preparacion: Object.values(prep[k]||{})
           .map(l=>({...l, ha:Math.round(l.ha*100)/100}))
           .sort((a,b)=>b.ha-a.ha || a.nombre.localeCompare(b.nombre,'es')),
         // n_labores > 1 marca los lotes sembrados en dos etapas con labores distintas: es donde
-        // aparece el desvio, porque el campo de la parcela suma una de las dos OT de mas.
+        // aparece el desvio, porque el campo de la parcela suma una de las dos OT de mas. La
+        // resiembra NO cuenta aca: resembrar no es sembrar en dos etapas.
         n_labores: labores.length,
         // Total de OT de siembra confirmadas del lote — lo usa el render para decidir si la fila
-        // se puede desplegar.
-        n_ots: labores.reduce((t,l)=>t+l.ots.length, 0),
-        estado: clasificarSiembra(p, sembradas, labores, g.sinConfirmar, sembradas_crudo)};
+        // se puede desplegar. Las de resiembra cuentan: tambien hay algo que mostrar.
+        n_ots: labores.reduce((t,l)=>t+l.ots.length, 0)
+             + resiembras.reduce((t,l)=>t+l.ots.length, 0),
+        estado: clasificarSiembra(p, sembradas, labores, g.sinConfirmar, sembradas_crudo, resiembras)};
     })
-    .filter(f=>f.declaradas>0 || f.sembradas>0 || f.sinConfirmar.length)
+    .filter(f=>f.declaradas>0 || f.sembradas>0 || f.sinConfirmar.length || f.resiembras.length)
     // Primero TODAS las que no coinciden, despues las que si. Ordenar solo por el tamanio de la
     // diferencia no alcanzaba: un desvio de tipo 'sin_confirmar' o 'sin_ot' puede tener dif 0,00 y
     // quedaba hundido entre un centenar de filas identicas en verde. El estado manda.
@@ -507,17 +533,24 @@ function construirAuditoriaSiembra(OTS, proyecciones){
     n_siembra_mas: filas.filter(f=>f.estado==='siembra_mas').length,
     n_sin_confirmar: filas.filter(f=>f.estado==='sin_confirmar').length,
     n_sin_ot: filas.filter(f=>f.estado==='sin_ot').length,
+    // Resiembra: no entra en ningun total de superficie (no acredita hectareas nuevas), pero se
+    // cuenta aparte para poder avisarlo en el panel.
+    n_resembrados: filas.filter(f=>f.resiembras.length).length,
+    ha_resembradas: Math.round(filas.reduce((s,f)=>s+f.ha_resiembra,0)*100)/100,
   };
 }
 // Clasificacion del desvio de una parcela. El orden importa: "supera_plan" se evalua primero
 // porque es el unico caso IMPOSIBLE (mas sembrado que la superficie de la parcela) y por lo tanto
 // un error de carga seguro, no una diferencia de criterio.
-function clasificarSiembra(p, sembradas, labores, sinConfirmar, sembradas_crudo){
+function clasificarSiembra(p, sembradas, labores, sinConfirmar, sembradas_crudo, resiembras){
   // 1. IMPOSIBLE: la parcela declara mas superficie sembrada que la que tiene. Es error de carga
   //    seguro, no una diferencia de criterio, asi que gana sobre cualquier otra clasificacion.
   if(p.plan && p.declaradas > p.plan + 0.01) return 'supera_plan';
   // 2. Sin ninguna OT de siembra, ni confirmada ni en curso, pero la parcela dice que se sembro.
-  if(!labores.length && !sinConfirmar.length && p.declaradas > 0.01) return 'sin_ot';
+  //    Una resiembra cuenta como OT existente: el lote no esta "sin OT de siembra" sino cargado al
+  //    reves (esta la resiembra y falta la siembra original). Hoy no hay ningun lote asi, pero el
+  //    rotulo seria falso el dia que aparezca, y el caso cae solo en la comparacion de mas abajo.
+  if(!labores.length && !sinConfirmar.length && !(resiembras||[]).length && p.declaradas > 0.01) return 'sin_ot';
   // 3. Hay OT de siembra pero ninguna confirmada: la superficie todavia no puede acreditarse. Se
   //    reporta aunque los dos numeros den 0, porque el 0 aca no es "coincide" sino "falta cerrar".
   if(!labores.length && sinConfirmar.length) return 'sin_confirmar';

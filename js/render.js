@@ -1091,6 +1091,8 @@ function renderAuditoriaSiembra(){
     'lo mismo —, y después ese número contra el <b>plan</b> del lote, que es lo que dice si la '+
     'siembra se terminó. Una parcela puede tener las dos fuentes de acuerdo y aun así estar a medio '+
     'sembrar. '+
+    '<b>La resiembra no suma superficie:</b> resembrar es volver a sembrar lo ya sembrado, '+
+    'así que sus hectáreas se muestran aparte y no entran en «Sembrado (OT)». '+
     '<b>Clic en una fila</b> para ver las OT que la componen.';
 
   // Las cuatro cifras van en tarjetas .kpi, las MISMAS que usan los otros seis modulos (ver
@@ -1119,11 +1121,20 @@ function renderAuditoriaSiembra(){
     // Las labores son la prueba visible de la causa: cuando un lote se sembró en dos etapas con
     // labores distintas, cada OT sembró una PARTE y entre las dos cubren el lote una sola vez — pero
     // el campo de la parcela cuenta el lote completo y encima le suma una de las dos OT.
-    const labores = f.labores.length
+    const laboresHtml = f.labores.length
       ? f.labores.map(l=>`${escHtml(l.nombre.trim())} <span class="pu-ud">${fmt2(l.ha)} ha</span>`).join('<br>')
       : (f.sinConfirmar.length
           ? f.sinConfirmar.map(o=>`<span class="pu-curso">OT ${escHtml(o.ot)} · ${escHtml(o.estado)}</span>`).join('<br>')
-          : sinDato);
+          // Si lo unico que hay es resiembra, el guion sobra: la linea de abajo ya dice que paso.
+          : (f.resiembras.length ? '' : sinDato));
+    // La resiembra va debajo de las labores que si suman, y dice que no acredita superficie. Se
+    // muestra siempre que exista porque es la explicacion de la fila: por que el lote puede figurar
+    // corto aunque se haya trabajado, y por que la parcela declara de mas (hectareasSembradas si la
+    // suma). Sus hectareas NO estan en «Sembrado (OT)».
+    const resiembraHtml = f.resiembras.map(l=>
+      `<span class="sb-resiembra" title="Resembrar es volver a sembrar superficie ya sembrada: el lote no crece, así que estas hectáreas no se suman a Sembrado (OT)">`+
+      `${escHtml(l.nombre.trim())} <span class="pu-ud">${fmt2(l.ha)} ha</span> · no suma superficie</span>`).join('<br>');
+    const labores = [laboresHtml, resiembraHtml].filter(Boolean).join('<br>');
     const aviso2 = f.n_labores > 1
       ? '<br><span class="pu-aprox" title="El lote se sembró en dos etapas con labores distintas: cada OT sembró una parte y entre las dos cubren el lote una sola vez">sembrado en 2 etapas</span>'
       : '';
@@ -1174,6 +1185,22 @@ function siembraDetalle(f){
       `<td class="tr mono">${fmt2(o.ha)}</td><td colspan="4"></td></tr>`
     ).join('');
   });
+  // ---- Resiembra ----
+  // Va inmediatamente despues de la siembra porque es lo mismo hecho de nuevo: mismas columnas,
+  // misma trazabilidad. El encabezado dice que no suma, para que nadie sume estas hectareas a las
+  // de arriba al leer el desplegable.
+  if(f.resiembras.length){
+    html += `<tr class="dethead"><td colspan="8">Resiembra · ${fmt2(f.ha_resiembra)} ha · no acredita superficie</td></tr>`;
+    f.resiembras.forEach(l=>{
+      html += `<tr class="detcols"><td>${escHtml(l.nombre.trim())}</td><td>Fecha real</td><td>Contratista</td><td class="tr">Hectáreas</td><td colspan="4"></td></tr>`;
+      html += l.ots.map(o=>
+        `<tr class="det"><td class="dl mono"><b>OT ${escHtml(o.ot)}</b></td>`+
+        `<td>${o.fecha?ipFecha(o.fecha):sinDato}</td>`+
+        `<td>${escHtml(o.contratista)||sinDato}</td>`+
+        `<td class="tr mono">${fmt2(o.ha)}</td><td colspan="4"></td></tr>`
+      ).join('');
+    });
+  }
   // ---- Preparacion de suelo ----
   // Va despues de la siembra porque es contexto, no el sujeto de la auditoria: sirve para leer una
   // parcela corta — si el suelo se preparo entero y la siembra no llego, falta sembrar; si la
