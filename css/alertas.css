@@ -6,19 +6,6 @@
 .al-o{background:#fbdec0}
 .al-r{background:#f8d2ce}
 
-/* Detalle desplegable de cada OT. Repite el gesto visual de Servicios (fila clicable, caret y un
-   bloque secundario debajo), pero aca no duplica las columnas que ya estan en la fila: agrega la
-   observacion completa, que es el dato operativo que faltaba en Alertas. */
-tr.al-fila{cursor:pointer}
-tr.al-fila:hover td{filter:brightness(.98)}
-tr.al-fila.open td{box-shadow:inset 0 -2px 0 rgba(44,94,45,.18)}
-tr.al-det>td{background:#f7faf5;padding:10px 12px}
-.al-det-tit{font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;
-  letter-spacing:.3px;margin-bottom:8px}
-.al-det-obs{font-size:12px;line-height:1.5;color:var(--text)}
-.al-det-obs>b{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.3px;
-  color:var(--muted);margin-bottom:3px}
-
 /* Boton de descarga de la imagen de atrasadas. Reusa .prob-link (problemas.css), como la barra de
    accion de Siembra por Parcela: el mismo boton de contorno que ya usa el resto del tablero. Acá
    solo se lo acomoda en la fila de filtros, pegado al borde derecho, y se le da el estado

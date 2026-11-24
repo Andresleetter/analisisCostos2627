@@ -283,15 +283,6 @@ document.addEventListener('DOMContentLoaded', function(){
   document.getElementById('itipo').addEventListener('change', function(){ actualizarFiltroInsumo(); renderInsumos(); });
   document.getElementById('iinsumo').addEventListener('change', renderInsumos);
   document.getElementById('aestado').addEventListener('change', renderAlertas);
-  // Clic en una OT de Alertas: muestra/pliega su observacion completa. El listener es delegado
-  // porque renderAlertas reemplaza las filas al cambiar el filtro, igual que Servicios.
-  document.getElementById('al').addEventListener('click', function(e){
-    const fila = e.target.closest('tr.al-fila');
-    if(!fila) return;
-    const ot = decodeURIComponent(fila.dataset.ot);
-    alertaFilaAbierta = (alertaFilaAbierta===ot) ? null : ot;
-    renderAlertas();
-  });
   document.getElementById('al-img').addEventListener('click', alertasDescargarImagen);
   // Reporte de Combustible: el boton solo abre el dialogo de impresion del navegador — la hoja la
   // arma el @media print de css/ui.css sobre lo que ya esta en pantalla, asi que el reporte sale
