@@ -1,7 +1,7 @@
 {
  "_comentario": "Foto de Control de Hectareas de la exportacion ANTERIOR, mas las OT a las que les cambiaron la labor entre esa exportacion y la actual. Sirve para dos cosas: marcar que casos aparecieron con la subida actual (ver construirControlHectareas en cultivos.js) y dejar rastro de las correcciones de carga, que si no se pierden al pisarse el .xlsx. Se regenera con `node tools/baseline.mjs --escribir` en cada subida de datos, ANTES de commitear el xlsx.",
- "exportacion_base": "2026-11-19 11:18",
- "commit_base": "8fc6f97",
+ "exportacion_base": "2026-11-23 10:05",
+ "commit_base": "5eecac1",
  "lotes": [
   "ARROZ|.07A",
   "ARROZ|.27G",
@@ -35,9 +35,7 @@
   "ARROZ|.05B|Fumigacion Imperator",
   "ARROZ|.11A|Fumigacion Imperator",
   "ARROZ|.11C|Fumigacion Imperator",
-  "ARROZ|.27G|1° Disco",
   "ARROZ|.27G|Fumigacion Dron",
-  "ARROZ|.27H|1° Disco",
   "ARROZ|.33A|1° Plaina",
   "ARROZ|.35A|Fumigacion Imperator",
   "ARROZ|140|1° Disco",
@@ -46,7 +44,6 @@
   "ARROZ|205C|1° Disco",
   "ARROZ|208|Taipa Sin Implemento",
   "ARROZ|214|2° Disco",
-  "SOJA|110B|2° Disco",
   "SORGO|.28D|Fumigacion Imperator",
   "SORGO|.28E|Fumigacion Imperator",
   "SORGO|.28G|Fumigacion Imperator",
@@ -59,67 +56,17 @@
   "SORGO|.78A|Fumigacion Imperator",
   "SORGO|.78B|Fumigacion Imperator",
   "SORGO|.87|Fumigacion Imperator",
-  "SORGO|.92/93|2° Plaina",
   "SORGO|.92/93|Fumigacion Imperator",
   "SORGO|.98|1° Plaina",
   "SORGO|.98|Fumigacion Imperator"
  ],
  "ot_cambiadas": [
   {
-   "ot": "4744",
-   "cult": "SOJA",
-   "lote": "110B",
-   "de": "2° Disco",
-   "a": "1° Disco"
-  },
-  {
-   "ot": "5832",
-   "cult": "ARROZ",
-   "lote": ".27H",
-   "de": "1° Disco",
-   "a": "2° Disco"
-  },
-  {
-   "ot": "5833",
-   "cult": "ARROZ",
-   "lote": ".27G",
-   "de": "1° Disco",
-   "a": "2° Disco"
-  },
-  {
-   "ot": "5918",
-   "cult": "ARROZ",
-   "lote": ".27H",
-   "de": "2° Disco",
-   "a": "3° Disco"
-  },
-  {
-   "ot": "5919",
-   "cult": "ARROZ",
-   "lote": ".27G",
-   "de": "2° Disco",
-   "a": "3° Disco"
-  },
-  {
-   "ot": "6386",
-   "cult": "SORGO",
-   "lote": ".92/93",
-   "de": "2° Plaina",
-   "a": "3° Plaina"
-  },
-  {
-   "ot": "7269",
+   "ot": "7329",
    "cult": "PARCELA ARROZ",
    "lote": "PARCELA ARROZ",
    "de": "Camion + grua por dia >6hs",
    "a": "Camion + grua por dia <6hs"
-  },
-  {
-   "ot": "7310",
-   "cult": "PARCELA ARROZ",
-   "lote": "PARCELA ARROZ",
-   "de": "Cierre de taipon retro excavadora x Hs",
-   "a": "Cierre de taipon retropala x Hs"
   }
  ]
 }
