@@ -66,7 +66,72 @@
    "cult": "PARCELA ARROZ",
    "lote": "PARCELA ARROZ",
    "de": "Camion + grua por dia >6hs",
-   "a": "Camion + grua por dia <6hs"
+   "a": "Camion + grua por dia <6hs",
+   "fecha": "2026-11-25"
+  },
+  {
+   "ot": "4744",
+   "cult": "SOJA",
+   "lote": "110B",
+   "de": "2° Disco",
+   "a": "1° Disco",
+   "fecha": "2026-11-23"
+  },
+  {
+   "ot": "5832",
+   "cult": "ARROZ",
+   "lote": ".27H",
+   "de": "1° Disco",
+   "a": "2° Disco",
+   "fecha": "2026-11-23"
+  },
+  {
+   "ot": "5833",
+   "cult": "ARROZ",
+   "lote": ".27G",
+   "de": "1° Disco",
+   "a": "2° Disco",
+   "fecha": "2026-11-23"
+  },
+  {
+   "ot": "5918",
+   "cult": "ARROZ",
+   "lote": ".27H",
+   "de": "2° Disco",
+   "a": "3° Disco",
+   "fecha": "2026-11-23"
+  },
+  {
+   "ot": "5919",
+   "cult": "ARROZ",
+   "lote": ".27G",
+   "de": "2° Disco",
+   "a": "3° Disco",
+   "fecha": "2026-11-23"
+  },
+  {
+   "ot": "6386",
+   "cult": "SORGO",
+   "lote": ".92/93",
+   "de": "2° Plaina",
+   "a": "3° Plaina",
+   "fecha": "2026-11-23"
+  },
+  {
+   "ot": "7269",
+   "cult": "PARCELA ARROZ",
+   "lote": "PARCELA ARROZ",
+   "de": "Camion + grua por dia >6hs",
+   "a": "Camion + grua por dia <6hs",
+   "fecha": "2026-11-23"
+  },
+  {
+   "ot": "7310",
+   "cult": "PARCELA ARROZ",
+   "lote": "PARCELA ARROZ",
+   "de": "Cierre de taipon retro excavadora x Hs",
+   "a": "Cierre de taipon retropala x Hs",
+   "fecha": "2026-11-23"
   }
  ]
 }

@@ -711,22 +711,34 @@ En la exportación del 29/09/2026, sobre la base del 25/09, dio **10 casos nuevo
 exceso (`.39C` y `.27H` de arroz, +2,38 ha) y 8 labores repetidas (+167,04 ha), de las cuales 6 son
 Fumigación Imperator en sorgo — pasadas sucesivas sobre el mismo lote, no errores de carga.
 
-### OT con la labor cambiada desde la exportación anterior
+### Historial de OT con la labor cambiada
 
 Corregir una carga en Albor —por ejemplo renumerar una pasada que se cargó dos veces como `1° Disco`
 cuando la segunda era la `2°`— **no deja rastro en ninguna parte**: la próxima exportación pisa el
 `.xlsx` y el valor anterior desaparece. El hallazgo se cae solo del panel de Labores Repetidas y
 nadie puede decir después qué se tocó.
 
-El panel **OT con la Labor Cambiada desde la Exportación Anterior**, debajo de *Lotes inhabilitados*,
-lista esas OT con la labor que decían y la que dicen ahora. Ejemplo real de la subida del 23/11/2026,
-donde se corrigieron 6 pasadas:
+El panel **Historial de OT con la Labor Cambiada**, debajo de *Lotes inhabilitados*, lista esas OT
+con la labor que decían, la que dicen ahora y **la exportación en que se detectó el cambio**, de la
+más reciente a la más vieja:
 
-| OT | Cultivo | Lote | Decía | Dice ahora |
-|---|---|---|---|---|
-| 4744 | SOJA | 110B | 2° Disco | 1° Disco |
-| 5832 | ARROZ | .27H | 1° Disco | 2° Disco |
-| 6386 | SORGO | .92/93 | 2° Plaina | 3° Plaina |
+| OT | Cultivo | Lote | Decía | Dice ahora | Detectado |
+|---|---|---|---|---|---|
+| 7329 | PARCELA ARROZ | PARCELA ARROZ | Camion + grua por dia >6hs | Camion + grua por dia <6hs | 25/11/2026 |
+| 4744 | SOJA | 110B | 2° Disco | 1° Disco | 23/11/2026 |
+| 5832 | ARROZ | .27H | 1° Disco | 2° Disco | 23/11/2026 |
+| 6386 | SORGO | .92/93 | 2° Plaina | 3° Plaina | 23/11/2026 |
+
+**Es un historial: se acumula, no se pisa.** Cada subida le SUMA sus correcciones a las anteriores.
+Al principio mostraba solo la última subida, y así una corrección dejaba de verse a la semana
+siguiente — justo al revés de lo que sirve, porque una corrección de carga vale como antecedente
+toda la campaña. Por eso cada fila va fechada: sin esa columna, correcciones de meses distintos se
+leerían como una sola tanda.
+
+> Es la **única** parte de `exceso-baseline.json` que se acumula. `lotes` y `repetidas` son una foto
+> de la exportación anterior y se reemplazan enteras en cada corrida, porque su trabajo es decir qué
+> apareció en *esta* subida. Si alguna vez hay que recuperar entradas perdidas del historial, están
+> en las versiones viejas del JSON en git (así se recuperaron las 8 del 23/11/2026).
 
 **No lo calcula el dashboard**, y no puede: para saberlo hay que tener abiertas las **dos**
 exportaciones y en pantalla solo se ve la actual. Lo resuelve `tools/baseline.mjs` —que ya abre las
@@ -735,9 +747,12 @@ dashboard solo lo muestra.
 
 Se compara el campo `Servicio` tal como viene en la hoja, no la labor normalizada del modelo: lo que
 interesa es cómo se cargó el dato. Si una OT trae varias líneas de servicio se comparan todas juntas,
-ordenadas, para que el orden de las filas no invente un cambio. El subtítulo nombra la exportación
-contra la que se comparó, y la tabla vacía distingue *«ninguna cambió»* de *«no se pudo comparar»* —
-el mismo criterio que `hay_baseline` usa en los KPI.
+ordenadas, para que el orden de las filas no invente un cambio. El subtítulo cuenta cuántas hay y
+desde cuándo, y la tabla vacía distingue *«todavía ninguna»* de *«no se pudo comparar»* — el mismo
+criterio que `hay_baseline` usa en los KPI.
+
+La clave con que se deduplica el historial incluye la fecha (`ot` + `de` + `a` + `fecha`): si a la
+misma OT le cambian la labor dos veces en subidas distintas, son dos hechos y los dos quedan.
 
 Las filas pasan por los filtros de Cultivo, Lote y Servicio del módulo, pero **no alimentan sus
 opciones**: varias son de actividades que Control de Hectáreas no cubre (`PARCELA ARROZ`), y

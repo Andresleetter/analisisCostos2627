@@ -3195,25 +3195,29 @@ function renderControlHectareasDatos(datos){
     }
   });
   document.getElementById('cancel').innerHTML=cancelHtml || '<tr><td colspan="2">Sin casos para estos filtros</td></tr>';
-  // ---- OT con la labor cambiada desde la exportacion anterior ----
+  // ---- Historial de OT con la labor cambiada ----
   // Nada se recalcula aca (ver el comentario del panel en index.html): se muestra tal cual lo dejo
-  // el baseline. El subtitulo nombra la exportacion contra la que se comparo, porque sin esa fecha
-  // la tabla no dice desde cuando; y el texto de la tabla vacia distingue "ninguna cambio" de "no
-  // se pudo comparar", con el mismo criterio que los pies de los KPI.
-  // La foto guarda la fecha como "2026-11-19 11:18" y el tablero muestra todo en dd/mm/aaaa, asi que
+  // el baseline, que acumula una entrada por correccion y la fecha con la exportacion que la trajo.
+  // No es la foto de la ultima subida: es el historial de la campania, y por eso cada fila dice
+  // CUANDO se detecto. Sin esa columna dos correcciones de meses distintos se leerian como una sola
+  // tanda. El subtitulo cuenta cuantas hay y desde cuando, y el texto de la tabla vacia distingue
+  // "todavia ninguna" de "no se pudo comparar", con el mismo criterio que los pies de los KPI.
+  // El baseline guarda la fecha como "2026-11-25" y el tablero muestra todo en dd/mm/aaaa, asi que
   // se da vuelta aca. Si el formato llegara a cambiar se muestra tal cual, sin romperse.
-  const fechaBase=(function(t){ const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(String(t||''));
-    return m ? m[3]+'/'+m[2]+'/'+m[1] : String(t||''); })(D.exc_kpi.baseline_fecha);
+  const aDMA=t=>{ const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(String(t||''));
+    return m ? m[3]+'/'+m[2]+'/'+m[1] : String(t||''); };
+  // Vienen ordenadas de la mas reciente a la mas vieja: la primera y la ultima dan el periodo.
+  const fDesde=aDMA(D.ot_cambiadas.length?D.ot_cambiadas[D.ot_cambiadas.length-1].fecha:'');
   document.getElementById('camb-sub').textContent = D.ot_cambiadas.length
-    ? D.ot_cambiadas.length+' OT'+(fechaBase?' · desde la exportación del '+fechaBase:'')
+    ? D.ot_cambiadas.length+' OT'+(fDesde?' · desde el '+fDesde:'')
     : '';
   document.getElementById('camb').innerHTML = D.ot_cambiadas.map(c=>
     `<tr><td class="dl mono">OT ${escHtml(String(c.ot))}</td><td>${escHtml(String(c.cult))}</td>`+
     `<td class="mono">${escHtml(String(c.lote))}</td><td>${escHtml(String(c.de))}</td>`+
-    `<td>${escHtml(String(c.a))}</td></tr>`).join('') ||
-    `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px">`+
+    `<td>${escHtml(String(c.a))}</td><td class="mono">${escHtml(aDMA(c.fecha))||'—'}</td></tr>`).join('') ||
+    `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:16px">`+
     (D.exc_kpi.hay_baseline
-      ? 'Ninguna OT cambió de labor en esta subida de datos'
+      ? 'Todavía no se registró ninguna corrección de labor en la campaña'
       : 'No se pudo comparar con la exportación anterior')+`</td></tr>`;
   document.getElementById('sinrtk-sub').textContent=D.sinrtk.length+' OT';
   document.getElementById('sinrtk').innerHTML=D.sinrtk.map(r=>

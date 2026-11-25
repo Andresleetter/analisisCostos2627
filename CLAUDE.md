@@ -71,10 +71,16 @@ Saca el `.xlsx` de `HEAD` con `git show`, corre el `buildData()` real sobre ese 
 commitea el JSON **junto con** el `.xlsx` nuevo.
 
 Escribe además **`ot_cambiadas`**: las OT a las que les cambió la labor entre las dos exportaciones
-(`{ot, cult, lote, de, a}`). Es el rastro de las correcciones de carga hechas en Albor, que si no se
-pierde apenas se pisa el `.xlsx`; lo muestra el panel *OT con la Labor Cambiada* de Control de
-Hectáreas. Solo entran las OT que están en las **dos** exportaciones: una OT nueva no cambió de
-labor, y una borrada tampoco.
+(`{ot, cult, lote, de, a, fecha}`). Es el rastro de las correcciones de carga hechas en Albor, que si
+no se pierde apenas se pisa el `.xlsx`; lo muestra el panel *Historial de OT con la Labor Cambiada*
+de Control de Hectáreas. Solo entran las OT que están en las **dos** exportaciones: una OT nueva no
+cambió de labor, y una borrada tampoco.
+
+**`ot_cambiadas` se ACUMULA, no se reemplaza** — es la única parte del archivo que se comporta así.
+Cada corrida le suma las correcciones nuevas a las que ya estaban, fechadas con la exportación que
+las trajo, y deduplica por `ot + de + a + fecha`. `lotes` y `repetidas`, en cambio, son una foto y se
+reescriben enteras. No las mezcles: una foto vieja deja los avisos de «nuevo» en cero, y un historial
+pisado borra antecedentes de toda la campaña.
 
 `--desde` existe para el caso en que el `.xlsx` nuevo **ya se commiteó**: ahí `HEAD` es la
 exportación nueva, así que hay que nombrar a mano el commit de datos anterior

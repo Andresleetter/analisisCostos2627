@@ -468,13 +468,18 @@
       <div class="scroll"><table><thead><tr><th>Cultivo</th><th>Lote</th><th>Labor</th><th class="tr">Ha Plan</th><th class="tr">Suma OT</th><th class="tr">Dif. Ha</th><th class="tr">% Exceso</th></tr></thead><tbody id="rep"></tbody></table></div></div>
     <div class="panel"><h3>Lotes inhabilitados · Detalle de OT y Labores <span id="cancel-sub"></span></h3>
       <div class="scroll"><table><thead><tr><th>Cultivo</th><th>Lote</th></tr></thead><tbody id="cancel"></tbody></table></div></div>
-    <!-- OT a las que les cambiaron la labor entre la exportacion anterior del .xlsx y la actual.
+    <!-- HISTORIAL de OT a las que les cambiaron la labor, acumulado durante toda la campania.
          NO se calcula en el tablero: viene resuelto en data/exceso-baseline.json (ver
          tools/baseline.mjs), porque para saberlo hay que tener abiertas las dos exportaciones y aca
          solo se ve la actual. Existe para dejar rastro de las correcciones de carga hechas en Albor,
-         que si no se pierden en cuanto se pisa el archivo. -->
-    <div class="panel"><h3>OT con la Labor Cambiada desde la Exportación Anterior <span id="camb-sub"></span></h3>
-      <div class="scroll"><table><thead><tr><th>OT</th><th>Cultivo</th><th>Lote</th><th>Decía</th><th>Dice ahora</th></tr></thead><tbody id="camb"></tbody></table></div></div>
+         que si no se pierden en cuanto se pisa el archivo.
+         Acumula: cada subida SUMA sus correcciones a las anteriores en vez de reemplazarlas, y cada
+         fila dice con que exportacion se detecto. Antes mostraba solo la ultima subida, y entonces
+         una correccion dejaba de verse a la semana siguiente: justo al reves de lo que sirve, porque
+         vale como antecedente toda la campania. A diferencia de los avisos de "nuevo" de los paneles
+         de arriba, que si son la foto de la ultima subida. -->
+    <div class="panel"><h3>Historial de OT con la Labor Cambiada <span id="camb-sub"></span></h3>
+      <div class="scroll"><table><thead><tr><th>OT</th><th>Cultivo</th><th>Lote</th><th>Decía</th><th>Dice ahora</th><th>Detectado</th></tr></thead><tbody id="camb"></tbody></table></div></div>
     <div class="panel"><h3>OT sin Correspondencia en el Plan de Cultivo <span id="sinrtk-sub"></span></h3>
       <div class="scroll"><table><thead><tr><th>OT</th><th>Cultivo</th><th>Lote</th><th>Actividad</th><th>Labor / Servicio</th><th class="tr">Ha Cargadas</th><th>Estado</th></tr></thead><tbody id="sinrtk"></tbody></table></div></div>
   </section>

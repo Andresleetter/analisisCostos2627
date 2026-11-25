@@ -116,23 +116,44 @@ const nuevosLotes = lotesN.filter(k => !lotes.includes(k));
 const nuevasRepetidas = repetidasN.filter(k => !repetidas.includes(k));
 
 // ---- OT a las que les cambiaron la labor entre las dos exportaciones ----
-// Es el rastro de las correcciones de carga hechas en Albor. Hasta ahora se perdia entre una subida
-// y la siguiente: el .xlsx se pisa y nadie vuelve a mirar el anterior.
+// Es el rastro de las correcciones de carga hechas en Albor. Se perdia entre una subida y la
+// siguiente: el .xlsx se pisa y nadie vuelve a mirar el anterior.
 // Solo entran las OT que estan en las DOS exportaciones: una OT nueva no cambio de labor, y una que
 // se borro tampoco. El texto se ordena antes de comparar para que el orden de las lineas de la hoja
 // no invente un cambio donde no lo hay.
+// Cada una queda fechada con la exportacion que trajo el cambio: es el dato que convierte la lista
+// en un historial, porque sin el no se puede saber cual correccion es de cuando.
 const textoServ = v => [...v.servs].sort().join(' / ');
-const ot_cambiadas = [...nuevo.servicios.entries()]
+const fechaDeteccion = fmt(nuevo.modificado) ? fmt(nuevo.modificado).slice(0, 10) : null;
+const cambiosNuevos = [...nuevo.servicios.entries()]
   .map(([ot, v]) => {
     const antes = anterior.servicios.get(ot);
     if (!antes) return null;
     const de = textoServ(antes), a = textoServ(v);
-    return de === a ? null : { ot, cult: v.cult, lote: v.lote, de, a };
+    return de === a ? null : { ot, cult: v.cult, lote: v.lote, de, a, fecha: fechaDeteccion };
   })
   .filter(Boolean)
   .sort((x, y) => String(x.ot).localeCompare(String(y.ot), 'es', { numeric: true }));
 
 const viejo = JSON.parse(fs.readFileSync(SALIDA, 'utf8'));
+
+// ---- El historial, que NO se pisa ----
+// Lo de arriba son solo las correcciones de ESTA subida. Antes se escribian solas y las de la
+// subida anterior desaparecian, asi que el panel contaba siempre la ultima semana y nada mas: justo
+// al reves de lo que sirve, porque una correccion de carga es un hecho que vale como antecedente
+// toda la campania. Ahora se acumulan.
+// A las entradas viejas que no tienen fecha se les pone la de la exportacion de HEAD: son las que se
+// detectaron cuando se subio ese .xlsx, que es el que esta publicado hoy. Pasa una sola vez, con el
+// archivo escrito por la version anterior de este script.
+// La clave de deduplicacion lleva la fecha a proposito: si a la misma OT le cambian la labor dos
+// veces en subidas distintas, son dos hechos y los dos tienen que quedar.
+const previas = (viejo.ot_cambiadas || []).map(c => c.fecha ? c : { ...c, fecha: (exportacionBase || '').slice(0, 10) || null });
+const clave = c => [c.ot, c.de, c.a, c.fecha].join('\u0001');
+const vistas = new Set();
+const ot_cambiadas = [...previas, ...cambiosNuevos]
+  .filter(c => { const k = clave(c); if (vistas.has(k)) return false; vistas.add(k); return true; })
+  .sort((x, y) => String(y.fecha || '').localeCompare(String(x.fecha || '')) ||
+                  String(x.ot).localeCompare(String(y.ot), 'es', { numeric: true }));
 console.log('\nbaseline commiteado hoy');
 console.log(`   ${viejo.exportacion_base}   commit ${viejo.commit_base}   ${viejo.lotes.length} lotes, ${viejo.repetidas.length} repetidas`);
 console.log('\nbaseline que corresponde (foto del .xlsx de HEAD)');
@@ -146,9 +167,11 @@ nuevosLotes.forEach(k => console.log('        ' + k));
 console.log(`   ${nuevasRepetidas.length} labor(es) repetida(s)${nuevasRepetidas.length ? ':' : ''}`);
 nuevasRepetidas.forEach(k => console.log('        ' + k));
 console.log('');
-console.log(`OT a las que les cambiaron la labor: ${ot_cambiadas.length}`);
-ot_cambiadas.forEach(c => console.log(
+console.log(`OT a las que les cambiaron la labor en esta subida: ${cambiosNuevos.length}`);
+cambiosNuevos.forEach(c => console.log(
   `        OT ${String(c.ot).padEnd(7)} ${(c.cult + ' ' + c.lote).padEnd(14)} ${c.de}  ->  ${c.a}`));
+console.log(`historial acumulado de correcciones de carga: ${ot_cambiadas.length} OT` +
+  (previas.length ? `  (${previas.length} de subidas anteriores)` : ''));
 
 fs.rmSync(tmp, { recursive: true, force: true });
 
@@ -170,11 +193,13 @@ if (!exportacionBase) throw new Error('el .xlsx de HEAD no trae Props.ModifiedDa
 fs.writeFileSync(SALIDA, JSON.stringify({
   // El comentario se escribe aca y ya no se arrastra del archivo anterior, para que no pueda quedar
   // describiendo una version vieja del formato.
-  _comentario: 'Foto de Control de Hectareas de la exportacion ANTERIOR, mas las OT a las que les ' +
-    'cambiaron la labor entre esa exportacion y la actual. Sirve para dos cosas: marcar que casos ' +
-    'aparecieron con la subida actual (ver construirControlHectareas en cultivos.js) y dejar rastro ' +
-    'de las correcciones de carga, que si no se pierden al pisarse el .xlsx. Se regenera con ' +
-    '`node tools/baseline.mjs --escribir` en cada subida de datos, ANTES de commitear el xlsx.',
+  _comentario: 'Foto de Control de Hectareas de la exportacion ANTERIOR, mas el historial de OT a ' +
+    'las que les cambiaron la labor. Sirve para dos cosas: marcar que casos aparecieron con la ' +
+    'subida actual (ver construirControlHectareas en cultivos.js) y dejar rastro de las correcciones ' +
+    'de carga, que si no se pierden al pisarse el .xlsx. OJO: `lotes` y `repetidas` son una FOTO y se ' +
+    'reemplazan en cada corrida; `ot_cambiadas` es un HISTORIAL y se acumula, cada entrada fechada ' +
+    'con la exportacion que trajo el cambio. Se regenera con `node tools/baseline.mjs --escribir` en ' +
+    'cada subida de datos, ANTES de commitear el xlsx.',
   exportacion_base: exportacionBase,
   commit_base: commitBase,
   lotes,
