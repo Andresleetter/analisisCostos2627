@@ -389,7 +389,7 @@
     "descripcion": "Imazapic 17.5% + Imazapir 52.5% WG",
     "dosisHa": 0.12,
     "unidad": "kg",
-    "origen": "unidad corregida a L para que coincida con la carga de Albor · dosis de la fila \"Maxirice - Zupressor\" del presupuesto de ARROZ"
+    "origen": "25/11/2026: unidad del presupuesto (kgs en la fila \"Maxirice - Zupressor - Redex\" de ARROZ; es Imazapic + Imazapir WG, un granulado). Albor lo carga en Litros, asi que la dosis no se compara y el panel muestra el choque de unidades. Entre el 21/09 y el 25/11 se cargo en L para que comparara; se revirtio al respetar el presupuesto."
   },
   {
     "campania": "26/27",
@@ -1836,7 +1836,7 @@
     "descripcion": "Imazapic 17.5% + Imazapir 52.5% WG",
     "dosisHa": 0.14,
     "unidad": "kg",
-    "origen": "28/10/2026, de HOJA DE TRABAJO PRESP 26-27 SORGO · unidad en L y no en kg como dice el presupuesto: Albor carga Zupressor en Litros (66 movimientos), mismo criterio que la entrada de ARROZ. Hoy no hay ningun movimiento de Zupressor en SORGO — se carga porque el presupuesto lo preve"
+    "origen": "25/11/2026: unidad del presupuesto (kgs en HOJA DE TRABAJO PRESP 26-27 SORGO). Mismo criterio que la entrada de ARROZ. Hoy no hay ningun movimiento de Zupressor en SORGO: se carga porque el presupuesto lo preve."
   },
   {
     "campania": "26/27",
