@@ -90,6 +90,11 @@ function construirIndiceRecetas(recetasRaw){
       dosisHa:     dosis,
       unidad:      String(r.unidad==null?'':r.unidad).trim(),
       unidadNorm:  normUnidadDosis(r.unidad),
+      // La unidad que trae el PRESUPUESTO cuando no es la misma con que Albor carga el insumo.
+      // `unidad` es la de Albor —es la que compara— y esta queda solo para poder avisar la
+      // diferencia en pantalla: el presupuesto dice otra cosa y eso hay que corregirlo en el Excel.
+      // Vacia en los 231 registros donde las dos fuentes coinciden.
+      unidadPresupuesto: String(r.unidadPresupuesto==null?'':r.unidadPresupuesto).trim(),
     };
     filas.push(fila);
     const base = normHdr(fila.campania)+'|'+normHdr(fila.cultivo)+'|';
@@ -206,7 +211,7 @@ function evaluarDosisContraReceta(indice, datos){
   const dosisRealHa = (datos && datos.dosisRealHa!=null) ? datos.dosisRealHa : null;
   const salida = {
     recetaEncontrada:false, recetaInsumo:null, recetaGrupo:null,
-    dosisRecetaHa:null, unidadReceta:null,
+    dosisRecetaHa:null, unidadReceta:null, unidadPresupuesto:null,
     // dosisRecetaHa expresada en la MISMA unidad que la dosis real (unica conversion posible:
     // ton -> kg). Es el valor contra el que se calcula el desvio.
     dosisRecetaComparable:null,
@@ -222,6 +227,7 @@ function evaluarDosisContraReceta(indice, datos){
   salida.recetaGrupo  = hallazgo.fila.grupo;
   salida.dosisRecetaHa = hallazgo.fila.dosisHa;
   salida.unidadReceta = hallazgo.fila.unidad || null;
+  salida.unidadPresupuesto = hallazgo.fila.unidadPresupuesto || null;
   salida.viaReceta = hallazgo.via;
 
   const factor = factorConversionDosis(hallazgo.fila.unidadNorm, normUnidadDosis(unidadReal));

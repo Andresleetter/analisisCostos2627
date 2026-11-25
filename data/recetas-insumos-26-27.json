@@ -259,7 +259,9 @@
     "insumo": "Cyperex 75",
     "descripcion": "Pyrazosulfuron",
     "dosisHa": 0.08,
-    "unidad": "L"
+    "unidad": "kg",
+    "unidadPresupuesto": "L",
+    "origen": "25/11/2026: la dosis es la del presupuesto, pero la unidad es la de Albor (Kilos, 105 movimientos en la campaña). El presupuesto la trae en L y esa es la que esta mal —criterio del usuario—, asi que la dosis vuelve a compararse y el panel avisa la diferencia en vez de taparla."
   },
   {
     "campania": "26/27",
@@ -324,7 +326,9 @@
     "insumo": "VULCANO PQT",
     "descripcion": "Quinclorac 25% SC",
     "dosisHa": 2,
-    "unidad": "L"
+    "unidad": "kg",
+    "unidadPresupuesto": "L",
+    "origen": "25/11/2026: la dosis es la del presupuesto, pero la unidad es la de Albor (Kilos, 13 movimientos en la campaña). El presupuesto la trae en L y esa es la que esta mal —criterio del usuario—, asi que la dosis vuelve a compararse y el panel avisa la diferencia en vez de taparla."
   },
   {
     "campania": "26/27",
@@ -388,8 +392,9 @@
     "insumo": "Zupressor",
     "descripcion": "Imazapic 17.5% + Imazapir 52.5% WG",
     "dosisHa": 0.12,
-    "unidad": "kg",
-    "origen": "25/11/2026: unidad del presupuesto (kgs en la fila \"Maxirice - Zupressor - Redex\" de ARROZ; es Imazapic + Imazapir WG, un granulado). Albor lo carga en Litros, asi que la dosis no se compara y el panel muestra el choque de unidades. Entre el 21/09 y el 25/11 se cargo en L para que comparara; se revirtio al respetar el presupuesto."
+    "unidad": "L",
+    "origen": "25/11/2026: la dosis es la del presupuesto, pero la unidad es la de Albor (Litros, 69 movimientos en la campaña). El presupuesto la trae en kg y esa es la que esta mal —criterio del usuario—, asi que la dosis vuelve a compararse y el panel avisa la diferencia en vez de taparla.",
+    "unidadPresupuesto": "kg"
   },
   {
     "campania": "26/27",
@@ -434,7 +439,9 @@
     "insumo": "Sniper",
     "descripcion": "Bifentrina 40%",
     "dosisHa": 0.21,
-    "unidad": "kg"
+    "unidad": "L",
+    "unidadPresupuesto": "kg",
+    "origen": "25/11/2026: la dosis es la del presupuesto, pero la unidad es la de Albor (Litros, 82 movimientos en la campaña). El presupuesto la trae en kg y esa es la que esta mal —criterio del usuario—, asi que la dosis vuelve a compararse y el panel avisa la diferencia en vez de taparla."
   },
   {
     "campania": "26/27",
@@ -923,7 +930,8 @@
     "insumo": "Rhino",
     "descripcion": "Clorantraniliprole 75%",
     "dosisHa": 0.24,
-    "unidad": "kg"
+    "unidad": "kg",
+    "origen": "25/11/2026: unidad del presupuesto (kgs). Albor carga RHINO en MAIZ en Kilos en 8 de sus 9 movimientos; el noveno, en Litros, es el que esta mal cargado y por eso queda marcado \"Unidad no comparable\"."
   },
   {
     "campania": "26/27",
@@ -1049,7 +1057,9 @@
     "insumo": "UTRISHA N",
     "descripcion": "Methylobacterium symbioticum 3x10*7 UFC/g",
     "dosisHa": 0.3,
-    "unidad": "L"
+    "unidad": "kg",
+    "unidadPresupuesto": "L",
+    "origen": "25/11/2026: la dosis es la del presupuesto, pero la unidad es la de Albor (Kilos, 1 movimiento en la campaña). El presupuesto la trae en L y esa es la que esta mal —criterio del usuario—, asi que la dosis vuelve a compararse y el panel avisa la diferencia en vez de taparla."
   },
   {
     "campania": "26/27",
@@ -1424,7 +1434,9 @@
     "insumo": "Sniper",
     "descripcion": "Bifentrina 40%",
     "dosisHa": 0.3,
-    "unidad": "kg"
+    "unidad": "L",
+    "unidadPresupuesto": "kg",
+    "origen": "25/11/2026: la dosis es la del presupuesto, pero la unidad es la de Albor (Litros, 24 movimientos en la campaña). El presupuesto la trae en kg y esa es la que esta mal —criterio del usuario—, asi que la dosis vuelve a compararse y el panel avisa la diferencia en vez de taparla."
   },
   {
     "campania": "26/27",
@@ -1836,7 +1848,7 @@
     "descripcion": "Imazapic 17.5% + Imazapir 52.5% WG",
     "dosisHa": 0.14,
     "unidad": "kg",
-    "origen": "25/11/2026: unidad del presupuesto (kgs en HOJA DE TRABAJO PRESP 26-27 SORGO). Mismo criterio que la entrada de ARROZ. Hoy no hay ningun movimiento de Zupressor en SORGO: se carga porque el presupuesto lo preve."
+    "origen": "25/11/2026: unidad del presupuesto (kgs en la fila \"Maxirice - Zupressor\" de SORGO). Albor no registra ni un movimiento de Zupressor en SORGO en la campaña, asi que no hay unidad cargada que pueda corregirla."
   },
   {
     "campania": "26/27",

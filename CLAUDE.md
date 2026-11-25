@@ -102,7 +102,7 @@ nada que rebasear, y adelantar la foto dejaría en cero los avisos de «nuevo» 
 | `combustible.js` | Gasoil — cruza cada movimiento con su OT (`referenciaOrigen` = `consultaOT.referencia`; `referenciaAsiento` quedó descartado por no ser único) y lo atribuye por niveles: OT vinculada / Solo contratista / OT no disponible / Labor Propia |
 | `insumos.js` | Módulo Insumos |
 | `auditoria.js` | Infraestructura + Insumos por Parcela — Puentes por Unidad amplía los estados (Confirmado/En Ejecución/Pendiente) **solo acá**, sin tocar `CONF`; el avance sigue siendo solo Confirmados |
-| `recetas.js` | Dosis real vs receta: unidades, índice, búsqueda y desvío |
+| `recetas.js` | Dosis real vs receta: unidades, índice, búsqueda y desvío. **Cuando el presupuesto y Albor no coinciden en la unidad manda Albor** (criterio del 25/11/2026): la receta toma esa unidad y la del presupuesto queda en `unidadPresupuesto` para avisarla en pantalla, nunca para comparar. Si el insumo no tiene movimientos en Albor no hay unidad que respetar y queda la del presupuesto — ver README, *Las unidades que no coinciden* |
 | `alertas.js` | OT pendientes/atrasadas |
 | `resumen.js` | Gastos Operativos, `D.resumen` y `D.resumen_campanias` — `construirResumenPorCampania()` arma un paquete completo del Resumen Ejecutivo por cada campaña de `consultaOT`, mismo patrón que `construirServiciosPorCampania` (la vigente se reusa, no se recalcula) |
 

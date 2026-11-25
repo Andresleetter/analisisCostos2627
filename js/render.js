@@ -1562,16 +1562,24 @@ function renderInsumosParcela(){
     +(conteoReceta.get(RECETA_ESTADO.TOLERANCIA)||0)+(conteoReceta.get(RECETA_ESTADO.SEGUN)||0);
   // Insumos donde Albor y el presupuesto NO usan la misma unidad. Se juntan acá —en el mismo
   // recorrido que ya alimenta los contadores— para poder decirlo una vez arriba, con nombre y las
-  // dos unidades, en vez de obligar a abrir lote por lote hasta toparse con el chip. Se agrupan por
-  // insumo + las dos unidades: el mismo producto aparece en decenas de lotes y es un solo hallazgo.
+  // dos unidades, en vez de obligar a abrir lote por lote. Se agrupan por insumo + las dos
+  // unidades: el mismo producto aparece en decenas de lotes y es un solo hallazgo.
+  //
+  // Son dos situaciones distintas y el aviso las distingue:
+  //  - `unidadPresupuesto` cargada: la receta ya tomó la unidad de Albor (que es la correcta) y la
+  //    dosis SÍ se compara. Lo que queda por corregir es el Excel del presupuesto.
+  //  - estado "Unidad no comparable": nadie resolvió cuál de las dos vale, así que no se compara.
   const choqueUnidad = new Map();
   insumosPorParcela.forEach(lista=>lista.forEach(i=>{
-    if(i.receta.estadoReceta!==RECETA_ESTADO.UNIDAD) return;
-    const uRec = i.receta.unidadReceta||'sin unidad', uAlbor = i.unidad||'sin unidad';
+    const r = i.receta, incomparable = r.estadoReceta===RECETA_ESTADO.UNIDAD;
+    const uRec = r.unidadPresupuesto || (incomparable ? (r.unidadReceta||'sin unidad') : null);
+    if(!uRec) return;
+    const uAlbor = i.unidad||'sin unidad';
     const k = i.insumo+'|'+uAlbor+'|'+uRec;
-    if(!choqueUnidad.has(k)) choqueUnidad.set(k, {insumo:i.insumo, uAlbor, uRec, n:0});
+    if(!choqueUnidad.has(k)) choqueUnidad.set(k, {insumo:i.insumo, uAlbor, uRec, n:0, incomparable});
     choqueUnidad.get(k).n++;
   }));
+  const nIncomparables = [...choqueUnidad.values()].filter(c=>c.incomparable).length;
   const ipRec = document.getElementById('ip-receta');
   if(!D.recetas || !D.recetas.disponible){
     ipRec.innerHTML = '<div class="rc-nodisp">Seguimiento de receta <b>no disponible</b>: no se pudieron cargar las recetas de la campaña. '+
@@ -1603,11 +1611,16 @@ function renderInsumosParcela(){
       // Ocupa la fila entera debajo de las tarjetas (grid-column:1/-1, igual que .rc-nodisp).
       (choqueUnidad.size
         ? '<div class="rc-unid-aviso"><b>'+choqueUnidad.size+' insumo'+(choqueUnidad.size===1?'':'s')+
-          ' con la unidad distinta entre Albor y el presupuesto.</b> No se compara la dosis: '+
-          'entre masa y volumen no hay conversión posible, así que una de las dos está mal cargada. '+
+          ' con la unidad distinta entre Albor y el presupuesto.</b> La dosis se compara con la '+
+          'unidad de Albor, que es la correcta; lo que hay que corregir es el Excel del presupuesto.'+
+          (nIncomparables
+            ? ' '+nIncomparables+(nIncomparables===1?' queda sin comparar' : ' quedan sin comparar')+
+              ' porque todavía no se definió cuál de las dos unidades vale.'
+            : '')+
           [...choqueUnidad.values()].sort((a,b)=>b.n-a.n).map(c=>
-            '<span class="rc-unid-item">'+escHtml(c.insumo)+' — Albor <b>'+escHtml(c.uAlbor)+
-            '</b>, presupuesto <b>'+escHtml(c.uRec)+'</b></span>').join('')+'</div>'
+            '<span class="rc-unid-item'+(c.incomparable?' rc-unid-item-sin':'')+'">'+escHtml(c.insumo)+
+            ' — Albor <b>'+escHtml(c.uAlbor)+'</b>, presupuesto <b>'+escHtml(c.uRec)+'</b></span>').join('')+
+          '</div>'
         : '');
   }
 
@@ -1662,12 +1675,15 @@ function ipDetalleParcela(p, listaCompleta){
     const r = i.receta;
     // La dosis de receta se imprime con la MISMA unidad que la dosis real de la fila (ya convertida
     // cuando hizo falta, ton -> kg). Así una misma fila nunca alterna "Kilos/ha" con "kg/ha".
-    // Cuando las unidades no son convertibles, la dosis del presupuesto se muestra con SU unidad
-    // (no convertida: no hay conversion posible entre masa y volumen) y debajo, con todas las
-    // letras, la unidad con que Albor carga el insumo. Las dos juntas son el hallazgo: el mismo
-    // producto esta en kg de un lado y en litros del otro, y una de las dos esta mal.
+    // Cuando el presupuesto trae OTRA unidad, la dosis igual se compara —la unidad buena es la de
+    // Albor— pero debajo queda dicho qué dice el Excel. Taparlo haría que el panel pareciera
+    // consistente mientras el presupuesto sigue mal escrito.
+    // Y cuando no se definió cuál vale (estado "Unidad no comparable"), la dosis del presupuesto se
+    // muestra con SU unidad, sin convertir: entre masa y volumen no hay conversión posible.
+    const notaUnidad = r.unidadPresupuesto
+      ? `<div class="rc-unid-nota">presupuesto: ${escHtml(r.unidadPresupuesto)}</div>` : '';
     const dosisReceta = r.dosisRecetaComparable!=null
-      ? fmtCantidadUnidad(r.dosisRecetaComparable, i.unidad)+'/ha'
+      ? fmtCantidadUnidad(r.dosisRecetaComparable, i.unidad)+'/ha'+notaUnidad
       : (r.recetaEncontrada && r.dosisRecetaHa!=null
           ? `<span class="rc-crudo" title="${escAttr(ipTipReceta(r,i))}">${fmt2(r.dosisRecetaHa)} ${escHtml(r.unidadReceta||'')}/ha</span>`+
             `<div class="rc-unid-nota">en Albor: ${escHtml(i.unidad||'sin unidad')}</div>`
@@ -1712,8 +1728,14 @@ function ipTipReceta(r, i){
       '. Son magnitudes distintas y el tablero nunca las convierte, así que la dosis no se compara: '+
       'hay que corregir la unidad en Albor o en el presupuesto.';
   const base = 'Receta «'+(r.recetaInsumo||'')+'»'+(r.recetaGrupo?' ('+r.recetaGrupo+')':'')+' — '+fmt2(r.dosisRecetaHa)+' '+(r.unidadReceta||'')+'/ha';
-  if(r.estadoReceta===RECETA_ESTADO.TOLERANCIA) return base+'. Se aplicó de más, sin superar la tolerancia de +'+RECETA_TOLERANCIA_PCT+'% de la campaña';
-  return base;
+  // La comparación se hizo, pero con una unidad que el presupuesto no trae: se dice, en la misma
+  // explicación, para que nadie tome el desvío sin saber que el Excel dice otra cosa.
+  const nota = r.unidadPresupuesto
+    ? '. El presupuesto lo trae en '+r.unidadPresupuesto+'/ha: la unidad correcta es la de Albor ('+
+      (r.unidadReceta||'sin unidad')+'), así que la dosis se compara igual, pero hay que corregir el presupuesto'
+    : '';
+  if(r.estadoReceta===RECETA_ESTADO.TOLERANCIA) return base+nota+'. Se aplicó de más, sin superar la tolerancia de +'+RECETA_TOLERANCIA_PCT+'% de la campaña';
+  return base+nota;
 }
 // Porcentaje con signo explícito: "+1,33%" se lee distinto de "1,33%" cuando lo que importa es de
 // qué lado de la receta quedó la aplicación.
