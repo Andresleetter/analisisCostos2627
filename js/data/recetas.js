@@ -228,6 +228,15 @@ function evaluarDosisContraReceta(indice, datos){
   salida.dosisRecetaHa = hallazgo.fila.dosisHa;
   salida.unidadReceta = hallazgo.fila.unidad || null;
   salida.unidadPresupuesto = hallazgo.fila.unidadPresupuesto || null;
+  if(salida.unidadPresupuesto){
+    // El presupuesto trae OTRA unidad que la que Albor usa. La unidad buena es la de Albor —es la
+    // que esta en `unidad`— pero la DOSIS de esa fila del presupuesto esta escrita para la otra
+    // unidad, asi que no se sabe si ese numero es el de este producto: no se usa. No se compara
+    // nada y no se inventa un desvio; se muestran las dos unidades y se corrige el presupuesto.
+    salida.estadoReceta = RECETA_ESTADO.UNIDAD;
+    salida.motivo = 'unidad_distinta_en_presupuesto';
+    return salida;
+  }
   salida.viaReceta = hallazgo.via;
 
   const factor = factorConversionDosis(hallazgo.fila.unidadNorm, normUnidadDosis(unidadReal));

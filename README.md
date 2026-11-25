@@ -1456,34 +1456,43 @@ Efecto sobre los 1.247 movimientos de insumo con hectáreas:
 | Según receta | 6 | 6 |
 | Unidad no comparable | 0 | **0** |
 
-> Esa última fila vale para septiembre de 2026. Hoy queda **1**: la unidad buena es la de Albor y la
-> receta la adopta, así que la dosis compara igual y lo que se avisa es que el presupuesto dice otra
-> cosa (ver *Las unidades que no coinciden*).
+> Esa última fila vale para septiembre de 2026. Hoy son **6 insumos**: donde Albor y el presupuesto
+> no usan la misma unidad no se compara nada a propósito, y la celda muestra las dos unidades en vez
+> de una dosis (ver *Las unidades que no coinciden*).
 
-#### Las unidades que no coinciden: la dosis es del presupuesto, la unidad es de Albor
+#### Las unidades que no coinciden: la unidad es la de Albor, y la dosis no se usa
 
-> **Criterio vigente, del 25/11/2026 (tarde).** Cuando el presupuesto y Albor no coinciden en la
-> unidad, **la que vale es la de Albor**: *«las unidades en albor están bien, lo que está mal es el
-> presupuesto»*. La receta toma esa unidad —así la dosis vuelve a compararse— y la del presupuesto
-> se guarda en el campo `unidadPresupuesto` para **decirlo en pantalla** en vez de taparlo.
+> **Criterio vigente, del 25/11/2026.** Cuando el presupuesto y Albor no coinciden en la unidad:
+> *«respetar la unidad de Albor, y si en el presupuesto está en otra unidad de medida no usar la
+> dosis y mostrar: en Albor tal unidad, en el presupuesto tal»*.
 >
-> Esa mañana se había probado lo contrario (adoptar la unidad del presupuesto y dejar el insumo sin
-> comparar). Duró medio día: dejaba 6 insumos y ~186 movimientos sin ningún desvío, que es
-> justamente lo que el panel existe para mostrar.
+> Las dos mitades importan. **La unidad buena es la de Albor** —queda en el campo `unidad` de la
+> receta, y es la que el panel nombra primero—. Pero **la dosis de esa fila del presupuesto está
+> escrita para la otra unidad**, así que no se sabe si ese número es el de este producto: no se usa,
+> y el insumo queda en *Unidad no comparable*. Comparar igual sería inventar un desvío.
+>
+> El `Zupressor` es el ejemplo que lo motivó. Su fila del presupuesto es
+> `Maxirice - Zupressor - Redex`, a 0,12 **kgs**, y Albor carga `Maxirice` y `Redex` en Kilos pero
+> `Zupressor` en Litros. Leer ese 0,12 como litros daba **+49,66 %** — un número que no mide nada si
+> esos tres nombres no son el mismo producto. Ahora la celda dice `Albor: Litros / presupuesto: kg`
+> y punto.
 
 Las **139 filas** de las cuatro hojas `INSUMOS` del presupuesto 26/27 están cargadas, y el cotejo
 fila por fila contra los cuatro `.xlsx` (ARROZ, SOJA, SORGO, MAIZ, versiones de agosto de 2026) dio
 que **ninguna dosis difiere y ninguna fila quedó sin cargar**. Toda la discrepancia es de unidad, y
 hoy son **6 registros**:
 
-| Cultivo | Insumo | Dosis | Albor | Presupuesto | Movimientos en Albor |
-|---|---|---|---|---|---|
-| ARROZ | `Cyperex 75` | 0,08 | **kg** | L | Kilos ×105 |
-| ARROZ | `VULCANO PQT` | 2 | **kg** | L | Kilos ×13 |
-| ARROZ | `Zupressor` | 0,12 | **L** | kg | Litros ×69 |
-| ARROZ | `Sniper` | 0,21 | **L** | kg | Litros ×82 |
-| SOJA | `Sniper` | 0,3 | **L** | kg | Litros ×24 |
-| MAIZ | `UTRISHA N` | 0,3 | **kg** | L | Kilos ×1 |
+| Cultivo | Insumo | Albor | Presupuesto | Movimientos en Albor |
+|---|---|---|---|---|
+| ARROZ | `Cyperex 75` | **Kilos** | lts | Kilos ×105 |
+| ARROZ | `VULCANO PQT` | **Kilos** | lts | Kilos ×13 |
+| ARROZ | `Zupressor` | **Litros** | kgs | Litros ×69 |
+| ARROZ | `Sniper` | **Litros** | kgs | Litros ×82 |
+| SOJA | `Sniper` | **Litros** | kgs | Litros ×24 |
+| MAIZ | `UTRISHA N` | **Kilos** | lts | Kilos ×1 |
+
+La dosis de esas seis filas del presupuesto (0,08 · 2 · 0,12 · 0,21 · 0,3 · 0,3) **no se usa**. Queda
+guardada en el JSON, pero ninguna comparación la toca.
 
 **La regla es "la unidad que Albor usa de verdad", no "la unidad de cualquier movimiento".** Hay
 tres casos donde parecía haber choque y no lo hay:
@@ -1493,9 +1502,9 @@ tres casos donde parecía haber choque y no lo hay:
   usuario). Si mañana se cargan con otra unidad, el aviso lo va a marcar solo.
 - **`Zupressor` en SORGO** tampoco tiene movimientos: solo aparece en ARROZ. Queda en kg.
 - **`RHINO` en MAIZ** se carga en **Kilos ×8 y Litros ×1**. Ahí el presupuesto (kgs) ya estaba bien
-  y el que está mal es ese movimiento suelto, así que la receta **no** se tocó y ese movimiento
-  queda marcado *Unidad no comparable* — que es exactamente lo que hay que ver. Es el único que
-  queda sin comparar en toda la campaña.
+  y el que está mal es ese movimiento suelto, así que la receta **no** se tocó: los 8 movimientos en
+  kilos comparan normalmente y solo el noveno queda marcado *Unidad no comparable* — que es
+  exactamente lo que hay que ver.
 
 **Lo que el choque deja a la vista.** La misma fila del presupuesto aparece en Albor con dos
 unidades distintas según el nombre comercial:
@@ -1514,15 +1523,23 @@ Lo mismo pasa con `Sniper`, donde el presupuesto se contradice solo: lo pone en 
 SOJA y en **L** para MAIZ y SORGO, mientras Albor lo carga en Litros en los 115 movimientos de los
 tres cultivos.
 
-**Cómo se ve.** En el detalle del lote, *Dosis Receta* muestra la dosis con la unidad de Albor —así
-la comparación es legítima— y debajo, en gris, `presupuesto: kg`. El tooltip del estado lo dice con
-todas las letras: *«El presupuesto lo trae en kg/ha: la unidad correcta es la de Albor (L), así que
-la dosis se compara igual, pero hay que corregir el presupuesto»*. Arriba, junto a las tarjetas del
-seguimiento de receta, un aviso ámbar junta los 6 casos — `SNIPER 40% SG — Albor Litros,
-presupuesto kg` — y marca con borde punteado el que además no compara.
+**Cómo se ve.** En el detalle del lote, donde iría la dosis de receta la celda muestra las dos
+unidades, una debajo de la otra:
 
-El efecto en los contadores: **Con receta 2.720 → 2.950** y **Sobre receta 314 → 413**. Son 230
-movimientos que antes no se comparaban contra nada.
+```
+Albor: Litros
+presupuesto: kg
+```
+
+El Desvío queda en `—`, el estado es *Unidad no comparable*, y el tooltip lo explica: *«En Albor
+este insumo se carga en Litros y el presupuesto lo trae en kg/ha. La unidad buena es la de Albor,
+pero la dosis del presupuesto está escrita para la otra unidad, así que no se usa…»*. Arriba, junto
+a las tarjetas del seguimiento de receta, un aviso ámbar junta los 6 casos —
+`SNIPER 40% SG — Albor Litros, presupuesto kg`— para no tener que abrir lote por lote.
+
+Son **~186 movimientos** que quedan sin desvío a propósito. Es el costo de no inventar un número: la
+cantidad aplicada, el costo y la dosis real por hectárea se siguen viendo enteros, lo único que falta
+es contra qué compararlos, y eso se arregla corrigiendo el Excel.
 
 <details>
 <summary>Cómo era antes (21/09/2026), para entender los commits viejos</summary>
@@ -1574,18 +1591,16 @@ AQ BPR MAX   12 movimientos de SOJA · Siembra · 0,184 L/ha  vs 0,150  =  +22,8
 +Brady       12 movimientos de SOJA · Siembra · 0,344 L/ha  vs 0,500  =  -31,2%   Bajo receta
 ```
 
-**`Zupressor` lleva la unidad de Albor (L), no la del presupuesto.** La fila
-`Maxirice - Zupressor - Redex` está en **kilos** y Albor lo carga en **litros** en sus 69
-movimientos. La mañana del 25/11/2026 se probó respetar el kilo del presupuesto —y el insumo quedó
-sin comparar—; esa misma tarde se volvió a la unidad de Albor, que es la correcta, con la diferencia
-avisada en pantalla (ver *Las unidades que no coinciden*). Los otros dos nombres de esa fila,
-`Maxirice` y `Redex`, sí están en kilos en Albor, lo que sugiere que la fila del presupuesto agrupa
-productos distintos.
+**`Zupressor` no se compara: Albor lo carga en litros y el presupuesto lo trae en kilos.** La fila
+`Maxirice - Zupressor - Redex` está en **kgs** y Albor carga `Zupressor` en **Litros** en sus 69
+movimientos, mientras `Maxirice` (×5) y `Redex` (×85) sí van en Kilos. La unidad buena es la de
+Albor, pero el `0,12` de esa fila está escrito para kilos y muy probablemente sea la dosis de los
+otros dos nombres, así que no se usa (ver *Las unidades que no coinciden*).
 
-Comparado contra **0,12 L/ha**, el resultado es alto: los movimientos van de **0,18 a 0,28 L/ha**,
-con picos de **+133 %** en los lotes 135, 137, 138, 139, 140, 142 y `.95B`. La dosis real es
-notablemente consistente, así que el desvío no viene de una carga errática: o la aplicación va muy
-por encima de lo presupuestado, o el 0,12 de esa fila no es la dosis de este producto.
+Para dimensionar lo que se deja de ver: la dosis real es **0,18 a 0,28 L/ha** en los lotes 135, 137,
+138, 139, 140, 142 y `.95B`, y es notablemente consistente —no es una carga errática—. Si se
+confirma cuál es la dosis presupuestada del `Zupressor`, se carga como dosis declarada con su campo
+`origen` (igual que el Triclon de SORGO) y esos 69 movimientos vuelven a compararse.
 
 #### Una dosis que no viene del presupuesto: Triclon en SORGO
 
