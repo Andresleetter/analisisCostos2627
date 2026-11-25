@@ -172,6 +172,37 @@ tr.sb-fila.open td{background:#eef4ea}
 .sb-acciones{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
 .sb-acciones .sb-albor{margin-top:0;text-decoration:none;font-size:12px;padding:7px 16px}
 .sb-acciones .sb-ext{font-weight:700;margin-left:2px}
+/* Detalle desplegable de una parcela, en dos columnas: siembra | preparacion de suelo (ver
+   siembraDetalle en render.js). Ocupa una sola fila de la tabla, asi que el <td> no lleva padding
+   propio: lo pone cada columna. */
+#sb-filas tr.sb-det>td{padding:0;background:#fbfcfa;border-bottom:1px solid var(--line)}
+.sb-det-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+/* minmax(0,1fr) y no 1fr: sin el minimo en 0 una tabla ancha estira su columna y rompe la grilla. */
+.sb-det-col{padding:4px 16px 14px;min-width:0}
+.sb-det-col+.sb-det-col{border-left:1px solid var(--line)}
+/* Debajo de 900px las dos columnas no entran sin apretar los nombres de labor: cae a una sola y
+   queda el apilado de siempre, con la linea divisoria pasada a horizontal. */
+@media (max-width:900px){
+  .sb-det-grid{grid-template-columns:minmax(0,1fr)}
+  .sb-det-col+.sb-det-col{border-left:0;border-top:1px solid var(--line)}
+}
+/* Mismo tono y mismas versalitas que tr.dethead, que es lo que estas cajas reemplazan. */
+.sb-det-tit{font-size:9.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);
+  font-weight:700;padding:10px 0 5px;border-bottom:1px solid #f0dede}
+.sb-det-tit-res{font-style:italic}
+table.sb-det-t{width:100%;border-collapse:collapse;font-size:11.5px;table-layout:auto}
+table.sb-det-t th{font-size:9px;text-transform:uppercase;letter-spacing:.3px;color:var(--muted);
+  font-weight:700;padding:4px 6px 4px 0;border-bottom:1px solid #f4f0f0;white-space:nowrap}
+table.sb-det-t td{padding:5px 6px 5px 0;border-bottom:1px solid #f6f4f4;vertical-align:middle}
+table.sb-det-t tr:last-child td{border-bottom:0}
+.sb-det-ot{color:var(--teal);font-weight:700;white-space:nowrap}
+.sb-det-vacio{font-size:11px;color:var(--muted);padding:14px 0 4px}
+
+/* El campo de la parcela cuando incluye la resiembra: la aclaracion va debajo del numero, en gris y
+   sin tabular, para que se lea como nota y no como un segundo valor de la columna. */
+.sb-decl-nota{display:block;font-size:9.5px;font-weight:400;font-variant-numeric:normal;
+  color:var(--muted);line-height:1.25;margin-top:2px;white-space:nowrap}
+
 /* Resiembra en la celda de labores: se muestra pero NO suma superficie (ver construirAuditoriaSiembra).
    Va en gris y mas chica que las labores que si suman, para que se lea como la nota al pie que es y
    no como una linea mas del total. */

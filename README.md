@@ -1663,7 +1663,21 @@ Son 7 lotes en la 26/27, **todos de arroz**, y en los 7 la resiembra es justamen
 
 `hectareasSembradas` **también la suma**, y eso no se puede cambiar desde acá: es un campo de Albor. Por eso los 6 primeros siguen marcados *Supera la parcela* — el diagnóstico es correcto y se corrige en Albor. El 205C pasó de *Siembra de menos* a *Parcela declara de más* **+3,00 ha**, que son exactamente las de su resiembra: antes el desvío quedaba oculto porque las dos fuentes sumaban igual.
 
+Verificado en la fila cruda de `consultaCultivos`: la parcela `LA TERESA .35A ARROZ 26/27` (idCultivo 1410) trae `hectareas: 50,3` y `hectareasSembradas: 100,6`, con `fechaUltimaActualizacion` del 04/11/2026 — días después de la resiembra del 31/10. En **los 7 lotes** la cuenta cierra al centavo: `declaradas = siembra + resiembra`.
+
+Por eso la celda **Declarado (parcela)** lleva debajo, en gris, *«incluye 50,30 de resiembra»*. Un lote que declara el doble de su superficie parece un error de lectura del tablero, y la aclaración evita tener que abrir la fila para entender de dónde sale. La nota **solo aparece cuando la cuenta cierra** (`|declaradas − (siembra + resiembra)| ≤ 0,02`): si no cierra, la diferencia no es solo la resiembra y decirlo sería inventar.
+
 > **El avance del Resumen Ejecutivo no usa esta exclusión** y no hay que agregarsela sin mirar: allá la resiembra ya está contemplada por el divisor de labores por lote (`divisores`), que reparte las hectáreas entre las labores del estadio. En el 35A el divisor 2 deja 25,15 + 25,15 = 50,30, o sea el 100% del lote, que es lo correcto.
+
+### El desplegable de la parcela, en dos columnas
+
+Clic en una fila y el detalle se abre **en dos columnas**: a la izquierda la **siembra** del lote (la siembra propiamente dicha, la resiembra y las OT sin confirmar), a la derecha la **preparación de suelo**. Izquierda es lo que la fila audita; derecha es el contexto con que se lee esa fila — si el suelo se preparó entero y la siembra no llegó, falta sembrar; si la preparación tampoco cubrió el lote, el atraso viene de antes.
+
+Antes iba todo apilado y un lote con siete labores de preparación empujaba la siembra fuera de la pantalla, justo cuando lo que hay que hacer es compararlas. Lado a lado el desplegable mide **la mitad de alto** (el 35A pasó de ~500 px a 260).
+
+No se puede hacer con las filas `<tr class="det">` de siempre: dos listas de distinto largo no entran en una sola grilla de filas sin dejar huecos o inventar correspondencias entre renglones que no tienen nada que ver. Así que el detalle es **una** fila con un `<td colspan="8">` y adentro una grilla CSS de dos columnas, cada una con su propia tablita (`.sb-det-grid` en `auditoria.css`). Debajo de 900 px cae sola a una columna y queda el apilado de siempre. Cada columna dice *«Sin OT de siembra cargadas»* / *«Sin labores de preparación de suelo cargadas»* en vez de quedar en blanco — hoy pasa en el `.74A` de maíz.
+
+> **La fila abierta se identifica por `CULTIVO|LOTE`, no por el lote solo.** 29 lotes de la 26/27 llevan dos cultivos a la vez; con el lote como clave, un clic en el `.74A` abría **los dos** detalles —el de sorgo y el de maíz— a la vez. Es la misma clave con que el modelo indexa las parcelas.
 
 ### Por qué el campo de la parcela queda mal
 

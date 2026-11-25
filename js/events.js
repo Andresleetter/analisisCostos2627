@@ -329,8 +329,9 @@ document.addEventListener('DOMContentLoaded', function(){
   document.getElementById('sb-filas').addEventListener('click', function(e){
     const fila = e.target.closest('tr.sb-fila');
     if(!fila) return;
-    const lote = fila.dataset.lote;
-    auditSiembraAbierta = (auditSiembraAbierta===lote) ? null : lote;
+    // data-clave es CULTIVO|LOTE: el lote solo abriria las dos filas de un lote con dos cultivos.
+    const clave = fila.dataset.clave;
+    auditSiembraAbierta = (auditSiembraAbierta===clave) ? null : clave;
     renderAuditoriaSiembra();
   });
   // Qué mide el gráfico de Actividad Operacional. Delegado sobre #act-medir, que es fijo en el
