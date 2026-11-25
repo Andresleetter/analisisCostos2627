@@ -198,6 +198,16 @@ table.sb-det-t tr:last-child td{border-bottom:0}
 .sb-det-ot{color:var(--teal);font-weight:700;white-space:nowrap}
 .sb-det-vacio{font-size:11px;color:var(--muted);padding:14px 0 4px}
 
+/* Choque de unidad entre Albor y el presupuesto. La nota de la celda va debajo de la dosis del
+   presupuesto y dice el OTRO lado; el aviso de arriba junta todos los casos del modulo. Ambar, no
+   rojo: es un dato mal cargado que hay que corregir, no una perdida. */
+.rc-unid-nota{font-size:9.5px;color:var(--muted);font-weight:400;font-variant-numeric:normal;
+  line-height:1.25;margin-top:2px;white-space:nowrap}
+.rc-unid-aviso{grid-column:1/-1;font-size:12px;color:#6b5300;background:#fdf7e6;
+  border:1px solid var(--y);border-radius:var(--radius-sm);padding:10px 14px;line-height:1.55}
+.rc-unid-item{display:inline-block;margin:4px 8px 0 0;padding:2px 9px;background:#fff;
+  border:1px solid #f0e2bd;border-radius:20px;font-size:11px;white-space:nowrap}
+
 /* Lo unico que tiene una parcela sin sembrar: la preparacion. En gris, porque no es una labor de
    siembra —que es lo que la columna lista— sino la razon por la que la fila esta en la tabla. */
 .sb-solo-prep{color:var(--muted);font-size:11px;font-style:italic}

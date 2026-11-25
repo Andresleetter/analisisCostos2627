@@ -1560,6 +1560,18 @@ function renderInsumosParcela(){
   }));
   const conReceta = (conteoReceta.get(RECETA_ESTADO.SOBRE)||0)+(conteoReceta.get(RECETA_ESTADO.BAJO)||0)
     +(conteoReceta.get(RECETA_ESTADO.TOLERANCIA)||0)+(conteoReceta.get(RECETA_ESTADO.SEGUN)||0);
+  // Insumos donde Albor y el presupuesto NO usan la misma unidad. Se juntan acá —en el mismo
+  // recorrido que ya alimenta los contadores— para poder decirlo una vez arriba, con nombre y las
+  // dos unidades, en vez de obligar a abrir lote por lote hasta toparse con el chip. Se agrupan por
+  // insumo + las dos unidades: el mismo producto aparece en decenas de lotes y es un solo hallazgo.
+  const choqueUnidad = new Map();
+  insumosPorParcela.forEach(lista=>lista.forEach(i=>{
+    if(i.receta.estadoReceta!==RECETA_ESTADO.UNIDAD) return;
+    const uRec = i.receta.unidadReceta||'sin unidad', uAlbor = i.unidad||'sin unidad';
+    const k = i.insumo+'|'+uAlbor+'|'+uRec;
+    if(!choqueUnidad.has(k)) choqueUnidad.set(k, {insumo:i.insumo, uAlbor, uRec, n:0});
+    choqueUnidad.get(k).n++;
+  }));
   const ipRec = document.getElementById('ip-receta');
   if(!D.recetas || !D.recetas.disponible){
     ipRec.innerHTML = '<div class="rc-nodisp">Seguimiento de receta <b>no disponible</b>: no se pudieron cargar las recetas de la campaña. '+
@@ -1587,7 +1599,16 @@ function renderInsumosParcela(){
         'de más, hasta +'+RECETA_TOLERANCIA_PCT+'%',
         'Se aplicó de más, pero sin superar la tolerancia de +'+RECETA_TOLERANCIA_PCT+'% definida para la campaña')+
       kpiAuditoria('Sin receta', conteoReceta.get(RECETA_ESTADO.SIN)||0, 'gris', 'no se comparan ni se estiman',
-        'No hay una receta inequívoca para ese cultivo e insumo: no se compara ni se estima');
+        'No hay una receta inequívoca para ese cultivo e insumo: no se compara ni se estima')+
+      // Ocupa la fila entera debajo de las tarjetas (grid-column:1/-1, igual que .rc-nodisp).
+      (choqueUnidad.size
+        ? '<div class="rc-unid-aviso"><b>'+choqueUnidad.size+' insumo'+(choqueUnidad.size===1?'':'s')+
+          ' con la unidad distinta entre Albor y el presupuesto.</b> No se compara la dosis: '+
+          'entre masa y volumen no hay conversión posible, así que una de las dos está mal cargada. '+
+          [...choqueUnidad.values()].sort((a,b)=>b.n-a.n).map(c=>
+            '<span class="rc-unid-item">'+escHtml(c.insumo)+' — Albor <b>'+escHtml(c.uAlbor)+
+            '</b>, presupuesto <b>'+escHtml(c.uRec)+'</b></span>').join('')+'</div>'
+        : '');
   }
 
   // ---- Resumen por lote, ordenado por COSTO TOTAL de mayor a menor ----
@@ -1641,10 +1662,15 @@ function ipDetalleParcela(p, listaCompleta){
     const r = i.receta;
     // La dosis de receta se imprime con la MISMA unidad que la dosis real de la fila (ya convertida
     // cuando hizo falta, ton -> kg). Así una misma fila nunca alterna "Kilos/ha" con "kg/ha".
+    // Cuando las unidades no son convertibles, la dosis del presupuesto se muestra con SU unidad
+    // (no convertida: no hay conversion posible entre masa y volumen) y debajo, con todas las
+    // letras, la unidad con que Albor carga el insumo. Las dos juntas son el hallazgo: el mismo
+    // producto esta en kg de un lado y en litros del otro, y una de las dos esta mal.
     const dosisReceta = r.dosisRecetaComparable!=null
       ? fmtCantidadUnidad(r.dosisRecetaComparable, i.unidad)+'/ha'
       : (r.recetaEncontrada && r.dosisRecetaHa!=null
-          ? `<span class="rc-crudo" title="La receta está en «${r.unidadReceta||'sin unidad'}», que no es comparable con ${i.unidad}">${fmt2(r.dosisRecetaHa)} ${r.unidadReceta||''}/ha</span>`
+          ? `<span class="rc-crudo" title="${escAttr(ipTipReceta(r,i))}">${fmt2(r.dosisRecetaHa)} ${escHtml(r.unidadReceta||'')}/ha</span>`+
+            `<div class="rc-unid-nota">en Albor: ${escHtml(i.unidad||'sin unidad')}</div>`
           : '<span class="ip-sin">—</span>');
     const desvio = (r.desvioAbsoluto!=null)
       ? `<span class="${r.desvioAbsoluto>0?'rc-up':(r.desvioAbsoluto<0?'rc-down':'')}">${r.desvioPct!=null?fmtPctFirmado(r.desvioPct):'—'}</span>`+
@@ -1679,7 +1705,12 @@ function ipTipReceta(r, i){
     return 'El presupuesto de la campaña no tiene una receta para este cultivo e insumo';
   }
   if(r.estadoReceta===RECETA_ESTADO.UNIDAD)
-    return 'Receta «'+(r.recetaInsumo||'')+'» en '+(r.unidadReceta||'sin unidad')+': no es comparable con '+i.unidad+', y nunca se convierte entre magnitudes distintas';
+    // Se nombran las DOS fuentes y su unidad, en ese orden: el presupuesto es lo acordado y Albor
+    // es lo que se cargó. Sin los dos lados el aviso no dice qué corregir ni dónde.
+    return 'El presupuesto tiene «'+(r.recetaInsumo||'')+'» en '+(r.unidadReceta||'sin unidad')+
+      '/ha y en Albor este insumo se carga en '+(i.unidad||'sin unidad')+
+      '. Son magnitudes distintas y el tablero nunca las convierte, así que la dosis no se compara: '+
+      'hay que corregir la unidad en Albor o en el presupuesto.';
   const base = 'Receta «'+(r.recetaInsumo||'')+'»'+(r.recetaGrupo?' ('+r.recetaGrupo+')':'')+' — '+fmt2(r.dosisRecetaHa)+' '+(r.unidadReceta||'')+'/ha';
   if(r.estadoReceta===RECETA_ESTADO.TOLERANCIA) return base+'. Se aplicó de más, sin superar la tolerancia de +'+RECETA_TOLERANCIA_PCT+'% de la campaña';
   return base;

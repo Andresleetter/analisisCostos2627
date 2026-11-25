@@ -259,7 +259,7 @@
     "insumo": "Cyperex 75",
     "descripcion": "Pyrazosulfuron",
     "dosisHa": 0.08,
-    "unidad": "kg"
+    "unidad": "L"
   },
   {
     "campania": "26/27",
@@ -278,7 +278,7 @@
     "insumo": "Fyn",
     "descripcion": "Quinclorac 25% SC",
     "dosisHa": 2,
-    "unidad": "kg"
+    "unidad": "L"
   },
   {
     "campania": "26/27",
@@ -296,7 +296,7 @@
     "insumo": "Pyrazosulfuron",
     "descripcion": null,
     "dosisHa": 0.08,
-    "unidad": "kg"
+    "unidad": "L"
   },
   {
     "campania": "26/27",
@@ -324,7 +324,7 @@
     "insumo": "VULCANO PQT",
     "descripcion": "Quinclorac 25% SC",
     "dosisHa": 2,
-    "unidad": "kg"
+    "unidad": "L"
   },
   {
     "campania": "26/27",
@@ -369,7 +369,7 @@
     "insumo": "Pyrazosulfuron",
     "descripcion": null,
     "dosisHa": 0.21,
-    "unidad": "kg"
+    "unidad": "L"
   },
   {
     "campania": "26/27",
@@ -388,7 +388,7 @@
     "insumo": "Zupressor",
     "descripcion": "Imazapic 17.5% + Imazapir 52.5% WG",
     "dosisHa": 0.12,
-    "unidad": "L",
+    "unidad": "kg",
     "origen": "unidad corregida a L para que coincida con la carga de Albor · dosis de la fila \"Maxirice - Zupressor\" del presupuesto de ARROZ"
   },
   {
@@ -1835,7 +1835,7 @@
     "insumo": "Zupressor",
     "descripcion": "Imazapic 17.5% + Imazapir 52.5% WG",
     "dosisHa": 0.14,
-    "unidad": "L",
+    "unidad": "kg",
     "origen": "28/10/2026, de HOJA DE TRABAJO PRESP 26-27 SORGO · unidad en L y no en kg como dice el presupuesto: Albor carga Zupressor en Litros (66 movimientos), mismo criterio que la entrada de ARROZ. Hoy no hay ningun movimiento de Zupressor en SORGO — se carga porque el presupuesto lo preve"
   },
   {

@@ -4,7 +4,7 @@ Dashboard de seguimiento de campaña agrícola (Campo La Teresa). Es una web est
 
 - **`data/datosCampania2627.xlsx`** — 3 hojas: `consultaOT`, `consultaCultivos`, `consultaInsumos`.
 - **`data/presupuesto-infraestructura-26-27.json`** — 10 ítems con el presupuesto de infraestructura usado en la pestaña Auditoría (`especificacion`, `cantidadPresupuestada`, `unidadMedida`, `costo`, `importeTotal`).
-- **`data/recetas-insumos-26-27.json`** — 238 registros con la dosis por hectárea recomendada por cultivo e insumo. Es una versión **reducida** del presupuesto de insumos: solo dosis, sin costos ni volúmenes. Alimenta el seguimiento de receta de Auditoría de Insumos por Parcela.
+- **`data/recetas-insumos-26-27.json`** — 239 registros con la dosis por hectárea recomendada por cultivo e insumo. Es una versión **reducida** del presupuesto de insumos: solo dosis, sin costos ni volúmenes. Alimenta el seguimiento de receta de Auditoría de Insumos por Parcela.
 
 - **`data/receta-labores-25-26.json`** — cuántas labores distintas lleva cada cultivo en cada estadio, derivado del export de la campaña 25/26. Es el **divisor** del avance de campo: sin él, la primera labor confirmada sobre un lote lo dejaba en 100 % del estadio (ver **El divisor del avance**).
 
@@ -1456,20 +1456,72 @@ Efecto sobre los 1.247 movimientos de insumo con hectáreas:
 | Según receta | 6 | 6 |
 | Unidad no comparable | 0 | **0** |
 
-#### Dos unidades corregidas contra el presupuesto
+> Esa última fila vale para septiembre de 2026. Desde el **25/11/2026** se respeta la unidad del
+> presupuesto y «unidad no comparable» dejó de ser cero a propósito: hoy son 6 insumos, y el panel
+> los avisa (ver *Las unidades que no coinciden*).
 
-El presupuesto de ARROZ pone dos productos en **litros** y Albor los carga en **kilos**, así que al
-principio quedaron en «unidad no comparable» — el módulo nunca convierte entre magnitudes distintas.
-Los dos son formulaciones **sólidas** (Pyrazosulfuron WG y el Quinclorac de esa línea), de modo que
-el kilo de Albor es el correcto y la unidad del presupuesto el error. **Se corrigió la receta a kg**
-(decisión del usuario, 21/09/2026), y con eso «unidad no comparable» vuelve a cero:
+#### Las unidades que no coinciden: manda el presupuesto, y se avisa
+
+> **Cambio de criterio del 25/11/2026.** Hasta esa fecha, cuando el presupuesto y Albor no coincidían
+> en la unidad, la receta se cargaba con **la unidad de Albor** para que la dosis pudiera compararse
+> (decisión del 21/09/2026, abajo). Ahora manda el presupuesto y la discrepancia **se muestra**:
+> *«vamos a respetar el presupuesto y si hay insumos que tienen la misma fórmula pero con diferentes
+> unidad de medida mostrar el mensaje»*. Es la decisión correcta: adoptar la unidad de Albor tapaba
+> un dato mal cargado, y el que estaba mal podía ser cualquiera de los dos.
+
+Las **139 filas** de las cuatro hojas `INSUMOS` del presupuesto 26/27 están cargadas y coinciden con
+la receta en dosis y unidad. El cotejo se hizo fila por fila contra los cuatro `.xlsx` del usuario
+(ARROZ, SOJA, SORGO, MAIZ, versiones de agosto de 2026) y dio **7 unidades** que había que alinear:
+
+| Cultivo · grupo | Insumo | Estaba | Presupuesto | Fórmula |
+|---|---|---|---|---|
+| ARROZ · Punto de aguja | `Zupressor` | L | **kg** | Imazapic 17.5% + Imazapir 52.5% WG |
+| ARROZ · Punto de aguja | `Pyrazosulfuron` | kg | **L** | Pyrazosulfuron |
+| ARROZ · Pós emergentes | `Fyn` | kg | **L** | Quinclorac 25% SC |
+| ARROZ · Pós emergentes | `VULCANO PQT` | kg | **L** | Quinclorac 25% SC |
+| ARROZ · Pós emergentes | `Cyperex 75` | kg | **L** | Pyrazosulfuron |
+| ARROZ · Pós emergentes | `Pyrazosulfuron` | kg | **L** | Pyrazosulfuron |
+| SORGO · Pós emergentes | `Zupressor` | L | **kg** | Imazapic 17.5% + Imazapir 52.5% WG |
+
+Ninguna **dosis** difería y ninguna fila del presupuesto estaba sin cargar: las siete diferencias
+eran de unidad.
+
+**Lo que el choque deja a la vista.** La misma fórmula aparece en Albor con dos unidades distintas
+según el nombre comercial, y eso es lo que permite ver cuál está mal cargado:
+
+| Fórmula | En Albor | Presupuesto |
+|---|---|---|
+| Quinclorac 25% **SC** (líquido) | `EXOCET 25 FLOW` en **Litros** · `VULCANO PQT` en **Kilos** | lts |
+| Imazapic + Imazapir **WG** (granulado) | `Maxirice` y `Redex` en **Kilos** · `Zupressor` en **Litros** | kgs |
+
+En los dos casos la formulación dicta la unidad —SC es suspensión, WG es granulado— y hay un alias
+cargado al revés. El tablero no elige: muestra las dos unidades y deja la corrección en Albor.
+
+**Cómo se ve.** Son hoy **6 insumos**. En el detalle del lote, la columna *Dosis Receta* muestra la
+dosis del presupuesto con **su** unidad (sin convertir: no hay conversión posible entre masa y
+volumen) y debajo, en gris, `en Albor: Kilos`. El chip de estado sigue siendo *Unidad no comparable*
+y su tooltip nombra las dos fuentes. Arriba, junto a las tarjetas del seguimiento de receta, un
+aviso ámbar los junta a todos — `SNIPER 40% SG — Albor Litros, presupuesto kg` — para no tener que
+abrir lote por lote hasta toparse con uno.
+
+El precio de respetar el presupuesto es que esos insumos **dejan de compararse**: `Cyperex 75`,
+`Zupressor` y `VULCANO PQT` pasaron de tener desvío a *Unidad no comparable* (los casos subieron de
+4 a 6). Es deliberado: una comparación apoyada en una unidad inventada vale menos que un aviso que
+dice qué corregir.
+
+<details>
+<summary>Cómo era antes (21/09/2026), para entender los commits viejos</summary>
+
+El presupuesto de ARROZ ponía dos productos en **litros** y Albor los carga en **kilos**. Como los
+dos son formulaciones sólidas, se consideró que el kilo de Albor era el correcto y **se corrigió la
+receta a kg**, con lo que «unidad no comparable» volvía a cero:
 
 | Producto | Real | Receta | Desvío |
 |---|---|---|---|
 | `Cyperex 75` | 0,069 kg/ha (34,70 kg sobre 500,87 ha) | 0,08 kg | **−13,4 %** |
 | `VULCANO PQT` | 0,593 kg/ha (26,00 kg sobre 43,87 ha) | 2 kg | **−70,4 %** |
 
-El cambio se aplicó a **los dos nombres de cada producto**, no solo al que Albor usa hoy:
+El cambio se aplicaba a **los dos nombres de cada producto**, no solo al que Albor usa hoy:
 `Cyperex 75` y `Pyrazosulfuron` (sus dos grupos), `VULCANO PQT` y `Fyn`. Si mañana la OT viene
 cargada con el otro nombre, la receta ya está en la unidad correcta.
 
@@ -1507,18 +1559,17 @@ AQ BPR MAX   12 movimientos de SOJA · Siembra · 0,184 L/ha  vs 0,150  =  +22,8
 +Brady       12 movimientos de SOJA · Siembra · 0,344 L/ha  vs 0,500  =  -31,2%   Bajo receta
 ```
 
-**`Zupressor` lleva la unidad de la OT, no la del presupuesto.** La fila
-`Maxirice - Zupressor` está en **kilos** —es Imazapic + Imazapir **WG**, un granulado— pero Albor lo
-carga en **litros**, así que cargado con la unidad del Excel quedaba en «unidad no comparable»: el
-módulo nunca convierte entre magnitudes distintas. Se cargó con **la misma dosis de la fila (0,12) y
-la unidad de la OT (L)**, por decisión del usuario del 21/09/2026: el producto sí está presupuestado,
-lo que estaba mal escrito era la unidad.
+**`Zupressor` volvió a la unidad del presupuesto (kg) el 25/11/2026.** La fila
+`Maxirice - Zupressor` está en **kilos** —es Imazapic + Imazapir **WG**, un granulado— y Albor lo
+carga en **litros**. Entre el 21/09 y el 25/11 se cargó con la unidad de la OT (L) para que
+comparara; hoy manda el presupuesto y la diferencia se avisa en pantalla (ver *Las unidades que no
+coinciden*). Los otros dos nombres de la misma fila, `Maxirice` y `Redex`, sí están en kilos en
+Albor: el que está cargado al revés es `Zupressor`.
 
-Con eso los 7 movimientos comparan, y el resultado es alto: **0,280 L/ha contra 0,12 = +133,0 %**,
-los siete sobre receta (lotes 135, 137, 138, 139, 140, 142 y `.95B`). La dosis real es notablemente
-consistente —de 0,277 a 0,281 L/ha— así que el desvío no viene de una carga errática. Queda a la
-vista para que se revise si el 0,12 de la fila es la dosis correcta para la formulación líquida.
-`Maxirice`, el otro nombre de esa fila, no tiene ningún movimiento en la campaña.
+Mientras comparó con la unidad de la OT el resultado era alto —**0,280 L/ha contra 0,12 = +133,0 %**,
+los siete movimientos sobre receta (lotes 135, 137, 138, 139, 140, 142 y `.95B`)— y la dosis real
+era notablemente consistente, de 0,277 a 0,281 L/ha, así que el desvío no venía de una carga
+errática. Ese número se recupera en cuanto se corrija la unidad en Albor.
 
 #### Una dosis que no viene del presupuesto: Triclon en SORGO
 
