@@ -385,6 +385,12 @@ function construirAuditoriaSiembra(OTS, proyecciones){
   // ---- OT de siembra por lote ----
   const esSiembra = o => normEstadio(o.estadio)==='siembra'
     && !SIEMBRA_SERVICIOS_NO_SIEMBRA.some(p=>normHdr(o.serv).startsWith(p));
+  // Cultivos que SE SIEMBRAN con OT en esta campania. Sale del dato, no de una lista fija: si
+  // maniana empiezan a cargar la siembra de un cultivo nuevo, entra solo.
+  // Hace falta para no marcar "sin sembrar" a las coberturas: avena y cobertura figuran en el plan
+  // con su superficie, pero en la 26/27 no tienen NINGUNA OT de siembra —lo unico que se les carga
+  // es la desecacion, que es preparacion de suelo— asi que decir que les falta sembrar seria falso.
+  const cultivosConSiembra = new Set(OTS.filter(esSiembra).map(o=>String(o.act||'').toUpperCase()));
   const porLote = {};
   OTS.filter(esSiembra).forEach(o=>{
     const k = clave(o.act, o.lote);
@@ -480,13 +486,15 @@ function construirAuditoriaSiembra(OTS, proyecciones){
       const falta_plan = p.plan ? Math.max(0, Math.round((p.plan - sembradas)*100)/100) : 0;
       // El otro lado del mismo eje: lo que se sembro POR ENCIMA del plan del lote.
       const exceso_plan = p.plan ? Math.max(0, Math.round((sembradas_crudo - p.plan)*100)/100) : 0;
+      // Preparacion de suelo del lote, ordenada por superficie trabajada. Se arma antes del return
+      // porque ahora tambien decide el estado: un lote sin siembra pero con preparacion no es lo
+      // mismo que uno donde no se hizo nada.
+      const preparacion = Object.values(prep[k]||{})
+        .map(l=>({...l, ha:Math.round(l.ha*100)/100}))
+        .sort((a,b)=>b.ha-a.ha || a.nombre.localeCompare(b.nombre,'es'));
       return {lote, cultivo:p.cultivo, plan:p.plan, declaradas:p.declaradas, sembradas,
         sembradas_crudo, dif, falta_plan, exceso_plan, labores, resiembras, ha_resiembra,
-        sinConfirmar:g.sinConfirmar,
-        // Preparacion de suelo del lote, ordenada por superficie trabajada.
-        preparacion: Object.values(prep[k]||{})
-          .map(l=>({...l, ha:Math.round(l.ha*100)/100}))
-          .sort((a,b)=>b.ha-a.ha || a.nombre.localeCompare(b.nombre,'es')),
+        sinConfirmar:g.sinConfirmar, preparacion,
         // n_labores > 1 marca los lotes sembrados en dos etapas con labores distintas: es donde
         // aparece el desvio, porque el campo de la parcela suma una de las dos OT de mas. La
         // resiembra NO cuenta aca: resembrar no es sembrar en dos etapas.
@@ -495,9 +503,16 @@ function construirAuditoriaSiembra(OTS, proyecciones){
         // se puede desplegar. Las de resiembra cuentan: tambien hay algo que mostrar.
         n_ots: labores.reduce((t,l)=>t+l.ots.length, 0)
              + resiembras.reduce((t,l)=>t+l.ots.length, 0),
-        estado: clasificarSiembra(p, sembradas, labores, g.sinConfirmar, sembradas_crudo, resiembras)};
+        estado: clasificarSiembra(p, sembradas, labores, g.sinConfirmar, sembradas_crudo, resiembras,
+          preparacion, cultivosConSiembra.has(String(p.cultivo||'').toUpperCase()))};
     })
-    .filter(f=>f.declaradas>0 || f.sembradas>0 || f.sinConfirmar.length || f.resiembras.length)
+    // Entra tambien la parcela que SOLO tiene preparacion de suelo: no declara siembra ni tiene OT
+    // de siembra, pero se trabajo sobre ella. Antes se caia del panel entera y no habia donde ver
+    // que el suelo estaba listo y la siembra no habia entrado — justo lo que hay que mirar en plena
+    // campania. Entra por el estado, no por tener preparacion a secas: el clasificador ya descarto
+    // las coberturas y las parcelas sin plan, que no tienen siembra pendiente que mostrar.
+    .filter(f=>f.declaradas>0 || f.sembradas>0 || f.sinConfirmar.length || f.resiembras.length
+            || f.estado==='sin_sembrar')
     // Primero TODAS las que no coinciden, despues las que si. Ordenar solo por el tamanio de la
     // diferencia no alcanzaba: un desvio de tipo 'sin_confirmar' o 'sin_ot' puede tener dif 0,00 y
     // quedaba hundido entre un centenar de filas identicas en verde. El estado manda.
@@ -507,21 +522,36 @@ function construirAuditoriaSiembra(OTS, proyecciones){
     // exceso_plan (sembrado contra plan, en cualquiera de sus dos direcciones). Sin esto las 13
     // `siembra_menos` quedaban ordenadas por lote, porque su dif es 0,00 — y entonces la que
     // tiene 0,23 ha pendientes salia antes que la de 5,87.
-    .sort((a,b)=>(a.estado==='ok')-(b.estado==='ok')
+    // Las que solo tienen preparacion van al final de todo, despues incluso de las que coinciden:
+    // no son un desvio de carga —no hay dos fuentes que comparar— sino una etapa que no empezo.
+    // Entre ellas manda la superficie del plan, que es la que esta esperando: falta_plan vale el
+    // plan entero porque no hay nada sembrado.
+    .sort((a,b)=>SB_RANGO(a)-SB_RANGO(b)
       || Math.max(Math.abs(b.dif), b.falta_plan, b.exceso_plan)
          - Math.max(Math.abs(a.dif), a.falta_plan, a.exceso_plan)
       || a.lote.localeCompare(b.lote,'es'));
 
-  const desvios = filas.filter(f=>f.estado!=='ok');
+  // Las que solo tienen preparacion NO son un desvio: no hay nada cargado que pueda estar mal.
+  // Tampoco entran en los totales de superficie del subtitulo, que comparan dos fuentes sobre las
+  // parcelas que si tienen siembra; meterlas ahi cambiaria el significado de «plan» —pasaria a
+  // incluir parcelas que nadie sembro todavia— y el numero dejaria de ser comparable con el de
+  // ayer. Se cuentan aparte.
+  const conSiembra = filas.filter(f=>f.estado!=='sin_sembrar');
+  const sinSembrar = filas.filter(f=>f.estado==='sin_sembrar');
+  const desvios = conSiembra.filter(f=>f.estado!=='ok');
   return {
     filas,
     // KPIs del encabezado. total_declaradas es la suma del campo de la parcela y total_sembradas la
     // de las OT: la brecha entre ambos es, justamente, lo que hay que corregir.
     n_parcelas: filas.length,
     n_desvios: desvios.length,
-    total_declaradas: filas.reduce((s,f)=>s+f.declaradas,0),
-    total_sembradas: filas.reduce((s,f)=>s+f.sembradas,0),
-    total_plan: filas.reduce((s,f)=>s+f.plan,0),
+    n_con_siembra: conSiembra.length,
+    n_sin_sembrar: sinSembrar.length,
+    // La superficie que esas parcelas tienen planificada: es lo que esta esperando la siembra.
+    ha_sin_sembrar: Math.round(sinSembrar.reduce((s,f)=>s+f.plan,0)*100)/100,
+    total_declaradas: conSiembra.reduce((s,f)=>s+f.declaradas,0),
+    total_sembradas: conSiembra.reduce((s,f)=>s+f.sembradas,0),
+    total_plan: conSiembra.reduce((s,f)=>s+f.plan,0),
     // Desglose por tipo de problema, para el subtitulo del panel.
     n_supera_plan: filas.filter(f=>f.estado==='supera_plan').length,
     n_sin_cargar: filas.filter(f=>f.estado==='sin_cargar').length,
@@ -542,7 +572,11 @@ function construirAuditoriaSiembra(OTS, proyecciones){
 // Clasificacion del desvio de una parcela. El orden importa: "supera_plan" se evalua primero
 // porque es el unico caso IMPOSIBLE (mas sembrado que la superficie de la parcela) y por lo tanto
 // un error de carga seguro, no una diferencia de criterio.
-function clasificarSiembra(p, sembradas, labores, sinConfirmar, sembradas_crudo, resiembras){
+// Rango de orden de una fila: primero los desvios, despues las que coinciden y al final las que
+// todavia no se sembraron. Va aparte para que el sort de arriba se lea de un vistazo.
+function SB_RANGO(f){ return f.estado==='sin_sembrar' ? 2 : (f.estado==='ok' ? 1 : 0); }
+function clasificarSiembra(p, sembradas, labores, sinConfirmar, sembradas_crudo, resiembras,
+                           preparacion, seSiembra){
   // 1. IMPOSIBLE: la parcela declara mas superficie sembrada que la que tiene. Es error de carga
   //    seguro, no una diferencia de criterio, asi que gana sobre cualquier otra clasificacion.
   if(p.plan && p.declaradas > p.plan + 0.01) return 'supera_plan';
@@ -554,6 +588,17 @@ function clasificarSiembra(p, sembradas, labores, sinConfirmar, sembradas_crudo,
   // 3. Hay OT de siembra pero ninguna confirmada: la superficie todavia no puede acreditarse. Se
   //    reporta aunque los dos numeros den 0, porque el 0 aca no es "coincide" sino "falta cerrar".
   if(!labores.length && sinConfirmar.length) return 'sin_confirmar';
+  // 3b. Ni siembra ni declarado, pero el suelo se trabajo: la siembra no empezo. No es un desvio
+  //     de carga —no hay dos fuentes que comparar— y por eso tiene estado propio. Sin esto caia en
+  //     'siembra_menos' por la regla 6, que es cierto pero contesta otra cosa: diria que el lote
+  //     esta a medio sembrar cuando no se sembro nada, y con el plan entero como hectareas
+  //     faltantes se mezclaria con los lotes que si estan a medio terminar.
+  //     Dos condiciones mas, para no decir que falta algo que no falta: el lote tiene que tener
+  //     PLAN —sin plan no hay superficie que sembrar, es una parcela operativa— y su cultivo tiene
+  //     que ser de los que se siembran con OT (`seSiembra`), lo que deja fuera a las coberturas.
+  if(!labores.length && !sinConfirmar.length && !(resiembras||[]).length
+     && p.declaradas <= 0.01 && (preparacion||[]).length
+     && p.plan > 0 && seSiembra) return 'sin_sembrar';
   // 4. La OT confirma superficie sembrada y la parcela sigue en cero.
   if(sembradas > 0 && p.declaradas <= 0.01) return 'sin_cargar';
   // 5. Las dos fuentes NO dicen lo mismo: es el desvio de carga que este panel vino a detectar.

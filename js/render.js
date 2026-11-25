@@ -1057,6 +1057,9 @@ const SB_DIAG = {
   difiere:       {label:'Difiere de la OT',    cls:'rc-e-bajo',  ayuda:'La parcela y las OT confirmadas no coinciden.'},
   sin_confirmar: {label:'OT sin confirmar',    cls:'rc-e-sobre', ayuda:'Hay OT de siembra abiertas: hasta que no se confirmen, su superficie no se puede acreditar.'},
   sin_ot:        {label:'Sin OT de siembra',   cls:'rc-e-sin',   ayuda:'La parcela declara siembra pero no existe ninguna OT de siembra para ese lote.'},
+  // La parcela se trabajo pero todavia no se sembro. No es un desvio de carga: no hay dos fuentes
+  // que comparar. Gris, el mismo tono con que el panel marca lo que todavia no se puede comparar.
+  sin_sembrar:   {label:'Sin sembrar',         cls:'rc-e-sin',   ayuda:'El lote tiene labores de preparación de suelo confirmadas, pero ninguna OT de siembra y la parcela no declara hectáreas sembradas. Clic en la fila para ver qué se trabajó.'},
   // Las dos direcciones del eje "vs. plan", cuando las dos fuentes ya coincidieron entre si.
   // "de menos" es avance pendiente (azul, falta completar) y "de mas" es imposible —no se puede
   // sembrar mas superficie de la que el lote tiene— y por eso va en ambar, como 'supera_plan'.
@@ -1096,15 +1099,27 @@ function renderAuditoriaSiembra(){
     'sembrar. '+
     '<b>La resiembra no suma superficie:</b> resembrar es volver a sembrar lo ya sembrado, '+
     'así que sus hectáreas se muestran aparte y no entran en «Sembrado (OT)». '+
+    (A.n_sin_sembrar
+      ? '<b>Las parcelas «Sin sembrar»</b> —hoy '+A.n_sin_sembrar+', con '+fmt2(A.ha_sin_sembrar)+
+        ' ha de plan— tienen preparación de suelo confirmada y ninguna OT de siembra. Van al final '+
+        'de la tabla y no cuentan como desvío: no hay dos fuentes que comparar, hay una etapa que '+
+        'todavía no empezó. '
+      : '')+
     '<b>Clic en una fila</b> para ver las OT que la componen.';
 
   // Las cuatro cifras van en tarjetas .kpi, las MISMAS que usan los otros seis modulos (ver
   // kpiAuditoria mas abajo). Hasta el 19/11/2026 eran .rc-chip, una pieza propia de Auditoria —
   // mas chica, con borde de color y la cifra en 19px— y el modulo se leia como si fuera de otro
   // tablero. El dato y el criterio no cambian: lo que cambia es la caja.
+  // El pie de las dos primeras tarjetas ancla la comparacion: sin el, "201 auditadas / 135
+  // coinciden" invita a leer 66 problemas cuando son 22 — las otras 44 no tienen siembra que
+  // comparar todavia.
   document.getElementById('sb-kpis').innerHTML =
-    kpiAuditoria('Parcelas auditadas', A.n_parcelas, 'gris', 'con siembra declarada o con OT') +
-    kpiAuditoria('Coinciden', A.n_parcelas - A.n_desvios, 'g', 'la parcela y sus OT dicen lo mismo') +
+    kpiAuditoria('Parcelas auditadas', A.n_parcelas, 'gris',
+      A.n_sin_sembrar ? A.n_con_siembra+' con siembra · '+A.n_sin_sembrar+' solo con preparación'
+                      : 'con siembra declarada o con OT') +
+    kpiAuditoria('Coinciden', A.n_con_siembra - A.n_desvios, 'g',
+      A.n_sin_sembrar ? 'de las '+A.n_con_siembra+' con siembra' : 'la parcela y sus OT dicen lo mismo') +
     kpiAuditoria('Superan la parcela', A.n_supera_plan, 'o', 'más hectáreas que el lote') +
     kpiAuditoria('Otras diferencias', A.n_desvios - A.n_supera_plan, 'gris', 'el resto de los desvíos de carga');
 
@@ -1129,7 +1144,13 @@ function renderAuditoriaSiembra(){
       : (f.sinConfirmar.length
           ? f.sinConfirmar.map(o=>`<span class="pu-curso">OT ${escHtml(o.ot)} · ${escHtml(o.estado)}</span>`).join('<br>')
           // Si lo unico que hay es resiembra, el guion sobra: la linea de abajo ya dice que paso.
-          : (f.resiembras.length ? '' : sinDato));
+          // Y si no hay siembra pero si preparacion, se dice que se trabajo: un guion solo haria
+          // pensar que al lote no lo toco nadie.
+          : (f.resiembras.length ? ''
+             : (f.estado==='sin_sembrar'
+                ? `<span class="sb-solo-prep">${f.preparacion.length} labor(es) de preparación · `+
+                  `${f.preparacion.reduce((t,l)=>t+l.n_ot,0)} OT</span>`
+                : sinDato)));
     // La resiembra va debajo de las labores que si suman, y dice que no acredita superficie. Se
     // muestra siempre que exista porque es la explicacion de la fila: por que el lote puede figurar
     // corto aunque se haya trabajado, y por que la parcela declara de mas (hectareasSembradas si la
@@ -1173,7 +1194,7 @@ function renderAuditoriaSiembra(){
       `<td class="tr mono">${f.plan?fmt2(f.plan):sinDato}</td>`+
       `<td class="tr mono">${f.sembradas?fmt2(f.sembradas):sinDato}</td>`+
       `<td class="tr mono">${f.declaradas?fmt2(f.declaradas):sinDato}${notaDecl}</td>`+
-      `<td class="tr mono ${difCls}">${Math.abs(f.dif)<=0.01?'0,00':(f.dif>0?'+':'')+fmt2(f.dif)}</td>`+
+      `<td class="tr mono ${difCls}">${f.estado==='sin_sembrar'?sinDato:(Math.abs(f.dif)<=0.01?'0,00':(f.dif>0?'+':'')+fmt2(f.dif))}</td>`+
       `<td>${labores}${aviso2}</td>`+
       `<td><span class="rc-est ${d.cls}" title="${escHtml(d.ayuda)}">${dLabel}</span></td></tr>`;
     if(abierta) html += siembraDetalle(f);

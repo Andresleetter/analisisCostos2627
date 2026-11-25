@@ -198,6 +198,10 @@ table.sb-det-t tr:last-child td{border-bottom:0}
 .sb-det-ot{color:var(--teal);font-weight:700;white-space:nowrap}
 .sb-det-vacio{font-size:11px;color:var(--muted);padding:14px 0 4px}
 
+/* Lo unico que tiene una parcela sin sembrar: la preparacion. En gris, porque no es una labor de
+   siembra —que es lo que la columna lista— sino la razon por la que la fila esta en la tabla. */
+.sb-solo-prep{color:var(--muted);font-size:11px;font-style:italic}
+
 /* El campo de la parcela cuando incluye la resiembra: la aclaracion va debajo del numero, en gris y
    sin tabular, para que se lea como nota y no como un segundo valor de la columna. */
 .sb-decl-nota{display:block;font-size:9.5px;font-weight:400;font-variant-numeric:normal;

@@ -1669,6 +1669,23 @@ Por eso la celda **Declarado (parcela)** lleva debajo, en gris, *«incluye 50,30
 
 > **El avance del Resumen Ejecutivo no usa esta exclusión** y no hay que agregarsela sin mirar: allá la resiembra ya está contemplada por el divisor de labores por lote (`divisores`), que reparte las hectáreas entre las labores del estadio. En el 35A el divisor 2 deja 25,15 + 25,15 = 50,30, o sea el 100% del lote, que es lo correcto.
 
+### Parcelas con preparación de suelo y sin siembra
+
+Una parcela que no declara siembra y no tiene ninguna OT de siembra **se caía del panel entera**, aunque se hubiera trabajado el suelo. Son hoy **19 lotes de arroz y 513,83 ha de plan** — el `.11B` con seis labores confirmadas, el `.3A` con cinco, la última del 12/10/2026 — y no había dónde ver que el suelo estaba listo y la siembra no había entrado. En plena campaña es justo lo que hay que mirar.
+
+Ahora entran con estado propio, **`sin_sembrar`** (chip gris *Sin sembrar*), al final de la tabla. **No cuentan como desvío**: no hay dos fuentes que comparar, hay una etapa que todavía no empezó. Las columnas Sembrado, Declarado y Diferencia van en guion —no en `0,00`, que se leería como "las dos fuentes coinciden en cero"— y la columna de labores dice qué sí hay (`6 labor(es) de preparación · 6 OT`). El desplegable muestra la preparación completa en su columna derecha.
+
+Sin un estado propio caían en `siembra_menos` por la regla 6 del clasificador, que es cierto pero contesta otra cosa: diría que el lote está a medio sembrar cuando no se sembró nada, y con el plan entero como hectáreas faltantes se mezclarían con los 13 que sí están a medio terminar.
+
+**Dos exclusiones, para no decir que falta algo que no falta:**
+
+- **Las coberturas.** `AVENA` y `COBERTURA` figuran en el plan con su superficie y tienen labores confirmadas (la desecación, que es preparación de suelo), pero en la 26/27 **no existe ni una sola OT de estadio Siembra** para ellas: no se cargan como siembra. Marcarlas "sin sembrar" sumaría 25 filas que nunca van a tener siembra. El criterio sale del dato, no de una lista fija (`cultivosConSiembra`): si mañana empiezan a cargar la siembra de un cultivo nuevo, entra solo.
+- **Las parcelas sin plan** (`plan = 0`): las operativas y de ensayo, como `PARCELA SOJA`. Sin plan no hay superficie que sembrar.
+
+Los KPIs separan las dos poblaciones: *Parcelas auditadas* **176** con el pie «157 con siembra · 19 solo con preparación», y *Coinciden* **135** con «de las 157 con siembra». Sin esos pies, "176 auditadas / 135 coinciden" invita a leer 41 problemas cuando son 22.
+
+> **Los totales del subtítulo siguen siendo los de las parcelas con siembra** (`conSiembra`), no los de las 176. Meter las 19 ahí cambiaría el significado de «plan» —pasaría a incluir parcelas que nadie sembró todavía— y el número dejaría de ser comparable con el de la subida anterior.
+
 ### El desplegable de la parcela, en dos columnas
 
 Clic en una fila y el detalle se abre **en dos columnas**: a la izquierda la **siembra** del lote (la siembra propiamente dicha, la resiembra y las OT sin confirmar), a la derecha la **preparación de suelo**. Izquierda es lo que la fila audita; derecha es el contexto con que se lee esa fila — si el suelo se preparó entero y la siembra no llegó, falta sembrar; si la preparación tampoco cubrió el lote, el atraso viene de antes.
