@@ -1,7 +1,7 @@
 {
- "_comentario": "Foto de Control de Hectareas de la exportacion ANTERIOR, mas las OT a las que les cambiaron la labor entre esa exportacion y la actual. Sirve para dos cosas: marcar que casos aparecieron con la subida actual (ver construirControlHectareas en cultivos.js) y dejar rastro de las correcciones de carga, que si no se pierden al pisarse el .xlsx. Se regenera con `node tools/baseline.mjs --escribir` en cada subida de datos, ANTES de commitear el xlsx.",
- "exportacion_base": "2026-11-23 10:05",
- "commit_base": "5eecac1",
+ "_comentario": "Foto de Control de Hectareas de la exportacion ANTERIOR, mas el historial de OT a las que les cambiaron la labor. Sirve para dos cosas: marcar que casos aparecieron con la subida actual (ver construirControlHectareas en cultivos.js) y dejar rastro de las correcciones de carga, que si no se pierden al pisarse el .xlsx. OJO: `lotes` y `repetidas` son una FOTO y se reemplazan en cada corrida; `ot_cambiadas` es un HISTORIAL y se acumula, cada entrada fechada con la exportacion que trajo el cambio. Se regenera con `node tools/baseline.mjs --escribir` en cada subida de datos, ANTES de commitear el xlsx.",
+ "exportacion_base": "2026-11-25 11:03",
+ "commit_base": "6d9f65e",
  "lotes": [
   "ARROZ|.07A",
   "ARROZ|.27G",
